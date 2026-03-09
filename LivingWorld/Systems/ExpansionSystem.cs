@@ -31,8 +31,8 @@ public sealed class ExpansionSystem
                 .Where(p => p.RegionId == home.Id && p.Population > 0)
                 .Sum(p => p.Population);
 
-            bool overcrowded = localPopulation > home.CarryingCapacity * 0.9;
-            bool largeEnoughToSplit = polity.Population >= 40;
+            bool overcrowded = localPopulation > home.CarryingCapacity * 0.85;
+            bool largeEnoughToSplit = polity.Population >= 35;
 
             double annualFoodRatio = polity.AnnualFoodNeeded <= 0
                 ? 1.0
