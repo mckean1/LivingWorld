@@ -42,7 +42,10 @@ public sealed class Simulation
         if (_world.Time.Month == 12)
         {
             _populationSystem.UpdatePopulation(_world);
+
             _expansionSystem.UpdateExpansion(_world);
+
+            _world.Polities.RemoveAll(p => p.Population <= 0);
 
             PrintYearSummary();
 

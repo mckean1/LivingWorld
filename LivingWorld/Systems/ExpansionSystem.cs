@@ -40,7 +40,9 @@ public sealed class ExpansionSystem
 
             bool wellFed = annualFoodRatio >= 0.90;
 
-            if (!overcrowded || !largeEnoughToSplit || !wellFed)
+            bool expansionPressure = overcrowded || largeEnoughToSplit;
+
+            if (!expansionPressure || !wellFed)
             {
                 continue;
             }
