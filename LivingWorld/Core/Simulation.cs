@@ -95,30 +95,56 @@ public sealed class Simulation
         }
     }
 
+    private void PrintFoodAlerts()
+    {
+        var stressed = _world.Polities
+            .Where(p => p.Population > 0 &&
+                        (p.FoodShortageThisMonth > 0 || p.StarvationMonthsThisYear > 0))
+            .OrderByDescending(p => p.StarvationMonthsThisYear)
+            .ToList();
+
+        if (stressed.Count == 0)
+        {
+            return;
+        }
+
+        Console.WriteLine("Food Stress:");
+        foreach (var polity in stressed)
+        {
+            Console.WriteLine(
+                $"  - {polity.Name}: " +
+                $"Need={polity.FoodNeededThisMonth:F1}, " +
+                $"Consumed={polity.FoodConsumedThisMonth:F1}, " +
+                $"Shortage={polity.FoodShortageThisMonth:F1}, " +
+                $"AFR={(polity.AnnualFoodNeeded <= 0 ? 1.0 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded):F2}, " +
+                $"StarvationMonths={polity.StarvationMonthsThisYear}");
+        }
+    }
+
     private void PrintYearSummary()
     {
+        int activePolities = _world.Polities.Count(p => p.Population > 0);
+        int totalPopulation = _world.Polities.Where(p => p.Population > 0).Sum(p => p.Population);
+
         Console.WriteLine();
         Console.WriteLine($"=== YEAR {_world.Time.Year} SUMMARY ===");
+        Console.WriteLine($"Active Polities: {activePolities} | Total Population: {totalPopulation}");
 
-        foreach (var polity in _world.Polities.OrderByDescending(p => p.Population))
+        foreach (var polity in _world.Polities.OrderByDescending(p => p.Population).ThenBy(p => p.Name))
         {
             double annualFoodRatio = polity.AnnualFoodNeeded <= 0
                 ? 1.0
                 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
 
             Console.WriteLine(
-                $"- {polity.Name} | " +
-                $"Pop={polity.Population} | " +
-                $"Age={polity.YearsSinceFounded} | " +
-                $"Region={polity.RegionId} | " +
-                $"Food={polity.FoodStores:F1} | " +
-                $"Gathered={polity.FoodGatheredThisMonth:F1} | " +
-                $"Consumed={polity.FoodConsumedThisMonth:F1} | " +
-                $"Need={polity.FoodNeededThisMonth:F1} | " +
-                $"Shortage={polity.FoodShortageThisMonth:F1} | " +
-                $"AnnualFoodRatio={annualFoodRatio:F2} | " +
-                $"StarvationMonths={polity.StarvationMonthsThisYear} | " +
-                $"MigrationPressure={polity.MigrationPressure:F2}");
+                $"- {polity.Name,-20} " +
+                $"Pop={polity.Population,3} " +
+                $"Age={polity.YearsSinceFounded,3} " +
+                $"Reg={polity.RegionId,2} " +
+                $"Food={polity.FoodStores,6:F1} " +
+                $"AFR={annualFoodRatio,4:F2} " +
+                $"Starve={polity.StarvationMonthsThisYear,2} " +
+                $"Move={polity.MigrationPressure,4:F2}");
         }
     }
 }

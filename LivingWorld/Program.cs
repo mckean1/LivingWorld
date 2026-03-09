@@ -9,13 +9,18 @@ class Program
     static void Main()
     {
         const int seed = 1;
+        const int monthsToSimulate = 12;
+        const int monthsInYear = 10;
 
         WorldGenerator generator = new(seed);
         World world = generator.Generate();
 
         Simulation simulation = new(world);
 
-        simulation.RunMonths(1200);
+        Console.WriteLine("Press any key to start simulation.");
+        Console.ReadKey();
+
+        simulation.RunMonths(monthsToSimulate * monthsToSimulate);
 
         Console.WriteLine("Simulation complete.");
     }
