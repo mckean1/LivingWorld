@@ -30,7 +30,11 @@ public sealed class MigrationSystem
 
                 if (target is not null && target.Id != currentRegion.Id)
                 {
+                    polity.PreviousRegionId = polity.RegionId;
                     polity.RegionId = target.Id;
+
+                    polity.MovedThisYear = true;
+                    polity.MovesThisYear++;
                     polity.FoodStores *= 0.75; // moving costs food
                 }
             }
