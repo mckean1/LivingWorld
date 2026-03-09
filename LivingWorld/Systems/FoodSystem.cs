@@ -150,6 +150,11 @@ public sealed class FoodSystem
             {
                 polity.StarvationMonthsThisYear++;
             }
+
+            if (need > 0 && shortage / need >= 0.25)
+            {
+                world.AddEvent("STARVATION", $"{polity.Name} suffered food shortage in Region {polity.RegionId} ({shortage:F1} unmet).");
+            }
         }
     }
 }

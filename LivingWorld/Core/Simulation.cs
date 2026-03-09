@@ -52,10 +52,17 @@ public sealed class Simulation
             _populationSystem.UpdatePopulation(_world);
             _expansionSystem.UpdateExpansion(_world);
 
+            foreach (var polity in _world.Polities.Where(p => p.Population <= 0))
+            {
+                _world.AddEvent(
+                    "COLLAPSE",
+                    $"{polity.Name} collapsed in Region {polity.RegionId}.");
+            }
+
             _world.Polities.RemoveAll(p => p.Population <= 0);
 
             PrintYearSummary();
-
+            PrintYearEvents();
             ResetAnnualStats();
 
             Console.ReadKey();
@@ -67,6 +74,24 @@ public sealed class Simulation
         foreach (var polity in _world.Polities)
         {
             polity.ResetAnnualFoodStats();
+        }
+    }
+
+    private void PrintYearEvents()
+    {
+        var eventsThisYear = _world.Events
+            .Where(e => e.Year == _world.Time.Year)
+            .ToList();
+
+        if (eventsThisYear.Count == 0)
+        {
+            return;
+        }
+
+        Console.WriteLine("Events:");
+        foreach (var worldEvent in eventsThisYear)
+        {
+            Console.WriteLine($"  {worldEvent}");
         }
     }
 

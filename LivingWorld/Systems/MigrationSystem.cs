@@ -36,6 +36,8 @@ public sealed class MigrationSystem
                     polity.MovedThisYear = true;
                     polity.MovesThisYear++;
                     polity.FoodStores *= 0.75; // moving costs food
+
+                    world.AddEvent("MIGRATION", $"{polity.Name} migrated from Region {currentRegion.Id} to Region {target.Id}.");
                 }
             }
         }

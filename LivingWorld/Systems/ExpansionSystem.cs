@@ -88,6 +88,8 @@ public sealed class ExpansionSystem
             polity.FoodStores *= 0.70;
 
             newPolities.Add(child);
+
+            world.AddEvent("COLONY", $"{polity.Name} founded {child.Name} in Region {target.Id} with population {splitPopulation}.");
         }
 
         world.Polities.AddRange(newPolities);
