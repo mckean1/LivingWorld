@@ -1,3 +1,12 @@
+## Documentation
+
+Project documentation is available in the following files:
+
+- DESIGN.md
+- ARCHITECTURE.md
+- SYSTEMS.md
+- SIMULATION_RULES.md
+
 # LivingWorld
 
 LivingWorld is a **procedural world simulation engine** where species evolve, societies form, civilizations emerge, and complex histories unfold over long spans of simulated time.
