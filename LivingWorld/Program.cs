@@ -15,7 +15,7 @@ class Program
 
         Simulation simulation = new(world);
 
-        simulation.RunMonths(240);
+        simulation.RunMonths(1200);
 
         Console.WriteLine("Simulation complete.");
     }
