@@ -20,8 +20,9 @@ class Program
         Console.WriteLine("Press any key to start simulation.");
         Console.ReadKey();
 
-        simulation.RunMonths(monthsToSimulate * monthsToSimulate);
+        simulation.RunMonths(monthsToSimulate * monthsInYear);
 
         Console.WriteLine("Simulation complete.");
     }
 }
+
