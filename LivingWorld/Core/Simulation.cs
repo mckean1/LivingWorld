@@ -52,12 +52,7 @@ public sealed class Simulation
             _populationSystem.UpdatePopulation(_world);
             _expansionSystem.UpdateExpansion(_world);
 
-            foreach (var polity in _world.Polities.Where(p => p.Population <= 0))
-            {
-                _world.AddEvent(
-                    "COLLAPSE",
-                    $"{polity.Name} collapsed in Region {polity.RegionId}.");
-            }
+            AddYearlyFoodStressEvents();
 
             _world.Polities.RemoveAll(p => p.Population <= 0);
 
@@ -66,6 +61,26 @@ public sealed class Simulation
             ResetAnnualStats();
 
             Console.ReadKey();
+        }
+    }
+
+    private void AddYearlyFoodStressEvents()
+    {
+        foreach (var polity in _world.Polities.Where(p => p.Population > 0))
+        {
+            if (polity.StarvationMonthsThisYear < 2)
+            {
+                continue;
+            }
+
+            double annualFoodRatio = polity.AnnualFoodNeeded <= 0
+                ? 1.0
+                : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
+
+            _world.AddEvent(
+                "FOOD-STRESS",
+                $"{polity.Name} endured {polity.StarvationMonthsThisYear} starvation months; AFR={annualFoodRatio:F2}."
+            );
         }
     }
 
