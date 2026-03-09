@@ -29,17 +29,17 @@ public sealed class Simulation
     {
         _world.Time.AdvanceOneMonth();
 
-        _foodSystem.UpdateRegionEcology(_world);
-        _foodSystem.GatherFood(_world);
-        _foodSystem.ConsumeFood(_world);
-        _populationSystem.UpdatePopulation(_world);
-        _migrationSystem.UpdateMigration(_world);
-
         if (_world.Time.Month == 12)
         {
             PrintYearSummary();
             Console.ReadKey();
         }
+
+        _foodSystem.UpdateRegionEcology(_world);
+        _foodSystem.GatherFood(_world);
+        _foodSystem.ConsumeFood(_world);
+        _populationSystem.UpdatePopulation(_world);
+        _migrationSystem.UpdateMigration(_world);
     }
 
     private void PrintYearSummary()
