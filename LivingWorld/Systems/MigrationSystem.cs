@@ -22,7 +22,7 @@ public sealed class MigrationSystem
 
             Region currentRegion = world.Regions.First(r => r.Id == polity.RegionId);
 
-            polity.MigrationPressure = CalculateMigrationPressure(polity, currentRegion);
+            polity.MigrationPressure = CalculateMigrationPressure(world, polity, currentRegion);
 
             if (polity.MigrationPressure >= 0.65)
             {
@@ -41,25 +41,33 @@ public sealed class MigrationSystem
         }
     }
 
-    private double CalculateMigrationPressure(Polity polity, Region region)
+    private double CalculateMigrationPressure(World world, Polity polity, Region region)
     {
         double monthlyFoodNeed = Math.Max(1, polity.Population);
         double foodSafety = Math.Min(1.0, polity.FoodStores / monthlyFoodNeed);
 
-        double ecologyRatio = 0;
-        if (region.TotalBiomassCapacity > 0)
-        {
-            ecologyRatio = region.TotalBiomass / region.TotalBiomassCapacity;
-        }
+        double ecologyRatio = region.TotalBiomassCapacity <= 0
+            ? 0
+            : region.TotalBiomass / region.TotalBiomassCapacity;
+
+        int localPopulation = world.Polities
+            .Where(p => p.RegionId == region.Id && p.Population > 0)
+            .Sum(p => p.Population);
+
+        double crowdingRatio = region.CarryingCapacity <= 0
+            ? 1.0
+            : localPopulation / region.CarryingCapacity;
 
         double shortagePressure = 1.0 - polity.FoodSatisfactionThisMonth;
         double foodStorePressure = 1.0 - foodSafety;
         double ecologyPressure = 1.0 - ecologyRatio;
+        double crowdingPressure = Math.Clamp(crowdingRatio - 1.0, 0.0, 1.0);
 
         double pressure =
-            (shortagePressure * 0.45) +
-            (foodStorePressure * 0.35) +
-            (ecologyPressure * 0.20);
+            (shortagePressure * 0.40) +
+            (foodStorePressure * 0.25) +
+            (ecologyPressure * 0.20) +
+            (crowdingPressure * 0.15);
 
         return Math.Clamp(pressure, 0.0, 1.0);
     }
@@ -85,13 +93,14 @@ public sealed class MigrationSystem
                 .Where(p => p.RegionId == region.Id && p.Population > 0)
                 .Sum(p => p.Population);
 
-            double crowdingPenalty = localPopulation * 0.5;
+            double crowdingPenalty = localPopulation * 0.7;
 
             double score =
                 region.PlantBiomass +
                 region.AnimalBiomass +
                 (region.Fertility * 200) +
-                (region.WaterAvailability * 150) -
+                (region.WaterAvailability * 150) +
+                (region.CarryingCapacity * 2.0) -
                 crowdingPenalty;
 
             // Small randomness so ties don't always pick the same region

@@ -46,8 +46,6 @@ public sealed class PopulationSystem
             {
                 polity.Population = 0;
             }
-
-            polity.ResetAnnualFoodStats();
         }
     }
 }

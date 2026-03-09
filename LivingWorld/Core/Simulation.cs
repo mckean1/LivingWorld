@@ -1,3 +1,4 @@
+using LivingWorld.Societies;
 using LivingWorld.Systems;
 
 namespace LivingWorld.Core;
@@ -8,6 +9,7 @@ public sealed class Simulation
     private readonly FoodSystem _foodSystem;
     private readonly PopulationSystem _populationSystem;
     private readonly MigrationSystem _migrationSystem;
+    private readonly ExpansionSystem _expansionSystem;
 
     public Simulation(World world)
     {
@@ -15,6 +17,7 @@ public sealed class Simulation
         _foodSystem = new FoodSystem();
         _populationSystem = new PopulationSystem();
         _migrationSystem = new MigrationSystem();
+        _expansionSystem = new ExpansionSystem();
     }
 
     public void RunMonths(int months)
@@ -29,17 +32,32 @@ public sealed class Simulation
     {
         _world.Time.AdvanceOneMonth();
 
-        if (_world.Time.Month == 12)
-        {
-            PrintYearSummary();
-            Console.ReadKey();
-        }
-
+        // Monthly systems
         _foodSystem.UpdateRegionEcology(_world);
         _foodSystem.GatherFood(_world);
         _foodSystem.ConsumeFood(_world);
-        _populationSystem.UpdatePopulation(_world);
         _migrationSystem.UpdateMigration(_world);
+
+        // Year-end systems
+        if (_world.Time.Month == 12)
+        {
+            _populationSystem.UpdatePopulation(_world);
+            _expansionSystem.UpdateExpansion(_world);
+
+            PrintYearSummary();
+
+            ResetAnnualStats();
+
+            Console.ReadKey();
+        }
+    }
+
+    private void ResetAnnualStats()
+    {
+        foreach (var polity in _world.Polities)
+        {
+            polity.ResetAnnualFoodStats();
+        }
     }
 
     private void PrintYearSummary()

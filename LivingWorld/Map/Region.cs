@@ -16,6 +16,11 @@ public sealed class Region
 
     public List<int> ConnectedRegionIds { get; } = new();
 
+    public double CarryingCapacity => 20.0 +
+        (Fertility * 80.0) +
+        (WaterAvailability * 60.0) +
+        ((MaxPlantBiomass + MaxAnimalBiomass) / 20.0);
+
     public Region(int id, string name)
     {
         Id = id;

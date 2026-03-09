@@ -6,6 +6,8 @@ namespace LivingWorld.Systems;
 
 public sealed class FoodSystem
 {
+    private const double BaseSpoilageRate = 0.12;
+
     public void UpdateRegionEcology(World world)
     {
         double plantSeasonMultiplier = world.Time.Season switch
@@ -54,27 +56,65 @@ public sealed class FoodSystem
                 continue;
             }
 
-            Region region = world.Regions.First(r => r.Id == polity.RegionId);
-
             polity.FoodGatheredThisMonth = 0;
             polity.FoodConsumedThisMonth = 0;
             polity.FoodShortageThisMonth = 0;
             polity.FoodSurplusThisMonth = 0;
-
             polity.FoodNeededThisMonth = polity.Population;
+        }
 
-            double plantFoodTarget = polity.Population * 0.85;
-            double animalFoodTarget = polity.Population * 0.35;
+        foreach (Region region in world.Regions)
+        {
+            List<Polity> localPolities = world.Polities
+                .Where(p => p.RegionId == region.Id && p.Population > 0)
+                .ToList();
 
-            double gatheredPlants = Math.Min(region.PlantBiomass, plantFoodTarget);
-            double gatheredAnimals = Math.Min(region.AnimalBiomass, animalFoodTarget);
+            if (localPolities.Count == 0)
+            {
+                continue;
+            }
 
-            region.PlantBiomass -= gatheredPlants;
-            region.AnimalBiomass -= gatheredAnimals;
+            Dictionary<int, double> plantDemand = localPolities.ToDictionary(
+                p => p.Id,
+                p => p.Population * 0.85);
 
-            double totalFood = gatheredPlants + gatheredAnimals;
-            polity.FoodGatheredThisMonth = totalFood;
-            polity.FoodStores += totalFood;
+            Dictionary<int, double> animalDemand = localPolities.ToDictionary(
+                p => p.Id,
+                p => p.Population * 0.35);
+
+            double totalPlantDemand = plantDemand.Values.Sum();
+            double totalAnimalDemand = animalDemand.Values.Sum();
+
+            double startingPlantBiomass = region.PlantBiomass;
+            double startingAnimalBiomass = region.AnimalBiomass;
+
+            double actualPlantHarvest = 0;
+            double actualAnimalHarvest = 0;
+
+            foreach (Polity polity in localPolities)
+            {
+                double plantShare = totalPlantDemand <= 0
+                    ? 0
+                    : startingPlantBiomass * (plantDemand[polity.Id] / totalPlantDemand);
+
+                double animalShare = totalAnimalDemand <= 0
+                    ? 0
+                    : startingAnimalBiomass * (animalDemand[polity.Id] / totalAnimalDemand);
+
+                double gatheredPlants = Math.Min(plantShare, plantDemand[polity.Id]);
+                double gatheredAnimals = Math.Min(animalShare, animalDemand[polity.Id]);
+
+                double totalFood = gatheredPlants + gatheredAnimals;
+
+                polity.FoodGatheredThisMonth += totalFood;
+                polity.FoodStores += totalFood;
+
+                actualPlantHarvest += gatheredPlants;
+                actualAnimalHarvest += gatheredAnimals;
+            }
+
+            region.PlantBiomass = Math.Max(0, region.PlantBiomass - actualPlantHarvest);
+            region.AnimalBiomass = Math.Max(0, region.AnimalBiomass - actualAnimalHarvest);
         }
     }
 
@@ -90,14 +130,17 @@ public sealed class FoodSystem
             double need = polity.FoodNeededThisMonth;
             double eaten = Math.Min(polity.FoodStores, need);
             double shortage = Math.Max(0, need - eaten);
-            double surplus = Math.Max(0, polity.FoodStores - eaten);
 
             polity.FoodConsumedThisMonth = eaten;
             polity.FoodShortageThisMonth = shortage;
-            polity.FoodSurplusThisMonth = surplus;
-            polity.FoodSatisfactionThisMonth = need <= 0 ? 1.0 : eaten / need;
 
             polity.FoodStores -= eaten;
+
+            double spoiled = polity.FoodStores * BaseSpoilageRate;
+            polity.FoodStores = Math.Max(0, polity.FoodStores - spoiled);
+
+            polity.FoodSurplusThisMonth = polity.FoodStores;
+            polity.FoodSatisfactionThisMonth = need <= 0 ? 1.0 : eaten / need;
 
             polity.AnnualFoodNeeded += need;
             polity.AnnualFoodConsumed += eaten;
