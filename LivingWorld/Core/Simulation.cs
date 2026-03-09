@@ -49,9 +49,9 @@ public sealed class Simulation
 
         foreach (var polity in _world.Polities.OrderByDescending(p => p.Population))
         {
-            double foodRatio = polity.FoodNeededThisMonth <= 0
+            double annualFoodRatio = polity.AnnualFoodNeeded <= 0
                 ? 1.0
-                : polity.FoodConsumedThisMonth / polity.FoodNeededThisMonth;
+                : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
 
             Console.WriteLine(
                 $"- {polity.Name} | " +
@@ -61,7 +61,9 @@ public sealed class Simulation
                 $"Gathered={polity.FoodGatheredThisMonth:F1} | " +
                 $"Consumed={polity.FoodConsumedThisMonth:F1} | " +
                 $"Need={polity.FoodNeededThisMonth:F1} | " +
-                $"FoodRatio={foodRatio:F2} | " +
+                $"Shortage={polity.FoodShortageThisMonth:F1} | " +
+                $"AnnualFoodRatio={annualFoodRatio:F2} | " +
+                $"StarvationMonths={polity.StarvationMonthsThisYear} | " +
                 $"MigrationPressure={polity.MigrationPressure:F2}");
         }
     }

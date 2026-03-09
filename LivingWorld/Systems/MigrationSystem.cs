@@ -52,12 +52,14 @@ public sealed class MigrationSystem
             ecologyRatio = region.TotalBiomass / region.TotalBiomassCapacity;
         }
 
-        double foodPressure = 1.0 - foodSafety;
+        double shortagePressure = 1.0 - polity.FoodSatisfactionThisMonth;
+        double foodStorePressure = 1.0 - foodSafety;
         double ecologyPressure = 1.0 - ecologyRatio;
 
         double pressure =
-            (foodPressure * 0.7) +
-            (ecologyPressure * 0.3);
+            (shortagePressure * 0.45) +
+            (foodStorePressure * 0.35) +
+            (ecologyPressure * 0.20);
 
         return Math.Clamp(pressure, 0.0, 1.0);
     }
