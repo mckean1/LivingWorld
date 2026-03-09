@@ -30,7 +30,6 @@ public sealed class Simulation
 
     private void RunTick()
     {
-        _world.Time.AdvanceOneMonth();
 
         // Monthly systems
         _foodSystem.UpdateRegionEcology(_world);
@@ -59,9 +58,10 @@ public sealed class Simulation
             PrintYearSummary();
             PrintYearEvents();
             ResetAnnualStats();
-
             Console.ReadKey();
         }
+
+        _world.Time.AdvanceOneMonth();
     }
 
     private void AddYearlyFoodStressEvents()
