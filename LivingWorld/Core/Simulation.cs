@@ -137,7 +137,7 @@ public sealed class Simulation
                 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
 
             Console.WriteLine(
-                $"- {polity.Name,-20} " +
+                $"- {polity.Name,-22} " +
                 $"Pop={polity.Population,3} " +
                 $"Age={polity.YearsSinceFounded,3} " +
                 $"Reg={polity.RegionId,2} " +
