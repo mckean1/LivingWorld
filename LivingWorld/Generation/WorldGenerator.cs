@@ -20,6 +20,7 @@ public sealed class WorldGenerator
         World world = new(new WorldTime());
 
         GenerateRegions(world);
+        ConnectRegions(world);
         GenerateSpecies(world);
         GeneratePolities(world);
 
@@ -65,5 +66,34 @@ public sealed class WorldGenerator
 
             world.Polities.Add(polity);
         }
+    }
+
+    private void ConnectRegions(World world)
+    {
+        // Guaranteed chain so every region is reachable
+        for (int i = 0; i < world.Regions.Count - 1; i++)
+        {
+            AddConnection(world.Regions[i], world.Regions[i + 1]);
+        }
+
+        // Add a few extra random connections
+        int extraConnections = Math.Max(2, world.Regions.Count / 3);
+
+        for (int i = 0; i < extraConnections; i++)
+        {
+            Region a = world.Regions[_random.Next(world.Regions.Count)];
+            Region b = world.Regions[_random.Next(world.Regions.Count)];
+
+            if (a.Id != b.Id)
+            {
+                AddConnection(a, b);
+            }
+        }
+    }
+
+    private static void AddConnection(Region a, Region b)
+    {
+        a.AddConnection(b.Id);
+        b.AddConnection(a.Id);
     }
 }

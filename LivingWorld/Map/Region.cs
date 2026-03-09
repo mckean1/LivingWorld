@@ -1,4 +1,3 @@
-
 namespace LivingWorld.Map;
 
 public sealed class Region
@@ -15,9 +14,23 @@ public sealed class Region
     public double MaxPlantBiomass { get; set; }
     public double MaxAnimalBiomass { get; set; }
 
+    public List<int> ConnectedRegionIds { get; } = new();
+
     public Region(int id, string name)
     {
         Id = id;
         Name = name;
+    }
+
+    public double TotalBiomass => PlantBiomass + AnimalBiomass;
+    public double TotalBiomassCapacity => MaxPlantBiomass + MaxAnimalBiomass;
+
+    public void AddConnection(int regionId)
+    {
+        if (regionId == Id)
+            return;
+
+        if (!ConnectedRegionIds.Contains(regionId))
+            ConnectedRegionIds.Add(regionId);
     }
 }

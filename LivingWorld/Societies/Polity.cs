@@ -1,4 +1,3 @@
-
 namespace LivingWorld.Societies;
 
 public sealed class Polity
@@ -13,6 +12,8 @@ public sealed class Polity
 
     public double FoodStores { get; set; }
 
+    public double MigrationPressure { get; set; }
+
     public Polity(int id, string name, int speciesId, int regionId, int population)
     {
         Id = id;
@@ -20,5 +21,7 @@ public sealed class Polity
         SpeciesId = speciesId;
         RegionId = regionId;
         Population = population;
+        FoodStores = 0;
+        MigrationPressure = 0;
     }
 }
