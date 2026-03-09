@@ -8,6 +8,8 @@ public sealed class Polity
     public int RegionId { get; set; }
     public int Population { get; set; }
 
+    public int YearsSinceFounded { get; set; }
+
     public double FoodStores { get; set; }
     public double MigrationPressure { get; set; }
 
@@ -39,6 +41,8 @@ public sealed class Polity
         SpeciesId = speciesId;
         RegionId = regionId;
         Population = population;
+
+        YearsSinceFounded = 0;
 
         FoodStores = 0;
         MigrationPressure = 0;

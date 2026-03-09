@@ -41,8 +41,15 @@ public sealed class Simulation
         // Year-end systems
         if (_world.Time.Month == 12)
         {
-            _populationSystem.UpdatePopulation(_world);
+            foreach (var polity in _world.Polities)
+            {
+                if (polity.Population > 0)
+                {
+                    polity.YearsSinceFounded++;
+                }
+            }
 
+            _populationSystem.UpdatePopulation(_world);
             _expansionSystem.UpdateExpansion(_world);
 
             _world.Polities.RemoveAll(p => p.Population <= 0);
@@ -77,6 +84,7 @@ public sealed class Simulation
             Console.WriteLine(
                 $"- {polity.Name} | " +
                 $"Pop={polity.Population} | " +
+                $"Age={polity.YearsSinceFounded} | " +
                 $"Region={polity.RegionId} | " +
                 $"Food={polity.FoodStores:F1} | " +
                 $"Gathered={polity.FoodGatheredThisMonth:F1} | " +
