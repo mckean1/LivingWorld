@@ -96,6 +96,8 @@ public sealed class Simulation
     {
         var eventsThisYear = _world.Events
             .Where(e => e.Year == _world.Time.Year)
+            .OrderBy(e => e.Month)
+            .ThenBy(e => e.Type)
             .ToList();
 
         if (eventsThisYear.Count == 0)
@@ -107,32 +109,6 @@ public sealed class Simulation
         foreach (var worldEvent in eventsThisYear)
         {
             Console.WriteLine($"  {worldEvent}");
-        }
-    }
-
-    private void PrintFoodAlerts()
-    {
-        var stressed = _world.Polities
-            .Where(p => p.Population > 0 &&
-                        (p.FoodShortageThisMonth > 0 || p.StarvationMonthsThisYear > 0))
-            .OrderByDescending(p => p.StarvationMonthsThisYear)
-            .ToList();
-
-        if (stressed.Count == 0)
-        {
-            return;
-        }
-
-        Console.WriteLine("Food Stress:");
-        foreach (var polity in stressed)
-        {
-            Console.WriteLine(
-                $"  - {polity.Name}: " +
-                $"Need={polity.FoodNeededThisMonth:F1}, " +
-                $"Consumed={polity.FoodConsumedThisMonth:F1}, " +
-                $"Shortage={polity.FoodShortageThisMonth:F1}, " +
-                $"AFR={(polity.AnnualFoodNeeded <= 0 ? 1.0 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded):F2}, " +
-                $"StarvationMonths={polity.StarvationMonthsThisYear}");
         }
     }
 
