@@ -1,387 +1,216 @@
+# ARCHITECTURE.md
+
 # LivingWorld Architecture
 
-This document describes the **technical architecture** of the LivingWorld simulation engine.
+This document describes the high-level architecture of the LivingWorld simulation and how the major systems interact.
 
-It defines how the simulation is structured, how systems interact with data, and the rules for safely extending the engine as new features are added.
-
----
-
-# Architectural Principles
-
-LivingWorld follows several key architectural principles:
-
-### Deterministic Simulation
-
-Given the same seed and inputs, the simulation should produce the same results.
-
-This allows:
-
-- reproducibility
-- debugging
-- testing
-- world regeneration
+LivingWorld is built as a **systems-driven simulation** where independent systems interact to produce emergent world history.
 
 ---
 
-### System-Based Simulation
+# Core Simulation Structure
 
-LivingWorld uses a **system-based simulation model**.
+The simulation is centered around a **World** object that contains all entities and systems.
 
-Systems operate on shared world data during each simulation tick.
-
-```
-World State
-   ↓
-Simulation Systems
-   ↓
-Updated World State
-```
-
-Examples of systems include:
-
-- EcologySystem
-- FoodSystem
-- PopulationSystem
-- MigrationSystem
-- EconomySystem
-- DiplomacySystem
-
-Each system performs a **single responsibility**.
-
----
-
-### Centralized Simulation Loop
-
-All simulation updates occur within the **Simulation loop**.
-
-Systems must **never trigger other systems directly**.
-
-```
-Simulation
- ├ AdvanceTime
- ├ EcologySystem
- ├ FoodSystem
- ├ PopulationSystem
- ├ MigrationSystem
- ├ SocietySystem
- └ Reporting
-```
-
-This ensures:
-
-- predictable execution order
-- easier debugging
-- prevention of circular dependencies
-
----
-
-# Core Data Model
-
-The world simulation is built around a **shared world state object**.
+High-level structure:
 
 ```
 World
- ├ Regions
- ├ Species
- ├ Societies
- ├ Resources
- └ Simulation Time
+ ├─ Regions
+ ├─ Species
+ ├─ Polities
+ ├─ Settlements
+ ├─ Ecology System
+ ├─ Food System
+ ├─ Population System
+ ├─ Migration System
+ ├─ Knowledge System
+ └─ Historical Event System
 ```
 
-The `World` object acts as the central container for all simulation data.
-
-Systems receive the world state and mutate it.
+Each system updates the world state during the simulation loop.
 
 ---
 
-# Data Ownership
-
-To maintain clean architecture, each data type has a clear owner.
-
-| Data | Owner |
-|-----|-----|
-| World time | World |
-| Regions | World |
-| Species | World |
-| Societies | World |
-| Population | Societies |
-| Biomass | Regions |
-| Food stores | Societies |
-
-Systems operate on this data but **do not own it**.
-
----
-
-# Project Structure
-
-```
-LivingWorld/
- ├ Core/
- │   ├ World.cs
- │   ├ WorldTime.cs
- │   └ Simulation.cs
- │
- ├ Generation/
- │   └ WorldGenerator.cs
- │
- ├ Life/
- │   └ Species.cs
- │
- ├ Map/
- │   └ Region.cs
- │
- ├ Societies/
- │   └ Polity.cs
- │
- ├ Systems/
- │   ├ FoodSystem.cs
- │   └ PopulationSystem.cs
- │
- └ Program.cs
-```
-
----
-
-# Core Components
+# Core Entities
 
 ## World
 
-`World` is the central container for all simulation state.
+The World object acts as the root container for the simulation.
 
-It contains:
+Responsibilities:
 
-- regions
-- species
-- societies
-- simulation time
-
-Systems read and mutate data inside the world object.
-
----
-
-## WorldTime
-
-`WorldTime` manages the simulation calendar.
-
-```
-1 Tick = 1 Month
-12 Ticks = 1 Year
-```
-
-WorldTime also determines the current season.
+* stores all regions
+* stores species definitions
+* stores all polities
+* coordinates the simulation loop
+* records historical events
 
 ---
 
-## Simulation
+## Region
 
-`Simulation` controls the simulation loop.
+Regions represent geographic areas of the world.
 
-Responsibilities include:
+The simulation uses **regions rather than grid cells**.
 
-- advancing time
-- running simulation systems
-- generating reports
-- maintaining system update order
+Regions store environmental properties that affect societies and ecosystems.
 
----
+Typical region data includes:
 
-# Simulation Systems
+* climate
+* fertility
+* water availability
+* biomass production
+* species present
+* settlements in the region
+* polities occupying the region
 
-Simulation systems perform updates to world state.
-
-Each system should follow these rules:
-
-- perform one responsibility
-- avoid interacting with other systems directly
-- only read/write world data
-
-### Example System
-
-```
-FoodSystem
- ├ Gather food from regions
- ├ Update food stores
- └ Reduce ecological biomass
-```
+Regions generate **biomass**, which represents available food resources.
 
 ---
 
-# System Execution Order
+## Species
 
-System order matters because later systems depend on earlier ones.
+Species represent biological populations.
 
-```
-1. Time Update
-2. Ecology Update
-3. Food Gathering
-4. Food Consumption
-5. Population Update
-6. Migration Pressure
-7. Society Updates
-8. Reporting
-```
+Species influence how societies interact with the environment.
 
-Future systems will be inserted carefully into this pipeline.
+Species traits may affect:
+
+* hunting efficiency
+* agricultural potential
+* environmental adaptability
+* migration tendencies
+
+Each polity belongs to exactly **one species**.
 
 ---
 
-# Randomness and Seeds
+## Polity
 
-All randomness should originate from a **controlled seed**.
-
-Example:
-
-```
-WorldGenerator(seed)
-```
-
-Using seeded randomness ensures:
-
-- reproducible worlds
-- consistent debugging
-- deterministic simulations
-
----
-
-# Extending the Simulation
-
-When adding new systems, follow these guidelines.
-
-### 1. Create a new system class
-
-Example:
-
-```
-MigrationSystem.cs
-```
-
----
-
-### 2. Define a single responsibility
-
-A system should only handle one domain.
+A polity represents a cohesive social group.
 
 Examples:
 
-- migration
-- diplomacy
-- economy
-- warfare
+* clans
+* tribes
+* early civilizations
+
+Polities are responsible for:
+
+* managing population
+* founding settlements
+* migrating between regions
+* discovering knowledge
+* splitting into new societies
+
+Over time, polities may transition into **civilizations** as their complexity grows.
 
 ---
 
-### 3. Integrate into the simulation loop
+## Settlement
 
-Add the system to the `Simulation` update order.
+Settlements represent permanent population centers.
 
-```
-Simulation
- ├ EcologySystem
- ├ FoodSystem
- ├ PopulationSystem
- ├ MigrationSystem
-```
+A settlement typically contains:
 
----
+* population
+* founding year
+* region location
+* food production
+* stored food
 
-### 4. Avoid cross-system dependencies
+Settlements anchor societies geographically and enable long-term growth.
 
-Systems should not call each other.
-
-Incorrect:
-
-```
-FoodSystem → PopulationSystem
-```
-
-Correct:
-
-```
-Simulation → FoodSystem
-Simulation → PopulationSystem
-```
+Multiple settlements within one polity represent increasing societal complexity.
 
 ---
 
-# Performance Strategy
+# Core Systems
 
-LivingWorld prioritizes **scalable simulation design**.
+## Ecology System
 
-Key techniques include:
+The ecology system generates environmental resources.
 
-### Aggregated Population
+Responsibilities include:
 
-Population is stored as counts rather than individual agents.
-
-### Region Abstraction
-
-Regions represent large areas rather than grid tiles.
-
-### System Separation
-
-Each system processes only the data it requires.
+* generating biomass
+* seasonal ecological growth
+* determining regional productivity
 
 ---
 
-# Testing Strategy
+## Food System
 
-Future development should include:
+The food system converts ecological resources into usable food.
 
-- deterministic simulation tests
-- system-level unit tests
-- simulation stability tests
+Processes include:
 
-Example test scenarios:
+* harvesting biomass
+* food storage
+* food consumption
+* famine detection
 
-- famine collapse
-- migration waves
-- population booms
-
----
-
-# Future Architectural Extensions
-
-As the simulation expands, new systems may include:
-
-- MigrationSystem
-- SettlementSystem
-- AdvancementSystem
-- EconomySystem
-- TradeSystem
-- DiplomacySystem
-- WarfareSystem
-- CultureSystem
-
-Each new system must follow the architecture rules described above.
+Food availability directly influences population growth and migration.
 
 ---
 
-# Long-Term Engine Structure
+## Population System
 
-The long-term architecture may evolve toward a more structured simulation framework:
+Population is tracked as **aggregated counts** rather than individual agents.
 
-```
-World
- ├ Core Data
- ├ Simulation Systems
- ├ Generation Systems
- └ Reporting Systems
-```
+Population changes include:
 
-This structure allows the engine to grow without sacrificing maintainability.
+* growth during surplus
+* decline during famine
+* redistribution through migration
+* fragmentation during polity splits
 
 ---
 
-# Summary
+## Migration System
 
-LivingWorld uses a **system-driven simulation architecture** built around shared world state and deterministic updates.
+Migration allows societies to relocate when conditions change.
 
-Key characteristics include:
+Migration may occur due to:
 
-- deterministic simulation
-- modular systems
-- centralized update loop
-- clear data ownership
-- scalable design
+* food scarcity
+* population pressure
+* ecological opportunity
+* social instability
 
-This architecture supports the long-term goal of simulating **complex emergent world histories**.
+Migration spreads societies across regions.
+
+---
+
+## Knowledge System
+
+Knowledge represents discovered capabilities.
+
+LivingWorld uses a **probabilistic discovery system** instead of a fixed tech tree.
+
+Discovery may depend on:
+
+* environmental exposure
+* societal need
+* prerequisite knowledge
+* available surplus
+
+Knowledge unlocks new capabilities in the simulation.
+
+---
+
+## Historical Event System
+
+The historical event system records notable events.
+
+Events are stored as chronological records representing world history.
+
+Examples include:
+
+* migrations
+* settlement founding
+* knowledge discoveries
+* polity splits
+* famine events

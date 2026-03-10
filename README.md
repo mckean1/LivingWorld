@@ -1,297 +1,293 @@
-## Documentation
-
-Project documentation is available in the following files:
-
-- DESIGN.md
-- ARCHITECTURE.md
-- SYSTEMS.md
-- SIMULATION_RULES.md
-
 # LivingWorld
 
-LivingWorld is a **procedural world simulation engine** where species evolve, societies form, civilizations emerge, and complex histories unfold over long spans of simulated time.
+LivingWorld is a command-line autonomous world simulation where ecosystems, species, societies, and civilizations emerge over time.
 
-The project focuses on **emergent systems**, where large-scale historical outcomes arise naturally from simple interacting rules.
+The simulation generates a procedural world and runs centuries of history before the player enters. During this time species spread, societies migrate, settlements form, knowledge is discovered, and civilizations begin to emerge.
 
----
-
-# Project Goals
-
-LivingWorld aims to simulate:
-
-- ecological systems
-- species evolution
-- society formation
-- civilization development
-- migration
-- resource competition
-- long-term historical change
-
-Rather than scripting events, LivingWorld relies on **system interactions** to produce history.
+The goal of the project is to produce **emergent history**, where complex civilizations arise naturally from interacting systems such as ecology, population dynamics, migration, resource pressure, and knowledge discovery.
 
 ---
 
-# Core Philosophy
+# Core Design Principles
 
-## Emergence Over Scripting
+LivingWorld prioritizes **emergent simulation** rather than scripted gameplay.
 
-Civilizations, trade networks, migration, famine, and conflict should arise naturally from simulation systems.
+The world evolves through interacting systems where:
 
-## Ecology Drives History
+* species adapt to environments
+* societies respond to ecological pressure
+* migration redistributes populations
+* settlements anchor civilization growth
+* knowledge emerges from conditions
+* history develops naturally through simulation
 
-Food production and ecological capacity drive population growth and migration.
+The simulation models **processes that create history**, rather than scripting historical events.
+
+---
+
+# Simulation Overview
+
+The simulation runs in **monthly ticks**, with seasonal logic layered on top.
+
+Each simulated year roughly processes:
 
 ```
-sunlight
-→ plants
-→ animals
-→ food
-→ population
-→ societies
-→ civilizations
+Ecological growth
+Resource harvesting
+Food consumption
+Population growth or decline
+Migration decisions
+Settlement development
+Knowledge discovery
+Polity events
+Historical logging
 ```
 
-## Autonomous Systems
-
-Most systems operate autonomously.  
-The player will eventually guide strategic direction rather than micromanaging individual actors.
-
-## Long Timescale Simulation
-
-The world can simulate **hundreds or thousands of years** before the player begins interacting with it.
+The world is simulated for approximately **1000 years before the player begins**, allowing civilizations to develop naturally.
 
 ---
 
 # World Model
 
-LivingWorld uses a **pure region-based world map**.
+The world is composed of **regions rather than grid cells or tiles**.
 
-```
-World
- └ Regions
-     ├ Ecology
-     ├ Resources
-     ├ Species
-     └ Societies
-```
+Each region stores abstract environmental and ecological information.
 
-Regions store environmental values such as:
+Region properties may include:
 
-- fertility
-- water availability
-- plant biomass
-- animal biomass
-- biome
-- climate
+* climate
+* fertility
+* water access
+* ecological biomass
+* species presence
+* settlements
+* societies
 
-Regions act as **ecological containers** that societies interact with.
+Regions generate **biomass**, representing plant and animal life available for consumption.
 
 ---
 
 # Species
 
-Species emerge from primitive life through evolutionary processes.
+Species represent biological populations inhabiting the world.
 
-Species define biological traits that influence behavior:
+Species influence:
 
-- intelligence
-- cooperation
-- aggression
-- adaptability
-- reproduction rate
-- curiosity
+* ecological efficiency
+* environmental adaptation
+* behavioral tendencies
+* survival traits
 
-These traits influence how societies grow and develop.
+Societies are always composed of members of a **single species**.
 
 ---
 
-# Societies and Civilizations
+# Societies and Polities
 
-LivingWorld models social development as a **single evolving entity**.
+The primary social unit in the simulation is a **Polity**.
 
-```
-Society → Civilization → Nation → Empire
-```
+A polity represents an organized group of a species acting as a social and economic unit.
 
-A **Society** represents a cohesive social group.
+Polities may:
 
-A **Civilization** emerges when a society develops sufficient complexity, such as:
+* migrate between regions
+* found settlements
+* split into new groups
+* discover knowledge
+* experience famine or surplus
 
-- permanent settlements
-- food surplus
-- labor specialization
-- leadership structures
-- multiple communities
-
-The same lineage evolves through these stages.
+Over time, polities may evolve into **civilizations** as their complexity increases.
 
 ---
 
 # Population Model
 
-Population is modeled using **aggregated counts**, not individuals.
+Population is tracked as **aggregated counts** rather than individual agents.
 
-Population exists on:
+Population is typically stored at the polity or settlement level.
 
-- societies
-- settlements (later)
+Population change is influenced by:
+
+* food availability
+* environmental conditions
+* migration opportunities
+* societal stability
+
+Future versions may introduce simplified age cohorts such as:
+
+* young
+* adult
+* old
+
+---
+
+# Ecology and Food System
+
+Regions generate **ecological biomass** each season.
+
+This biomass represents food accessible through activities such as:
+
+* hunting
+* gathering
+* fishing
+* agriculture
+
+Food dynamics include:
+
+* seasonal growth
+* harvesting
+* storage
+* famine events
+
+Food availability strongly influences migration, settlement stability, and population growth.
+
+---
+
+# Settlements
+
+Settlements represent **permanent population centers** founded by societies.
+
+Settlements track:
+
+* population
+* founding year
+* region location
+* food production
+
+Settlements allow societies to transition from nomadic groups into more complex social structures.
+
+They serve as the foundation for civilization development.
+
+---
+
+# Knowledge and Advancement
+
+LivingWorld uses a **probabilistic knowledge discovery system** rather than a rigid technology tree.
+
+Knowledge discovery depends on factors such as:
+
+* environmental exposure
+* societal needs
+* prerequisite knowledge
+* available surplus
+* time
+
+Examples of knowledge include:
+
+* agriculture
+* pottery
+* animal domestication
+* construction techniques
+
+Knowledge unlocks **new capabilities in the simulation**, affecting food production, settlement development, and societal complexity.
+
+---
+
+# Migration and Societal Change
+
+Societies dynamically respond to environmental pressures.
+
+Migration may be triggered by:
+
+* food scarcity
+* population pressure
+* ecological opportunity
+* internal societal tension
+
+Societies may also split into new groups when internal pressures become too large.
+
+This produces natural expansion and cultural divergence across regions.
+
+---
+
+# Historical Event Logging
+
+The simulation records important events as a chronological history.
+
+Logs are intentionally short and readable, resembling historical records.
 
 Example:
 
 ```
-Stone River Society
-Population: 48
+Year 412
+
+Red River Clan migrated to Northern Plains
+Stone Ford discovered Agriculture
+Oak Valley Society founded River Camp
 ```
 
-Future versions may introduce demographic cohorts:
-
-```
-Young
-Adult
-Old
-```
+Only **notable events** are included in the default output to maintain readability.
 
 ---
 
-# Ecology and Food
+# Player Entry
 
-Regions generate **biomass**:
+After the autonomous world simulation completes, the player selects an existing society.
 
-- plant biomass
-- animal biomass
+The player then guides the strategic development of that society as it grows into a civilization.
 
-Societies harvest biomass for food.
-
-Food systems drive:
-
-- population growth
-- migration
-- famine
-- societal stability
-
-Seasonal cycles influence ecological production:
-
-```
-Spring → growth
-Summer → peak biomass
-Autumn → harvest
-Winter → scarcity
-```
+The underlying simulation continues to run throughout gameplay.
 
 ---
 
-# Simulation Time
+# Architecture Overview
 
-LivingWorld uses **monthly simulation ticks**.
-
-```
-1 tick = 1 month
-12 ticks = 1 year
-```
-
-Seasonal logic is layered on top of monthly ticks.
-
-Current simulation loop:
+The simulation is organized into several interacting systems:
 
 ```
-1. Advance Time
-2. Region Ecology Update
-3. Food Gathering
-4. Food Consumption
-5. Population Update
-6. Yearly Report
+World
+ ├─ Regions
+ ├─ Species
+ ├─ Polities
+ ├─ Settlements
+ ├─ Ecology System
+ ├─ Population System
+ ├─ Food System
+ ├─ Knowledge System
+ └─ Historical Logging
 ```
+
+These systems interact to generate emergent world history.
 
 ---
 
-# Project Structure
+# Development Roadmap
 
-```
-LivingWorld/
- ├ Core/
- │   ├ World.cs
- │   ├ WorldTime.cs
- │   └ Simulation.cs
- │
- ├ Generation/
- │   └ WorldGenerator.cs
- │
- ├ Life/
- │   └ Species.cs
- │
- ├ Map/
- │   └ Region.cs
- │
- ├ Societies/
- │   └ Polity.cs
- │
- ├ Systems/
- │   ├ FoodSystem.cs
- │   └ PopulationSystem.cs
- │
- └ Program.cs
-```
+Planned systems for future development include:
 
----
+### Knowledge Diffusion
 
-# Running the Simulation
+Spread of discoveries between societies through migration, proximity, trade, and conflict.
 
-Currently the project runs as a **console simulation**.
+### Trade Networks
 
-The program will:
+Exchange of goods and resources between settlements and civilizations.
 
-1. Generate a world
-2. Generate species
-3. Generate starting societies
-4. Run the simulation month-by-month
-5. Print yearly summaries
+### Cultural Divergence
 
-The simulation pauses each year so results can be reviewed.
+Development of distinct cultural identities.
+
+### Warfare and Territorial Conflict
+
+Competition between civilizations for land and resources.
+
+### Governance Systems
+
+Internal political structures within civilizations.
+
+### Dynamic Economy
+
+Supply and demand systems influencing production and trade.
 
 ---
 
-# Roadmap
+# Project Goals
 
-## Current Systems
+LivingWorld explores questions such as:
 
-- Region ecology
-- Species generation
-- Societies
-- Food gathering
-- Population dynamics
-- Simulation loop
+* How do civilizations emerge from ecological pressure?
+* How do migration and scarcity shape history?
+* How does knowledge spread between societies?
+* What conditions lead to societal collapse?
 
-## Planned Systems
-
-- Migration and expansion
-- Society splitting
-- Settlement creation
-- Advancement / knowledge system
-- Society → civilization transitions
-- Trade networks
-- Diplomacy and conflict
-- Species evolution
-- Long-term ecological change
-
----
-
-# Development Status
-
-LivingWorld is currently in **early simulation engine development**.
-
-The current focus is building a stable simulation foundation before introducing gameplay systems.
-
----
-
-# Long-Term Vision
-
-The long-term goal is a **fully autonomous historical simulation** where:
-
-- ecosystems evolve
-- species emerge
-- societies form
-- civilizations rise and fall
-- cultures diverge
-- economies develop
-
-Each generated world should produce **unique histories** driven entirely by system interactions.
+By simulating these processes, LivingWorld aims to produce **dynamic and believable world histories**.
