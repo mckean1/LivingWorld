@@ -198,6 +198,6 @@ public sealed class SettlementSystem
 
     private static string BuildSettledSocietyNarrative(Polity polity, Region region)
         => polity.HasAdvancement(AdvancementId.LeadershipTraditions)
-            ? $"{polity.Name} became a civilization in {region.Name}"
+            ? $"{polity.Name} became a settled society in {region.Name}"
             : $"{polity.Name} became a settled people in {region.Name}";
 }

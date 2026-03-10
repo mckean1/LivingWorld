@@ -39,6 +39,7 @@ Population growth or decline
 Migration decisions
 Settlement development
 Knowledge discovery
+Polity stage progression
 Polity events
 Historical logging
 ```
@@ -97,6 +98,13 @@ Polities may:
 * experience famine or surplus
 
 Over time, polities may evolve into **civilizations** as their complexity increases.
+
+Polities now track an explicit stage progression:
+
+* Band
+* Tribe
+* Settled Society
+* Civilization
 
 ---
 
@@ -232,6 +240,7 @@ Year 412
 Red River Clan migrated to Northern Plains
 Stone Ford discovered Agriculture
 Oak Valley Society founded River Camp
+Riverwatch Clan became a Tribe
 Ashen Vale Clan split from Riverwatch Clan in Ashen Vale
 ```
 

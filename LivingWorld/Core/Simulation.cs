@@ -14,6 +14,7 @@ public sealed class Simulation
     private readonly AdvancementSystem _advancementSystem;
     private readonly SettlementSystem _settlementSystem;
     private readonly FragmentationSystem _fragmentationSystem;
+    private readonly PolityStageSystem _polityStageSystem;
     private readonly SimulationOptions _options;
     private readonly NarrativeRenderer _narrativeRenderer;
 
@@ -26,6 +27,7 @@ public sealed class Simulation
         _advancementSystem = new AdvancementSystem();
         _settlementSystem = new SettlementSystem();
         _fragmentationSystem = new FragmentationSystem();
+        _polityStageSystem = new PolityStageSystem();
         _options = options ?? new SimulationOptions();
         _narrativeRenderer = new NarrativeRenderer();
     }
@@ -63,6 +65,7 @@ public sealed class Simulation
             _advancementSystem.UpdateAdvancements(_world);
             _settlementSystem.UpdateSettlements(_world);
             _fragmentationSystem.UpdateFragmentation(_world);
+            _polityStageSystem.UpdatePolityStages(_world);
 
             AddYearlyFoodStressEvents();
 
@@ -194,7 +197,8 @@ public sealed class Simulation
                 $"Frag={polity.FragmentationPressure,4:F2} " +
                 $"Cool={polity.SplitCooldownYears,2} " +
                 $"Know={polity.Advancements.Count,2} " +
-                $"Settle={polity.SettlementStatus,-11}");
+                $"Settle={polity.SettlementStatus,-11} " +
+                $"Stage={polity.Stage,-14}");
         }
     }
 

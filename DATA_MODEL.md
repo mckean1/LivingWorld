@@ -17,6 +17,7 @@ World
 Region
 Species
 Polity
+PolityStage
 Settlement
 Knowledge
 HistoricalEvent
@@ -120,6 +121,7 @@ Typical properties:
 Name
 Species
 Population
+Stage
 Settlements
 CurrentRegion
 KnownKnowledge
@@ -140,6 +142,13 @@ Responsibilities:
 
 Polities evolve over time and may transition into civilizations.
 
+`Stage` stores explicit polity progression state:
+
+* Band
+* Tribe
+* Settled Society
+* Civilization
+
 Fragmentation-related notes:
 
 * `ParentPolityId` records simple parent-child lineage for split-off polities
@@ -147,6 +156,7 @@ Fragmentation-related notes:
 * `FoodStressYears` tracks sustained shortage pressure across years
 * `SplitCooldownYears` prevents immediate repeat fragmentation
 * settlement-related fields continue to represent actual established settlement presence; fragmented children begin without settlement state until the settlement system creates it
+* fragmented children inherit a sensible starting `Stage` from their parent context instead of always resetting blindly
 
 ---
 

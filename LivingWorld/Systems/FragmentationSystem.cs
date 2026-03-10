@@ -221,7 +221,8 @@ public sealed class FragmentationSystem
             parent.SpeciesId,
             target.Id,
             transferPopulation,
-            parent.Id)
+            parent.Id,
+            DetermineChildStartingStage(parent))
         {
             FoodStores = foodTransfer,
             YearsInCurrentRegion = 0,
@@ -317,4 +318,12 @@ public sealed class FragmentationSystem
         => parent.SettlementStatus == SettlementStatus.Settled
             ? $"{parent.Name} founded {child.Name} in {target.Name}"
             : $"{child.Name} split from {parent.Name} in {target.Name}";
+
+    private static PolityStage DetermineChildStartingStage(Polity parent)
+        => parent.Stage switch
+        {
+            PolityStage.Band => PolityStage.Band,
+            PolityStage.Tribe => PolityStage.Tribe,
+            _ => PolityStage.Tribe
+        };
 }

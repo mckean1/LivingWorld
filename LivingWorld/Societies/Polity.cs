@@ -10,6 +10,7 @@ public sealed class Polity
     public int RegionId { get; set; }
     public int Population { get; set; }
     public int? ParentPolityId { get; set; }
+    public PolityStage Stage { get; set; }
 
     public int YearsSinceFounded { get; set; }
     public int YearsInCurrentRegion { get; set; }
@@ -48,7 +49,14 @@ public sealed class Polity
     public HashSet<AdvancementId> Advancements { get; }
     public bool HasSettlements => SettlementCount > 0;
 
-    public Polity(int id, string name, int speciesId, int regionId, int population, int? parentPolityId = null)
+    public Polity(
+        int id,
+        string name,
+        int speciesId,
+        int regionId,
+        int population,
+        int? parentPolityId = null,
+        PolityStage stage = PolityStage.Band)
     {
         Id = id;
         Name = name;
@@ -56,6 +64,7 @@ public sealed class Polity
         RegionId = regionId;
         Population = population;
         ParentPolityId = parentPolityId;
+        Stage = stage;
 
         YearsSinceFounded = 0;
         YearsInCurrentRegion = 0;

@@ -30,6 +30,13 @@ World
 
 Each system updates the world state during the simulation loop.
 
+The yearly loop now includes a dedicated polity stage pass that advances polities through:
+
+* Band
+* Tribe
+* Settled Society
+* Civilization
+
 ---
 
 # Core Entities
@@ -106,6 +113,8 @@ Polities are responsible for:
 * splitting into new societies through yearly fragmentation checks
 
 Over time, polities may transition into **civilizations** as their complexity grows.
+
+Each polity stores a persistent stage value, so progression is explicit state rather than inferred only from settlement status.
 
 ---
 
@@ -239,6 +248,23 @@ Discovery may depend on:
 * available surplus
 
 Knowledge unlocks new capabilities in the simulation.
+
+---
+
+## Polity Stage System
+
+The polity stage system evaluates each active polity yearly and advances stages when thresholds are met.
+
+Its v1 inputs are intentionally simple and tunable:
+
+* total population
+* polity longevity
+* settlement durability
+* annual food stability
+* advancement count
+* sustained stress indicators
+
+This version is advancement-only (no automatic regression) and emits short historical transition events.
 
 ---
 

@@ -66,6 +66,27 @@ Knowledge discoveries may enable:
 
 ---
 
+# Polity Stage Transitions
+
+Stage events occur when a polity advances through social complexity stages.
+
+Examples:
+
+```
+Red River Clan became a Tribe
+Ashen Vale became a Settled Society
+Naru formed a Civilization
+```
+
+Current stages:
+
+* Band
+* Tribe
+* Settled Society
+* Civilization
+
+---
+
 # Polity Splits
 
 Societies may fragment into multiple groups.
@@ -118,6 +139,7 @@ Year 412
 Red River Clan migrated to Northern Plains
 Stone Ford discovered Agriculture
 Oak Valley Clan founded River Camp
+Riverwatch Clan became a Tribe
 
 Year 417
 

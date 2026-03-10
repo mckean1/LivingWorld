@@ -41,6 +41,9 @@ Societies moving between regions
 Knowledge System
 Probabilistic discovery of new capabilities
 
+Polity Stage Progression
+Yearly advancement through Band, Tribe, Settled Society, and Civilization based on tunable thresholds
+
 Historical Event System
 Chronological logging of important events
 
@@ -90,7 +93,7 @@ Goals:
 Key features:
 
 Civilization Thresholds
-Polities become civilizations when they reach sufficient complexity.
+An initial threshold-based stage system is now in place and can be tuned or expanded with richer civic criteria over time.
 
 Settlement Networks
 Civilizations manage multiple population centers.

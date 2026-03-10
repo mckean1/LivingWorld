@@ -131,6 +131,8 @@ Early societies typically begin as:
 
 These groups migrate frequently while exploring the world.
 
+At initialization, polities begin at the `Band` stage. Later stage transitions are evaluated during yearly simulation updates as conditions improve.
+
 ---
 
 # Pre-Player Simulation

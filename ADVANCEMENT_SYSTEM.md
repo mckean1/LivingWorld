@@ -156,6 +156,8 @@ Improves settlement stability and expansion.
 
 These effects modify how societies interact with the world.
 
+Advancements also contribute to polity stage progression indirectly. Higher stage thresholds now consider advancement count alongside settlement durability, population, longevity, and food stability.
+
 ---
 
 # Knowledge Storage
@@ -174,6 +176,8 @@ Polity
 ```
 
 This allows different civilizations to develop unique technological profiles.
+
+The yearly polity stage pass runs separately from discovery, so advancement remains modular while still influencing social complexity transitions.
 
 ---
 

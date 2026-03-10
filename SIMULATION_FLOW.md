@@ -27,6 +27,7 @@ Year
  |- Knowledge discovery
  |- Settlement progression
  |- Fragmentation checks
+ |- Polity stage progression
  `- Historical event recording
 ```
 
@@ -101,6 +102,7 @@ Knowledge discovery
 Settlement expansion
 Migration outcomes
 Polity fragmentation
+Polity stage transitions
 Historical event generation
 ```
 
@@ -116,6 +118,13 @@ Yearly fragmentation details:
 * the child starts without settlement state until the settlement system later founds one
 * child names stay readable through simple uniqueness suffixes such as `II` and `III`
 * a short history entry is emitted for the split
+
+Yearly polity stage details:
+
+* each active polity is evaluated once per year after settlement and fragmentation updates
+* progression is advancement-only in v1 (no automatic regression)
+* stage checks use population, longevity, settlement durability, annual food stability, and advancement count
+* stage transitions emit short historical entries such as `Riverwatch Clan became a Tribe`
 
 ---
 
