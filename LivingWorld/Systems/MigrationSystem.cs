@@ -39,7 +39,7 @@ public sealed class MigrationSystem
 
                     world.AddEvent(
                         "MIGRATION",
-                        $"{polity.Name} left {currentRegion.Name} and migrated to {target.Name}.",
+                        $"{polity.Name} migrated to {target.Name}",
                         $"{polity.Name} migrated from Region {currentRegion.Id} to Region {target.Id}."
                     );
                 }

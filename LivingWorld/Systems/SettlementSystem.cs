@@ -192,14 +192,12 @@ public sealed class SettlementSystem
                 && polity.HasAdvancement(AdvancementId.LeadershipTraditions));
 
     private static string BuildFirstSettlementNarrative(Polity polity, Region region)
-    {
-        string settlementType = polity.HasAdvancement(AdvancementId.Agriculture)
-            ? "permanent farming settlement"
-            : "lasting settlement";
-
-        return $"{polity.Name} established its first {settlementType} in {region.Name}.";
-    }
+        => polity.HasAdvancement(AdvancementId.Agriculture)
+            ? $"{polity.Name} founded a settlement in {region.Name}"
+            : $"{polity.Name} founded a settlement in {region.Name}";
 
     private static string BuildSettledSocietyNarrative(Polity polity, Region region)
-        => $"{polity.Name} grew into a more established settled society in {region.Name}.";
+        => polity.HasAdvancement(AdvancementId.LeadershipTraditions)
+            ? $"{polity.Name} became a civilization in {region.Name}"
+            : $"{polity.Name} became a settled people in {region.Name}";
 }

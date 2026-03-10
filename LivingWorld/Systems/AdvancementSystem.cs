@@ -100,18 +100,5 @@ public sealed class AdvancementSystem
         => definition.Prerequisites.All(polity.HasAdvancement);
 
     private static string BuildDiscoveryNarrative(Polity polity, AdvancementDefinition definition)
-        => $"{polity.Name} developed {definition.Name.ToLowerInvariant()}, {BuildDiscoveryFlavor(definition.Id)}";
-
-    private static string BuildDiscoveryFlavor(AdvancementId advancementId)
-        => advancementId switch
-        {
-            AdvancementId.OrganizedHunting => "refining the hunt into a more coordinated practice.",
-            AdvancementId.SeasonalPlanning => "reading the rhythm of the year more carefully than before.",
-            AdvancementId.FoodStorage => "learning how to carry abundance across the lean season.",
-            AdvancementId.Agriculture => "turning fertile ground into a deliberate source of food.",
-            AdvancementId.BasicConstruction => "raising sturdier dwellings and shared structures.",
-            AdvancementId.LeadershipTraditions => "placing greater trust in custom and recognized guidance.",
-            AdvancementId.CraftSpecialization => "freeing skilled hands to focus on dedicated work.",
-            _ => "marking a new step in its shared knowledge."
-        };
+        => $"{polity.Name} discovered {definition.Name}";
 }

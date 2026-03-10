@@ -6,7 +6,7 @@ public sealed class SimulationOptions
         => new()
         {
             OutputMode = OutputMode.Narrative,
-            StreamTickChronicle = true,
+            StreamTickChronicle = false,
             TickDelayMilliseconds = tickDelayMilliseconds
         };
 

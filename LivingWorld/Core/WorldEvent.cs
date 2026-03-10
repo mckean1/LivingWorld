@@ -13,8 +13,27 @@ public sealed class WorldEvent
         Year = year;
         Month = month;
         Type = type;
-        Narrative = narrative;
+        Narrative = NormalizeNarrative(narrative);
         Details = details;
+    }
+
+    public string HistoricalText => FormatHistoricalEvent(Year, Narrative);
+
+    public static string FormatHistoricalEvent(int year, string narrative)
+        => $"Year {year} \u2014 {NormalizeNarrative(narrative)}";
+
+    private static string NormalizeNarrative(string narrative)
+    {
+        string trimmed = narrative.Trim();
+        if (trimmed.Length == 0)
+        {
+            return trimmed;
+        }
+
+        char lastCharacter = trimmed[^1];
+        return lastCharacter is '.' or '!' or '?'
+            ? trimmed
+            : $"{trimmed}.";
     }
 
     public override string ToString()

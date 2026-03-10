@@ -196,14 +196,14 @@ public sealed class Simulation
     {
         if (annualFoodRatio < 0.50)
         {
-            return $"{polity.Name} slipped into famine after months of hunger and loss.";
+            return $"{polity.Name} fell into famine";
         }
 
         if (annualFoodRatio < 0.75)
         {
-            return $"{polity.Name} weathered a hard year of rationing and thin stores.";
+            return $"{polity.Name} endured a year of hunger";
         }
 
-        return $"{polity.Name} faced repeated shortages, and hunger shadowed much of the year.";
+        return $"{polity.Name} faced repeated food shortages";
     }
 }

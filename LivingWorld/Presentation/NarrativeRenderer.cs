@@ -27,7 +27,7 @@ public sealed class NarrativeRenderer
 
         foreach (WorldEvent worldEvent in eventsThisMonth)
         {
-            lines.Add($"  Event: {worldEvent.Narrative}");
+            lines.Add($"  {worldEvent.HistoricalText}");
         }
 
         lines.Add(string.Empty);
@@ -51,22 +51,13 @@ public sealed class NarrativeRenderer
         lines.Add(BuildWorldOverview(activePolities, totalPopulation, eventsThisYear.Count));
         lines.Add(string.Empty);
 
-        foreach (Polity polity in world.Polities
-                     .Where(p => p.Population > 0)
-                     .OrderByDescending(p => p.Population)
-                     .ThenBy(p => p.Name))
-        {
-            lines.Add(RenderPolitySummary(world, polity));
-        }
-
         if (eventsThisYear.Count > 0)
         {
-            lines.Add(string.Empty);
             lines.Add("Notable events");
 
             foreach (WorldEvent worldEvent in eventsThisYear)
             {
-                lines.Add($"- {FormatMonth(worldEvent.Month)}: {worldEvent.Narrative}");
+                lines.Add($"- {worldEvent.Narrative}");
             }
         }
 
@@ -76,13 +67,9 @@ public sealed class NarrativeRenderer
     private static string BuildWorldOverview(int activePolities, int totalPopulation, int eventCount)
     {
         string polityText = activePolities == 1 ? "one active people" : $"{activePolities} active peoples";
-        string eventText = eventCount == 0
-            ? "The year passed without a defining upheaval."
-            : eventCount == 1
-                ? "One event stood out strongly enough to enter the yearly chronicle."
-                : $"{eventCount} events stood out strongly enough to enter the yearly chronicle.";
-
-        return $"The world now holds {polityText} with a combined population of {totalPopulation}. {eventText}";
+        return eventCount == 0
+            ? $"The world now holds {polityText} with a combined population of {totalPopulation}. No major events were recorded."
+            : $"The world now holds {polityText} with a combined population of {totalPopulation}.";
     }
 
     private static string BuildMonthlyOverview(World world)

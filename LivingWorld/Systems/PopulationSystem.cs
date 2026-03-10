@@ -5,6 +5,8 @@ namespace LivingWorld.Systems;
 
 public sealed class PopulationSystem
 {
+    private static readonly int[] PopulationMilestones = [25, 50, 100, 250, 500, 1000];
+
     public void UpdatePopulation(World world)
     {
         if (world.Time.Month != 12)
@@ -14,6 +16,8 @@ public sealed class PopulationSystem
 
         foreach (Polity polity in world.Polities)
         {
+            int previousPopulation = polity.Population;
+
             if (polity.Population <= 0)
             {
                 polity.Population = 0;
@@ -46,6 +50,42 @@ public sealed class PopulationSystem
             {
                 polity.Population = 0;
             }
+
+            AddPopulationEvents(world, polity, previousPopulation);
         }
+    }
+
+    private static void AddPopulationEvents(World world, Polity polity, int previousPopulation)
+    {
+        if (previousPopulation > 0 && polity.Population == 0)
+        {
+            string collapseNarrative = polity.StarvationMonthsThisYear >= 6
+                ? $"{polity.Name} collapsed after prolonged famine"
+                : $"{polity.Name} collapsed";
+
+            world.AddEvent(
+                "COLLAPSE",
+                collapseNarrative,
+                $"{polity.Name} fell from population {previousPopulation} to 0."
+            );
+
+            return;
+        }
+
+        int? milestone = PopulationMilestones
+            .Where(value => previousPopulation < value && polity.Population >= value)
+            .OrderBy(value => value)
+            .FirstOrDefault();
+
+        if (milestone is null || milestone.Value == 0)
+        {
+            return;
+        }
+
+        world.AddEvent(
+            "POPULATION",
+            $"{polity.Name} grew to {milestone.Value} people",
+            $"{polity.Name} grew from population {previousPopulation} to {polity.Population}, crossing milestone {milestone.Value}."
+        );
     }
 }
