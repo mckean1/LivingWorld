@@ -111,8 +111,9 @@ public sealed class NarrativeRenderer
         string growth = DescribePopulation(polity, annualFoodRatio);
         string stores = DescribeFoodStores(polity);
         string knowledge = DescribeKnowledge(polity);
+        string settlement = DescribeSettlement(polity);
 
-        return $"{polity.Name} in {region.Name} {condition} {growth} {stores} {movement} {knowledge}";
+        return $"{polity.Name} in {region.Name} {condition} {growth} {stores} {movement} {settlement} {knowledge}";
     }
 
     private static string RenderMonthlyPolityBeat(World world, Polity polity)
@@ -136,9 +137,18 @@ public sealed class NarrativeRenderer
 
         string movementBeat = polity.MovedThisYear && polity.PreviousRegionId != polity.RegionId
             ? $"after arriving in {region.Name}"
-            : $"while holding to {region.Name}";
+            : polity.SettlementStatus == SettlementStatus.Nomadic
+                ? $"while ranging through {region.Name}"
+                : $"while holding to {region.Name}";
 
-        return $"{polity.Name} {foodBeat} {movementBeat}, {storeBeat}.";
+        string settlementBeat = polity.SettlementStatus switch
+        {
+            SettlementStatus.Settled => "from a lasting settlement",
+            SettlementStatus.SemiSettled => "from a growing hearth-site",
+            _ => "as a mobile people"
+        };
+
+        return $"{polity.Name} {foodBeat} {movementBeat}, {settlementBeat}, {storeBeat}.";
     }
 
     private static RegionSnapshot GetRegionSnapshot(World world, int regionId)
@@ -229,8 +239,18 @@ public sealed class NarrativeRenderer
             return "Some families spoke quietly of better land elsewhere.";
         }
 
-        return "They remained settled in their homeland.";
+        return polity.SettlementStatus == SettlementStatus.Nomadic
+            ? "They remained a mobile people."
+            : "They held close to their home region.";
     }
+
+    private static string DescribeSettlement(Polity polity)
+        => polity.SettlementStatus switch
+        {
+            SettlementStatus.Settled => "A durable settled way of life now shapes their society.",
+            SettlementStatus.SemiSettled => "A first settlement is beginning to anchor the people.",
+            _ => "They still live without a lasting settlement."
+        };
 
     private static string DescribeKnowledge(Polity polity)
     {

@@ -11,6 +11,7 @@ public sealed class Polity
     public int Population { get; set; }
 
     public int YearsSinceFounded { get; set; }
+    public int YearsInCurrentRegion { get; set; }
 
     public double FoodStores { get; set; }
     public double MigrationPressure { get; set; }
@@ -36,7 +37,12 @@ public sealed class Polity
     // Ongoing stress
     public int StarvationMonthsThisYear { get; set; }
 
+    public SettlementStatus SettlementStatus { get; set; }
+    public int SettlementCount { get; set; }
+    public int YearsSinceFirstSettlement { get; set; }
+
     public HashSet<AdvancementId> Advancements { get; }
+    public bool HasSettlements => SettlementCount > 0;
 
     public Polity(int id, string name, int speciesId, int regionId, int population)
     {
@@ -47,6 +53,7 @@ public sealed class Polity
         Population = population;
 
         YearsSinceFounded = 0;
+        YearsInCurrentRegion = 0;
 
         FoodStores = 0;
         MigrationPressure = 0;
@@ -66,6 +73,10 @@ public sealed class Polity
         AnnualFoodConsumed = 0;
         AnnualFoodShortage = 0;
         StarvationMonthsThisYear = 0;
+
+        SettlementStatus = SettlementStatus.Nomadic;
+        SettlementCount = 0;
+        YearsSinceFirstSettlement = 0;
         Advancements = new HashSet<AdvancementId>();
     }
 
@@ -92,4 +103,5 @@ public sealed class Polity
             Advancements.Add(advancement);
         }
     }
+
 }

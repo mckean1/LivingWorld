@@ -68,12 +68,19 @@ public sealed class MigrationSystem
         double foodStorePressure = 1.0 - foodSafety;
         double ecologyPressure = 1.0 - ecologyRatio;
         double crowdingPressure = Math.Clamp(crowdingRatio - 1.0, 0.0, 1.0);
+        double settlementAnchor = polity.SettlementStatus switch
+        {
+            SettlementStatus.Settled => 0.18,
+            SettlementStatus.SemiSettled => 0.08,
+            _ => 0.0
+        };
 
         double pressure =
             (shortagePressure * 0.40) +
             (foodStorePressure * 0.25) +
             (ecologyPressure * 0.20) +
-            (crowdingPressure * 0.15);
+            (crowdingPressure * 0.15) -
+            settlementAnchor;
 
         return Math.Clamp(pressure, 0.0, 1.0);
     }
