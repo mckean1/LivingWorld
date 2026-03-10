@@ -465,4 +465,728 @@ Population should respond to actual food conditions, not the other way around.
 
 ---
 
-## Step 9 – Evaluate Migration
+## Step 9 – Evaluate Migration Pressure
+
+### Purpose
+
+Determine whether groups feel compelled to move.
+
+### Responsibilities
+
+- evaluate migration pressure from shortage, overpopulation, ecological decline, or opportunity
+- identify candidate populations for movement
+- rank neighboring destinations
+- prepare migrations
+
+### Inputs
+
+- food shortage states
+- famine states
+- population pressure
+- species/ecology conditions
+- neighboring region suitability
+- distance and connectivity
+- settlement opportunities
+
+### Outputs
+
+- migration decisions
+- movement candidates
+- founder group selection
+
+### Possible Events
+
+- `MigrationPressureIncreasedEvent`
+- `MigrationStartedEvent`
+
+### Example
+
+```text
+FoodShortageStartedEvent
+    + neighboring fertile river valley
+    ↓
+migration begins
+```
+
+---
+
+## Step 10 – Resolve Migration Movement
+
+### Purpose
+
+Move population groups and apply arrival/failure outcomes.
+
+### Responsibilities
+
+- transfer migrants
+- resolve destination arrival
+- handle failed migration outcomes
+- create founder populations where appropriate
+- create conditions for future polity splits or new settlement founding
+
+### Inputs
+
+- migration plans from previous step
+- destination suitability
+- movement survival rules
+- travel difficulty
+
+### Outputs
+
+- migrant populations relocated
+- new regional pressure patterns
+- arrival or failure outcomes
+
+### Possible Events
+
+- `MigrationArrivedEvent`
+- `MigrationFailedEvent`
+
+### Notes
+
+This step should happen before settlement updates because settlement founding may depend on newly arrived groups.
+
+---
+
+## Step 11 – Update Settlement System
+
+### Purpose
+
+Resolve permanent population centers after movement and population changes.
+
+### Responsibilities
+
+- found new settlements
+- expand viable settlements
+- identify declining settlements
+- abandon failed settlements
+- evaluate core settlement shifts
+
+### Inputs
+
+- migration arrivals
+- population totals
+- local food conditions
+- river access
+- fertility
+- region suitability
+- polity support
+
+### Outputs
+
+- settlement map updates
+- core settlement changes
+- permanent habitation shifts
+
+### Possible Events
+
+- `SettlementFoundedEvent`
+- `SettlementExpandedEvent`
+- `SettlementAbandonedEvent`
+- `SettlementBecameCoreEvent`
+
+### Why It Happens Here
+
+Settlement logic should reflect the newly updated population and migration state.
+
+---
+
+## Step 12 – Update Polity System
+
+### Purpose
+
+Resolve society and civilization lifecycle changes.
+
+### Responsibilities
+
+- evaluate whether groups remain cohesive
+- detect fragmentation pressure
+- create successor groups when splits occur
+- detect civilization formation thresholds
+- detect polity collapse thresholds
+- maintain lineage continuity for the player focus
+
+### Inputs
+
+- settlements
+- population
+- food stability
+- migration branching
+- distance between subgroups
+- advancement/capability level
+- recent hardship or collapse pressures
+
+### Outputs
+
+- polity state changes
+- successor polities
+- collapse outcomes
+- civilization transitions
+
+### Possible Events
+
+- `SocietyFormedEvent`
+- `CivilizationFormedEvent`
+- `PolityFragmentedEvent`
+- `PolityCollapsedEvent`
+
+### Example Chain
+
+```text
+multiple stable settlements
+    + food stability
+    + population growth
+    ↓
+civilization forms
+```
+
+---
+
+## Step 13 – Update Advancement System
+
+### Purpose
+
+Evaluate knowledge emergence, spread, and decay.
+
+### Responsibilities
+
+- accumulate advancement pressure from need, exposure, and surplus
+- check prerequisites
+- evaluate discovery chances
+- spread knowledge via contact or trade
+- remove or decay knowledge after collapse where appropriate
+
+### Inputs
+
+- environmental exposure
+- food instability or stability
+- settlement permanence
+- polity complexity
+- prior advancements
+- inter-polity contact
+- trade contact later
+
+### Outputs
+
+- advancement discoveries
+- spread events
+- knowledge loss
+
+### Possible Events
+
+- `AdvancementProgressEvent`
+- `AdvancementDiscoveredEvent`
+- `AdvancementSpreadEvent`
+- `AdvancementLostEvent`
+
+### Why It Happens After Polity and Settlement Updates
+
+Advancement depends heavily on social stability, settlement permanence, and current pressures.
+
+---
+
+## Step 14 – Resolve Trade System
+
+### Purpose
+
+Move resources between settlements or polities.
+
+This can begin with food surplus/deficit balancing.
+
+### Responsibilities
+
+- identify surplus nodes
+- identify deficit nodes
+- establish viable exchange paths
+- transfer resources
+- resolve shortage relief or route collapse
+
+### Inputs
+
+- settlement surpluses
+- settlement shortages
+- region connectivity
+- polity relationships
+- recent settlement changes
+
+### Outputs
+
+- resource transfers
+- route creation or loss
+- shortage relief
+- trade dependencies
+
+### Possible Events
+
+- `TradeRouteEstablishedEvent`
+- `TradeShipmentSentEvent`
+- `TradeShipmentReceivedEvent`
+- `TradeShortageRelievedEvent`
+- `TradeRouteCollapsedEvent`
+
+### Notes
+
+Trade can resolve food pressure after local production has already been evaluated.
+
+That sequencing preserves causality.
+
+---
+
+## Step 15 – Resolve Conflict System
+
+### Purpose
+
+Apply tension, clashes, and territorial struggle where appropriate.
+
+### Responsibilities
+
+- evaluate tension from overlap, scarcity, fragmentation, or migration
+- resolve conflict starts and ends
+- apply casualties and displacement
+- apply territorial control shifts
+
+### Inputs
+
+- food pressure
+- migration overlap
+- polity fragmentation
+- settlement competition
+- trade collapse
+- aggression traits later
+
+### Outputs
+
+- deaths
+- territory shifts
+- migration displacement
+- settlement damage or abandonment
+
+### Possible Events
+
+- `TensionIncreasedEvent`
+- `ConflictStartedEvent`
+- `ConflictEndedEvent`
+- `TerritoryLostEvent`
+- `TerritoryGainedEvent`
+
+### Notes
+
+Conflict should happen after settlement and polity state is known for the tick.
+
+---
+
+## Step 16 – Propagate Events Across Systems
+
+### Purpose
+
+Allow emitted events to trigger downstream reactions.
+
+### Responsibilities
+
+- dispatch newly emitted events
+- allow subscribed systems to react
+- avoid infinite loops or event spam
+- enforce scope-based propagation
+- process only meaningful state-change consequences
+
+### Inputs
+
+- all events emitted during the tick
+
+### Outputs
+
+- follow-up events
+- derived state transitions
+- chained historical consequences
+
+### Example
+
+```text
+FoodShortageStartedEvent
+    ↓
+MigrationSystem reacts
+    ↓
+MigrationPressureIncreasedEvent
+```
+
+### Important Rule
+
+Event propagation should occur on state transitions, not every time a value is recalculated.
+
+---
+
+## Step 17 – Record Structured Event History
+
+### Purpose
+
+Persist the authoritative causal history of the world.
+
+### Responsibilities
+
+- append structured events to history log
+- preserve causes, actors, tags, location, and severity
+- ensure later debugging and history analysis are possible
+- support future Civilization History view
+
+### Inputs
+
+- finalized structured events from the tick
+
+### Outputs
+
+- append-only historical/debug record
+
+### Notes
+
+This is distinct from chronicle output.
+
+The structured log is comprehensive.
+The chronicle is curated.
+
+---
+
+## Step 18 – Render Chronicle Output
+
+### Purpose
+
+Generate readable player-facing history from selected events.
+
+### Responsibilities
+
+- select chronicle-worthy events
+- format concise narrative lines
+- maintain lineage focus
+- include species in polity references
+- suppress repetitive noise
+- prioritize meaningful historical changes
+
+### Inputs
+
+- structured event history for current tick
+- player lineage focus rules
+- chronicle visibility rules
+
+### Outputs
+
+- short narrative event lines for the player
+
+### Example
+
+```text
+Year 197 — Red Fang Tribe (Wolfkin) discovers agriculture.
+Year 198 — Several Red Fang clans migrate south.
+Year 199 — A new settlement rises along the Silver River.
+```
+
+### Important UI Rule
+
+Chronicle lines shown in watch mode should display:
+
+- newest entries at the top
+- older entries below
+
+This improves readability and matches the intended player experience.
+
+---
+
+## Step 19 – Refresh Watch Mode UI
+
+### Purpose
+
+Update the console display without overwhelming the player.
+
+### Responsibilities
+
+- update fixed polity status panel
+- redraw chronicle viewport
+- minimize flicker through partial redraws where possible
+- apply playback delay to event display
+- keep newest chronicle entries at the top
+- avoid repeated hardship spam through state-transition event filtering
+
+### Inputs
+
+- updated chronicle entries
+- current focus polity status
+- playback timing settings
+
+### Outputs
+
+- player-facing live simulation display
+
+### Notes
+
+This is a presentation step, not a world-simulation step.
+
+---
+
+# Event Propagation Model in the Loop
+
+A useful conceptual model is:
+
+```text
+Phase A: Base systems update world state
+Phase B: Systems emit meaningful events
+Phase C: Subscribed systems react
+Phase D: History is recorded
+Phase E: Chronicle is rendered
+```
+
+This keeps the architecture understandable.
+
+---
+
+# Example Full Tick Chain
+
+Here is an example of how one monthly tick might unfold:
+
+```text
+1. Time advances to Late Summer, Year 304
+2. Drought continues in the Silver River region
+3. EcologySystem reduces biomass
+4. Herbivore populations decline further
+5. AgricultureSystem resolves poor harvest output
+6. FoodSystem detects severe deficit
+7. FoodShortageStartedEvent emitted
+8. PopulationSystem applies stress and decline
+9. MigrationSystem begins evaluating nearby fertile regions
+10. A migrating branch departs south
+11. SettlementSystem marks one small settlement as unstable
+12. PolitySystem increases fragmentation pressure
+13. AdvancementSystem gains agriculture/irrigation pressure
+14. TradeSystem fails to fully cover the shortage
+15. Structured events are recorded
+16. Chronicle displays the most important outcomes
+```
+
+Possible chronicle output:
+
+```text
+Year 304 — The harvest fails along the Silver River.
+Year 304 — Red Fang Tribe (Wolfkin) faces food shortages.
+Year 304 — Several Red Fang clans migrate south.
+```
+
+---
+
+# Recommended Loop Granularity by System
+
+## Monthly
+
+These should normally update every month:
+
+- time/calendar
+- food balance
+- storage/spoilage
+- population
+- migration pressure
+- settlement viability
+- polity cohesion checks
+- trade transfers
+- event propagation
+- chronicle output
+
+## Seasonal or Season-Weighted
+
+These should run monthly but have stronger seasonal outcomes:
+
+- ecology growth
+- agriculture growth/harvest
+- climate stress
+- biomass swings
+
+## Long-Horizon but Checked Monthly
+
+These may accumulate slowly but should still be evaluated monthly:
+
+- advancement progress
+- species mutation/divergence
+- polity fragmentation risk
+- civilization formation thresholds
+- extinction pressure
+
+This gives the world continuity without requiring a separate long-interval loop.
+
+---
+
+# Processing Order Rationale
+
+## Why ecology comes before food
+
+Because societies cannot gather what does not exist.
+
+## Why food comes before population
+
+Because survival pressure shapes births, deaths, and labor.
+
+## Why population comes before migration
+
+Because migration is a response to pressure on the population.
+
+## Why migration comes before settlement
+
+Because settlement founding often emerges from arrival.
+
+## Why settlement comes before polity change
+
+Because complex polities depend on settlement structure.
+
+## Why polity comes before advancement
+
+Because complexity, stability, and need influence discoveries.
+
+## Why trade comes after local production
+
+Because trade redistributes outcomes rather than replacing local production logic.
+
+## Why chronicle comes last
+
+Because it should describe what actually happened after all state changes and event propagation are complete.
+
+---
+
+# Recommended Internal Loop Pattern Per System
+
+Each system should ideally use a consistent structure:
+
+```text
+1. Read required input state
+2. Evaluate pressures / conditions
+3. Apply state changes
+4. Emit events for meaningful transitions
+5. Return results for downstream systems
+```
+
+This makes the codebase easier to reason about and debug.
+
+---
+
+# Anti-Patterns to Avoid
+
+## 1. Systems changing unrelated domains directly
+
+Bad:
+
+- FoodSystem directly founding settlements
+- ChronicleSystem changing simulation state
+
+Good:
+
+- FoodSystem emits shortage events
+- Migration/Settlement systems react appropriately
+
+---
+
+## 2. Repeated event spam for unchanged conditions
+
+Bad:
+
+- emitting “still starving” every month
+
+Good:
+
+- emit `FoodShortageStartedEvent` once
+- emit `FamineStartedEvent` if severity escalates
+- emit `FoodShortageEndedEvent` when recovered
+
+---
+
+## 3. Discovery without causal context
+
+Bad:
+
+- random agriculture unlock with no relationship to environment or need
+
+Good:
+
+- settled life + fertile land + repeated food pressure + prerequisites
+    → agriculture discovery
+
+---
+
+## 4. Chronicle-first logic driving simulation
+
+The simulation should create reality first.
+The chronicle should interpret it afterward.
+
+---
+
+# Pseudocode Example
+
+```text
+AdvanceTime();
+DetectSeasonTransition();
+
+UpdateClimateAndEnvironment();
+UpdateEcology();
+UpdateSpecies();
+UpdateAgriculture();
+
+UpdateFoodAndResources();
+UpdatePopulation();
+
+EvaluateMigrationPressure();
+ResolveMigration();
+
+UpdateSettlements();
+UpdatePolities();
+UpdateAdvancements();
+
+ResolveTrade();
+ResolveConflict();
+
+PropagateEvents();
+
+RecordStructuredHistory();
+RenderChronicle();
+RefreshWatchModeUI();
+```
+
+This is the intended conceptual order, even if implementation details evolve.
+
+---
+
+# Future Expansion Guidance
+
+When new systems are added, place them according to what they depend on.
+
+Examples:
+
+## Domestication System
+Likely between Species and Food/Agriculture, with ties into Advancement.
+
+## Disease System
+Likely after Population and Settlement, with consequences for Polity and Migration.
+
+## Religion / Belief System
+Likely after Polity and Advancement, possibly influenced by catastrophe events.
+
+## Governance System
+Likely inside or adjacent to Polity System.
+
+## Cultural Memory System
+Likely after structured event history, with future effects feeding back into Polity and Advancement.
+
+New systems should never break the causal order without a strong reason.
+
+---
+
+# Final Principle
+
+The simulation loop is the backbone of LivingWorld.
+
+A good loop does more than update numbers.
+
+It creates a believable chain where:
+
+- land shapes ecology
+- ecology shapes food
+- food shapes survival
+- survival shapes migration
+- migration shapes settlement
+- settlement shapes civilization
+- civilization shapes discovery
+- discovery reshapes the world
+- all of it becomes history
+
+That is what makes LivingWorld feel alive.
