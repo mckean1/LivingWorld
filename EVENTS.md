@@ -72,6 +72,14 @@ Chronicle presentation also applies yearly collapsing rules:
 - knowledge breadth debug metrics are not rendered
 - ordinary monthly trade transfers are kept mostly in structured history, while notable trade outcomes appear in chronicle lines
 
+Trade debug history now records additional context for analysis:
+
+- internal-priority vs external trade mode
+- settlement-aware sender/receiver endpoint names
+- shortage before/after transfer
+- partial vs full relief outcome
+- link continuity signals (age, activity, collapse)
+
 ---
 
 ## JSONL History Rules

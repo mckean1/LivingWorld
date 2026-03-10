@@ -81,11 +81,14 @@ Severity levels:
 
 Default chronicle prioritizes focal `Notable`/`Critical` events.
 
-Trade is food-first in v1:
+Trade is food-first and hybrid settlement/polity in the current refinement:
 
 - conservative surplus/deficit heuristics
-- nearby partner matching (same region or connected regions)
-- monthly transfers that can reduce shortage pressure
+- internal-priority matching first (lineage/internal bloc), then external trade
+- settlement-aware endpoints in trade links/events, with polity-level accounting
+- local-network reachability using limited region-hop distance
+- continuity preference for existing reliable links
+- partial and full shortage relief accounting (not just all-or-nothing rescue)
 - notable trade milestones in narrative output
 - detailed structured trade records in JSONL history
 

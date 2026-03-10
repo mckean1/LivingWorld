@@ -244,7 +244,8 @@ public sealed class NarrativeRenderer
             or WorldEventType.PolityCollapsed
             || (isFocusedSubject && evt.Type is WorldEventType.TradeLinkStarted
                 or WorldEventType.TradeRelief
-                or WorldEventType.TradeDependency);
+                or WorldEventType.TradeDependency
+                or WorldEventType.TradeLinkCollapsed);
     }
 
     private static int GetMilestonePriority(WorldEvent evt)
@@ -257,9 +258,10 @@ public sealed class NarrativeRenderer
             WorldEventType.TradeDependency => 3,
             WorldEventType.TradeRelief => 4,
             WorldEventType.TradeLinkStarted => 5,
-            WorldEventType.SettlementFounded => 6,
-            WorldEventType.SettlementConsolidated => 7,
-            WorldEventType.KnowledgeDiscovered => 8,
+            WorldEventType.TradeLinkCollapsed => 6,
+            WorldEventType.SettlementFounded => 7,
+            WorldEventType.SettlementConsolidated => 8,
+            WorldEventType.KnowledgeDiscovered => 9,
             _ => 10
         };
     }

@@ -51,7 +51,11 @@ Selected fields:
 - settlement state: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`
 - knowledge: `Advancements`, derived `Capabilities`
 - chronicle year-boundary food snapshot: `LastResolvedFoodState`, `LastResolvedFoodStateYear`
-- trade aggregates: `AnnualFoodImported`, `AnnualFoodExported`, `TradeReliefMonthsThisYear`, `TradePartnerCountThisYear`
+- trade aggregates:
+  `AnnualFoodImported`, `AnnualFoodExported`,
+  `AnnualFoodImportedInternal`, `AnnualFoodImportedExternal`,
+  `TradeReliefMonthsThisYear`, `TradePartialReliefMonthsThisYear`, `TradeFullReliefMonthsThisYear`,
+  `AnnualTradeNeedMitigated`, `TradePartnerCountThisYear`
 
 ---
 
@@ -78,7 +82,7 @@ This model supports both narrative rendering and structured persistence.
 ## Trade Types
 
 - `TradeResourceType` (v1 uses `Food`)
-- `TradeLink` (exporter/importer/resource, age, last-active tick)
+- `TradeLink` (exporter/importer/resource, optional settlement endpoints, age, success count, inactivity, moved quantity, continuity flags)
 
 ---
 

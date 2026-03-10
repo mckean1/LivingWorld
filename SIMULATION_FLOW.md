@@ -60,6 +60,12 @@ Food transitions in `Notable Changes` compare persisted prior-year food state to
 Chronicle rendering collapses multi-step migration paths into one yearly migration line and collapses food stress into one worst-condition yearly line.
 Population micro-events are summarized via yearly population delta / notable change lines.
 Trade stays food-first in v1: normal monthly transfers are mostly hidden from player output, while notable trade milestones (new link, shortage relief, annual dependency) can appear.
+Current refinement details:
+
+- internal-priority matching is evaluated before external trade
+- reachability uses constrained multi-hop local networks
+- continuity of existing links affects partner selection
+- relief metrics include partial and full shortage mitigation
 
 ---
 

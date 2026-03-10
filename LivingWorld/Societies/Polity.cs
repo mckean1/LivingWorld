@@ -43,8 +43,13 @@ public sealed class Polity
     public double AnnualFoodFarmed { get; set; }
     public double AnnualFoodImported { get; set; }
     public double AnnualFoodExported { get; set; }
+    public double AnnualFoodImportedInternal { get; set; }
+    public double AnnualFoodImportedExternal { get; set; }
     public int TradeReliefMonthsThisYear { get; set; }
+    public int TradePartialReliefMonthsThisYear { get; set; }
+    public int TradeFullReliefMonthsThisYear { get; set; }
     public int TradePartnerCountThisYear { get; set; }
+    public double AnnualTradeNeedMitigated { get; set; }
 
     // Agriculture tracking
     public double CultivatedLand { get; set; }
@@ -112,8 +117,13 @@ public sealed class Polity
         AnnualFoodFarmed = 0;
         AnnualFoodImported = 0;
         AnnualFoodExported = 0;
+        AnnualFoodImportedInternal = 0;
+        AnnualFoodImportedExternal = 0;
         TradeReliefMonthsThisYear = 0;
+        TradePartialReliefMonthsThisYear = 0;
+        TradeFullReliefMonthsThisYear = 0;
         TradePartnerCountThisYear = 0;
+        AnnualTradeNeedMitigated = 0;
         StarvationMonthsThisYear = 0;
 
         CultivatedLand = 0;
@@ -139,8 +149,13 @@ public sealed class Polity
         AnnualFoodFarmed = 0;
         AnnualFoodImported = 0;
         AnnualFoodExported = 0;
+        AnnualFoodImportedInternal = 0;
+        AnnualFoodImportedExternal = 0;
         TradeReliefMonthsThisYear = 0;
+        TradePartialReliefMonthsThisYear = 0;
+        TradeFullReliefMonthsThisYear = 0;
         TradePartnerCountThisYear = 0;
+        AnnualTradeNeedMitigated = 0;
         AnnualCultivatedLandTotal = 0;
         FarmingMonthsThisYear = 0;
         StarvationMonthsThisYear = 0;

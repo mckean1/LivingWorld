@@ -289,7 +289,11 @@ public sealed class Simulation : IDisposable
                 $"Wild={polity.AnnualFoodGathered,6:F0} " +
                 $"Farm={polity.AnnualFoodFarmed,6:F0} " +
                 $"Imp={polity.AnnualFoodImported,6:F0} " +
+                $"IntImp={polity.AnnualFoodImportedInternal,6:F0} " +
+                $"ExtImp={polity.AnnualFoodImportedExternal,6:F0} " +
                 $"Exp={polity.AnnualFoodExported,6:F0} " +
+                $"RelP={polity.TradePartialReliefMonthsThisYear,2} " +
+                $"RelF={polity.TradeFullReliefMonthsThisYear,2} " +
                 $"Starve={polity.StarvationMonthsThisYear,2} " +
                 $"Move={polity.MigrationPressure,4:F2} " +
                 $"Frag={polity.FragmentationPressure,4:F2} " +

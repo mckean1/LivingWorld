@@ -117,3 +117,11 @@ Year-end:
 - annual stat reset
 
 Debug mode still prints broad world summaries and raw yearly events.
+
+Trade system refinement notes:
+
+- matching order is internal-priority first, then external
+- link continuity (age + recency) influences partner reuse
+- reachability uses constrained region-hop networks (local clusters, not global shipping)
+- transfer accounting remains polity-level for stability, but links/events include settlement-aware endpoint fields for future settlement-first expansion
+- relief tracks partial and full shortage mitigation

@@ -31,7 +31,7 @@ Replace initial first-polity focus with explicit player-tracked lineage and bett
 Improve event deduping and weighting so migration-heavy years still surface the most meaningful beats.
 
 3. Trade expansion
-Extend food-first trade into broader resource exchange (timber/stone/metal/livestock/crafted goods), stronger intra-polity logistics, and eventual route infrastructure.
+Extend the refined food-first hybrid model into broader resource exchange (timber/stone/metal/livestock/crafted goods), stronger true settlement-level logistics, and eventual route infrastructure.
 
 4. Event taxonomy expansion
 Add richer event types (absorption, diplomacy, conflict precursors) while maintaining concise chronicle rendering.
