@@ -1,81 +1,63 @@
-# SIMULATION_FLOW.md
-
 # LivingWorld Simulation Flow
 
-The simulation runs in monthly ticks with yearly aggregation. The full world always simulates; only default presentation is focused.
-
----
+LivingWorld runs the full world in monthly ticks. Player-facing output is now live chronicle playback, not a yearly report.
 
 ## Monthly Flow
 
-1. Region ecology update
-2. Wild food gathering
-3. Settlement farming output
-4. Trade evaluation and food redistribution (nearby partners)
-5. Food consumption and starvation tracking
-6. Migration evaluation and relocation
-7. Structured events emitted when notable outcomes occur
+1. region ecology update
+2. wild food gathering
+3. settlement farming output
+4. trade evaluation and food redistribution
+5. food consumption and starvation tracking
+6. migration evaluation and relocation
+7. notable structured events emitted immediately
+8. watch mode formats and displays qualifying focal-polity chronicle entries
 
----
+## Year-End Flow
 
-## Year-End Flow (Month 12)
+When `Month == 12`:
 
-1. Increment polity age
-2. Population update
-3. Advancement discovery
-4. Settlement progression
-5. Fragmentation checks
-6. Polity stage progression
-7. Annual agriculture events
-8. Annual food-stress events
-9. Annual trade dependency and link maintenance pass
-10. Remove collapsed polities (`Population <= 0`)
-11. Validate lineage focus and emit any handoff event
-12. Persist resolved year-end food-state snapshot for each active polity
-13. Render yearly focused chronicle (narrative mode) or debug summary (debug mode)
-14. Reset annual food stats
+1. increment polity age
+2. update population
+3. roll advancement discovery
+4. update settlement progression
+5. resolve fragmentation
+6. evaluate polity stage progression
+7. apply annual agriculture events
+8. apply annual trade maintenance
+9. emit annual food-stress events
+10. remove collapsed polities
+11. validate lineage focus and emit any handoff event
+12. persist resolved year-end food-state snapshots
+13. refresh the watch-mode status panel
+14. reset annual counters
 
----
-
-## Event Pipeline During Flow
+## Event Pipeline
 
 `systems -> World.AddEvent -> World.Events + EventRecorded`
 
 Sinks:
 
-- focused chronicle renderer (year-end)
-- JSONL writer (immediate append)
+- `HistoryJsonlWriter` writes append-only JSONL history
+- `ChronicleEventFormatter` converts selected notable events into player-facing lines
+- `ChronicleWatchRenderer` redraws the watch console with newest entries first
 
-Chronicle console output passes through a centralized semantic color writer in the presentation layer; event capture/storage stays color-free.
+## Default Watch Output
 
----
+Default player mode shows:
 
-## Focused Chronicle Output (Default)
+- a fixed status panel at the top
+- a chronicle viewport beneath it sized from the available console height
+- newest messages first
+- concise notable history only
 
-Each year prints:
+It does not show:
 
-- optional interstitial major milestone banner(s) (rare)
-- header for focal polity (region, population delta, food, status, knowledge)
-- `This Year` focal events (up to 3, collapsed summaries)
-- optional `Notable Changes`
-- optional `World Notes` (0-2 rare outside events)
-
-Food transitions in `Notable Changes` compare persisted prior-year food state to current year-end resolved food state, so reset annual counters do not distort January start snapshots.
-Chronicle rendering collapses multi-step migration paths into one yearly migration line and collapses food stress into one worst-condition yearly line.
-Population micro-events are summarized via yearly population delta / notable change lines.
-Trade stays food-first in v1: normal monthly transfers are mostly hidden from player output, while notable trade milestones (new link, shortage relief, annual dependency) can appear.
-If a milestone is elevated to a major banner, that same event is not repeated in the regular yearly event bullet list.
-Current refinement details:
-
-- internal-priority matching is evaluated before external trade
-- reachability uses constrained multi-hop local networks
-- continuity of existing links affects partner selection
-- relief metrics include partial and full shortage mitigation
-
-Lineage focus validation happens after collapse cleanup so the selector chooses only surviving successors. The handoff event is emitted before the yearly chronicle renders, which lets the same canonical event appear in both the player-facing report and the structured JSONL history.
-
----
+- yearly stat blocks
+- broad annual diagnostics
+- routine monthly bookkeeping
+- most trade/telemetry internals
 
 ## Debug Output
 
-Debug mode keeps broad world summary and full yearly event list for simulation diagnostics.
+`OutputMode.Debug` still prints yearly developer summaries and the full yearly event list for diagnostics and balancing work.

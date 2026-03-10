@@ -22,6 +22,34 @@ public sealed class ChronicleColorWriter
             return;
         }
 
+        Write(line, context);
+        Console.WriteLine();
+        Console.ResetColor();
+    }
+
+    public void WriteLineAt(int left, int top, int width, string line, ChronicleColorContext context)
+    {
+        if (Console.IsOutputRedirected)
+        {
+            Console.WriteLine(line);
+            return;
+        }
+
+        string fitted = FitToWidth(line, width);
+        Console.SetCursorPosition(left, top);
+        Write(fitted, context);
+
+        int remaining = Math.Max(0, width - fitted.Length);
+        if (remaining > 0)
+        {
+            Console.Write(new string(' ', remaining));
+        }
+
+        Console.ResetColor();
+    }
+
+    private void Write(string line, ChronicleColorContext context)
+    {
         IReadOnlyList<ChronicleStyledSegment> segments = _colorizer.Colorize(line, context);
         foreach (ChronicleStyledSegment segment in segments)
         {
@@ -35,9 +63,18 @@ public sealed class ChronicleColorWriter
             Console.Write(segment.Text);
             Console.ResetColor();
         }
+    }
 
-        Console.WriteLine();
-        Console.ResetColor();
+    private static string FitToWidth(string line, int width)
+    {
+        if (width <= 0)
+        {
+            return string.Empty;
+        }
+
+        return line.Length <= width
+            ? line
+            : line[..width];
     }
 
     private static ConsoleColor MapColor(ChronicleSemantic semantic)

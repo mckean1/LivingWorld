@@ -1,13 +1,6 @@
-# EVENTS.md
-
 # LivingWorld Event System
 
-LivingWorld now uses a canonical structured event model for simulation events, then routes those events to two separate outputs:
-
-- focused yearly chronicle (console, player-facing)
-- append-only JSONL history (developer-facing)
-
----
+LivingWorld uses a canonical structured event model for simulation events, then routes those events into separate storage and presentation paths.
 
 ## Event Model
 
@@ -22,8 +15,6 @@ Core fields:
 - `settlementId`, `settlementName`
 - `before`, `after`, `metadata`
 
----
-
 ## Severity
 
 - `Debug`
@@ -31,9 +22,7 @@ Core fields:
 - `Notable`
 - `Critical`
 
-Chronicle view prioritizes focal `Notable` and `Critical` events.
-
----
+Default chronicle playback only surfaces selected `Notable` and `Critical` events for the focused polity.
 
 ## Important Event Types
 
@@ -41,7 +30,6 @@ Chronicle view prioritizes focal `Notable` and `Critical` events.
 - `knowledge_discovered`
 - `settlement_founded`
 - `settlement_consolidated`
-- `harvest`
 - `food_stress`
 - `population_changed`
 - `fragmentation`
@@ -58,81 +46,48 @@ Chronicle view prioritizes focal `Notable` and `Critical` events.
 - `trade_link_collapsed`
 - `world_event`
 
----
+## Chronicle Filtering Rules
 
-## Chronicle Filtering Rules (Default)
+Normal player-facing watch mode:
 
-- show focal-polity events only
-- show up to 3 short lines in `This Year`
-- show optional `Notable Changes` (before -> after)
-- show optional `World Notes` (0-2 rare outside events)
+- follows one focal polity/lineage
+- shows notable focal historical beats as short lines
+- keeps storage chronological but renders the visible watch buffer newest-first
+- suppresses yearly report formatting entirely
+- suppresses noisy bookkeeping and most non-focal telemetry
 
-For food transitions, `Notable Changes` uses persisted prior-year resolved food-state snapshots. It does not infer the "before" state from freshly reset annual counters.
-Chronicle presentation also applies yearly collapsing rules:
+Current chronicle formatting favors:
 
-- migration: one yearly summary line from start/end region
-- food stress: one yearly worst-condition summary line
-- population micro-events: summarized in yearly change lines
-- knowledge breadth debug metrics are not rendered
-- ordinary monthly trade transfers are kept mostly in structured history, while notable trade outcomes appear in chronicle lines
-- rare major milestones can be elevated into banner-style chronicle highlights
-- lineage focus handoff events appear as concise narrative lines when the chronicle actually changes subjects
+- polity formation/splits/collapse
+- migration
+- settlement founding and consolidation
+- stage changes
+- knowledge discoveries
+- severe food stress
+- major population shifts and milestone growth
+- focus handoffs when the watched lineage changes subject
 
-### Major Chronicle Milestones (Presentation Classification)
+Current noise-control rules include:
 
-Major milestone highlighting is a presentation-layer classification over canonical events. It currently includes rare focal-polity moments such as:
-
-- first settlement founded
-- major discoveries (for example, Agriculture, Craft Specialization)
-- settled society / civilization formation
-- notable major trade-network start
-- great famine (critical annual food stress)
-- fragmentation
-- collapse
-
-These milestones are rendered as headline banners and excluded from duplicate display in the same year's normal event bullet list.
-
-The player-facing console renderer may color semantic segments (year headers, polity/place names, discoveries, positive/warning/crisis phrases), while structured history remains plain structured data.
-Yellow is reserved for actor/polity names; warning phrases are rendered in dark yellow.
-Section headers are intentionally dimmed to keep historical events visually primary.
-
-Trade debug history now records additional context for analysis:
-
-- internal-priority vs external trade mode
-- settlement-aware sender/receiver endpoint names
-- shortage before/after transfer
-- partial vs full relief outcome
-- link continuity signals (age, activity, collapse)
-
-Focus-transition history records now also capture:
-
-- old/new focused polity ids and names
-- old/new lineage ids
-- transition kind (`Fragmentation`, `Collapse`, `LineageContinuation`, `LineageExtinctionFallback`)
-- the reason that triggered the handoff
-
----
+- only selected notable event types reach the player chronicle
+- repeated focal migrations are collapsed to one visible chronicle entry per year
+- structured history still records the full underlying event stream
 
 ## JSONL History Rules
 
-- append-only during run
-- captures important events for all polities/world entities
-- designed for grep/filter/post-run analysis
-- intentionally excludes low-value telemetry spam
-
----
+- append-only during the run
+- captures important events across the whole world
+- remains the canonical stored history beneath the chronicle
+- keeps `before` / `after` / `metadata` context for later tools and history views
 
 ## Example Chronicle Lines
 
-- `Red River Clan migrated to Lower Valley.`
-- `Red River Clan discovered Agriculture.`
-- `Red River Clan suffered famine.`
-- `Red River Clan declined from 84 to 71.`
-- `Red River Clan became a Settled Society.`
-- `Red River Clan fractured into rival groups. The chronicle now follows Valley Clan.`
-- `Valley Clan collapsed. Its legacy continued through Hill Tribe.`
-
----
+- `Year 18 - River Clan migrated to Red Valley.`
+- `Year 41 - River Clan discovered Agriculture.`
+- `Year 57 - River Clan founded a settlement in Red Valley.`
+- `Year 84 - River Clan became a Settled Society.`
+- `Year 133 - River Clan suffered famine.`
+- `Year 136 - Stone Clan split from River Clan in High Ridge.`
 
 ## Example JSONL Record
 

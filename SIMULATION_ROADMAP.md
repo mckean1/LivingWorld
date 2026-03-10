@@ -1,59 +1,48 @@
-# SIMULATION_ROADMAP.md
-
 # LivingWorld Simulation Roadmap
 
-This roadmap describes planned evolution of simulation depth while preserving full-world emergent behavior.
-
----
+This roadmap describes how LivingWorld can deepen the simulation while keeping the chronicle-first player experience intact.
 
 ## Current Foundation
 
 Implemented core includes:
 
-- world generation (regions, species, starting polities)
+- world generation
 - ecology and food systems
 - migration, settlement, population, fragmentation
-- food-first regional trade redistribution between nearby polities
 - advancement and capability effects
 - polity stage progression
 - canonical structured event model
-- focused society chronicle output
-- player lineage focus with deterministic focus handoff across fragmentation and collapse
-- major milestone banner highlights for rare history-defining focal events
-- append-only JSONL event history output
-
----
+- chronicle-first watch mode with a fixed status panel
+- newest-first live chronicle playback
+- configurable chronicle playback delay
+- append-only JSONL history output
+- lineage-aware focus handoff across fragmentation and collapse
 
 ## Near-Term Priorities
 
 1. Chronicle quality tuning
-Improve event deduping and weighting so migration-heavy years still surface the most meaningful beats.
+Keep improving event weighting and suppression so the live chronicle stays readable during busy simulation periods.
 
-2. Trade expansion
-Extend the refined food-first hybrid model into broader resource exchange (timber/stone/metal/livestock/crafted goods), stronger true settlement-level logistics, and eventual route infrastructure.
+2. History views
+Build a Civilization History view over the stored event stream without changing simulation systems.
 
-3. Event taxonomy expansion
-Add richer event types (absorption, diplomacy, conflict precursors) while maintaining concise chronicle rendering.
+3. Multiple perspectives
+Allow the same stored history to be rendered through different focal filters or narrative lenses.
 
-4. History tooling
-Add simple post-run analyzers over JSONL (severity distributions, collapse causes, migration pressure trends).
-
----
+4. Event taxonomy expansion
+Add richer event types such as absorption, diplomacy, conflict precursors, and regional shocks while keeping the player chronicle concise.
 
 ## Mid-Term Systems
 
 - knowledge diffusion
-- advanced trade networks (specialization, supply-demand, market-like behavior)
+- broader trade networks and specialization
 - cultural divergence
 - warfare and territorial conflict
 
-All should emit structured events through the same canonical pipeline.
-
----
+All should continue to emit structured canonical events first.
 
 ## Long-Term Vision
 
-- civilizations rise and fall organically
-- player follows a readable lineage history
-- debugging and balancing use structured event history at scale
-- output remains readable without reducing simulation scope
+- the chronicle is the main game experience
+- players follow a living lineage rather than yearly diagnostics
+- richer history tools and perspectives are layered over the same append-only event foundation

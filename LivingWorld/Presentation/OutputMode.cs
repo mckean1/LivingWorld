@@ -2,6 +2,6 @@ namespace LivingWorld.Presentation;
 
 public enum OutputMode
 {
-    Narrative,
+    Watch,
     Debug
 }

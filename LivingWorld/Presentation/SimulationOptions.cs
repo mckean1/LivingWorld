@@ -2,24 +2,25 @@ namespace LivingWorld.Presentation;
 
 public sealed class SimulationOptions
 {
-    public static SimulationOptions NarrativeChronicle(int tickDelayMilliseconds = 1000)
+    public static SimulationOptions ChronicleWatch(
+        int playbackDelayMilliseconds = 150,
+        int visibleEntryLimit = 8)
         => new()
         {
-            OutputMode = OutputMode.Narrative,
-            StreamTickChronicle = false,
-            TickDelayMilliseconds = tickDelayMilliseconds,
+            OutputMode = OutputMode.Watch,
+            ChroniclePlaybackDelayMilliseconds = Math.Max(0, playbackDelayMilliseconds),
+            ChronicleVisibleEntryLimit = Math.Max(1, visibleEntryLimit),
             PauseBeforeStart = false,
             PauseAfterEachYear = false,
-            FocusedChronicleEnabled = true,
             WriteStructuredHistory = true,
             HistoryFilePath = BuildDefaultHistoryFilePath()
         };
 
-    public OutputMode OutputMode { get; init; } = OutputMode.Narrative;
+    public OutputMode OutputMode { get; init; } = OutputMode.Watch;
 
-    public bool StreamTickChronicle { get; init; }
+    public int ChroniclePlaybackDelayMilliseconds { get; init; }
 
-    public int TickDelayMilliseconds { get; init; }
+    public int ChronicleVisibleEntryLimit { get; init; } = 8;
 
     public bool PauseBeforeStart { get; init; }
 

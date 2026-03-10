@@ -1,167 +1,117 @@
-# ARCHITECTURE.md
-
 # LivingWorld Architecture
 
-LivingWorld is a systems-driven simulation. Core simulation logic remains full-world and unchanged in scope; logging and presentation are now split into dedicated event capture and output paths.
-
----
+LivingWorld keeps simulation logic, event storage, formatting, and console playback separate.
 
 ## Core Structure
 
 World contains:
 
-- Regions
-- Species
-- Polities
-- Time
-- Structured world events
+- regions
+- species
+- polities
+- time
+- canonical world events
 
 Major systems:
 
-- Food / ecology
-- Agriculture
-- Trade
-- Migration
-- Population
-- Advancement
-- Settlement
-- Fragmentation
-- Polity stage progression
+- food / ecology
+- agriculture
+- trade
+- migration
+- population
+- advancement
+- settlement
+- fragmentation
+- polity stage progression
 
----
-
-## Event and Logging Architecture
+## Event Architecture
 
 Canonical flow:
 
-`simulation systems -> canonical WorldEvent -> render/persist outputs`
+`simulation systems -> World.AddEvent -> World.Events + EventRecorded -> output sinks`
 
-Outputs:
+Primary sinks:
 
-1. Focused chronicle renderer (player-facing)
-2. JSONL history writer (developer-facing)
+1. `HistoryJsonlWriter` for append-only structured history
+2. `ChronicleEventFormatter` for player-facing chronicle text
+3. `ChronicleWatchRenderer` for live console playback
 
 ### Canonical Event Model
 
-`WorldEvent` now stores:
+`WorldEvent` stores:
 
 - `EventId`, `Year`, `Month`, `Season`
 - `Type`, `Severity`, `Narrative`, `Details`, `Reason`
-- polity/species/region/settlement ids and names
-- optional `Before`, `After`, `Metadata` dictionaries
+- polity / related polity / species / region / settlement identifiers and names
+- optional `Before`, `After`, `Metadata`
 
-### Severity
+`World.AddEvent(...)` is the source of truth. It timestamps, ids, stores, and publishes each event.
 
-- `Debug`
-- `Normal`
-- `Notable`
-- `Critical`
+## Player-Facing Chronicle Path
 
-### Event Capture
+Default player output uses watch mode rather than yearly report rendering.
 
-`World.AddEvent(...)` is the source of truth:
+Watch mode is built from two small presentation pieces:
 
-- enriches event time/id
-- appends to `World.Events`
-- publishes `EventRecorded` for sinks
+- `ChronicleEventFormatter`: filters structured events into concise chronicle lines
+- `ChronicleWatchRenderer`: maintains the reverse-chronological chronicle buffer and redraws only the docked status panel lines and chronicle viewport lines that changed
 
----
+Important traits:
 
-## Focused Chronicle Path
+- the structured event list remains chronological and append-only
+- the visible chronicle buffer is rendered newest-first
+- the chronicle viewport height is derived from the current console height after reserving the docked panel
+- only notable focal-polity events are shown in normal player mode
+- yearly debug summaries remain available only through `OutputMode.Debug`
 
-`NarrativeRenderer` produces a yearly focused chronicle for one focal polity:
+### Docked Status Panel
 
-- optional major-event milestone banners (rare, headline style)
-- header snapshot
-- `This Year` focal events (up to 3, collapsed summaries)
-- optional notable before/after changes
-- optional rare world notes (0-2)
+The watch panel is a stable HUD for the currently focused polity. It shows:
 
-Chronicle focus is tracked by `ChronicleFocus` and chosen/validated by `IPolityFocusSelector` (default: `LineagePolityFocusSelector`).
-
-### Player Lineage Focus
-
-`ChronicleFocus` stores:
-
-- current focal polity id
-- current focal lineage id
-
-`LineagePolityFocusSelector` handles two responsibilities:
-
-1. initial focus selection at simulation start
-2. year-end validation and deterministic handoff when continuity breaks
-
-Year-end handoff rules:
-
-- if the focused polity survives and did not fragment, keep following it
-- if it fragmented this year, choose the strongest direct child in the same lineage
-- if it collapsed or vanished, choose the best surviving polity in the same lineage
-- if the lineage is extinct, fall back to the closest strong surviving polity outside the lineage
-
-Successor choice is deterministic and weighted from existing simulation state:
-
+- polity name
+- polity stage
+- current region
 - population
 - settlement count
-- stage
-- direct descent distance
-- regional continuity
-- species continuity for fallback cases
+- food stores with resolved food state
+- concise knowledge summary
+- current year
 
-When focus changes, `Simulation` emits a canonical focus-transition `WorldEvent` before chronicle rendering. That same event feeds both:
+## Focus and Continuity
 
-- the concise narrative chronicle
-- the append-only JSONL history
+`ChronicleFocus` stores the currently watched polity and lineage.
 
-Food-state notable changes use a persisted prior-year snapshot on each polity (`LastResolvedFoodState` + capture year), not recomputation after annual counters reset.
-Yearly chronicle rendering now collapses:
+`LineagePolityFocusSelector` is responsible for:
 
-- multiple migration events into one summary line
-- food stress into one worst-condition yearly line
-- population micro-events into a single population before/after notable change
+1. initial focus selection
+2. deterministic year-end handoff when the watched polity fragments, collapses, or disappears
 
-Knowledge breadth debug diffs are omitted from player-facing output.
+Focus handoffs are themselves canonical `WorldEvent` records, so they appear in both:
 
-Trade milestones use the same event pipeline, while ordinary monthly transfers stay mostly in structured history.
-
-Console coloring is handled by a centralized presentation helper (`ChronicleColorWriter`) that applies semantic colors to chronicle text segments without changing simulation/event data.
-It supports segmented line styling (for example, `Year N` and polity name rendered separately, dim section headers, and value-only food status coloring).
-Chronicle color semantics reserve yellow for actor names only; warning/shortage phrases use dark yellow so actor identity and risk state remain visually distinct.
-Major-event banner formatting (separators, headline line, placement) is also presentation-only and does not alter canonical event records.
-
----
-
-## Structured History Path
-
-`HistoryJsonlWriter` subscribes to `World.EventRecorded` and writes append-only JSONL records.
-
-Default output:
-
-- `logs/history-{timestamp}.jsonl`
-
-This path is intentionally independent of console formatting.
-
----
+- structured JSONL history
+- the live chronicle
 
 ## Simulation Loop Notes
 
 Monthly:
 
 - ecology, gathering, farming, trade redistribution, consumption, migration
+- systems emit structured events as notable outcomes happen
+- watch mode immediately formats and plays qualifying chronicle entries
 
 Year-end:
 
-- population, advancement, settlement, fragmentation, stage, annual agriculture events, annual food stress events, annual trade dependency/link maintenance
-- persist each active polity's resolved year-end food state snapshot
-- validate lineage focus and emit a handoff event if the chronicle switches to a successor
-- focused chronicle rendering
+- population, advancement, settlement, fragmentation, stage, agriculture, and annual trade passes
+- annual food stress events
+- focus validation and handoff events
+- persisted year-end food-state snapshot updates
+- status panel refresh
 - annual stat reset
 
-Debug mode still prints broad world summaries and raw yearly events.
+## Extensibility Path
 
-Trade system refinement notes:
+The current architecture intentionally preserves a path for:
 
-- matching order is internal-priority first, then external
-- link continuity (age + recency) influences partner reuse
-- reachability uses constrained region-hop networks (local clusters, not global shipping)
-- transfer accounting remains polity-level for stability, but links/events include settlement-aware endpoint fields for future settlement-first expansion
-- relief tracks partial and full shortage mitigation
+- Civilization History views built from the same stored event stream
+- multiple chronicle perspectives over the same world history
+- richer post-run history tooling without rewriting simulation systems

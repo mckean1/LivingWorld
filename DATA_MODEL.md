@@ -1,10 +1,6 @@
-# DATA_MODEL.md
-
 # LivingWorld Data Model
 
-LivingWorld uses aggregated entities (not individual agents) so centuries of simulation can run efficiently.
-
----
+LivingWorld uses aggregated entities rather than individual agents so long historical runs remain practical.
 
 ## Core Entities
 
@@ -14,9 +10,7 @@ LivingWorld uses aggregated entities (not individual agents) so centuries of sim
 - `Polity`
 - `PolityStage`
 - `WorldEvent`
-- `ChronicleFocus` (presentation-level focus state)
-
----
+- `ChronicleFocus`
 
 ## World
 
@@ -33,9 +27,7 @@ Key properties:
 Event responsibilities:
 
 - `AddEvent(...)` enriches and stores canonical event records
-- `EventRecorded` publishes events to sinks (for example, JSONL writer)
-
----
+- `EventRecorded` publishes each stored event to sinks
 
 ## Polity
 
@@ -45,60 +37,45 @@ Selected fields:
 
 - identity: `Id`, `Name`, `SpeciesId`, `RegionId`, `LineageId`, `ParentPolityId`
 - demographics: `Population`, `YearsSinceFounded`, `Stage`
-- food stress and stores: monthly + annual aggregates
-- migration state: `MigrationPressure`, `MovedThisYear`, `MovesThisYear`
-- fragmentation state: `FragmentationPressure`, `FoodStressYears`, `SplitCooldownYears`
-- settlement state: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`
+- food: `FoodStores` and annual food aggregates
+- migration: `MigrationPressure`, `MovedThisYear`, `MovesThisYear`
+- fragmentation: `FragmentationPressure`, `FoodStressYears`, `SplitCooldownYears`
+- settlements: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`
 - knowledge: `Advancements`, derived `Capabilities`
-- chronicle year-boundary food snapshot: `LastResolvedFoodState`, `LastResolvedFoodStateYear`
-- trade aggregates:
-  `AnnualFoodImported`, `AnnualFoodExported`,
-  `AnnualFoodImportedInternal`, `AnnualFoodImportedExternal`,
-  `TradeReliefMonthsThisYear`, `TradePartialReliefMonthsThisYear`, `TradeFullReliefMonthsThisYear`,
-  `AnnualTradeNeedMitigated`, `TradePartnerCountThisYear`
+- year-boundary food snapshot: `LastResolvedFoodState`, `LastResolvedFoodStateYear`
 
-Lineage rules:
+These fields support both simulation logic and the watch-mode status panel.
 
-- each starting polity founds its own lineage (`LineageId = Id`)
-- fragmentation children inherit the parent's `LineageId`
-- fragmentation children record `ParentPolityId = source polity id`
-- lineage identity stays stable even when the original polity collapses
+## WorldEvent
 
----
+`WorldEvent` is the canonical historical record.
 
-## WorldEvent (Canonical)
-
-`WorldEvent` includes:
+It includes:
 
 - time: `EventId`, `Year`, `Month`, `Season`
 - classification: `Type`, `Severity`
-- readable text: `Narrative`, `Details`, `Reason`
-- entity refs: polity/species/region/settlement ids + names
-- optional context maps: `Before`, `After`, `Metadata`
+- narrative fields: `Narrative`, `Details`, `Reason`
+- entity references: polity, related polity, species, region, settlement ids and names
+- context maps: `Before`, `After`, `Metadata`
 
-This model supports both narrative rendering and structured persistence.
-
----
+The console chronicle is derived from this model. It is not a separate source of truth.
 
 ## Presentation and Persistence Types
 
-- `ChronicleFocus`: stores current focal polity id and focal lineage id
-- `ChronicleFocusSelection`: initial focus result (`PolityId`, `LineageId`)
-- `ChronicleFocusTransition`: year-end focus handoff result (`Kind`, old/new polity, old/new lineage, reason)
-- `IPolityFocusSelector`: selects initial focus and resolves year-end focus handoff
-- `LineagePolityFocusSelector`: lineage-aware focus selector/handoff service
-- `HistoryJsonlWriter`: append-only writer for structured event history
-- `NarrativeRenderer` major-milestone presentation classification (banner titles/categories for rare focal events)
+- `ChronicleFocus`: currently watched polity and lineage
+- `ChronicleFocusSelection`: initial focus result
+- `ChronicleFocusTransition`: year-end focus handoff result
+- `IPolityFocusSelector`: focus selection/handoff abstraction
+- `LineagePolityFocusSelector`: default lineage-aware selector
+- `ChronicleEventFormatter`: lightweight formatter/filter for player-facing chronicle text
+- `ChronicleWatchRenderer`: fixed-panel live chronicle playback
+- `HistoryJsonlWriter`: append-only structured history sink
 
-## Trade Types
-
-- `TradeResourceType` (v1 uses `Food`)
-- `TradeLink` (exporter/importer/resource, optional settlement endpoints, age, success count, inactivity, moved quantity, continuity flags)
-
----
+The visible chronicle buffer in watch mode is presentation state only. Chronological history remains in `World.Events` and the JSONL log.
 
 ## Design Notes
 
-- simulation behavior and scope remain full-world
-- event capture is now source-of-truth and output-agnostic
-- console output and history output are intentionally separate
+- simulation behavior remains full-world
+- event capture is source-of-truth and output-agnostic
+- storage order and display order are intentionally different
+- this separation preserves a future path for Civilization History and multiple chronicle perspectives

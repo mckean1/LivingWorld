@@ -1,4 +1,3 @@
-using System.Threading;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
@@ -18,13 +17,12 @@ public sealed class Simulation : IDisposable
     private readonly FragmentationSystem _fragmentationSystem;
     private readonly PolityStageSystem _polityStageSystem;
     private readonly SimulationOptions _options;
-    private readonly NarrativeRenderer _narrativeRenderer;
     private readonly ChronicleColorWriter _chronicleColorWriter;
+    private readonly ChronicleEventFormatter _chronicleEventFormatter;
+    private readonly ChronicleWatchRenderer _chronicleWatchRenderer;
     private readonly ChronicleFocus _chronicleFocus;
     private readonly IPolityFocusSelector _focusSelector;
     private readonly HistoryJsonlWriter? _historyWriter;
-
-    private int _snapshotYear = int.MinValue;
 
     public Simulation(World world, SimulationOptions? options = null, IPolityFocusSelector? focusSelector = null)
     {
@@ -39,8 +37,9 @@ public sealed class Simulation : IDisposable
         _fragmentationSystem = new FragmentationSystem();
         _polityStageSystem = new PolityStageSystem();
         _options = options ?? new SimulationOptions();
-        _narrativeRenderer = new NarrativeRenderer();
         _chronicleColorWriter = new ChronicleColorWriter();
+        _chronicleEventFormatter = new ChronicleEventFormatter();
+        _chronicleWatchRenderer = new ChronicleWatchRenderer(_options, _chronicleColorWriter, _chronicleEventFormatter);
 
         _chronicleFocus = new ChronicleFocus();
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
@@ -50,8 +49,14 @@ public sealed class Simulation : IDisposable
         if (_options.WriteStructuredHistory)
         {
             _historyWriter = new HistoryJsonlWriter(_options.HistoryFilePath);
+        }
+
+        if (_options.WriteStructuredHistory || _options.OutputMode == OutputMode.Watch)
+        {
             _world.EventRecorded += OnWorldEventRecorded;
         }
+
+        _chronicleWatchRenderer.Render(_world, _chronicleFocus);
     }
 
     public void RunMonths(int months)
@@ -64,17 +69,21 @@ public sealed class Simulation : IDisposable
 
     public void Dispose()
     {
-        if (_historyWriter is not null)
+        if (_options.WriteStructuredHistory || _options.OutputMode == OutputMode.Watch)
         {
             _world.EventRecorded -= OnWorldEventRecorded;
+        }
+
+        if (_historyWriter is not null)
+        {
             _historyWriter.Dispose();
         }
+
+        _chronicleWatchRenderer.Dispose();
     }
 
     private void RunTick()
     {
-        CaptureYearStartIfNeeded();
-
         // Monthly systems
         _foodSystem.UpdateRegionEcology(_world);
         _foodSystem.GatherFood(_world);
@@ -82,7 +91,6 @@ public sealed class Simulation : IDisposable
         _tradeSystem.UpdateTrade(_world);
         _foodSystem.ConsumeFood(_world);
         _migrationSystem.UpdateMigration(_world);
-        PrintTickReport();
 
         // Year-end systems
         if (_world.Time.Month == 12)
@@ -109,7 +117,7 @@ public sealed class Simulation : IDisposable
             ResolveChronicleFocusForYear();
             PersistYearEndFoodStateSnapshots();
 
-            PrintYearReport();
+            RenderYearBoundaryOutput();
             ResetAnnualStats();
 
             if (_options.PauseAfterEachYear)
@@ -121,35 +129,15 @@ public sealed class Simulation : IDisposable
         _world.Time.AdvanceOneMonth();
     }
 
-    private void CaptureYearStartIfNeeded()
-    {
-        if (_world.Time.Month != 1)
-        {
-            return;
-        }
-
-        if (_snapshotYear == _world.Time.Year)
-        {
-            return;
-        }
-
-        _narrativeRenderer.CaptureYearStart(_world, _chronicleFocus);
-        _snapshotYear = _world.Time.Year;
-    }
-
     private void OnWorldEventRecorded(WorldEvent worldEvent)
     {
-        if (_historyWriter is null)
-        {
-            return;
-        }
-
         if (worldEvent.Severity == WorldEventSeverity.Debug)
         {
             return;
         }
 
-        _historyWriter.Write(worldEvent);
+        _historyWriter?.Write(worldEvent);
+        _chronicleWatchRenderer.Record(_world, _chronicleFocus, worldEvent);
     }
 
     private void AddYearlyFoodStressEvents()
@@ -291,7 +279,7 @@ public sealed class Simulation : IDisposable
             });
     }
 
-    private void PrintYearReport()
+    private void RenderYearBoundaryOutput()
     {
         if (_options.OutputMode == OutputMode.Debug)
         {
@@ -300,37 +288,7 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        IReadOnlyList<string> report = _options.FocusedChronicleEnabled
-            ? _narrativeRenderer.RenderYearReport(_world, _chronicleFocus)
-            : _narrativeRenderer.RenderYearReport(_world, _chronicleFocus);
-
-        foreach (string line in report)
-        {
-            _chronicleColorWriter.WriteLine(line, _world);
-        }
-    }
-
-    private void PrintTickReport()
-    {
-        if (!_options.StreamTickChronicle)
-        {
-            return;
-        }
-
-        if (_options.OutputMode == OutputMode.Debug)
-        {
-            return;
-        }
-
-        foreach (string line in _narrativeRenderer.RenderTickChronicle(_world))
-        {
-            _chronicleColorWriter.WriteLine(line, _world);
-        }
-
-        if (_options.TickDelayMilliseconds > 0)
-        {
-            Thread.Sleep(_options.TickDelayMilliseconds);
-        }
+        _chronicleWatchRenderer.Render(_world, _chronicleFocus);
     }
 
     private void PrintDebugYearEvents()
