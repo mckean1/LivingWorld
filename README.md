@@ -20,11 +20,12 @@ The simulation runs the full world in the background. Default output is now a fo
 The simulation runs in monthly ticks with yearly aggregation:
 
 1. Ecology and food updates
-2. Migration checks
-3. Year-end population, advancement, settlement, fragmentation, and stage passes
-4. Structured event emission
-5. Focused yearly chronicle rendering
-6. Append-only JSONL history persistence
+2. Regional food trade and redistribution checks
+3. Migration checks
+4. Year-end population, advancement, settlement, fragmentation, stage, and trade passes
+5. Structured event emission
+6. Focused yearly chronicle rendering
+7. Append-only JSONL history persistence
 
 ---
 
@@ -79,6 +80,14 @@ Severity levels:
 - `Critical`
 
 Default chronicle prioritizes focal `Notable`/`Critical` events.
+
+Trade is food-first in v1:
+
+- conservative surplus/deficit heuristics
+- nearby partner matching (same region or connected regions)
+- monthly transfers that can reduce shortage pressure
+- notable trade milestones in narrative output
+- detailed structured trade records in JSONL history
 
 ---
 

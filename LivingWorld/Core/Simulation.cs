@@ -10,6 +10,7 @@ public sealed class Simulation : IDisposable
     private readonly World _world;
     private readonly FoodSystem _foodSystem;
     private readonly AgricultureSystem _agricultureSystem;
+    private readonly TradeSystem _tradeSystem;
     private readonly PopulationSystem _populationSystem;
     private readonly MigrationSystem _migrationSystem;
     private readonly AdvancementSystem _advancementSystem;
@@ -29,6 +30,7 @@ public sealed class Simulation : IDisposable
         _world = world;
         _foodSystem = new FoodSystem();
         _agricultureSystem = new AgricultureSystem();
+        _tradeSystem = new TradeSystem();
         _populationSystem = new PopulationSystem();
         _migrationSystem = new MigrationSystem();
         _advancementSystem = new AdvancementSystem();
@@ -74,6 +76,7 @@ public sealed class Simulation : IDisposable
         _foodSystem.UpdateRegionEcology(_world);
         _foodSystem.GatherFood(_world);
         _agricultureSystem.ProduceFarmFood(_world);
+        _tradeSystem.UpdateTrade(_world);
         _foodSystem.ConsumeFood(_world);
         _migrationSystem.UpdateMigration(_world);
         PrintTickReport();
@@ -95,6 +98,7 @@ public sealed class Simulation : IDisposable
             _fragmentationSystem.UpdateFragmentation(_world);
             _polityStageSystem.UpdatePolityStages(_world);
             _agricultureSystem.UpdateAnnualAgriculture(_world);
+            _tradeSystem.UpdateAnnualTrade(_world);
 
             AddYearlyFoodStressEvents();
 
@@ -284,6 +288,8 @@ public sealed class Simulation : IDisposable
                 $"AFR={annualFoodRatio,4:F2} " +
                 $"Wild={polity.AnnualFoodGathered,6:F0} " +
                 $"Farm={polity.AnnualFoodFarmed,6:F0} " +
+                $"Imp={polity.AnnualFoodImported,6:F0} " +
+                $"Exp={polity.AnnualFoodExported,6:F0} " +
                 $"Starve={polity.StarvationMonthsThisYear,2} " +
                 $"Move={polity.MigrationPressure,4:F2} " +
                 $"Frag={polity.FragmentationPressure,4:F2} " +

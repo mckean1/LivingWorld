@@ -13,5 +13,10 @@ public static class WorldEventType
     public const string Fragmentation = "fragmentation";
     public const string StageChanged = "stage_changed";
     public const string PolityCollapsed = "polity_collapsed";
+    public const string TradeTransfer = "trade_transfer";
+    public const string TradeLinkStarted = "trade_link_started";
+    public const string TradeRelief = "trade_relief";
+    public const string TradeDependency = "trade_dependency";
+    public const string TradeLinkCollapsed = "trade_link_collapsed";
     public const string WorldEvent = "world_event";
 }

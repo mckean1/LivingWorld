@@ -20,6 +20,7 @@ Major systems:
 
 - Food / ecology
 - Agriculture
+- Trade
 - Migration
 - Population
 - Advancement
@@ -86,6 +87,8 @@ Yearly chronicle rendering now collapses:
 
 Knowledge breadth debug diffs are omitted from player-facing output.
 
+Trade milestones use the same event pipeline, while ordinary monthly transfers stay mostly in structured history.
+
 ---
 
 ## Structured History Path
@@ -104,11 +107,11 @@ This path is intentionally independent of console formatting.
 
 Monthly:
 
-- ecology, gathering, farming, consumption, migration
+- ecology, gathering, farming, trade redistribution, consumption, migration
 
 Year-end:
 
-- population, advancement, settlement, fragmentation, stage, annual agriculture events, annual food stress events
+- population, advancement, settlement, fragmentation, stage, annual agriculture events, annual food stress events, annual trade dependency/link maintenance
 - persist each active polity's resolved year-end food state snapshot
 - focused chronicle rendering
 - annual stat reset

@@ -29,7 +29,7 @@ public static class ChronicleTextFormatter
             return ChronicleFoodCondition.Hunger;
         }
 
-        if (annualFoodRatio < 1.0)
+        if (annualFoodRatio < 0.90)
         {
             return ChronicleFoodCondition.Shortage;
         }

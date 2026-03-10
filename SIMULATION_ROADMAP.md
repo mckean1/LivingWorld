@@ -13,6 +13,7 @@ Implemented core includes:
 - world generation (regions, species, starting polities)
 - ecology and food systems
 - migration, settlement, population, fragmentation
+- food-first regional trade redistribution between nearby polities
 - advancement and capability effects
 - polity stage progression
 - canonical structured event model
@@ -29,10 +30,13 @@ Replace initial first-polity focus with explicit player-tracked lineage and bett
 2. Chronicle quality tuning
 Improve event deduping and weighting so migration-heavy years still surface the most meaningful beats.
 
-3. Event taxonomy expansion
+3. Trade expansion
+Extend food-first trade into broader resource exchange (timber/stone/metal/livestock/crafted goods), stronger intra-polity logistics, and eventual route infrastructure.
+
+4. Event taxonomy expansion
 Add richer event types (absorption, diplomacy, conflict precursors) while maintaining concise chronicle rendering.
 
-4. History tooling
+5. History tooling
 Add simple post-run analyzers over JSONL (severity distributions, collapse causes, migration pressure trends).
 
 ---
@@ -40,7 +44,7 @@ Add simple post-run analyzers over JSONL (severity distributions, collapse cause
 ## Mid-Term Systems
 
 - knowledge diffusion
-- trade networks
+- advanced trade networks (specialization, supply-demand, market-like behavior)
 - cultural divergence
 - warfare and territorial conflict
 

@@ -51,6 +51,7 @@ Selected fields:
 - settlement state: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`
 - knowledge: `Advancements`, derived `Capabilities`
 - chronicle year-boundary food snapshot: `LastResolvedFoodState`, `LastResolvedFoodStateYear`
+- trade aggregates: `AnnualFoodImported`, `AnnualFoodExported`, `TradeReliefMonthsThisYear`, `TradePartnerCountThisYear`
 
 ---
 
@@ -73,6 +74,11 @@ This model supports both narrative rendering and structured persistence.
 - `ChronicleFocus`: stores current focal polity id
 - `IPolityFocusSelector`: selects initial focus
 - `HistoryJsonlWriter`: append-only writer for structured event history
+
+## Trade Types
+
+- `TradeResourceType` (v1 uses `Food`)
+- `TradeLink` (exporter/importer/resource, age, last-active tick)
 
 ---
 

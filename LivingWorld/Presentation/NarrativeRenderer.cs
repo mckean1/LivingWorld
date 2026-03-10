@@ -154,7 +154,7 @@ public sealed class NarrativeRenderer
             .OrderBy(GetMilestonePriority)
             .ThenBy(evt => evt.Month)
             .ThenBy(evt => evt.EventId)
-            .Where(IsMajorMilestoneEvent)
+            .Where(evt => IsMajorMilestoneEvent(evt, focusedPolity.Id))
             .Select(evt => evt.Narrative)
             .Where(narrative => !string.IsNullOrWhiteSpace(narrative))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -232,14 +232,19 @@ public sealed class NarrativeRenderer
         return ChronicleTextFormatter.DescribeFoodConditionNarrative(focusedPolity.Name, condition);
     }
 
-    private static bool IsMajorMilestoneEvent(WorldEvent evt)
+    private static bool IsMajorMilestoneEvent(WorldEvent evt, int focusedPolityId)
     {
+        bool isFocusedSubject = evt.PolityId == focusedPolityId;
+
         return evt.Type is WorldEventType.KnowledgeDiscovered
             or WorldEventType.SettlementFounded
             or WorldEventType.SettlementConsolidated
             or WorldEventType.StageChanged
             or WorldEventType.Fragmentation
-            or WorldEventType.PolityCollapsed;
+            or WorldEventType.PolityCollapsed
+            || (isFocusedSubject && evt.Type is WorldEventType.TradeLinkStarted
+                or WorldEventType.TradeRelief
+                or WorldEventType.TradeDependency);
     }
 
     private static int GetMilestonePriority(WorldEvent evt)
@@ -249,9 +254,12 @@ public sealed class NarrativeRenderer
             WorldEventType.PolityCollapsed => 0,
             WorldEventType.Fragmentation => 1,
             WorldEventType.StageChanged => 2,
-            WorldEventType.SettlementFounded => 3,
-            WorldEventType.SettlementConsolidated => 4,
-            WorldEventType.KnowledgeDiscovered => 5,
+            WorldEventType.TradeDependency => 3,
+            WorldEventType.TradeRelief => 4,
+            WorldEventType.TradeLinkStarted => 5,
+            WorldEventType.SettlementFounded => 6,
+            WorldEventType.SettlementConsolidated => 7,
+            WorldEventType.KnowledgeDiscovered => 8,
             _ => 10
         };
     }

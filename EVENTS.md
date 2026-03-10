@@ -47,6 +47,11 @@ Chronicle view prioritizes focal `Notable` and `Critical` events.
 - `fragmentation`
 - `stage_changed`
 - `polity_collapsed`
+- `trade_transfer`
+- `trade_link_started`
+- `trade_relief`
+- `trade_dependency`
+- `trade_link_collapsed`
 - `world_event`
 
 ---
@@ -65,6 +70,7 @@ Chronicle presentation also applies yearly collapsing rules:
 - food stress: one yearly worst-condition summary line
 - population micro-events: summarized in yearly change lines
 - knowledge breadth debug metrics are not rendered
+- ordinary monthly trade transfers are kept mostly in structured history, while notable trade outcomes appear in chronicle lines
 
 ---
 
