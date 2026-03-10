@@ -71,6 +71,7 @@ Outputs:
 
 `NarrativeRenderer` produces a yearly focused chronicle for one focal polity:
 
+- optional major-event milestone banners (rare, headline style)
 - header snapshot
 - `This Year` focal events (up to 3, collapsed summaries)
 - optional notable before/after changes
@@ -92,6 +93,7 @@ Trade milestones use the same event pipeline, while ordinary monthly transfers s
 Console coloring is handled by a centralized presentation helper (`ChronicleColorWriter`) that applies semantic colors to chronicle text segments without changing simulation/event data.
 It supports segmented line styling (for example, `Year N` and polity name rendered separately, dim section headers, and value-only food status coloring).
 Chronicle color semantics reserve yellow for actor names only; warning/shortage phrases use dark yellow so actor identity and risk state remain visually distinct.
+Major-event banner formatting (separators, headline line, placement) is also presentation-only and does not alter canonical event records.
 
 ---
 

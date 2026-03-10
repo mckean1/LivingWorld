@@ -53,6 +53,7 @@ Chronicle console output passes through a centralized semantic color writer in t
 
 Each year prints:
 
+- optional interstitial major milestone banner(s) (rare)
 - header for focal polity (region, population delta, food, status, knowledge)
 - `This Year` focal events (up to 3, collapsed summaries)
 - optional `Notable Changes`
@@ -62,6 +63,7 @@ Food transitions in `Notable Changes` compare persisted prior-year food state to
 Chronicle rendering collapses multi-step migration paths into one yearly migration line and collapses food stress into one worst-condition yearly line.
 Population micro-events are summarized via yearly population delta / notable change lines.
 Trade stays food-first in v1: normal monthly transfers are mostly hidden from player output, while notable trade milestones (new link, shortage relief, annual dependency) can appear.
+If a milestone is elevated to a major banner, that same event is not repeated in the regular yearly event bullet list.
 Current refinement details:
 
 - internal-priority matching is evaluated before external trade

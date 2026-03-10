@@ -37,12 +37,21 @@ Default yearly output follows one focal polity:
 - `This Year`: up to 3 short focal events
 - `Notable Changes`: optional before -> after lines
 - `World Notes`: optional 0-2 rare outside-world notes
+- rare major-event milestone banners for history-defining moments
 
 Food transitions in `Notable Changes` are year-boundary comparisons: prior-year resolved food state (persisted before annual reset) versus current year-end resolved state.
 Migration lines are collapsed to one yearly summary (start vs end region), and food stress is collapsed to one worst-condition yearly summary line.
 Knowledge breadth diffs are no longer shown in the player-facing chronicle.
 
 The wider world still simulates fully; only presentation is filtered.
+
+When a truly major milestone occurs, the chronicle now renders an interstitial banner block before the yearly detail report, for example:
+
+- `Year 122 - CIVILIZATION FORMED`
+- `Year 64 - MAJOR DISCOVERY`
+- `Year 214 - CIVILIZATION COLLAPSE`
+
+Major highlights are intentionally rare and currently focus on events such as first settlement, agriculture/craft breakthroughs, settled/civilization formation, major trade network starts, great famine, fragmentation, and collapse.
 
 Chronicle console output also applies lightweight semantic color styling for readability:
 

@@ -1,12 +1,15 @@
 using LivingWorld.Core;
 using LivingWorld.Map;
 using LivingWorld.Societies;
+using LivingWorld.Advancement;
 
 namespace LivingWorld.Presentation;
 
 public sealed class NarrativeRenderer
 {
+    private const int MaxYearlyMajorHighlights = 2;
     private readonly Dictionary<int, FocalYearSnapshot> _yearStartSnapshots = new();
+    private readonly HashSet<int> _majorTradeBannerShownForPolity = [];
 
     public void CaptureYearStart(World world, ChronicleFocus focus)
     {
@@ -57,11 +60,36 @@ public sealed class NarrativeRenderer
             .ThenBy(evt => evt.EventId)
             .ToList();
 
-        List<string> focalEvents = BuildChronicleEvents(world, focusedPolity, startSnapshot, eventsThisYear);
+        List<MajorChronicleEvent> majorHighlights = FilterMajorHighlightsForRarity(
+            SelectMajorHighlights(
+            world.Events,
+            eventsThisYear,
+            focusedPolity.Id),
+            focusedPolity.Id);
+        HashSet<long> highlightedEventIds = majorHighlights
+            .Select(highlight => highlight.Event.EventId)
+            .ToHashSet();
+
+        List<string> focalEvents = BuildChronicleEvents(
+            world,
+            focusedPolity,
+            startSnapshot,
+            eventsThisYear,
+            highlightedEventIds);
         List<string> notableChanges = BuildNotableChanges(startSnapshot, focusedPolity);
         List<WorldEvent> worldNotes = SelectWorldNotes(eventsThisYear, focusedPolity.Id);
 
         lines.Add(string.Empty);
+
+        foreach (MajorChronicleEvent major in majorHighlights)
+        {
+            lines.Add("==================================================");
+            lines.Add($"Year {world.Time.Year} - {major.Title}");
+            lines.Add(WorldEvent.NormalizeNarrative(major.Event.Narrative));
+            lines.Add("==================================================");
+            lines.Add(string.Empty);
+        }
+
         lines.Add("==================================================");
         lines.Add($"Year {world.Time.Year} - {focusedPolity.Name}");
         lines.Add($"Region: {region.Name}");
@@ -133,7 +161,8 @@ public sealed class NarrativeRenderer
         World world,
         Polity focusedPolity,
         FocalYearSnapshot startSnapshot,
-        IReadOnlyList<WorldEvent> eventsThisYear)
+        IReadOnlyList<WorldEvent> eventsThisYear,
+        IReadOnlySet<long> highlightedEventIds)
     {
         List<string> lines = new();
         List<WorldEvent> focalEvents = SelectFocalEvents(eventsThisYear, focusedPolity.Id);
@@ -154,6 +183,7 @@ public sealed class NarrativeRenderer
             .OrderBy(GetMilestonePriority)
             .ThenBy(evt => evt.Month)
             .ThenBy(evt => evt.EventId)
+            .Where(evt => !highlightedEventIds.Contains(evt.EventId))
             .Where(evt => IsMajorMilestoneEvent(evt, focusedPolity.Id))
             .Select(evt => evt.Narrative)
             .Where(narrative => !string.IsNullOrWhiteSpace(narrative))
@@ -266,6 +296,228 @@ public sealed class NarrativeRenderer
         };
     }
 
+    private static List<MajorChronicleEvent> SelectMajorHighlights(
+        IReadOnlyList<WorldEvent> allEvents,
+        IReadOnlyList<WorldEvent> eventsThisYear,
+        int focusedPolityId)
+    {
+        return eventsThisYear
+            .Where(evt => IsFocalEvent(evt, focusedPolityId))
+            .Where(evt => evt.Severity >= WorldEventSeverity.Notable)
+            .Select(evt => TryClassifyMajorEvent(allEvents, evt, focusedPolityId, out MajorChronicleCategory category)
+                ? new MajorChronicleEvent(evt, category, RenderMajorCategoryTitle(category), GetMajorPriority(category))
+                : null)
+            .Where(highlight => highlight is not null)
+            .Select(highlight => highlight!)
+            .OrderBy(highlight => highlight.Priority)
+            .ThenBy(highlight => highlight.Event.Month)
+            .ThenBy(highlight => highlight.Event.EventId)
+            .ToList();
+    }
+
+    private List<MajorChronicleEvent> FilterMajorHighlightsForRarity(
+        IReadOnlyList<MajorChronicleEvent> candidates,
+        int focusedPolityId)
+    {
+        List<MajorChronicleEvent> filtered = [];
+
+        foreach (MajorChronicleEvent candidate in candidates)
+        {
+            if (candidate.Category == MajorChronicleCategory.MajorTradeNetwork
+                && _majorTradeBannerShownForPolity.Contains(focusedPolityId))
+            {
+                continue;
+            }
+
+            filtered.Add(candidate);
+            if (candidate.Category == MajorChronicleCategory.MajorTradeNetwork)
+            {
+                _majorTradeBannerShownForPolity.Add(focusedPolityId);
+            }
+
+            if (filtered.Count >= MaxYearlyMajorHighlights)
+            {
+                break;
+            }
+        }
+
+        return filtered;
+    }
+
+    private static bool TryClassifyMajorEvent(
+        IReadOnlyList<WorldEvent> allEvents,
+        WorldEvent worldEvent,
+        int focusedPolityId,
+        out MajorChronicleCategory category)
+    {
+        category = default;
+        bool isFocusedSubject = worldEvent.PolityId == focusedPolityId;
+        bool isFocusedRelated = worldEvent.RelatedPolityId == focusedPolityId;
+
+        if (!isFocusedSubject && !isFocusedRelated)
+        {
+            return false;
+        }
+
+        if (isFocusedSubject && worldEvent.Type == WorldEventType.PolityCollapsed)
+        {
+            category = MajorChronicleCategory.CivilizationCollapse;
+            return true;
+        }
+
+        if (worldEvent.Type == WorldEventType.Fragmentation)
+        {
+            category = MajorChronicleCategory.Fragmentation;
+            return true;
+        }
+
+        if (isFocusedSubject && worldEvent.Type == WorldEventType.StageChanged)
+        {
+            if (TryParsePolityStage(worldEvent.After, out PolityStage afterStage))
+            {
+                if (afterStage == PolityStage.Civilization)
+                {
+                    category = MajorChronicleCategory.CivilizationFormed;
+                    return true;
+                }
+
+                if (afterStage == PolityStage.SettledSociety)
+                {
+                    category = MajorChronicleCategory.SettledSocietyFormed;
+                    return true;
+                }
+            }
+        }
+
+        if (isFocusedSubject && worldEvent.Type == WorldEventType.SettlementFounded && IsFirstSettlement(worldEvent))
+        {
+            category = MajorChronicleCategory.FirstSettlement;
+            return true;
+        }
+
+        if (isFocusedSubject
+            && worldEvent.Type == WorldEventType.KnowledgeDiscovered
+            && IsMajorKnowledgeBreakthrough(worldEvent))
+        {
+            category = MajorChronicleCategory.MajorDiscovery;
+            return true;
+        }
+
+        if (isFocusedSubject
+            && worldEvent.Type == WorldEventType.TradeLinkStarted
+            && worldEvent.Severity >= WorldEventSeverity.Notable
+            && IsFirstMajorTradeNetworkEvent(allEvents, worldEvent, focusedPolityId))
+        {
+            category = MajorChronicleCategory.MajorTradeNetwork;
+            return true;
+        }
+
+        if (isFocusedSubject
+            && worldEvent.Type == WorldEventType.FoodStress
+            && worldEvent.Severity >= WorldEventSeverity.Critical)
+        {
+            category = MajorChronicleCategory.GreatFamine;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryParsePolityStage(
+        IReadOnlyDictionary<string, string> values,
+        out PolityStage stage)
+    {
+        stage = default;
+        return values.TryGetValue("stage", out string? stageText)
+            && Enum.TryParse(stageText, true, out stage);
+    }
+
+    private static bool IsFirstSettlement(WorldEvent worldEvent)
+    {
+        if (!worldEvent.Before.TryGetValue("settlementCount", out string? previousCount))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(previousCount, out int count))
+        {
+            return false;
+        }
+
+        return count == 0;
+    }
+
+    private static bool IsMajorKnowledgeBreakthrough(WorldEvent worldEvent)
+    {
+        if (worldEvent.Metadata.TryGetValue("advancementId", out string? advancementIdText)
+            && int.TryParse(advancementIdText, out int advancementId))
+        {
+            return advancementId is (int)AdvancementId.Agriculture
+                or (int)AdvancementId.CraftSpecialization;
+        }
+
+        if (!worldEvent.Metadata.TryGetValue("advancement", out string? advancementName))
+        {
+            return false;
+        }
+
+        return advancementName.Equals("Agriculture", StringComparison.OrdinalIgnoreCase)
+            || advancementName.Equals("Craft Specialization", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsFirstMajorTradeNetworkEvent(
+        IReadOnlyList<WorldEvent> allEvents,
+        WorldEvent currentEvent,
+        int focusedPolityId)
+    {
+        if (!currentEvent.Metadata.TryGetValue("tradeMode", out string? tradeMode)
+            || !tradeMode.Equals("external", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        bool hasEarlierExternalLink = allEvents.Any(evt =>
+            evt.EventId < currentEvent.EventId
+            && evt.Type == WorldEventType.TradeLinkStarted
+            && evt.PolityId == focusedPolityId
+            && evt.Metadata.TryGetValue("tradeMode", out string? mode)
+            && mode.Equals("external", StringComparison.OrdinalIgnoreCase));
+
+        return !hasEarlierExternalLink;
+    }
+
+    private static string RenderMajorCategoryTitle(MajorChronicleCategory category)
+    {
+        return category switch
+        {
+            MajorChronicleCategory.FirstSettlement => "FIRST SETTLEMENT",
+            MajorChronicleCategory.MajorDiscovery => "MAJOR DISCOVERY",
+            MajorChronicleCategory.SettledSocietyFormed => "SETTLED SOCIETY FORMED",
+            MajorChronicleCategory.CivilizationFormed => "CIVILIZATION FORMED",
+            MajorChronicleCategory.MajorTradeNetwork => "MAJOR TRADE NETWORK",
+            MajorChronicleCategory.GreatFamine => "GREAT FAMINE",
+            MajorChronicleCategory.Fragmentation => "FRAGMENTATION",
+            MajorChronicleCategory.CivilizationCollapse => "CIVILIZATION COLLAPSE",
+            _ => "MAJOR EVENT"
+        };
+    }
+
+    private static int GetMajorPriority(MajorChronicleCategory category)
+    {
+        return category switch
+        {
+            MajorChronicleCategory.CivilizationCollapse => 0,
+            MajorChronicleCategory.GreatFamine => 1,
+            MajorChronicleCategory.Fragmentation => 2,
+            MajorChronicleCategory.CivilizationFormed => 3,
+            MajorChronicleCategory.MajorDiscovery => 4,
+            MajorChronicleCategory.FirstSettlement => 5,
+            MajorChronicleCategory.MajorTradeNetwork => 6,
+            MajorChronicleCategory.SettledSocietyFormed => 7,
+            _ => 10
+        };
+    }
+
     private static List<WorldEvent> SelectWorldNotes(IReadOnlyList<WorldEvent> eventsThisYear, int focusedPolityId)
     {
         return eventsThisYear
@@ -349,4 +601,22 @@ public sealed class NarrativeRenderer
         FoodStateSummary? FoodState,
         int RegionId,
         string RegionName);
+
+    private sealed record MajorChronicleEvent(
+        WorldEvent Event,
+        MajorChronicleCategory Category,
+        string Title,
+        int Priority);
+
+    private enum MajorChronicleCategory
+    {
+        FirstSettlement,
+        MajorDiscovery,
+        SettledSocietyFormed,
+        CivilizationFormed,
+        MajorTradeNetwork,
+        GreatFamine,
+        Fragmentation,
+        CivilizationCollapse
+    }
 }

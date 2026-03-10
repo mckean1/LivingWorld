@@ -71,6 +71,21 @@ Chronicle presentation also applies yearly collapsing rules:
 - population micro-events: summarized in yearly change lines
 - knowledge breadth debug metrics are not rendered
 - ordinary monthly trade transfers are kept mostly in structured history, while notable trade outcomes appear in chronicle lines
+- rare major milestones can be elevated into banner-style chronicle highlights
+
+### Major Chronicle Milestones (Presentation Classification)
+
+Major milestone highlighting is a presentation-layer classification over canonical events. It currently includes rare focal-polity moments such as:
+
+- first settlement founded
+- major discoveries (for example, Agriculture, Craft Specialization)
+- settled society / civilization formation
+- notable major trade-network start
+- great famine (critical annual food stress)
+- fragmentation
+- collapse
+
+These milestones are rendered as headline banners and excluded from duplicate display in the same year's normal event bullet list.
 
 The player-facing console renderer may color semantic segments (year headers, polity/place names, discoveries, positive/warning/crisis phrases), while structured history remains plain structured data.
 Yellow is reserved for actor/polity names; warning phrases are rendered in dark yellow.

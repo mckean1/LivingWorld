@@ -18,6 +18,7 @@ Implemented core includes:
 - polity stage progression
 - canonical structured event model
 - focused society chronicle output
+- major milestone banner highlights for rare history-defining focal events
 - append-only JSONL event history output
 
 ---

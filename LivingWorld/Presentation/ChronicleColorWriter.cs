@@ -113,6 +113,7 @@ public readonly record struct ChronicleStyledSegment(string Text, ChronicleSeman
 internal sealed class ChronicleLineColorizer
 {
     private static readonly Regex YearHeaderRegex = new(@"^Year\s+\d+", RegexOptions.Compiled);
+    private static readonly Regex MajorHeaderRegex = new(@"^Year\s+\d+\s+-\s+([A-Z][A-Z\s]+)$", RegexOptions.Compiled);
     private static readonly Regex PopulationRegex = new(@"^Population:\s+\d+\s+\(([^)]+)\)", RegexOptions.Compiled);
     private static readonly Regex RegionRegex = new(@"^Region:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex KnowledgeRegex = new(@"^Knowledge:\s+(.+)$", RegexOptions.Compiled);
@@ -193,6 +194,20 @@ internal sealed class ChronicleLineColorizer
             spans.Add(new SemanticSpan(year.Index, year.Length, ChronicleSemantic.YearHeader, 110));
         }
 
+        Match majorHeader = MajorHeaderRegex.Match(line);
+        if (majorHeader.Success)
+        {
+            ChronicleSemantic majorSemantic = ResolveMajorHeadlineSemantic(majorHeader.Groups[1].Value);
+            if (majorSemantic != ChronicleSemantic.Text)
+            {
+                spans.Add(new SemanticSpan(
+                    majorHeader.Groups[1].Index,
+                    majorHeader.Groups[1].Length,
+                    majorSemantic,
+                    108));
+            }
+        }
+
         Match region = RegionRegex.Match(line);
         if (region.Success)
         {
@@ -239,6 +254,34 @@ internal sealed class ChronicleLineColorizer
                 spans.Add(new SemanticSpan(population.Groups[1].Index, population.Groups[1].Length, semantic, 95));
             }
         }
+    }
+
+    private static ChronicleSemantic ResolveMajorHeadlineSemantic(string headline)
+    {
+        if (headline.Contains("DISCOVERY", StringComparison.OrdinalIgnoreCase))
+        {
+            return ChronicleSemantic.KnowledgeName;
+        }
+
+        if (headline.Contains("COLLAPSE", StringComparison.OrdinalIgnoreCase)
+            || headline.Contains("FAMINE", StringComparison.OrdinalIgnoreCase))
+        {
+            return ChronicleSemantic.Crisis;
+        }
+
+        if (headline.Contains("FRAGMENTATION", StringComparison.OrdinalIgnoreCase))
+        {
+            return ChronicleSemantic.Warning;
+        }
+
+        if (headline.Contains("FORMED", StringComparison.OrdinalIgnoreCase)
+            || headline.Contains("SETTLEMENT", StringComparison.OrdinalIgnoreCase)
+            || headline.Contains("TRADE", StringComparison.OrdinalIgnoreCase))
+        {
+            return ChronicleSemantic.Positive;
+        }
+
+        return ChronicleSemantic.Text;
     }
 
     private static void AddPhraseSpans(

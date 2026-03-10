@@ -78,6 +78,7 @@ This model supports both narrative rendering and structured persistence.
 - `ChronicleFocus`: stores current focal polity id
 - `IPolityFocusSelector`: selects initial focus
 - `HistoryJsonlWriter`: append-only writer for structured event history
+- `NarrativeRenderer` major-milestone presentation classification (banner titles/categories for rare focal events)
 
 ## Trade Types
 
