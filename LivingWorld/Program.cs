@@ -10,7 +10,7 @@ class Program
     static void Main()
     {
         const int seed = 1;
-        const int monthsToSimulate = 12;
+        const int yearsToSimulate = 12;
         const int monthsInYear = 12;
 
         WorldGenerator generator = new(seed);
@@ -23,7 +23,7 @@ class Program
         Console.WriteLine("Press any key to start simulation.");
         Console.ReadKey();
 
-        simulation.RunMonths(monthsToSimulate * monthsInYear);
+        simulation.RunMonths(yearsToSimulate * monthsInYear);
 
         Console.WriteLine("Simulation complete.");
     }
