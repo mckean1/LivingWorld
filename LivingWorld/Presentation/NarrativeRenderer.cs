@@ -1,5 +1,6 @@
 using LivingWorld.Core;
 using LivingWorld.Societies;
+using LivingWorld.Advancement;
 
 namespace LivingWorld.Presentation;
 
@@ -109,8 +110,9 @@ public sealed class NarrativeRenderer
         string movement = DescribeMovement(polity);
         string growth = DescribePopulation(polity, annualFoodRatio);
         string stores = DescribeFoodStores(polity);
+        string knowledge = DescribeKnowledge(polity);
 
-        return $"{polity.Name} in {region.Name} {condition} {growth} {stores} {movement}";
+        return $"{polity.Name} in {region.Name} {condition} {growth} {stores} {movement} {knowledge}";
     }
 
     private static string RenderMonthlyPolityBeat(World world, Polity polity)
@@ -228,6 +230,29 @@ public sealed class NarrativeRenderer
         }
 
         return "They remained settled in their homeland.";
+    }
+
+    private static string DescribeKnowledge(Polity polity)
+    {
+        if (polity.Advancements.Count == 0)
+        {
+            return "Their shared knowledge remains practical and local.";
+        }
+
+        if (polity.Advancements.Count == 1)
+        {
+            AdvancementDefinition advancement = AdvancementCatalog.Get(polity.Advancements.OrderBy(id => id).First());
+            return $"Their people are now known for {advancement.Name.ToLowerInvariant()}.";
+        }
+
+        string featured = string.Join(
+            ", ",
+            polity.Advancements
+                .OrderBy(id => id)
+                .Take(2)
+                .Select(id => AdvancementCatalog.Get(id).Name.ToLowerInvariant()));
+
+        return $"Their traditions now include {featured}.";
     }
 
     private static string FormatMonth(int month)

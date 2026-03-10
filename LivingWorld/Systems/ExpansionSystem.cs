@@ -85,6 +85,7 @@ public sealed class ExpansionSystem
                 splitPopulation);
 
             child.FoodStores = polity.FoodStores * 0.30;
+            child.InheritAdvancements(polity.Advancements);
             polity.FoodStores *= 0.70;
 
             newPolities.Add(child);

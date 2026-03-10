@@ -1,3 +1,5 @@
+using LivingWorld.Advancement;
+
 namespace LivingWorld.Societies;
 
 public sealed class Polity
@@ -34,6 +36,8 @@ public sealed class Polity
     // Ongoing stress
     public int StarvationMonthsThisYear { get; set; }
 
+    public HashSet<AdvancementId> Advancements { get; }
+
     public Polity(int id, string name, int speciesId, int regionId, int population)
     {
         Id = id;
@@ -62,6 +66,7 @@ public sealed class Polity
         AnnualFoodConsumed = 0;
         AnnualFoodShortage = 0;
         StarvationMonthsThisYear = 0;
+        Advancements = new HashSet<AdvancementId>();
     }
 
     public void ResetAnnualFoodStats()
@@ -72,5 +77,19 @@ public sealed class Polity
         StarvationMonthsThisYear = 0;
         MovedThisYear = false;
         MovesThisYear = 0;
+    }
+
+    public bool HasAdvancement(AdvancementId advancementId)
+        => Advancements.Contains(advancementId);
+
+    public bool DiscoverAdvancement(AdvancementId advancementId)
+        => Advancements.Add(advancementId);
+
+    public void InheritAdvancements(IEnumerable<AdvancementId> advancements)
+    {
+        foreach (AdvancementId advancement in advancements)
+        {
+            Advancements.Add(advancement);
+        }
     }
 }

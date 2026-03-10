@@ -11,6 +11,7 @@ public sealed class Simulation
     private readonly FoodSystem _foodSystem;
     private readonly PopulationSystem _populationSystem;
     private readonly MigrationSystem _migrationSystem;
+    private readonly AdvancementSystem _advancementSystem;
     private readonly ExpansionSystem _expansionSystem;
     private readonly SimulationOptions _options;
     private readonly NarrativeRenderer _narrativeRenderer;
@@ -21,6 +22,7 @@ public sealed class Simulation
         _foodSystem = new FoodSystem();
         _populationSystem = new PopulationSystem();
         _migrationSystem = new MigrationSystem();
+        _advancementSystem = new AdvancementSystem();
         _expansionSystem = new ExpansionSystem();
         _options = options ?? new SimulationOptions();
         _narrativeRenderer = new NarrativeRenderer();
@@ -56,6 +58,7 @@ public sealed class Simulation
             }
 
             _populationSystem.UpdatePopulation(_world);
+            _advancementSystem.UpdateAdvancements(_world);
             _expansionSystem.UpdateExpansion(_world);
 
             AddYearlyFoodStressEvents();
@@ -180,7 +183,8 @@ public sealed class Simulation
                 $"Food={polity.FoodStores,6:F1} " +
                 $"AFR={annualFoodRatio,4:F2} " +
                 $"Starve={polity.StarvationMonthsThisYear,2} " +
-                $"Move={polity.MigrationPressure,4:F2}");
+                $"Move={polity.MigrationPressure,4:F2} " +
+                $"Know={polity.Advancements.Count,2}");
         }
     }
 
