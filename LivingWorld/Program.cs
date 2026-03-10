@@ -16,7 +16,7 @@ class Program
         WorldGenerator generator = new(seed);
         World world = generator.Generate();
 
-        SimulationOptions options = SimulationOptions.NarrativeChronicle(tickDelayMilliseconds: 1000);
+        SimulationOptions options = SimulationOptions.NarrativeChronicle();
 
         Simulation simulation = new(world, options);
 

@@ -2,7 +2,7 @@ namespace LivingWorld.Presentation;
 
 public sealed class SimulationOptions
 {
-    public static SimulationOptions NarrativeChronicle(int tickDelayMilliseconds = 250)
+    public static SimulationOptions NarrativeChronicle(int tickDelayMilliseconds = 1000)
         => new()
         {
             OutputMode = OutputMode.Narrative,
