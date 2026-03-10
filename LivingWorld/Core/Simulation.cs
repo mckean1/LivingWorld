@@ -99,6 +99,7 @@ public sealed class Simulation : IDisposable
             AddYearlyFoodStressEvents();
 
             _world.Polities.RemoveAll(p => p.Population <= 0);
+            PersistYearEndFoodStateSnapshots();
 
             PrintYearReport();
             ResetAnnualStats();
@@ -185,6 +186,15 @@ public sealed class Simulation : IDisposable
         foreach (Polity polity in _world.Polities)
         {
             polity.ResetAnnualFoodStats();
+        }
+    }
+
+    private void PersistYearEndFoodStateSnapshots()
+    {
+        foreach (Polity polity in _world.Polities.Where(p => p.Population > 0))
+        {
+            polity.LastResolvedFoodState = ChronicleTextFormatter.ResolveFoodState(polity);
+            polity.LastResolvedFoodStateYear = _world.Time.Year;
         }
     }
 

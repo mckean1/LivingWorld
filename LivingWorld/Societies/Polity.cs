@@ -56,6 +56,8 @@ public sealed class Polity
     public SettlementStatus SettlementStatus { get; set; }
     public int SettlementCount { get; set; }
     public int YearsSinceFirstSettlement { get; set; }
+    public FoodStateSummary? LastResolvedFoodState { get; set; }
+    public int? LastResolvedFoodStateYear { get; set; }
 
     public HashSet<AdvancementId> Advancements { get; }
     public PolityCapabilities Capabilities { get; private set; }
@@ -114,6 +116,8 @@ public sealed class Polity
         AgricultureEventCooldownYears = 0;
 
         ClearSettlementState();
+        LastResolvedFoodState = null;
+        LastResolvedFoodStateYear = null;
         Advancements = new HashSet<AdvancementId>();
         Capabilities = PolityCapabilities.FromAdvancements(Advancements);
     }

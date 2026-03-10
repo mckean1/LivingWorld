@@ -71,11 +71,20 @@ Outputs:
 `NarrativeRenderer` produces a yearly focused chronicle for one focal polity:
 
 - header snapshot
-- `This Year` focal events (usually 1-5)
+- `This Year` focal events (up to 3, collapsed summaries)
 - optional notable before/after changes
 - optional rare world notes (0-2)
 
 Chronicle focus is tracked by `ChronicleFocus` and chosen by `IPolityFocusSelector` (default: first starting polity).
+
+Food-state notable changes use a persisted prior-year snapshot on each polity (`LastResolvedFoodState` + capture year), not recomputation after annual counters reset.
+Yearly chronicle rendering now collapses:
+
+- multiple migration events into one summary line
+- food stress into one worst-condition yearly line
+- population micro-events into a single population before/after notable change
+
+Knowledge breadth debug diffs are omitted from player-facing output.
 
 ---
 
@@ -100,6 +109,7 @@ Monthly:
 Year-end:
 
 - population, advancement, settlement, fragmentation, stage, annual agriculture events, annual food stress events
+- persist each active polity's resolved year-end food state snapshot
 - focused chronicle rendering
 - annual stat reset
 

@@ -50,6 +50,7 @@ Selected fields:
 - fragmentation state: `FragmentationPressure`, `FoodStressYears`, `SplitCooldownYears`
 - settlement state: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`
 - knowledge: `Advancements`, derived `Capabilities`
+- chronicle year-boundary food snapshot: `LastResolvedFoodState`, `LastResolvedFoodStateYear`
 
 ---
 

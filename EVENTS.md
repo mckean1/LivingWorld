@@ -54,9 +54,17 @@ Chronicle view prioritizes focal `Notable` and `Critical` events.
 ## Chronicle Filtering Rules (Default)
 
 - show focal-polity events only
-- show 1-5 short lines in `This Year`
+- show up to 3 short lines in `This Year`
 - show optional `Notable Changes` (before -> after)
 - show optional `World Notes` (0-2 rare outside events)
+
+For food transitions, `Notable Changes` uses persisted prior-year resolved food-state snapshots. It does not infer the "before" state from freshly reset annual counters.
+Chronicle presentation also applies yearly collapsing rules:
+
+- migration: one yearly summary line from start/end region
+- food stress: one yearly worst-condition summary line
+- population micro-events: summarized in yearly change lines
+- knowledge breadth debug metrics are not rendered
 
 ---
 

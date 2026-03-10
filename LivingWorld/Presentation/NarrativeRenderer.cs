@@ -20,8 +20,9 @@ public sealed class NarrativeRenderer
             polity.Id,
             polity.Population,
             polity.Stage,
-            ChronicleTextFormatter.DescribeFoodState(polity),
-            polity.Advancements.Count);
+            ResolvePriorYearFoodState(world.Time.Year, polity),
+            polity.RegionId,
+            world.Regions.First(region => region.Id == polity.RegionId).Name);
     }
 
     public IReadOnlyList<string> RenderTickChronicle(World world)
@@ -46,7 +47,7 @@ public sealed class NarrativeRenderer
             return lines;
         }
 
-        FocalYearSnapshot startSnapshot = ResolveStartSnapshot(world.Time.Year, focusedPolity);
+        FocalYearSnapshot startSnapshot = ResolveStartSnapshot(world, world.Time.Year, focusedPolity);
         int populationDelta = focusedPolity.Population - startSnapshot.Population;
 
         Region region = world.Regions.First(region => region.Id == focusedPolity.RegionId);
@@ -56,7 +57,7 @@ public sealed class NarrativeRenderer
             .ThenBy(evt => evt.EventId)
             .ToList();
 
-        List<WorldEvent> focalEvents = SelectFocalEvents(eventsThisYear, focusedPolity.Id);
+        List<string> focalEvents = BuildChronicleEvents(world, focusedPolity, startSnapshot, eventsThisYear);
         List<string> notableChanges = BuildNotableChanges(startSnapshot, focusedPolity);
         List<WorldEvent> worldNotes = SelectWorldNotes(eventsThisYear, focusedPolity.Id);
 
@@ -78,9 +79,9 @@ public sealed class NarrativeRenderer
         }
         else
         {
-            foreach (WorldEvent worldEvent in focalEvents.Take(5))
+            foreach (string narrative in focalEvents.Take(3))
             {
-                lines.Add($"- {worldEvent.Narrative}");
+                lines.Add($"- {narrative}");
             }
         }
 
@@ -128,6 +129,133 @@ public sealed class NarrativeRenderer
     private static bool IsFocalEvent(WorldEvent evt, int focusedPolityId)
         => evt.PolityId == focusedPolityId || evt.RelatedPolityId == focusedPolityId;
 
+    private static List<string> BuildChronicleEvents(
+        World world,
+        Polity focusedPolity,
+        FocalYearSnapshot startSnapshot,
+        IReadOnlyList<WorldEvent> eventsThisYear)
+    {
+        List<string> lines = new();
+        List<WorldEvent> focalEvents = SelectFocalEvents(eventsThisYear, focusedPolity.Id);
+
+        string? migrationLine = BuildMigrationSummaryLine(world, focusedPolity, startSnapshot, focalEvents);
+        if (!string.IsNullOrWhiteSpace(migrationLine))
+        {
+            lines.Add(migrationLine);
+        }
+
+        string? foodLine = BuildFoodSummaryLine(focusedPolity, startSnapshot);
+        if (!string.IsNullOrWhiteSpace(foodLine))
+        {
+            lines.Add(foodLine);
+        }
+
+        List<string> milestoneLines = focalEvents
+            .OrderBy(GetMilestonePriority)
+            .ThenBy(evt => evt.Month)
+            .ThenBy(evt => evt.EventId)
+            .Where(IsMajorMilestoneEvent)
+            .Select(evt => evt.Narrative)
+            .Where(narrative => !string.IsNullOrWhiteSpace(narrative))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (string milestoneLine in milestoneLines)
+        {
+            if (lines.Count >= 3)
+            {
+                break;
+            }
+
+            // Skip duplicate migration/food narratives once synthesized.
+            if (ContainsSameMeaning(lines, milestoneLine))
+            {
+                continue;
+            }
+
+            lines.Add(milestoneLine);
+        }
+
+        return lines;
+    }
+
+    private static bool ContainsSameMeaning(IReadOnlyList<string> currentLines, string candidate)
+    {
+        return currentLines.Any(line =>
+            string.Equals(line, candidate, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? BuildMigrationSummaryLine(
+        World world,
+        Polity focusedPolity,
+        FocalYearSnapshot startSnapshot,
+        IReadOnlyList<WorldEvent> focalEvents)
+    {
+        List<WorldEvent> migrationEvents = focalEvents
+            .Where(evt => evt.Type == WorldEventType.Migration && evt.PolityId == focusedPolity.Id)
+            .OrderBy(evt => evt.Month)
+            .ThenBy(evt => evt.EventId)
+            .ToList();
+
+        if (migrationEvents.Count == 0)
+        {
+            return null;
+        }
+
+        string endRegionName = world.Regions.First(region => region.Id == focusedPolity.RegionId).Name;
+        bool endedWhereStarted = startSnapshot.RegionId == focusedPolity.RegionId;
+
+        if (endedWhereStarted && migrationEvents.Count > 1)
+        {
+            return $"{focusedPolity.Name} wandered in search of food.";
+        }
+
+        if (!endedWhereStarted)
+        {
+            if (migrationEvents.Count == 1)
+            {
+                return $"{focusedPolity.Name} migrated to {endRegionName}.";
+            }
+
+            return $"{focusedPolity.Name} migrated from {startSnapshot.RegionName} to {endRegionName}.";
+        }
+
+        return $"{focusedPolity.Name} migrated to {endRegionName}.";
+    }
+
+    private static string? BuildFoodSummaryLine(Polity focusedPolity, FocalYearSnapshot startSnapshot)
+    {
+        ChronicleFoodCondition condition = ChronicleTextFormatter.ResolveChronicleFoodCondition(
+            focusedPolity,
+            startSnapshot.Population);
+
+        return ChronicleTextFormatter.DescribeFoodConditionNarrative(focusedPolity.Name, condition);
+    }
+
+    private static bool IsMajorMilestoneEvent(WorldEvent evt)
+    {
+        return evt.Type is WorldEventType.KnowledgeDiscovered
+            or WorldEventType.SettlementFounded
+            or WorldEventType.SettlementConsolidated
+            or WorldEventType.StageChanged
+            or WorldEventType.Fragmentation
+            or WorldEventType.PolityCollapsed;
+    }
+
+    private static int GetMilestonePriority(WorldEvent evt)
+    {
+        return evt.Type switch
+        {
+            WorldEventType.PolityCollapsed => 0,
+            WorldEventType.Fragmentation => 1,
+            WorldEventType.StageChanged => 2,
+            WorldEventType.SettlementFounded => 3,
+            WorldEventType.SettlementConsolidated => 4,
+            WorldEventType.KnowledgeDiscovered => 5,
+            _ => 10
+        };
+    }
+
     private static List<WorldEvent> SelectWorldNotes(IReadOnlyList<WorldEvent> eventsThisYear, int focusedPolityId)
     {
         return eventsThisYear
@@ -157,15 +285,11 @@ public sealed class NarrativeRenderer
             changes.Add($"Status: {RenderStageName(startSnapshot.Stage)} -> {RenderStageName(current.Stage)}");
         }
 
-        string currentFood = ChronicleTextFormatter.DescribeFoodState(current);
-        if (!string.Equals(startSnapshot.FoodState, currentFood, StringComparison.Ordinal))
+        FoodStateSummary currentFood = ChronicleTextFormatter.ResolveFoodState(current);
+        if (startSnapshot.FoodState.HasValue && startSnapshot.FoodState.Value != currentFood)
         {
-            changes.Add($"Food: {startSnapshot.FoodState} -> {currentFood}");
-        }
-
-        if (startSnapshot.AdvancementCount != current.Advancements.Count)
-        {
-            changes.Add($"Knowledge breadth: {startSnapshot.AdvancementCount} -> {current.Advancements.Count}");
+            changes.Add(
+                $"Food: {ChronicleTextFormatter.DescribeFoodState(startSnapshot.FoodState.Value)} -> {ChronicleTextFormatter.DescribeFoodState(currentFood)}");
         }
 
         return changes;
@@ -178,25 +302,41 @@ public sealed class NarrativeRenderer
             _ => stage.ToString()
         };
 
-    private FocalYearSnapshot ResolveStartSnapshot(int year, Polity polity)
+    private FocalYearSnapshot ResolveStartSnapshot(World world, int year, Polity polity)
     {
         if (_yearStartSnapshots.TryGetValue(year, out FocalYearSnapshot? snapshot) && snapshot.PolityId == polity.Id)
         {
             return snapshot;
         }
 
+        Region currentRegion = world.Regions.First(region => region.Id == polity.RegionId);
+
         return new FocalYearSnapshot(
             polity.Id,
             polity.Population,
             polity.Stage,
-            ChronicleTextFormatter.DescribeFoodState(polity),
-            polity.Advancements.Count);
+            ResolvePriorYearFoodState(year, polity),
+            polity.RegionId,
+            currentRegion.Name);
+    }
+
+    private static FoodStateSummary? ResolvePriorYearFoodState(int currentYear, Polity polity)
+    {
+        if (!polity.LastResolvedFoodState.HasValue || !polity.LastResolvedFoodStateYear.HasValue)
+        {
+            return null;
+        }
+
+        return polity.LastResolvedFoodStateYear.Value == currentYear - 1
+            ? polity.LastResolvedFoodState
+            : null;
     }
 
     private sealed record FocalYearSnapshot(
         int PolityId,
         int Population,
         PolityStage Stage,
-        string FoodState,
-        int AdvancementCount);
+        FoodStateSummary? FoodState,
+        int RegionId,
+        string RegionName);
 }

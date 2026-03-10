@@ -28,8 +28,9 @@ The simulation runs in monthly ticks with yearly aggregation. The full world alw
 7. Annual agriculture events
 8. Annual food-stress events
 9. Remove collapsed polities (`Population <= 0`)
-10. Render yearly focused chronicle (narrative mode) or debug summary (debug mode)
-11. Reset annual food stats
+10. Persist resolved year-end food-state snapshot for each active polity
+11. Render yearly focused chronicle (narrative mode) or debug summary (debug mode)
+12. Reset annual food stats
 
 ---
 
@@ -49,9 +50,13 @@ Sinks:
 Each year prints:
 
 - header for focal polity (region, population delta, food, status, knowledge)
-- `This Year` focal events (usually 1-5)
+- `This Year` focal events (up to 3, collapsed summaries)
 - optional `Notable Changes`
 - optional `World Notes` (0-2 rare outside events)
+
+Food transitions in `Notable Changes` compare persisted prior-year food state to current year-end resolved food state, so reset annual counters do not distort January start snapshots.
+Chronicle rendering collapses multi-step migration paths into one yearly migration line and collapses food stress into one worst-condition yearly line.
+Population micro-events are summarized via yearly population delta / notable change lines.
 
 ---
 
