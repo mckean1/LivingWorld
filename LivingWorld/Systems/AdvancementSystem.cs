@@ -51,9 +51,23 @@ public sealed class AdvancementSystem
 
                 definition.OnDiscovered?.Invoke(world, polity);
                 world.AddEvent(
-                    "ADVANCEMENT",
+                    WorldEventType.KnowledgeDiscovered,
+                    WorldEventSeverity.Notable,
                     BuildDiscoveryNarrative(polity, definition),
-                    $"{polity.Name} discovered {definition.Name} with annual chance {chance:F3}.");
+                    $"{polity.Name} discovered {definition.Name} with annual chance {chance:F3}.",
+                    reason: "discovery_roll_success",
+                    polityId: polity.Id,
+                    polityName: polity.Name,
+                    speciesId: polity.SpeciesId,
+                    speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                    regionId: polity.RegionId,
+                    regionName: world.Regions.First(region => region.Id == polity.RegionId).Name,
+                    metadata: new Dictionary<string, string>
+                    {
+                        ["advancementId"] = definition.Id.ToString(),
+                        ["advancement"] = definition.Name,
+                        ["discoveryChance"] = chance.ToString("F3")
+                    });
             }
         }
     }

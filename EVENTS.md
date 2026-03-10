@@ -1,169 +1,86 @@
 # EVENTS.md
 
-# LivingWorld Historical Events
+# LivingWorld Event System
 
-The LivingWorld simulation records important events as a chronological history.
+LivingWorld now uses a canonical structured event model for simulation events, then routes those events to two separate outputs:
 
-Events are designed to be **short and readable**, resembling historical records.
-
-Only notable events are logged by default.
-
----
-
-# Event Types
-
-The following events may appear in the historical record.
+- focused yearly chronicle (console, player-facing)
+- append-only JSONL history (developer-facing)
 
 ---
 
-# Migration Events
+## Event Model
 
-Migration occurs when a polity relocates to a new region.
+Core fields:
 
-Example:
-
-```
-Red River Clan migrated to Northern Plains
-```
-
-Migration may occur due to:
-
-* food scarcity
-* population pressure
-* environmental opportunity
+- `eventId`, `year`, `month`, `season`
+- `type`, `severity`, `narrative`, `details`, `reason`
+- `polityId`, `polityName`
+- `relatedPolityId`, `relatedPolityName`
+- `speciesId`, `speciesName`
+- `regionId`, `regionName`
+- `settlementId`, `settlementName`
+- `before`, `after`, `metadata`
 
 ---
 
-# Settlement Founding
+## Severity
 
-Settlement events occur when a polity establishes a permanent settlement.
+- `Debug`
+- `Normal`
+- `Notable`
+- `Critical`
 
-Example:
-
-```
-Red River Clan founded Stone Ford
-```
-
-Settlements represent the transition from nomadic life to permanent habitation.
+Chronicle view prioritizes focal `Notable` and `Critical` events.
 
 ---
 
-# Knowledge Discovery
+## Important Event Types
 
-Knowledge events occur when a polity discovers new capabilities.
-
-Example:
-
-```
-Stone Ford discovered Stone Tools
-Ash Tribe improved food stores
-River Folk began farming
-```
-
-Knowledge discoveries may enable:
-
-* improved food production
-* settlement development
-* societal complexity
+- `migration`
+- `knowledge_discovered`
+- `settlement_founded`
+- `settlement_consolidated`
+- `harvest`
+- `food_stress`
+- `population_changed`
+- `fragmentation`
+- `stage_changed`
+- `polity_collapsed`
+- `world_event`
 
 ---
 
-# Polity Stage Transitions
+## Chronicle Filtering Rules (Default)
 
-Stage events occur when a polity advances through social complexity stages.
-
-Examples:
-
-```
-Red River Clan became a Tribe
-Ashen Vale became a Settled Society
-Naru formed a Civilization
-```
-
-Current stages:
-
-* Band
-* Tribe
-* Settled Society
-* Civilization
+- show focal-polity events only
+- show 1-5 short lines in `This Year`
+- show optional `Notable Changes` (before -> after)
+- show optional `World Notes` (0-2 rare outside events)
 
 ---
 
-# Polity Splits
+## JSONL History Rules
 
-Societies may fragment into multiple groups.
-
-Example:
-
-```
-Green Barrow Clan split from Deepfield Tribe in Green Barrow
-```
-
-Repeated splits into the same region keep readable names by using simple historical suffixes such as:
-
-```
-Green Barrow Clan II
-Green Barrow Colony III
-```
-
-Splits may occur due to:
-
-* population pressure
-* repeated food stress
-* regional crowding
-* migration strain
+- append-only during run
+- captures important events for all polities/world entities
+- designed for grep/filter/post-run analysis
+- intentionally excludes low-value telemetry spam
 
 ---
 
-# Famine Events
+## Example Chronicle Lines
 
-Famine occurs when food production fails to support the population.
-
-Example:
-
-```
-Stone Ford suffered a famine
-```
-
-Famines may lead to:
-
-* population decline
-* migration
-* societal collapse
+- `Red River Clan migrated to Lower Valley.`
+- `Red River Clan discovered Agriculture.`
+- `Red River Clan suffered famine.`
+- `Red River Clan declined from 84 to 71.`
+- `Red River Clan became a Settled Society.`
 
 ---
 
-# Agriculture and Harvest Events
+## Example JSONL Record
 
-Agriculture events occur when settled farming expands or produces notable outcomes.
-
-Examples:
-
+```json
+{"eventId":42,"year":118,"month":12,"season":"Winter","type":"stage_changed","severity":"Notable","narrative":"Red River Clan became a Settled Society.","polityId":3,"polityName":"Red River Clan","regionId":7,"regionName":"Lower Valley","before":{"stage":"Tribe"},"after":{"stage":"SettledSociety"},"metadata":{}}
 ```
-Red Valley began farming in Green Plains
-Ash Tribe expanded cultivation in Green Plains
-Riverhold harvested a strong crop
-Stone Fork suffered a poor harvest
-```
-
-These events are yearly and notable-only so default history stays concise.
-
----
-
-# Example Historical Output
-
-```
-Year 412
-
-Red River Clan migrated to Northern Plains
-Stone Ford discovered Agriculture
-Oak Valley Clan founded River Camp
-Riverwatch Clan became a Tribe
-
-Year 417
-
-River Camp suffered a famine
-Green Barrow Clan split from Deepfield Tribe in Green Barrow
-```
-
-The goal of the event system is to produce a **clear historical narrative** of how the world evolved.

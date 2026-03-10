@@ -48,9 +48,22 @@ public sealed class PolityStageSystem
             polity.Stage = evaluated;
 
             world.AddEvent(
-                "POLITY_STAGE",
+                WorldEventType.StageChanged,
+                WorldEventSeverity.Notable,
                 BuildStageChangeNarrative(polity, evaluated),
-                $"{polity.Name} advanced from {current} to {evaluated}.");
+                $"{polity.Name} advanced from {current} to {evaluated}.",
+                reason: "stage_threshold_met",
+                polityId: polity.Id,
+                polityName: polity.Name,
+                regionId: polity.RegionId,
+                before: new Dictionary<string, string>
+                {
+                    ["stage"] = current.ToString()
+                },
+                after: new Dictionary<string, string>
+                {
+                    ["stage"] = evaluated.ToString()
+                });
         }
     }
 

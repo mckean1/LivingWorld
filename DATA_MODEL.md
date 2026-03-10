@@ -2,319 +2,81 @@
 
 # LivingWorld Data Model
 
-This document describes the primary data structures used in the LivingWorld simulation.
-
-The simulation uses **aggregated entities rather than individual agents**, which allows the world to simulate centuries of history efficiently.
+LivingWorld uses aggregated entities (not individual agents) so centuries of simulation can run efficiently.
 
 ---
 
-# Core Entities
+## Core Entities
 
-The simulation is built around several core data structures:
-
-```
-World
-Region
-Species
-Polity
-PolityStage
-Settlement
-Knowledge
-PolityCapabilities
-HistoricalEvent
-```
-
-These entities interact to produce the evolving simulation.
+- `World`
+- `Region`
+- `Species`
+- `Polity`
+- `PolityStage`
+- `WorldEvent`
+- `ChronicleFocus` (presentation-level focus state)
 
 ---
 
-# World
+## World
 
-The `World` object is the root container for the simulation.
+`World` is the root simulation container.
 
-It stores all entities and coordinates the simulation loop.
+Key properties:
 
-Typical properties:
+- `Regions`
+- `Species`
+- `Polities`
+- `Events`
+- `Time`
 
-```
-Regions
-Species
-Polities
-Settlements
-HistoricalEvents
-CurrentYear
-CurrentMonth
-```
+Event responsibilities:
 
-Responsibilities:
-
-* advancing the simulation
-* coordinating system updates
-* recording historical events
+- `AddEvent(...)` enriches and stores canonical event records
+- `EventRecorded` publishes events to sinks (for example, JSONL writer)
 
 ---
 
-# Region
+## Polity
 
-Regions represent geographic areas of the world.
+`Polity` represents a social group.
 
-The simulation uses **abstract regions rather than tiles or grid cells**.
+Selected fields:
 
-Regions provide the environmental context for societies and ecosystems.
-
-Typical properties:
-
-```
-Name
-Climate
-Fertility
-WaterAvailability
-Biomass
-SpeciesPresent
-Settlements
-PolitiesPresent
-```
-
-Responsibilities:
-
-* generating ecological biomass
-* providing food resources
-* hosting species and societies
+- identity: `Id`, `Name`, `SpeciesId`, `RegionId`, `ParentPolityId`
+- demographics: `Population`, `YearsSinceFounded`, `Stage`
+- food stress and stores: monthly + annual aggregates
+- migration state: `MigrationPressure`, `MovedThisYear`, `MovesThisYear`
+- fragmentation state: `FragmentationPressure`, `FoodStressYears`, `SplitCooldownYears`
+- settlement state: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`
+- knowledge: `Advancements`, derived `Capabilities`
 
 ---
 
-# Species
+## WorldEvent (Canonical)
 
-Species represent biological populations capable of forming societies.
+`WorldEvent` includes:
 
-Typical properties:
+- time: `EventId`, `Year`, `Month`, `Season`
+- classification: `Type`, `Severity`
+- readable text: `Narrative`, `Details`, `Reason`
+- entity refs: polity/species/region/settlement ids + names
+- optional context maps: `Before`, `After`, `Metadata`
 
-```
-Name
-Traits
-EnvironmentalAdaptability
-HuntingEfficiency
-AgriculturalPotential
-```
-
-Responsibilities:
-
-* influencing how societies interact with the environment
-* shaping migration and survival behaviors
-
-Each polity belongs to exactly **one species**.
+This model supports both narrative rendering and structured persistence.
 
 ---
 
-# Polity
+## Presentation and Persistence Types
 
-A `Polity` represents a cohesive social group.
-
-Examples include:
-
-* clan
-* tribe
-* early civilization
-
-Typical properties:
-
-```
-Name
-Species
-Population
-Stage
-Settlements
-CurrentRegion
-KnownKnowledge
-ActiveCapabilities
-CultivatedLand
-YearsSinceFounded
-ParentPolityId
-FragmentationPressure
-FoodStressYears
-SplitCooldownYears
-```
-
-Responsibilities:
-
-* managing population
-* founding settlements
-* migrating between regions
-* discovering knowledge
-* splitting into new groups
-
-Polities evolve over time and may transition into civilizations.
-
-`Stage` stores explicit polity progression state:
-
-* Band
-* Tribe
-* Settled Society
-* Civilization
-
-`Civilization` is reserved for polities with a multi-settlement structure (at least two settlements), alongside the other stage thresholds.
-
-`ActiveCapabilities` is a derived profile rebuilt from `KnownKnowledge`.
-It exposes reusable flags and modifiers consumed by simulation systems.
-
-`CultivatedLand` stores active settlement-anchored farmland usage for polities that can farm.
-
-Fragmentation-related notes:
-
-* `ParentPolityId` records simple parent-child lineage for split-off polities
-* `FragmentationPressure` stores the current yearly split-pressure score for inspection and tuning
-* `FoodStressYears` tracks sustained shortage pressure across years
-* `SplitCooldownYears` prevents immediate repeat fragmentation
-* settlement-related fields continue to represent actual established settlement presence; fragmented children begin without settlement state until the settlement system creates it
-* fragmented children inherit a sensible starting `Stage` from their parent context instead of always resetting blindly
+- `ChronicleFocus`: stores current focal polity id
+- `IPolityFocusSelector`: selects initial focus
+- `HistoryJsonlWriter`: append-only writer for structured event history
 
 ---
 
-# Settlement
+## Design Notes
 
-Settlements represent permanent population centers.
-
-Typical properties:
-
-```
-Name
-Region
-Population
-FoundingYear
-FoodProduction
-FoodStorage
-ParentPolity
-```
-
-Responsibilities:
-
-* producing food
-* supporting population growth
-* anchoring societies geographically
-
-Multiple settlements within a polity indicate increasing societal complexity.
-
----
-
-# Knowledge
-
-Knowledge represents discovered capabilities.
-
-LivingWorld uses a **probabilistic discovery system** rather than a rigid technology tree.
-
-Typical properties:
-
-```
-Name
-Category
-Prerequisites
-DiscoveryConditions
-CapabilityEffects
-```
-
-Examples:
-
-* Fire
-* Stone Tools
-* Storage
-* Agriculture
-
-Knowledge unlocks capability effects such as harvest bonuses, spoilage multipliers, and farming enablement.
-
----
-
-# PolityCapabilities
-
-`PolityCapabilities` stores the derived, simulation-facing effects of known knowledge.
-
-Typical properties:
-
-```
-CanFarm
-HarvestEfficiencyMultiplier
-FoodSpoilageMultiplier
-FoodNeedMultiplier
-FarmingYieldPerPerson
-TravelCostMultiplier
-TradeEfficiencyMultiplier
-MilitaryPowerMultiplier
-```
-
-These values are designed to be extensible for future systems such as trade, movement, and military modeling.
-
----
-
-# Food Production Tracking
-
-Food production is tracked with separate wild and farm streams.
-
-Typical fields include:
-
-```
-FoodGatheredThisMonth
-FoodFarmedThisMonth
-AnnualFoodGathered
-AnnualFoodFarmed
-AnnualCultivatedLandTotal
-FarmingMonthsThisYear
-```
-
-This separation makes it possible to distinguish societies surviving through foraging from societies sustained by settlement agriculture.
-
----
-
-# HistoricalEvent
-
-Historical events record notable occurrences during the simulation.
-
-Typical properties:
-
-```
-Year
-EventType
-Description
-Polity
-Settlement
-Region
-```
-
-Examples of event types:
-
-* Migration
-* SettlementFounded
-* KnowledgeDiscovered
-* PolitySplit
-* Famine
-
-Events form a readable historical record of the world's development.
-
----
-
-# Design Philosophy
-
-The LivingWorld data model prioritizes:
-
-* **simplicity**
-* **scalability**
-* **emergent behavior**
-
-Entities represent aggregated groups rather than individuals.
-
-This allows the simulation to run for **thousands of years** without excessive computational cost.
-
----
-
-# Future Data Model Extensions
-
-Future versions of the simulation may introduce additional entities:
-
-```
-TradeRoute
-Culture
-Economy
-War
-Diplomacy
-ResourceTypes
-```
-
-These systems will expand the simulation from early societies into full civilizations.
+- simulation behavior and scope remain full-world
+- event capture is now source-of-truth and output-agnostic
+- console output and history output are intentionally separate

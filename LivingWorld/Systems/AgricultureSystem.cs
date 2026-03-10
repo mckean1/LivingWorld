@@ -94,17 +94,41 @@ public sealed class AgricultureSystem
             if (polity.ConsecutiveFarmingYears == 0)
             {
                 world.AddEvent(
-                    "AGRICULTURE",
+                    WorldEventType.SettlementFounded,
+                    WorldEventSeverity.Notable,
                     $"{polity.Name} established fields in {region.Name}",
-                    $"{polity.Name} produced {annualProduced:F0} farm food in {region.Name}.");
+                    $"{polity.Name} produced {annualProduced:F0} farm food in {region.Name}.",
+                    reason: "first_viable_farming_year",
+                    polityId: polity.Id,
+                    polityName: polity.Name,
+                    regionId: region.Id,
+                    regionName: region.Name,
+                    metadata: new Dictionary<string, string>
+                    {
+                        ["annualFarmFood"] = annualProduced.ToString("F0")
+                    });
             }
             else if (polity.AgricultureEventCooldownYears == 0
                 && averageCultivatedLand >= Math.Max(6.0, polity.LastYearAverageCultivatedLand * 1.20))
             {
                 world.AddEvent(
-                    "AGRICULTURE",
+                    WorldEventType.WorldEvent,
+                    WorldEventSeverity.Normal,
                     $"{polity.Name} expanded cultivation in {region.Name}",
-                    $"{polity.Name} expanded cultivated land from {polity.LastYearAverageCultivatedLand:F1} to {averageCultivatedLand:F1}.");
+                    $"{polity.Name} expanded cultivated land from {polity.LastYearAverageCultivatedLand:F1} to {averageCultivatedLand:F1}.",
+                    reason: "cultivation_growth",
+                    polityId: polity.Id,
+                    polityName: polity.Name,
+                    regionId: region.Id,
+                    regionName: region.Name,
+                    before: new Dictionary<string, string>
+                    {
+                        ["averageCultivatedLand"] = polity.LastYearAverageCultivatedLand.ToString("F1")
+                    },
+                    after: new Dictionary<string, string>
+                    {
+                        ["averageCultivatedLand"] = averageCultivatedLand.ToString("F1")
+                    });
                 polity.AgricultureEventCooldownYears = 4;
             }
 
@@ -113,17 +137,39 @@ public sealed class AgricultureSystem
                 if (farmShare >= 0.65 && annualFoodRatio >= 1.05 && annualProduced >= polity.Population * 5.0)
                 {
                     world.AddEvent(
-                        "HARVEST",
+                        WorldEventType.Harvest,
+                        WorldEventSeverity.Notable,
                         $"{polity.Name} harvested a strong crop",
-                        $"{polity.Name} farm share reached {farmShare:P0} with annual food ratio {annualFoodRatio:F2}.");
+                        $"{polity.Name} farm share reached {farmShare:P0} with annual food ratio {annualFoodRatio:F2}.",
+                        reason: "strong_harvest",
+                        polityId: polity.Id,
+                        polityName: polity.Name,
+                        regionId: region.Id,
+                        regionName: region.Name,
+                        after: new Dictionary<string, string>
+                        {
+                            ["farmShare"] = farmShare.ToString("F2"),
+                            ["annualFoodRatio"] = annualFoodRatio.ToString("F2")
+                        });
                     polity.AgricultureEventCooldownYears = 8;
                 }
                 else if (farmShare >= 0.30 && annualFoodRatio < 0.85)
                 {
                     world.AddEvent(
-                        "HARVEST",
+                        WorldEventType.Harvest,
+                        WorldEventSeverity.Notable,
                         $"{polity.Name} suffered a poor harvest",
-                        $"{polity.Name} farm share was {farmShare:P0} with annual food ratio {annualFoodRatio:F2}.");
+                        $"{polity.Name} farm share was {farmShare:P0} with annual food ratio {annualFoodRatio:F2}.",
+                        reason: "poor_harvest",
+                        polityId: polity.Id,
+                        polityName: polity.Name,
+                        regionId: region.Id,
+                        regionName: region.Name,
+                        after: new Dictionary<string, string>
+                        {
+                            ["farmShare"] = farmShare.ToString("F2"),
+                            ["annualFoodRatio"] = annualFoodRatio.ToString("F2")
+                        });
                     polity.AgricultureEventCooldownYears = 8;
                 }
             }

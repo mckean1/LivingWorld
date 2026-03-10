@@ -1,300 +1,202 @@
 using LivingWorld.Core;
+using LivingWorld.Map;
 using LivingWorld.Societies;
-using LivingWorld.Advancement;
 
 namespace LivingWorld.Presentation;
 
 public sealed class NarrativeRenderer
 {
-    public IReadOnlyList<string> RenderTickChronicle(World world)
+    private readonly Dictionary<int, FocalYearSnapshot> _yearStartSnapshots = new();
+
+    public void CaptureYearStart(World world, ChronicleFocus focus)
     {
-        List<string> lines = new();
-        List<WorldEvent> eventsThisMonth = world.Events
-            .Where(e => e.Year == world.Time.Year && e.Month == world.Time.Month)
-            .OrderBy(e => e.Type)
-            .ToList();
-
-        lines.Add($"{FormatMonth(world.Time.Month)}, Year {world.Time.Year}");
-        lines.Add(BuildMonthlyOverview(world));
-
-        foreach (Polity polity in world.Polities
-                     .Where(p => p.Population > 0)
-                     .OrderByDescending(p => p.Population)
-                     .ThenBy(p => p.Name))
+        Polity? polity = focus.ResolvePolity(world);
+        if (polity is null)
         {
-            lines.Add($"- {RenderMonthlyPolityBeat(world, polity)}");
+            return;
         }
 
-        foreach (WorldEvent worldEvent in eventsThisMonth)
-        {
-            lines.Add($"  {worldEvent.HistoricalText}");
-        }
-
-        lines.Add(string.Empty);
-        return lines;
+        _yearStartSnapshots[world.Time.Year] = new FocalYearSnapshot(
+            polity.Id,
+            polity.Population,
+            polity.Stage,
+            ChronicleTextFormatter.DescribeFoodState(polity),
+            polity.Advancements.Count);
     }
 
-    public IReadOnlyList<string> RenderYearReport(World world)
+    public IReadOnlyList<string> RenderTickChronicle(World world)
+    {
+        return [];
+    }
+
+    public IReadOnlyList<string> RenderYearReport(World world, ChronicleFocus focus)
     {
         List<string> lines = new();
+        Polity? focusedPolity = focus.ResolvePolity(world);
+
+        if (focusedPolity is null)
+        {
+            lines.Add(string.Empty);
+            lines.Add($"==================================================");
+            lines.Add($"Year {world.Time.Year} - No Focal Polity");
+            lines.Add("==================================================");
+            lines.Add("This Year");
+            lines.Add("- The tracked polity no longer survives.");
+            lines.Add(string.Empty);
+            return lines;
+        }
+
+        FocalYearSnapshot startSnapshot = ResolveStartSnapshot(world.Time.Year, focusedPolity);
+        int populationDelta = focusedPolity.Population - startSnapshot.Population;
+
+        Region region = world.Regions.First(region => region.Id == focusedPolity.RegionId);
         List<WorldEvent> eventsThisYear = world.Events
-            .Where(e => e.Year == world.Time.Year)
-            .OrderBy(e => e.Month)
-            .ThenBy(e => e.Type)
+            .Where(evt => evt.Year == world.Time.Year)
+            .OrderBy(evt => evt.Month)
+            .ThenBy(evt => evt.EventId)
             .ToList();
 
-        int activePolities = world.Polities.Count(p => p.Population > 0);
-        int totalPopulation = world.Polities.Where(p => p.Population > 0).Sum(p => p.Population);
+        List<WorldEvent> focalEvents = SelectFocalEvents(eventsThisYear, focusedPolity.Id);
+        List<string> notableChanges = BuildNotableChanges(startSnapshot, focusedPolity);
+        List<WorldEvent> worldNotes = SelectWorldNotes(eventsThisYear, focusedPolity.Id);
 
         lines.Add(string.Empty);
-        lines.Add($"Year {world.Time.Year}");
-        lines.Add(BuildWorldOverview(activePolities, totalPopulation, eventsThisYear.Count));
+        lines.Add("==================================================");
+        lines.Add($"Year {world.Time.Year} - {focusedPolity.Name}");
+        lines.Add($"Region: {region.Name}");
+        lines.Add($"Population: {focusedPolity.Population} ({ChronicleTextFormatter.RenderPopulationDelta(populationDelta)})");
+        lines.Add($"Food: {ChronicleTextFormatter.DescribeFoodState(focusedPolity)}");
+        lines.Add($"Status: {RenderStageName(focusedPolity.Stage)}");
+        lines.Add($"Knowledge: {ChronicleTextFormatter.DescribeKnowledge(focusedPolity)}");
+        lines.Add("==================================================");
         lines.Add(string.Empty);
 
-        if (eventsThisYear.Count > 0)
+        lines.Add("This Year");
+        if (focalEvents.Count == 0)
         {
-            lines.Add("Notable events");
-
-            foreach (WorldEvent worldEvent in eventsThisYear)
+            lines.Add("- Life held steady without major upheaval.");
+        }
+        else
+        {
+            foreach (WorldEvent worldEvent in focalEvents.Take(5))
             {
                 lines.Add($"- {worldEvent.Narrative}");
+            }
+        }
+
+        if (notableChanges.Count > 0)
+        {
+            lines.Add(string.Empty);
+            lines.Add("Notable Changes");
+            foreach (string change in notableChanges)
+            {
+                lines.Add($"- {change}");
+            }
+        }
+
+        if (worldNotes.Count > 0)
+        {
+            lines.Add(string.Empty);
+            lines.Add("World Notes");
+            foreach (WorldEvent worldNote in worldNotes)
+            {
+                lines.Add($"- {worldNote.Narrative}");
             }
         }
 
         return lines;
     }
 
-    private static string BuildWorldOverview(int activePolities, int totalPopulation, int eventCount)
+    private static List<WorldEvent> SelectFocalEvents(IReadOnlyList<WorldEvent> eventsThisYear, int focusedPolityId)
     {
-        string polityText = activePolities == 1 ? "one active people" : $"{activePolities} active peoples";
-        return eventCount == 0
-            ? $"The world now holds {polityText} with a combined population of {totalPopulation}. No major events were recorded."
-            : $"The world now holds {polityText} with a combined population of {totalPopulation}.";
+        List<WorldEvent> prioritized = eventsThisYear
+            .Where(evt => IsFocalEvent(evt, focusedPolityId))
+            .Where(evt => evt.Severity >= WorldEventSeverity.Notable)
+            .ToList();
+
+        if (prioritized.Count > 0)
+        {
+            return prioritized;
+        }
+
+        return eventsThisYear
+            .Where(evt => IsFocalEvent(evt, focusedPolityId))
+            .Where(evt => evt.Severity >= WorldEventSeverity.Normal)
+            .ToList();
     }
 
-    private static string BuildMonthlyOverview(World world)
-    {
-        int totalPopulation = world.Polities.Where(p => p.Population > 0).Sum(p => p.Population);
-        int activePolities = world.Polities.Count(p => p.Population > 0);
+    private static bool IsFocalEvent(WorldEvent evt, int focusedPolityId)
+        => evt.PolityId == focusedPolityId || evt.RelatedPolityId == focusedPolityId;
 
-        return world.Time.Season switch
-        {
-            Season.Winter => $"Cold weather grips the land. {activePolities} peoples endure the season, together numbering {totalPopulation}.",
-            Season.Spring => $"The thaw returns. {activePolities} peoples move through a world of {totalPopulation} souls.",
-            Season.Summer => $"The warm season holds. {activePolities} peoples range across the world, together numbering {totalPopulation}.",
-            _ => $"Autumn settles in. {activePolities} peoples prepare for scarcity, together numbering {totalPopulation}."
-        };
+    private static List<WorldEvent> SelectWorldNotes(IReadOnlyList<WorldEvent> eventsThisYear, int focusedPolityId)
+    {
+        return eventsThisYear
+            .Where(evt => !IsFocalEvent(evt, focusedPolityId))
+            .Where(evt => evt.Severity >= WorldEventSeverity.Critical
+                || evt.Type is WorldEventType.PolityCollapsed
+                    or WorldEventType.Fragmentation
+                    or WorldEventType.StageChanged
+                    or WorldEventType.SettlementFounded)
+            .OrderByDescending(evt => evt.Severity)
+            .ThenBy(evt => evt.Month)
+            .Take(2)
+            .ToList();
     }
 
-    private static string RenderPolitySummary(World world, Polity polity)
+    private static List<string> BuildNotableChanges(FocalYearSnapshot startSnapshot, Polity current)
     {
-        RegionSnapshot region = GetRegionSnapshot(world, polity.RegionId);
-        double annualFoodRatio = polity.AnnualFoodNeeded <= 0
-            ? 1.0
-            : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
+        List<string> changes = new();
 
-        string condition = DescribeFoodCondition(polity, annualFoodRatio);
-        string movement = DescribeMovement(polity);
-        string growth = DescribePopulation(polity, annualFoodRatio);
-        string stores = DescribeFoodStores(polity);
-        string knowledge = DescribeKnowledge(polity);
-        string settlement = DescribeSettlement(polity);
+        if (startSnapshot.Population != current.Population)
+        {
+            changes.Add($"Population: {startSnapshot.Population} -> {current.Population}");
+        }
 
-        return $"{polity.Name} in {region.Name} {condition} {growth} {stores} {movement} {settlement} {knowledge}";
+        if (startSnapshot.Stage != current.Stage)
+        {
+            changes.Add($"Status: {RenderStageName(startSnapshot.Stage)} -> {RenderStageName(current.Stage)}");
+        }
+
+        string currentFood = ChronicleTextFormatter.DescribeFoodState(current);
+        if (!string.Equals(startSnapshot.FoodState, currentFood, StringComparison.Ordinal))
+        {
+            changes.Add($"Food: {startSnapshot.FoodState} -> {currentFood}");
+        }
+
+        if (startSnapshot.AdvancementCount != current.Advancements.Count)
+        {
+            changes.Add($"Knowledge breadth: {startSnapshot.AdvancementCount} -> {current.Advancements.Count}");
+        }
+
+        return changes;
     }
 
-    private static string RenderMonthlyPolityBeat(World world, Polity polity)
-    {
-        RegionSnapshot region = GetRegionSnapshot(world, polity.RegionId);
-        string foodBeat = polity.FoodSatisfactionThisMonth switch
+    private static string RenderStageName(PolityStage stage)
+        => stage switch
         {
-            >= 1.0 => "found enough food",
-            >= 0.85 => "managed to eat, though supplies tightened",
-            >= 0.60 => "went short on food",
-            _ => "suffered a severe shortage"
-        };
-
-        string storeBeat = polity.FoodStores switch
-        {
-            <= 0 => "with no stores left",
-            < 15 => "with only a little food in reserve",
-            < 40 => "with modest reserves remaining",
-            _ => "while keeping healthy reserves"
-        };
-
-        string movementBeat = polity.MovedThisYear && polity.PreviousRegionId != polity.RegionId
-            ? $"after arriving in {region.Name}"
-            : polity.SettlementStatus == SettlementStatus.Nomadic
-                ? $"while ranging through {region.Name}"
-                : $"while holding to {region.Name}";
-
-        string settlementBeat = polity.SettlementStatus switch
-        {
-            SettlementStatus.Settled => "from a lasting settlement",
-            SettlementStatus.SemiSettled => "from a growing hearth-site",
-            _ => "as a mobile people"
-        };
-
-        string foodSourceBeat = DescribeFoodSource(polity);
-        return $"{polity.Name} {foodBeat} {movementBeat}, {settlementBeat}, {foodSourceBeat}, {storeBeat}.";
-    }
-
-    private static RegionSnapshot GetRegionSnapshot(World world, int regionId)
-    {
-        var region = world.Regions.First(r => r.Id == regionId);
-        return new RegionSnapshot(region.Name);
-    }
-
-    private static string DescribeFoodCondition(Polity polity, double annualFoodRatio)
-    {
-        if (annualFoodRatio >= 1.0)
-        {
-            return "enjoyed a year of plenty.";
-        }
-
-        if (annualFoodRatio >= 0.9)
-        {
-            return "held steady through a modest but manageable year.";
-        }
-
-        if (annualFoodRatio >= 0.75)
-        {
-            return "endured a lean year, with meals growing uncertain.";
-        }
-
-        if (annualFoodRatio >= 0.5)
-        {
-            return "spent much of the year under harsh rationing.";
-        }
-
-        return "fell into a year of famine.";
-    }
-
-    private static string DescribePopulation(Polity polity, double annualFoodRatio)
-    {
-        if (annualFoodRatio >= 1.0)
-        {
-            return $"Its numbers rose to {polity.Population}.";
-        }
-
-        if (annualFoodRatio >= 0.9)
-        {
-            return $"Its numbers held at {polity.Population}.";
-        }
-
-        if (annualFoodRatio >= 0.75)
-        {
-            return $"Its strength slipped to {polity.Population}.";
-        }
-
-        return $"By year's end, only {polity.Population} remained.";
-    }
-
-    private static string DescribeFoodStores(Polity polity)
-    {
-        if (polity.FoodStores >= polity.Population * 0.75)
-        {
-            return "The storehouses are comfortably stocked.";
-        }
-
-        if (polity.FoodStores >= polity.Population * 0.30)
-        {
-            return "Their stores are serviceable, but not deep.";
-        }
-
-        return "Their remaining stores are dangerously thin.";
-    }
-
-    private static string DescribeMovement(Polity polity)
-    {
-        if (polity.MovesThisYear >= 2)
-        {
-            return "Restlessness gripped them, and they moved more than once.";
-        }
-
-        if (polity.MovedThisYear)
-        {
-            return "They uprooted themselves before the year was done.";
-        }
-
-        if (polity.MigrationPressure >= 0.65)
-        {
-            return "Talk of leaving spread among the people.";
-        }
-
-        if (polity.MigrationPressure >= 0.35)
-        {
-            return "Some families spoke quietly of better land elsewhere.";
-        }
-
-        return polity.SettlementStatus == SettlementStatus.Nomadic
-            ? "They remained a mobile people."
-            : "They held close to their home region.";
-    }
-
-    private static string DescribeSettlement(Polity polity)
-        => polity.SettlementStatus switch
-        {
-            SettlementStatus.Settled => "A durable settled way of life now shapes their society.",
-            SettlementStatus.SemiSettled => "A first settlement is beginning to anchor the people.",
-            _ => "They still live without a lasting settlement."
+            PolityStage.SettledSociety => "Settled Society",
+            _ => stage.ToString()
         };
 
-    private static string DescribeKnowledge(Polity polity)
+    private FocalYearSnapshot ResolveStartSnapshot(int year, Polity polity)
     {
-        if (polity.Advancements.Count == 0)
+        if (_yearStartSnapshots.TryGetValue(year, out FocalYearSnapshot? snapshot) && snapshot.PolityId == polity.Id)
         {
-            return "Their shared knowledge remains practical and local.";
+            return snapshot;
         }
 
-        if (polity.Advancements.Count == 1)
-        {
-            AdvancementDefinition advancement = AdvancementCatalog.Get(polity.Advancements.OrderBy(id => id).First());
-            return $"Their people are now known for {advancement.Name.ToLowerInvariant()}.";
-        }
-
-        string featured = string.Join(
-            ", ",
-            polity.Advancements
-                .OrderBy(id => id)
-                .Take(2)
-                .Select(id => AdvancementCatalog.Get(id).Name.ToLowerInvariant()));
-
-        return $"Their traditions now include {featured}.";
+        return new FocalYearSnapshot(
+            polity.Id,
+            polity.Population,
+            polity.Stage,
+            ChronicleTextFormatter.DescribeFoodState(polity),
+            polity.Advancements.Count);
     }
 
-    private static string DescribeFoodSource(Polity polity)
-    {
-        if (polity.FoodFarmedThisMonth <= 0)
-        {
-            return "living mainly by foraging";
-        }
-
-        if (polity.FoodFarmedThisMonth >= polity.FoodGatheredThisMonth)
-        {
-            return "drawing most food from their fields";
-        }
-
-        return "mixing field crops with gathered food";
-    }
-
-    private static string FormatMonth(int month)
-        => month switch
-        {
-            1 => "January",
-            2 => "February",
-            3 => "March",
-            4 => "April",
-            5 => "May",
-            6 => "June",
-            7 => "July",
-            8 => "August",
-            9 => "September",
-            10 => "October",
-            11 => "November",
-            12 => "December",
-            _ => $"Month {month}"
-        };
-
-    private readonly record struct RegionSnapshot(string Name);
+    private sealed record FocalYearSnapshot(
+        int PolityId,
+        int Population,
+        PolityStage Stage,
+        string FoodState,
+        int AdvancementCount);
 }

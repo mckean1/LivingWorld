@@ -60,9 +60,29 @@ public sealed class SettlementSystem
         polity.YearsSinceFirstSettlement = 0;
 
         world.AddEvent(
-            "SETTLEMENT",
+            WorldEventType.SettlementFounded,
+            WorldEventSeverity.Notable,
             BuildFirstSettlementNarrative(polity, region),
-            $"{polity.Name} established its first settlement in {region.Name}; chance={chance:F3}.");
+            $"{polity.Name} established its first settlement in {region.Name}; chance={chance:F3}.",
+            reason: "first_settlement_roll_success",
+            polityId: polity.Id,
+            polityName: polity.Name,
+            regionId: region.Id,
+            regionName: region.Name,
+            before: new Dictionary<string, string>
+            {
+                ["settlementStatus"] = SettlementStatus.Nomadic.ToString(),
+                ["settlementCount"] = "0"
+            },
+            after: new Dictionary<string, string>
+            {
+                ["settlementStatus"] = polity.SettlementStatus.ToString(),
+                ["settlementCount"] = polity.SettlementCount.ToString()
+            },
+            metadata: new Dictionary<string, string>
+            {
+                ["rollChance"] = chance.ToString("F3")
+            });
     }
 
     private void TryBecomeSettledSociety(World world, Polity polity, Region region, int residenceYears)
@@ -76,9 +96,27 @@ public sealed class SettlementSystem
         polity.SettlementStatus = SettlementStatus.Settled;
 
         world.AddEvent(
-            "SETTLEMENT",
+            WorldEventType.SettlementConsolidated,
+            WorldEventSeverity.Notable,
             BuildSettledSocietyNarrative(polity, region),
-            $"{polity.Name} consolidated into a settled society in {region.Name}; chance={chance:F3}.");
+            $"{polity.Name} consolidated into a settled society in {region.Name}; chance={chance:F3}.",
+            reason: "settlement_consolidation_roll_success",
+            polityId: polity.Id,
+            polityName: polity.Name,
+            regionId: region.Id,
+            regionName: region.Name,
+            before: new Dictionary<string, string>
+            {
+                ["settlementStatus"] = SettlementStatus.SemiSettled.ToString()
+            },
+            after: new Dictionary<string, string>
+            {
+                ["settlementStatus"] = polity.SettlementStatus.ToString()
+            },
+            metadata: new Dictionary<string, string>
+            {
+                ["rollChance"] = chance.ToString("F3")
+            });
     }
 
     private static double CalculateFirstSettlementChance(World world, Polity polity, Region region, int residenceYears)

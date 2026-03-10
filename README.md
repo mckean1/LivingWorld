@@ -1,330 +1,107 @@
 # LivingWorld
 
-LivingWorld is a command-line autonomous world simulation where ecosystems, species, societies, and civilizations emerge over time.
+LivingWorld is a command-line autonomous world simulation where ecosystems, species, polities, and early civilizations emerge over time.
 
-The simulation generates a procedural world and runs centuries of history before the player enters. During this time species spread, societies migrate, settlements form, knowledge is discovered, and civilizations begin to emerge.
-
-The goal of the project is to produce **emergent history**, where complex civilizations arise naturally from interacting systems such as ecology, population dynamics, migration, resource pressure, and knowledge discovery.
+The simulation runs the full world in the background. Default output is now a focused, readable yearly chronicle centered on one focal polity, while a structured append-only history file captures major events across all polities.
 
 ---
 
-# Core Design Principles
+## Core Design Principles
 
-LivingWorld prioritizes **emergent simulation** rather than scripted gameplay.
-
-The world evolves through interacting systems where:
-
-* species adapt to environments
-* societies respond to ecological pressure
-* migration redistributes populations
-* settlements anchor civilization growth
-* knowledge emerges from conditions
-* history develops naturally through simulation
-
-The simulation models **processes that create history**, rather than scripting historical events.
+- Emergent simulation over scripted storylines
+- Full-world simulation scope at all times
+- Readable player-facing chronicle output
+- Structured developer-facing event history
 
 ---
 
-# Simulation Overview
+## Simulation Overview
 
-The simulation runs in **monthly ticks**, with seasonal logic layered on top.
+The simulation runs in monthly ticks with yearly aggregation:
 
-Each simulated year roughly processes:
-
-```
-Ecological growth
-Resource harvesting
-Food consumption
-Population growth or decline
-Migration decisions
-Settlement development
-Knowledge discovery
-Polity stage progression
-Polity events
-Historical logging
-```
-
-The world is simulated for approximately **1000 years before the player begins**, allowing civilizations to develop naturally.
+1. Ecology and food updates
+2. Migration checks
+3. Year-end population, advancement, settlement, fragmentation, and stage passes
+4. Structured event emission
+5. Focused yearly chronicle rendering
+6. Append-only JSONL history persistence
 
 ---
 
-# World Model
+## Focused Society Chronicle (Default Console Output)
 
-The world is composed of **regions rather than grid cells or tiles**.
+Default yearly output follows one focal polity:
 
-Each region stores abstract environmental and ecological information.
+- Header: year, polity, region, population (+/- delta), food state, stage, knowledge summary
+- `This Year`: 1-5 short focal events
+- `Notable Changes`: optional before -> after lines
+- `World Notes`: optional 0-2 rare outside-world notes
 
-Region properties may include:
-
-* climate
-* fertility
-* water access
-* ecological biomass
-* species presence
-* settlements
-* societies
-
-Regions generate **biomass**, representing plant and animal life available for consumption.
+The wider world still simulates fully; only presentation is filtered.
 
 ---
 
-# Species
+## Structured Event History (Developer Output)
 
-Species represent biological populations inhabiting the world.
+Important events are written as JSONL records, append-only during the run.
 
-Species influence:
+Default path:
 
-* ecological efficiency
-* environmental adaptation
-* behavioral tendencies
-* survival traits
+- `logs/history-{timestamp}.jsonl`
 
-Societies are always composed of members of a **single species**.
+Stored fields include, as available:
 
----
+- `eventId`, `year`, `month`, `season`
+- `type`, `severity`, `reason`
+- polity/species/region/settlement ids and names
+- `before`, `after`, `metadata`
+- concise narrative text
 
-# Societies and Polities
-
-The primary social unit in the simulation is a **Polity**.
-
-A polity represents an organized group of a species acting as a social and economic unit.
-
-Polities may:
-
-* migrate between regions
-* found settlements
-* split into new groups
-* discover knowledge
-* experience famine or surplus
-
-Over time, polities may evolve into **civilizations** as their complexity increases.
-
-Polities now track an explicit stage progression:
-
-* Band
-* Tribe
-* Settled Society
-* Civilization
-
-In the current stage rules, reaching `Civilization` requires a true multi-settlement polity (at least two settlements), not just one durable settlement.
+This history is separate from console formatting and is intended for debugging, analysis, and balancing.
 
 ---
 
-# Population Model
+## Event Architecture
 
-Population is tracked as **aggregated counts** rather than individual agents.
+Simulation systems emit canonical structured events:
 
-Population is typically stored at the polity or settlement level.
+`simulation systems -> world event model -> chronicle renderer + JSONL writer`
 
-Population change is influenced by:
+Severity levels:
 
-* food availability
-* environmental conditions
-* migration opportunities
-* societal stability
+- `Debug`
+- `Normal`
+- `Notable`
+- `Critical`
 
-Future versions may introduce simplified age cohorts such as:
-
-* young
-* adult
-* old
+Default chronicle prioritizes focal `Notable`/`Critical` events.
 
 ---
 
-# Ecology and Food System
+## Focal Polity Selection
 
-Regions generate **ecological biomass** each season.
+A lightweight focus abstraction tracks the polity shown in the chronicle.
 
-This biomass represents food accessible through activities such as:
+Current default selector:
 
-* hunting
-* gathering
-* fishing
-* agriculture
+- first starting polity (lowest initial polity id)
 
-Food dynamics include:
-
-* seasonal growth
-* wild harvesting
-* seasonal settlement-based farming
-* capability-based gathering bonuses
-* cultivated capacity limits by region quality
-* storage
-* capability-based spoilage reduction
-* famine events
-
-Food availability strongly influences migration, settlement stability, and population growth.
+This is designed to evolve later into explicit player lineage tracking.
 
 ---
 
-# Settlements
+## Runtime Options
 
-Settlements represent **permanent population centers** founded by societies.
+`SimulationOptions` supports:
 
-Settlements track:
-
-* population
-* founding year
-* region location
-* food production
-
-Settlements allow societies to transition from nomadic groups into more complex social structures.
-
-They serve as the foundation for civilization development.
+- `OutputMode` (`Narrative` or `Debug`)
+- `FocusedChronicleEnabled`
+- `FocusedPolityId` override
+- `WriteStructuredHistory`
+- `HistoryFilePath`
 
 ---
 
-# Knowledge and Advancement
+## Long-Term Goal
 
-LivingWorld uses a **probabilistic knowledge discovery system** rather than a rigid technology tree.
-
-Knowledge discovery depends on factors such as:
-
-* environmental exposure
-* societal needs
-* prerequisite knowledge
-* available surplus
-* time
-
-Each polity derives an active **capability profile** from its discovered knowledge.
-Simulation systems consume this profile instead of checking advancement names directly.
-
-Examples of currently implemented effects include:
-
-* Fire: modest survival and food-use benefit
-* Stone Tools: harvest efficiency bonus
-* Storage: reduced food spoilage
-* Agriculture: enables true farming through settlement-anchored cultivated land and seasonal crop yield
-
-This makes discoveries materially affect food production, survival, and long-term growth.
-
----
-
-# Migration and Societal Change
-
-Societies dynamically respond to environmental pressures.
-
-Migration may be triggered by:
-
-* food scarcity
-* population pressure
-* ecological opportunity
-* internal societal tension
-
-Societies may also split into new groups when internal pressures become too large.
-
-Fragmentation is evaluated yearly through a simple split-pressure score based on:
-
-* polity population size
-* repeated food stress and starvation
-* regional crowding
-* migration strain
-
-When pressure stays high enough, a polity may found a colony-style child polity in a connected region. The child keeps the parent species, inherits some knowledge, and takes a share of population and stored food.
-
-Migration and fragmentation now serve different roles:
-
-* migration relocates an existing polity
-* fragmentation creates a new child polity
-
-There is no separate yearly expansion system. The earlier colony-style offshoot role is now handled by fragmentation.
-
-Fragmented children remain region-based at birth. They do **not** start with settlement counts or settled status unless the settlement system later establishes a real first settlement.
-
-This produces natural expansion and cultural divergence across regions.
-
----
-
-# Historical Event Logging
-
-The simulation records important events as a chronological history.
-
-Logs are intentionally short and readable, resembling historical records.
-
-Example:
-
-```
-Year 412
-
-Red River Clan migrated to Northern Plains
-Stone Ford discovered Agriculture
-Oak Valley Society founded River Camp
-Riverwatch Clan became a Tribe
-Ashen Vale Clan split from Riverwatch Clan in Ashen Vale
-```
-
-Only **notable events** are included in the default output to maintain readability.
-
----
-
-# Player Entry
-
-After the autonomous world simulation completes, the player selects an existing society.
-
-The player then guides the strategic development of that society as it grows into a civilization.
-
-The underlying simulation continues to run throughout gameplay.
-
----
-
-# Architecture Overview
-
-The simulation is organized into several interacting systems:
-
-```
-World
- ├─ Regions
- ├─ Species
- ├─ Polities
- ├─ Settlements
- ├─ Ecology System
- ├─ Population System
- ├─ Food System
- ├─ Knowledge System
- └─ Historical Logging
-```
-
-These systems interact to generate emergent world history.
-
----
-
-# Development Roadmap
-
-Planned systems for future development include:
-
-### Knowledge Diffusion
-
-Spread of discoveries between societies through migration, proximity, trade, and conflict.
-
-### Trade Networks
-
-Exchange of goods and resources between settlements and civilizations.
-
-### Cultural Divergence
-
-Development of distinct cultural identities.
-
-### Warfare and Territorial Conflict
-
-Competition between civilizations for land and resources.
-
-### Governance Systems
-
-Internal political structures within civilizations.
-
-### Dynamic Economy
-
-Supply and demand systems influencing production and trade.
-
----
-
-# Project Goals
-
-LivingWorld explores questions such as:
-
-* How do civilizations emerge from ecological pressure?
-* How do migration and scarcity shape history?
-* How does knowledge spread between societies?
-* What conditions lead to societal collapse?
-
-By simulating these processes, LivingWorld aims to produce **dynamic and believable world histories**.
+LivingWorld aims to generate believable, emergent history where civilizations rise and fall from interacting ecological and societal systems, while keeping both player output and developer diagnostics readable.

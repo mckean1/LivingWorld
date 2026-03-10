@@ -17,8 +17,7 @@ class Program
         World world = generator.Generate();
 
         SimulationOptions options = SimulationOptions.NarrativeChronicle();
-
-        Simulation simulation = new(world, options);
+        using Simulation simulation = new(world, options);
 
         if (options.PauseBeforeStart)
         {
@@ -27,7 +26,10 @@ class Program
         }
 
         simulation.RunMonths(yearsToSimulate * monthsInYear);
-
+        if (options.WriteStructuredHistory)
+        {
+            Console.WriteLine($"History file: {Path.GetFullPath(options.HistoryFilePath)}");
+        }
         Console.WriteLine("Simulation complete.");
     }
 }

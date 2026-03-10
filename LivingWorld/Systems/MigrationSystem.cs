@@ -39,9 +39,30 @@ public sealed class MigrationSystem
                     polity.FoodStores *= 1.0 - moveCostRate;
 
                     world.AddEvent(
-                        "MIGRATION",
+                        WorldEventType.Migration,
+                        WorldEventSeverity.Notable,
                         $"{polity.Name} migrated to {target.Name}",
-                        $"{polity.Name} migrated from Region {currentRegion.Id} to Region {target.Id}."
+                        $"{polity.Name} migrated from Region {currentRegion.Id} to Region {target.Id}.",
+                        reason: "migration_pressure",
+                        polityId: polity.Id,
+                        polityName: polity.Name,
+                        regionId: target.Id,
+                        regionName: target.Name,
+                        before: new Dictionary<string, string>
+                        {
+                            ["regionId"] = currentRegion.Id.ToString(),
+                            ["foodStores"] = (polity.FoodStores / (1.0 - moveCostRate)).ToString("F1")
+                        },
+                        after: new Dictionary<string, string>
+                        {
+                            ["regionId"] = target.Id.ToString(),
+                            ["foodStores"] = polity.FoodStores.ToString("F1")
+                        },
+                        metadata: new Dictionary<string, string>
+                        {
+                            ["migrationPressure"] = polity.MigrationPressure.ToString("F2"),
+                            ["moveCostRate"] = moveCostRate.ToString("F2")
+                        }
                     );
                 }
             }

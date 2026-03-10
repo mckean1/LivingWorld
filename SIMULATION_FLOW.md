@@ -2,153 +2,59 @@
 
 # LivingWorld Simulation Flow
 
-This document describes the order of operations used during the LivingWorld simulation.
-
-The simulation operates using **monthly ticks**, with seasonal and yearly systems layered on top.
+The simulation runs in monthly ticks with yearly aggregation. The full world always simulates; only default presentation is focused.
 
 ---
 
-# Simulation Timeline
+## Monthly Flow
 
-```
-Month
- |- Resource updates
- |- Food harvesting
- |- Food consumption
- |- Migration checks
- `- Settlement updates
-
-Season
- |- Ecological growth cycles
- `- Harvest periods
-
-Year
- |- Population adjustment
- |- Knowledge discovery
- |- Settlement progression
- |- Fragmentation checks
- |- Polity stage progression
- `- Historical event recording
-```
+1. Region ecology update
+2. Wild food gathering
+3. Settlement farming output
+4. Food consumption and starvation tracking
+5. Migration evaluation and relocation
+6. Structured events emitted when notable outcomes occur
 
 ---
 
-# Monthly Processes
+## Year-End Flow (Month 12)
 
-Each monthly tick updates core survival systems.
-
-### 1. Biomass Update
-
-Regions regenerate ecological biomass depending on climate and fertility.
-
-### 2. Food Harvesting
-
-Polities gather wild biomass from their region.
-Gather output is modified by each polity's derived capability profile (for example, Stone Tools harvest bonuses).
-
-This may represent:
-
-* hunting
-* gathering
-* fishing
-
-### 3. Agriculture Production
-
-Settled polities with farming capability produce crop food through cultivated land.
-Cultivated capacity is region-limited and seasonal.
-Nomadic polities do not farm in this way.
-
-### 4. Food Consumption
-
-Population consumes available food.
-Consumption and spoilage are also capability-aware (for example, Fire survival benefit and Storage spoilage reduction).
-
-Food deficits may cause starvation or famine.
-
-### 5. Migration Evaluation
-
-Polities evaluate whether to migrate.
-
-Triggers may include:
-
-* food shortages
-* population pressure
-* better neighboring regions
-
-Migration moves an existing polity as a whole. It does not create child polities.
-
-### 6. Settlement Updates
-
-Settlement status remains part of yearly progression, but monthly movement and food conditions shape whether a polity is stable enough to settle later.
+1. Increment polity age
+2. Population update
+3. Advancement discovery
+4. Settlement progression
+5. Fragmentation checks
+6. Polity stage progression
+7. Annual agriculture events
+8. Annual food-stress events
+9. Remove collapsed polities (`Population <= 0`)
+10. Render yearly focused chronicle (narrative mode) or debug summary (debug mode)
+11. Reset annual food stats
 
 ---
 
-# Seasonal Processes
+## Event Pipeline During Flow
 
-Seasonal systems influence ecological productivity.
+`systems -> World.AddEvent -> World.Events + EventRecorded`
 
-Typical seasonal events include:
+Sinks:
 
-* biomass growth
-* harvest periods
-* food storage changes
-
-Seasonal cycles strongly affect food supply.
+- focused chronicle renderer (year-end)
+- JSONL writer (immediate append)
 
 ---
 
-# Yearly Processes
+## Focused Chronicle Output (Default)
 
-Each year the simulation processes larger societal changes.
+Each year prints:
 
-Typical yearly events include:
-
-```
-Population growth or decline
-Knowledge discovery
-Capability derivation from discovered knowledge
-Annual agriculture outcomes and notable harvest events
-Settlement expansion
-Migration outcomes
-Polity fragmentation
-Polity stage transitions
-Historical event generation
-```
-
-These events represent the most visible changes in the simulation history.
-
-Yearly fragmentation details:
-
-* each active polity calculates a `FragmentationPressure` score
-* pressure is driven by population size, food stress, regional crowding, and migration strain
-* only polities above a minimum population and outside their split cooldown can fragment
-* successful splits create a child polity in a connected region
-* the child receives transferred population, food, and some inherited knowledge
-* the child starts without settlement state until the settlement system later founds one
-* child names stay readable through simple uniqueness suffixes such as `II` and `III`
-* a short history entry is emitted for the split
-
-Yearly polity stage details:
-
-* each active polity is evaluated once per year after settlement and fragmentation updates
-* progression is advancement-only in v1 (no automatic regression)
-* stage checks use population, longevity, settlement durability, annual food stability, and advancement count
-* Civilization specifically requires a multi-settlement polity (at least two settlements)
-* stage transitions emit short historical entries such as `Riverwatch Clan became a Tribe`
+- header for focal polity (region, population delta, food, status, knowledge)
+- `This Year` focal events (usually 1-5)
+- optional `Notable Changes`
+- optional `World Notes` (0-2 rare outside events)
 
 ---
 
-# Pre-Player Simulation
+## Debug Output
 
-Before the player enters the world, the simulation runs for approximately:
-
-**1000 years**
-
-During this time:
-
-* societies migrate
-* settlements form
-* knowledge is discovered
-* civilizations begin emerging
-
-This creates a dynamic historical backdrop for gameplay.
+Debug mode keeps broad world summary and full yearly event list for simulation diagnostics.

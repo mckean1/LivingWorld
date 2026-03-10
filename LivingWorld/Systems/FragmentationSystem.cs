@@ -64,9 +64,22 @@ public sealed class FragmentationSystem
             newPolities.Add(child);
 
             world.AddEvent(
-                "FRAGMENTATION",
+                WorldEventType.Fragmentation,
+                WorldEventSeverity.Notable,
                 BuildFragmentationNarrative(polity, child, target),
-                $"{polity.Name} split to form {child.Name} in Region {target.Id}; pressure={polity.FragmentationPressure:F2}.");
+                $"{polity.Name} split to form {child.Name} in Region {target.Id}; pressure={polity.FragmentationPressure:F2}.",
+                reason: "fragmentation_pressure",
+                polityId: polity.Id,
+                polityName: polity.Name,
+                relatedPolityId: child.Id,
+                relatedPolityName: child.Name,
+                speciesId: polity.SpeciesId,
+                regionId: target.Id,
+                regionName: target.Name,
+                metadata: new Dictionary<string, string>
+                {
+                    ["fragmentationPressure"] = polity.FragmentationPressure.ToString("F2")
+                });
         }
 
         world.Polities.AddRange(newPolities);

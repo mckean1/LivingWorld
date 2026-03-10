@@ -2,266 +2,50 @@
 
 # LivingWorld Advancement System
 
-The advancement system models how societies discover new capabilities over time.
-
-Rather than using a rigid technology tree, LivingWorld uses a **probabilistic discovery system** driven by environmental conditions, societal needs, and historical development.
-
-This approach encourages **emergent technological progress** that varies between civilizations.
+Advancement discovery remains probabilistic and condition-driven. The system now emits structured canonical events that feed both focused chronicle output and JSONL history.
 
 ---
 
-# Design Goals
+## Discovery Loop
 
-The advancement system is designed to:
+Year-end, for each polity:
 
-* allow knowledge to emerge naturally
-* respond to environmental pressures
-* reward societal stability and surplus
-* allow civilizations to develop differently
-* support long-term historical progression
-
-The goal is to simulate **how societies historically developed new techniques and technologies**.
-
----
-
-# Core Concept
-
-Knowledge is discovered when certain **conditions are satisfied** and a probabilistic discovery check succeeds.
-
-Discovery is influenced by:
-
-* environmental exposure
-* population size
-* settlement stability
-* food surplus
-* prerequisite knowledge
-* time
-
-Societies experiencing different environments and pressures will discover knowledge at different times.
+1. build advancement context
+2. evaluate undiscovered definitions with satisfied prerequisites
+3. roll discovery probability
+4. on success:
+   - add advancement
+   - refresh capabilities
+   - emit `knowledge_discovered` world event (structured)
 
 ---
 
-# Knowledge Representation
+## Inputs to Discovery Probability
 
-Knowledge is stored as structured data.
-
-Typical fields:
-
-```
-Name
-Category
-Prerequisites
-DiscoveryConditions
-CapabilityEffects
-DiscoveryNarrative
-```
-
-Example:
-
-```
-Name: Agriculture
-Category: Food Production
-Prerequisites: Seasonal Planning, Storage
-DiscoveryConditions: Fertile region, water access, enough stability
-CapabilityEffects: Enables farming capability and farming efficiency
-```
+- population and social scale
+- annual food conditions
+- reserves
+- regional crowding and ecology context
+- movement pressure
+- prerequisite advancements
 
 ---
 
-# Discovery Conditions
+## Outputs
 
-Each knowledge entry defines conditions that influence discovery probability.
-
-Possible conditions include:
-
-* living in a fertile region
-* access to water
-* presence of animals suitable for domestication
-* population above a threshold
-* existence of a permanent settlement
-* prolonged food scarcity
-* existing prerequisite knowledge
-
-These conditions simulate the **historical pressures that drove innovation**.
+1. Capability changes consumed by simulation systems
+2. Structured event record containing:
+   - type/severity
+   - polity/species/region references
+   - advancement metadata and probability
+   - concise narrative for chronicle rendering
 
 ---
 
-# Discovery Algorithm
+## Event Integration
 
-Knowledge discovery typically occurs during **yearly simulation updates**.
+Advancement events are canonical simulation events, not direct console writes.
 
-Basic discovery process:
+`AdvancementSystem -> World.AddEvent(knowledge_discovered) -> renderer/writer`
 
-```
-For each polity:
-
-    For each undiscovered knowledge:
-
-        If prerequisites are satisfied:
-
-            Evaluate discovery conditions
-
-            Calculate discovery probability
-
-            Perform random discovery roll
-
-            If successful:
-                add knowledge to polity
-                generate historical event
-```
-
-This produces gradual and unpredictable technological development.
-
----
-
-# Probability Factors
-
-Discovery probability may be influenced by several factors.
-
-Common influences include:
-
-Population size
-Larger societies have more opportunities for experimentation.
-
-Food surplus
-Stable food supply allows specialization and experimentation.
-
-Environmental exposure
-Certain knowledge requires exposure to relevant environments.
-
-Settlement stability
-Permanent settlements allow accumulation of knowledge.
-
-Time
-Some discoveries become more likely as time passes.
-
----
-
-# Knowledge Effects
-
-Knowledge unlocks structured capability effects in the simulation.
-
-Each advancement can define one or more effects composed of:
-
-* capability flags (example: `CanFarm`)
-* numeric modifiers (example: `HarvestEfficiencyBonus`, `FoodSpoilageMultiplier`)
-
-Each polity derives one aggregated capability profile from known advancements.
-That profile is then consumed by simulation systems each tick.
-
-First-pass implemented effects:
-
-* Fire
-  * lowers effective food need slightly
-  * provides a modest food-use/harvest efficiency bonus
-* Stone Tools
-  * increases harvest efficiency
-* Storage
-  * reduces spoilage losses
-* Agriculture
-  * enables farming capability
-  * unlocks settlement-anchored crop production in the agriculture subsystem
-
-This creates direct consequence chains such as:
-
-`Stone Tools -> higher harvest efficiency -> more food stores -> stronger annual food ratio -> better population outcomes`
-
-Advancements also contribute to polity stage progression indirectly. Higher stage thresholds now consider advancement count alongside settlement durability, population, longevity, and food stability.
-
----
-
-# Knowledge Storage
-
-Knowledge is tracked at the **polity level**.
-Capabilities are derived at the polity level from that knowledge.
-
-Example structure:
-
-```
-Polity
- ├─ Name
- ├─ Species
- ├─ Population
- ├─ Settlements
- ├─ KnownKnowledge
- └─ ActiveCapabilities
-```
-
-This allows different civilizations to develop unique technological profiles.
-
-The yearly polity stage pass runs separately from discovery, so advancement remains modular while still influencing social complexity transitions.
-
----
-
-# Knowledge Diffusion (Future System)
-
-Future versions of LivingWorld may allow knowledge to spread between societies.
-
-Possible diffusion mechanisms:
-
-Migration
-Migrating populations bring knowledge with them.
-
-Trade
-Trade networks spread ideas between settlements.
-
-Proximity
-Neighboring societies influence each other.
-
-Conquest
-Victorious societies absorb knowledge from defeated ones.
-
-Knowledge diffusion will produce more realistic technological spread across the world.
-
----
-
-# Historical Event Logging
-
-When knowledge is discovered, a historical event is recorded.
-
-Example:
-
-```
-Stone Ford discovered Stone Tools
-Ash Tribe improved food stores
-River Folk began farming
-```
-
-These discoveries become part of the world's historical narrative.
-
----
-
-# Example Development Timeline
-
-Example progression for a hypothetical society:
-
-```
-Year 112
-Red River Clan founded Stone Ford
-
-Year 147
-Stone Ford discovered Fire
-
-Year 182
-Stone Ford discovered Stone Tools
-
-Year 230
-Stone Ford began farming
-```
-
-Different societies may follow completely different advancement paths depending on environment and historical conditions.
-
----
-
-# Design Philosophy
-
-The advancement system emphasizes:
-
-* emergent progression
-* environmental influence
-* societal pressure
-* non-linear technological growth
-
-Civilizations do not advance along a fixed path.
-
-Instead, their development reflects the **unique conditions of their environment and history**.
+This keeps capture independent from presentation.

@@ -64,12 +64,50 @@ public sealed class PopulationSystem
                 : $"{polity.Name} collapsed";
 
             world.AddEvent(
-                "COLLAPSE",
+                WorldEventType.PolityCollapsed,
+                WorldEventSeverity.Critical,
                 collapseNarrative,
-                $"{polity.Name} fell from population {previousPopulation} to 0."
+                $"{polity.Name} fell from population {previousPopulation} to 0.",
+                reason: "population_zero",
+                polityId: polity.Id,
+                polityName: polity.Name,
+                regionId: polity.RegionId,
+                before: new Dictionary<string, string>
+                {
+                    ["population"] = previousPopulation.ToString()
+                },
+                after: new Dictionary<string, string>
+                {
+                    ["population"] = "0"
+                }
             );
 
             return;
+        }
+
+        if (previousPopulation > 0 && polity.Population < previousPopulation)
+        {
+            double declineRatio = (double)(previousPopulation - polity.Population) / previousPopulation;
+            if (declineRatio >= 0.15)
+            {
+                world.AddEvent(
+                    WorldEventType.PopulationChanged,
+                    declineRatio >= 0.30 ? WorldEventSeverity.Critical : WorldEventSeverity.Notable,
+                    $"{polity.Name} declined from {previousPopulation} to {polity.Population}",
+                    $"{polity.Name} declined by {declineRatio:P0} in one year.",
+                    reason: "major_decline",
+                    polityId: polity.Id,
+                    polityName: polity.Name,
+                    regionId: polity.RegionId,
+                    before: new Dictionary<string, string>
+                    {
+                        ["population"] = previousPopulation.ToString()
+                    },
+                    after: new Dictionary<string, string>
+                    {
+                        ["population"] = polity.Population.ToString()
+                    });
+            }
         }
 
         int? milestone = PopulationMilestones
@@ -83,9 +121,26 @@ public sealed class PopulationSystem
         }
 
         world.AddEvent(
-            "POPULATION",
+            WorldEventType.PopulationChanged,
+            WorldEventSeverity.Notable,
             $"{polity.Name} grew to {milestone.Value} people",
-            $"{polity.Name} grew from population {previousPopulation} to {polity.Population}, crossing milestone {milestone.Value}."
+            $"{polity.Name} grew from population {previousPopulation} to {polity.Population}, crossing milestone {milestone.Value}.",
+            reason: "population_milestone",
+            polityId: polity.Id,
+            polityName: polity.Name,
+            regionId: polity.RegionId,
+            before: new Dictionary<string, string>
+            {
+                ["population"] = previousPopulation.ToString()
+            },
+            after: new Dictionary<string, string>
+            {
+                ["population"] = polity.Population.ToString()
+            },
+            metadata: new Dictionary<string, string>
+            {
+                ["milestone"] = milestone.Value.ToString()
+            }
         );
     }
 }

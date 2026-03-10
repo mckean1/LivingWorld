@@ -9,7 +9,10 @@ public sealed class SimulationOptions
             StreamTickChronicle = false,
             TickDelayMilliseconds = tickDelayMilliseconds,
             PauseBeforeStart = false,
-            PauseAfterEachYear = false
+            PauseAfterEachYear = false,
+            FocusedChronicleEnabled = true,
+            WriteStructuredHistory = true,
+            HistoryFilePath = BuildDefaultHistoryFilePath()
         };
 
     public OutputMode OutputMode { get; init; } = OutputMode.Narrative;
@@ -21,4 +24,18 @@ public sealed class SimulationOptions
     public bool PauseBeforeStart { get; init; }
 
     public bool PauseAfterEachYear { get; init; }
+
+    public bool FocusedChronicleEnabled { get; init; } = true;
+
+    public int? FocusedPolityId { get; init; }
+
+    public bool WriteStructuredHistory { get; init; } = true;
+
+    public string HistoryFilePath { get; init; } = BuildDefaultHistoryFilePath();
+
+    private static string BuildDefaultHistoryFilePath()
+    {
+        string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        return Path.Combine("logs", $"history-{timestamp}.jsonl");
+    }
 }

@@ -1,11 +1,11 @@
-using LivingWorld.Societies;
-using LivingWorld.Presentation;
-using LivingWorld.Systems;
 using System.Threading;
+using LivingWorld.Presentation;
+using LivingWorld.Societies;
+using LivingWorld.Systems;
 
 namespace LivingWorld.Core;
 
-public sealed class Simulation
+public sealed class Simulation : IDisposable
 {
     private readonly World _world;
     private readonly FoodSystem _foodSystem;
@@ -18,8 +18,13 @@ public sealed class Simulation
     private readonly PolityStageSystem _polityStageSystem;
     private readonly SimulationOptions _options;
     private readonly NarrativeRenderer _narrativeRenderer;
+    private readonly ChronicleFocus _chronicleFocus;
+    private readonly IPolityFocusSelector _focusSelector;
+    private readonly HistoryJsonlWriter? _historyWriter;
 
-    public Simulation(World world, SimulationOptions? options = null)
+    private int _snapshotYear = int.MinValue;
+
+    public Simulation(World world, SimulationOptions? options = null, IPolityFocusSelector? focusSelector = null)
     {
         _world = world;
         _foodSystem = new FoodSystem();
@@ -32,6 +37,16 @@ public sealed class Simulation
         _polityStageSystem = new PolityStageSystem();
         _options = options ?? new SimulationOptions();
         _narrativeRenderer = new NarrativeRenderer();
+
+        _chronicleFocus = new ChronicleFocus();
+        _focusSelector = focusSelector ?? new FirstPolityFocusSelector();
+        _chronicleFocus.SetFocusedPolity(_focusSelector.SelectFocusedPolityId(_world, _options));
+
+        if (_options.WriteStructuredHistory)
+        {
+            _historyWriter = new HistoryJsonlWriter(_options.HistoryFilePath);
+            _world.EventRecorded += OnWorldEventRecorded;
+        }
     }
 
     public void RunMonths(int months)
@@ -42,8 +57,18 @@ public sealed class Simulation
         }
     }
 
+    public void Dispose()
+    {
+        if (_historyWriter is not null)
+        {
+            _world.EventRecorded -= OnWorldEventRecorded;
+            _historyWriter.Dispose();
+        }
+    }
+
     private void RunTick()
     {
+        CaptureYearStartIfNeeded();
 
         // Monthly systems
         _foodSystem.UpdateRegionEcology(_world);
@@ -56,7 +81,7 @@ public sealed class Simulation
         // Year-end systems
         if (_world.Time.Month == 12)
         {
-            foreach (var polity in _world.Polities)
+            foreach (Polity polity in _world.Polities)
             {
                 if (polity.Population > 0)
                 {
@@ -87,9 +112,40 @@ public sealed class Simulation
         _world.Time.AdvanceOneMonth();
     }
 
+    private void CaptureYearStartIfNeeded()
+    {
+        if (_world.Time.Month != 1)
+        {
+            return;
+        }
+
+        if (_snapshotYear == _world.Time.Year)
+        {
+            return;
+        }
+
+        _narrativeRenderer.CaptureYearStart(_world, _chronicleFocus);
+        _snapshotYear = _world.Time.Year;
+    }
+
+    private void OnWorldEventRecorded(WorldEvent worldEvent)
+    {
+        if (_historyWriter is null)
+        {
+            return;
+        }
+
+        if (worldEvent.Severity == WorldEventSeverity.Debug)
+        {
+            return;
+        }
+
+        _historyWriter.Write(worldEvent);
+    }
+
     private void AddYearlyFoodStressEvents()
     {
-        foreach (var polity in _world.Polities.Where(p => p.Population > 0))
+        foreach (Polity polity in _world.Polities.Where(p => p.Population > 0))
         {
             if (polity.StarvationMonthsThisYear < 2)
             {
@@ -100,17 +156,33 @@ public sealed class Simulation
                 ? 1.0
                 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
 
+            string narrative = BuildFoodStressNarrative(polity, annualFoodRatio);
+
             _world.AddEvent(
-                "FOOD-STRESS",
-                BuildFoodStressNarrative(polity, annualFoodRatio),
-                $"{polity.Name} endured {polity.StarvationMonthsThisYear} starvation months; AFR={annualFoodRatio:F2}."
-            );
+                WorldEventType.FoodStress,
+                annualFoodRatio < 0.55 ? WorldEventSeverity.Critical : WorldEventSeverity.Notable,
+                narrative,
+                $"{polity.Name} endured {polity.StarvationMonthsThisYear} starvation months; AFR={annualFoodRatio:F2}.",
+                reason: "annual_food_shortage",
+                polityId: polity.Id,
+                polityName: polity.Name,
+                regionId: polity.RegionId,
+                regionName: _world.Regions.First(r => r.Id == polity.RegionId).Name,
+                before: new Dictionary<string, string>
+                {
+                    ["starvationMonths"] = "0"
+                },
+                after: new Dictionary<string, string>
+                {
+                    ["starvationMonths"] = polity.StarvationMonthsThisYear.ToString(),
+                    ["annualFoodRatio"] = annualFoodRatio.ToString("F2")
+                });
         }
     }
 
     private void ResetAnnualStats()
     {
-        foreach (var polity in _world.Polities)
+        foreach (Polity polity in _world.Polities)
         {
             polity.ResetAnnualFoodStats();
         }
@@ -125,7 +197,11 @@ public sealed class Simulation
             return;
         }
 
-        foreach (string line in _narrativeRenderer.RenderYearReport(_world))
+        IReadOnlyList<string> report = _options.FocusedChronicleEnabled
+            ? _narrativeRenderer.RenderYearReport(_world, _chronicleFocus)
+            : _narrativeRenderer.RenderYearReport(_world, _chronicleFocus);
+
+        foreach (string line in report)
         {
             Console.WriteLine(line);
         }
@@ -168,7 +244,7 @@ public sealed class Simulation
         }
 
         Console.WriteLine("Events:");
-        foreach (var worldEvent in eventsThisYear)
+        foreach (WorldEvent worldEvent in eventsThisYear)
         {
             Console.WriteLine($"  {worldEvent}");
         }
@@ -183,7 +259,7 @@ public sealed class Simulation
         Console.WriteLine($"=== YEAR {_world.Time.Year} SUMMARY ===");
         Console.WriteLine($"Active Polities: {activePolities} | Total Population: {totalPopulation}");
 
-        foreach (var polity in _world.Polities.OrderByDescending(p => p.Population).ThenBy(p => p.Name))
+        foreach (Polity polity in _world.Polities.OrderByDescending(p => p.Population).ThenBy(p => p.Name))
         {
             double annualFoodRatio = polity.AnnualFoodNeeded <= 0
                 ? 1.0
@@ -212,14 +288,14 @@ public sealed class Simulation
     {
         if (annualFoodRatio < 0.50)
         {
-            return $"{polity.Name} fell into famine";
+            return $"{polity.Name} suffered famine";
         }
 
         if (annualFoodRatio < 0.75)
         {
-            return $"{polity.Name} endured a year of hunger";
+            return $"{polity.Name} endured a lean year";
         }
 
-        return $"{polity.Name} faced repeated food shortages";
+        return $"{polity.Name} faced repeated shortages";
     }
 }
