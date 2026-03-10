@@ -21,7 +21,7 @@ Implemented core includes:
 ## Near-Term Priorities
 
 1. Chronicle quality tuning
-Keep improving event weighting and suppression so the live chronicle stays readable during busy simulation periods.
+Keep improving event weighting, transition detection, and suppression so the live chronicle stays readable during busy simulation periods.
 
 2. History views
 Build a Civilization History view over the stored event stream without changing simulation systems.

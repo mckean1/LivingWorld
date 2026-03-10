@@ -25,7 +25,7 @@ When `Month == 12`:
 6. evaluate polity stage progression
 7. apply annual agriculture events
 8. apply annual trade maintenance
-9. emit annual food-stress events
+9. evaluate annual hardship transitions and emit food-stress entry/escalation/persistence/recovery events
 10. remove collapsed polities
 11. validate lineage focus and emit any handoff event
 12. persist resolved year-end food-state snapshots

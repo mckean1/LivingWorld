@@ -62,6 +62,7 @@ Important traits:
 - the visible chronicle buffer is rendered newest-first
 - the chronicle viewport height is derived from the current console height after reserving the docked panel
 - only notable focal-polity events are shown in normal player mode
+- hardship chronicle events are emitted as state transitions rather than repeated yearly warnings
 - yearly debug summaries remain available only through `OutputMode.Debug`
 
 ### Docked Status Panel

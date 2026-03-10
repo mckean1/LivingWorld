@@ -6,6 +6,7 @@ namespace LivingWorld.Core;
 
 public sealed class Simulation : IDisposable
 {
+    private const int PersistentHardshipSummaryIntervalYears = 6;
     private readonly World _world;
     private readonly FoodSystem _foodSystem;
     private readonly AgricultureSystem _agricultureSystem;
@@ -23,6 +24,7 @@ public sealed class Simulation : IDisposable
     private readonly ChronicleFocus _chronicleFocus;
     private readonly IPolityFocusSelector _focusSelector;
     private readonly HistoryJsonlWriter? _historyWriter;
+    private readonly Dictionary<int, HardshipChronicleState> _hardshipStates = [];
 
     public Simulation(World world, SimulationOptions? options = null, IPolityFocusSelector? focusSelector = null)
     {
@@ -144,36 +146,65 @@ public sealed class Simulation : IDisposable
     {
         foreach (Polity polity in _world.Polities.Where(p => p.Population > 0))
         {
-            if (polity.StarvationMonthsThisYear < 2)
+            HardshipTier currentTier = ResolveHardshipTier(polity);
+            HardshipChronicleState previousState = _hardshipStates.TryGetValue(polity.Id, out HardshipChronicleState? existingState)
+                ? existingState
+                : HardshipChronicleState.Initial;
+
+            if (!ShouldEmitHardshipEvent(previousState, currentTier, _world.Time.Year))
             {
+                _hardshipStates[polity.Id] = previousState.WithObservedTier(currentTier, _world.Time.Year);
                 continue;
             }
 
-            double annualFoodRatio = polity.AnnualFoodNeeded <= 0
-                ? 1.0
-                : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
-
-            string narrative = BuildFoodStressNarrative(polity, annualFoodRatio);
+            WorldEventSeverity severity = ResolveHardshipSeverity(currentTier, previousState.CurrentTier);
+            string reason = ResolveHardshipReason(previousState, currentTier);
+            string narrative = BuildHardshipNarrative(polity, previousState, currentTier);
+            string details = BuildHardshipDetails(polity, previousState, currentTier);
 
             _world.AddEvent(
                 WorldEventType.FoodStress,
-                annualFoodRatio < 0.55 ? WorldEventSeverity.Critical : WorldEventSeverity.Notable,
+                severity,
                 narrative,
-                $"{polity.Name} endured {polity.StarvationMonthsThisYear} starvation months; AFR={annualFoodRatio:F2}.",
-                reason: "annual_food_shortage",
+                details,
+                reason: reason,
                 polityId: polity.Id,
                 polityName: polity.Name,
                 regionId: polity.RegionId,
                 regionName: _world.Regions.First(r => r.Id == polity.RegionId).Name,
                 before: new Dictionary<string, string>
                 {
-                    ["starvationMonths"] = "0"
+                    ["hardshipTier"] = previousState.CurrentTier.ToString(),
+                    ["hardshipTierYears"] = previousState.YearsInCurrentTier(_world.Time.Year).ToString(),
+                    ["starvationMonths"] = previousState.LastStarvationMonths.ToString(),
+                    ["annualFoodRatio"] = previousState.LastAnnualFoodRatio.ToString("F2")
                 },
                 after: new Dictionary<string, string>
                 {
+                    ["hardshipTier"] = currentTier.ToString(),
+                    ["hardshipTierYears"] = previousState.NextYearsInCurrentTier(currentTier, _world.Time.Year).ToString(),
                     ["starvationMonths"] = polity.StarvationMonthsThisYear.ToString(),
-                    ["annualFoodRatio"] = annualFoodRatio.ToString("F2")
+                    ["annualFoodRatio"] = ResolveAnnualFoodRatio(polity).ToString("F2")
+                },
+                metadata: new Dictionary<string, string>
+                {
+                    ["transitionKind"] = reason,
+                    ["hardshipTier"] = currentTier.ToString()
                 });
+
+            _hardshipStates[polity.Id] = previousState.AfterEmission(currentTier, _world.Time.Year, polity);
+        }
+
+        HashSet<int> activePolityIds = _world.Polities
+            .Where(polity => polity.Population > 0)
+            .Select(polity => polity.Id)
+            .ToHashSet();
+        List<int> inactiveTrackedPolities = _hardshipStates.Keys
+            .Where(polityId => !activePolityIds.Contains(polityId))
+            .ToList();
+        foreach (int polityId in inactiveTrackedPolities)
+        {
+            _hardshipStates.Remove(polityId);
         }
     }
 
@@ -351,18 +382,246 @@ public sealed class Simulation : IDisposable
         }
     }
 
-    private static string BuildFoodStressNarrative(Polity polity, double annualFoodRatio)
+    private static bool ShouldEmitHardshipEvent(HardshipChronicleState previousState, HardshipTier currentTier, int currentYear)
     {
-        if (annualFoodRatio < 0.50)
+        if (currentTier == HardshipTier.Stable)
         {
-            return $"{polity.Name} suffered famine";
+            return previousState.CurrentTier >= HardshipTier.Shortages;
         }
 
-        if (annualFoodRatio < 0.75)
+        if (currentTier < HardshipTier.Shortages)
         {
-            return $"{polity.Name} endured a lean year";
+            return previousState.CurrentTier >= HardshipTier.Shortages;
         }
 
-        return $"{polity.Name} faced repeated shortages";
+        if (previousState.CurrentTier < HardshipTier.Shortages)
+        {
+            return true;
+        }
+
+        if (currentTier != previousState.CurrentTier)
+        {
+            return true;
+        }
+
+        if (currentYear - previousState.LastEmittedYear < PersistentHardshipSummaryIntervalYears)
+        {
+            return false;
+        }
+
+        int yearsInTier = previousState.NextYearsInCurrentTier(currentTier, currentYear);
+        return currentYear - previousState.LastSummaryYear >= PersistentHardshipSummaryIntervalYears
+            && yearsInTier >= PersistentHardshipSummaryIntervalYears;
+    }
+
+    private string BuildHardshipNarrative(Polity polity, HardshipChronicleState previousState, HardshipTier currentTier)
+    {
+        return ResolveHardshipReason(previousState, currentTier) switch
+        {
+            "hardship_entered" => currentTier switch
+            {
+                HardshipTier.Shortages => $"{polity.Name} entered a period of shortages",
+                HardshipTier.Crisis => $"{polity.Name} entered a food crisis",
+                HardshipTier.Famine => $"Famine struck {polity.Name}",
+                _ => $"{polity.Name} came under food strain"
+            },
+            "hardship_worsened" => currentTier switch
+            {
+                HardshipTier.Crisis => $"{polity.Name}'s food crisis worsened",
+                HardshipTier.Famine => $"Famine struck {polity.Name}",
+                _ => $"{polity.Name}'s shortages worsened"
+            },
+            "hardship_improved" => previousState.CurrentTier switch
+            {
+                HardshipTier.Famine => $"{polity.Name} emerged from famine, though shortages endured",
+                HardshipTier.Crisis => $"{polity.Name}'s food crisis eased",
+                _ => $"{polity.Name}'s food strain eased"
+            },
+            "hardship_recovered" => previousState.CurrentTier switch
+            {
+                HardshipTier.Famine => $"{polity.Name} recovered from famine",
+                _ => $"Food stores in {polity.Name} stabilized"
+            },
+            "hardship_persisted" => $"{polity.Name} endured years of recurring shortages",
+            _ => $"{polity.Name} faced a food crisis"
+        };
+    }
+
+    private string BuildHardshipDetails(Polity polity, HardshipChronicleState previousState, HardshipTier currentTier)
+    {
+        double annualFoodRatio = ResolveAnnualFoodRatio(polity);
+        int yearsInTier = previousState.NextYearsInCurrentTier(currentTier, _world.Time.Year);
+        return $"Tier {previousState.CurrentTier} -> {currentTier}; yearsInTier={yearsInTier}; starvationMonths={polity.StarvationMonthsThisYear}; AFR={annualFoodRatio:F2}.";
+    }
+
+    private static string ResolveHardshipReason(HardshipChronicleState previousState, HardshipTier currentTier)
+    {
+        if (currentTier == HardshipTier.Stable)
+        {
+            return "hardship_recovered";
+        }
+
+        if (currentTier < HardshipTier.Shortages)
+        {
+            return "hardship_improved";
+        }
+
+        if (previousState.CurrentTier < HardshipTier.Shortages)
+        {
+            return "hardship_entered";
+        }
+
+        if (currentTier > previousState.CurrentTier)
+        {
+            return "hardship_worsened";
+        }
+
+        if (currentTier < previousState.CurrentTier)
+        {
+            return "hardship_improved";
+        }
+
+        return "hardship_persisted";
+    }
+
+    private static WorldEventSeverity ResolveHardshipSeverity(HardshipTier currentTier, HardshipTier previousTier)
+    {
+        if (currentTier == HardshipTier.Stable)
+        {
+            return WorldEventSeverity.Notable;
+        }
+
+        return currentTier switch
+        {
+            HardshipTier.Famine => WorldEventSeverity.Critical,
+            HardshipTier.Crisis when previousTier < HardshipTier.Crisis => WorldEventSeverity.Critical,
+            _ => WorldEventSeverity.Notable
+        };
+    }
+
+    private static HardshipTier ResolveHardshipTier(Polity polity)
+    {
+        double annualFoodRatio = ResolveAnnualFoodRatio(polity);
+
+        if (polity.StarvationMonthsThisYear >= 6 || annualFoodRatio < 0.55)
+        {
+            return HardshipTier.Famine;
+        }
+
+        if (polity.StarvationMonthsThisYear >= 4 || annualFoodRatio < 0.70)
+        {
+            return HardshipTier.Crisis;
+        }
+
+        if (polity.StarvationMonthsThisYear >= 2 || annualFoodRatio < 0.85)
+        {
+            return HardshipTier.Shortages;
+        }
+
+        if (polity.StarvationMonthsThisYear >= 1 || annualFoodRatio < 0.95)
+        {
+            return HardshipTier.Strain;
+        }
+
+        return HardshipTier.Stable;
+    }
+
+    private static double ResolveAnnualFoodRatio(Polity polity)
+        => polity.AnnualFoodNeeded <= 0
+            ? 1.0
+            : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
+
+    private enum HardshipTier
+    {
+        Stable,
+        Strain,
+        Shortages,
+        Crisis,
+        Famine
+    }
+
+    private sealed record HardshipChronicleState(
+        HardshipTier CurrentTier,
+        int TierStartedYear,
+        int LastObservedYear,
+        int LastEmittedYear,
+        int LastSummaryYear,
+        double LastAnnualFoodRatio,
+        int LastStarvationMonths)
+    {
+        public static HardshipChronicleState Initial { get; } = new(
+            HardshipTier.Stable,
+            -1,
+            -1,
+            int.MinValue,
+            int.MinValue,
+            1.0,
+            0);
+
+        public HardshipChronicleState WithObservedTier(HardshipTier observedTier, int year)
+        {
+            if (observedTier == CurrentTier)
+            {
+                return this with { LastObservedYear = year };
+            }
+
+            return this with
+            {
+                CurrentTier = observedTier,
+                TierStartedYear = year,
+                LastObservedYear = year
+            };
+        }
+
+        public HardshipChronicleState AfterEmission(HardshipTier emittedTier, int year, Polity polity)
+        {
+            bool summaryEmission = ResolveTransitionKind(emittedTier) == "hardship_persisted";
+            return new HardshipChronicleState(
+                emittedTier,
+                emittedTier == CurrentTier ? TierStartedYear : year,
+                year,
+                year,
+                summaryEmission ? year : LastSummaryYear,
+                ResolveAnnualFoodRatio(polity),
+                polity.StarvationMonthsThisYear);
+        }
+
+        public int YearsInCurrentTier(int year)
+            => TierStartedYear < 0 ? 0 : Math.Max(0, year - TierStartedYear);
+
+        public int NextYearsInCurrentTier(HardshipTier nextTier, int year)
+            => nextTier == CurrentTier
+                ? YearsInCurrentTier(year) + 1
+                : 1;
+
+        private string ResolveTransitionKind(HardshipTier nextTier)
+        {
+            if (nextTier == HardshipTier.Stable)
+            {
+                return "hardship_recovered";
+            }
+
+            if (nextTier < HardshipTier.Shortages)
+            {
+                return "hardship_improved";
+            }
+
+            if (CurrentTier < HardshipTier.Shortages)
+            {
+                return "hardship_entered";
+            }
+
+            if (nextTier > CurrentTier)
+            {
+                return "hardship_worsened";
+            }
+
+            if (nextTier < CurrentTier)
+            {
+                return "hardship_improved";
+            }
+
+            return "hardship_persisted";
+        }
     }
 }

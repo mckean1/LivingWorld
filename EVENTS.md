@@ -71,6 +71,7 @@ Current noise-control rules include:
 
 - only selected notable event types reach the player chronicle
 - repeated focal migrations are collapsed to one visible chronicle entry per year
+- hardship events emit on entry, escalation, long-duration persistence summaries, and recovery instead of repeating the same yearly warning
 - structured history still records the full underlying event stream
 
 ## JSONL History Rules
@@ -87,6 +88,7 @@ Current noise-control rules include:
 - `Year 57 - River Clan founded a settlement in Red Valley.`
 - `Year 84 - River Clan became a Settled Society.`
 - `Year 133 - River Clan suffered famine.`
+- `Year 149 - Food stores in River Clan stabilized.`
 - `Year 136 - Stone Clan split from River Clan in High Ridge.`
 
 ## Example JSONL Record

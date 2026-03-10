@@ -73,6 +73,8 @@ The console chronicle is derived from this model. It is not a separate source of
 
 The visible chronicle buffer in watch mode is presentation state only. Chronological history remains in `World.Events` and the JSONL log.
 
+Annual hardship transition tracking is held in simulation/runtime state rather than replacing canonical event history. It exists to decide when to emit new hardship chronicle events for a polity as conditions begin, worsen, persist, or recover.
+
 ## Design Notes
 
 - simulation behavior remains full-world

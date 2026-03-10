@@ -31,6 +31,7 @@ Examples of chronicle lines:
 - `Year 41 - River Clan discovered Agriculture.`
 - `Year 84 - River Clan became a Settled Society.`
 - `Year 136 - Stone Clan split from River Clan.`
+- `Year 179 - Food stores in River Clan stabilized.`
 
 ## Chronicle Pipeline
 

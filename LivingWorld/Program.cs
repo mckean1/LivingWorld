@@ -85,7 +85,7 @@ class Program
         public int Seed { get; private set; } = 1;
         public int YearsToSimulate { get; private set; } = 120;
         public bool DebugOutput { get; private set; }
-        public int ChroniclePlaybackDelayMilliseconds { get; private set; } = 150;
+        public int ChroniclePlaybackDelayMilliseconds { get; private set; } = 500;
         public int ChronicleVisibleEntryLimit { get; private set; } = 8;
         public int? FocusedPolityId { get; private set; }
         public bool DisableHistory { get; private set; }
