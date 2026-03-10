@@ -19,6 +19,7 @@ public sealed class PolityStageSystem
 
         public const int CivilizationMinPopulation = 130;
         public const int CivilizationMinYears = 16;
+        public const int CivilizationMinSettlements = 2;
         public const int CivilizationMinSettlementYears = 8;
         public const int CivilizationMinAdvancements = 4;
         public const double CivilizationMinAnnualFoodRatio = 0.98;
@@ -101,7 +102,7 @@ public sealed class PolityStageSystem
         double annualFoodRatio = GetAnnualFoodRatio(polity);
 
         return polity.SettlementStatus == SettlementStatus.Settled
-            && polity.SettlementCount > 0
+            && polity.SettlementCount >= Thresholds.CivilizationMinSettlements
             && polity.YearsSinceFirstSettlement >= Thresholds.CivilizationMinSettlementYears
             && polity.Population >= Thresholds.CivilizationMinPopulation
             && polity.YearsSinceFounded >= Thresholds.CivilizationMinYears

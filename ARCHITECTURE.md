@@ -265,6 +265,7 @@ Its v1 inputs are intentionally simple and tunable:
 * sustained stress indicators
 
 This version is advancement-only (no automatic regression) and emits short historical transition events.
+Civilization now requires a multi-settlement base (at least two settlements).
 
 ---
 

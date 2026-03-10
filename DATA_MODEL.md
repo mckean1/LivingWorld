@@ -149,6 +149,8 @@ Polities evolve over time and may transition into civilizations.
 * Settled Society
 * Civilization
 
+`Civilization` is reserved for polities with a multi-settlement structure (at least two settlements), alongside the other stage thresholds.
+
 Fragmentation-related notes:
 
 * `ParentPolityId` records simple parent-child lineage for split-off polities

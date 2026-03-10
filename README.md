@@ -106,6 +106,8 @@ Polities now track an explicit stage progression:
 * Settled Society
 * Civilization
 
+In the current stage rules, reaching `Civilization` requires a true multi-settlement polity (at least two settlements), not just one durable settlement.
+
 ---
 
 # Population Model

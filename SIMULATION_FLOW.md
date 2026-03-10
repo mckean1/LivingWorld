@@ -124,6 +124,7 @@ Yearly polity stage details:
 * each active polity is evaluated once per year after settlement and fragmentation updates
 * progression is advancement-only in v1 (no automatic regression)
 * stage checks use population, longevity, settlement durability, annual food stability, and advancement count
+* Civilization specifically requires a multi-settlement polity (at least two settlements)
 * stage transitions emit short historical entries such as `Riverwatch Clan became a Tribe`
 
 ---
