@@ -66,7 +66,7 @@ public sealed class WorldGenerator
             int speciesId = _random.Next(world.Species.Count);
             int regionId = _random.Next(world.Regions.Count);
 
-            Polity polity = new(i, NextPolityName(i), speciesId, regionId, _random.Next(30, 80));
+            Polity polity = new(i, NextPolityName(i), speciesId, regionId, _random.Next(30, 80), lineageId: i);
 
             world.Polities.Add(polity);
         }

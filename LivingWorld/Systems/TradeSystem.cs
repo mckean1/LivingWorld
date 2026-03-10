@@ -590,34 +590,7 @@ public sealed class TradeSystem
             return true;
         }
 
-        return ResolveLineageRootId(world, importer) == ResolveLineageRootId(world, exporter);
-    }
-
-    private static int ResolveLineageRootId(World world, Polity polity)
-    {
-        int currentId = polity.Id;
-        int? currentParent = polity.ParentPolityId;
-        HashSet<int> seen = new();
-        seen.Add(currentId);
-
-        while (currentParent.HasValue)
-        {
-            if (!seen.Add(currentParent.Value))
-            {
-                break;
-            }
-
-            Polity? parent = world.Polities.FirstOrDefault(candidate => candidate.Id == currentParent.Value);
-            if (parent is null)
-            {
-                break;
-            }
-
-            currentId = parent.Id;
-            currentParent = parent.ParentPolityId;
-        }
-
-        return currentId;
+        return importer.LineageId == exporter.LineageId;
     }
 
     private static TradeEndpoint ResolveEndpoint(World world, Polity polity)

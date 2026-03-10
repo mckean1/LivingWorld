@@ -13,6 +13,10 @@ public static class WorldEventType
     public const string Fragmentation = "fragmentation";
     public const string StageChanged = "stage_changed";
     public const string PolityCollapsed = "polity_collapsed";
+    public const string FocusHandoffFragmentation = "focus_handoff_fragmentation";
+    public const string FocusHandoffCollapse = "focus_handoff_collapse";
+    public const string FocusLineageContinued = "focus_lineage_continued";
+    public const string FocusLineageExtinctFallback = "focus_lineage_extinct_fallback";
     public const string TradeTransfer = "trade_transfer";
     public const string TradeLinkStarted = "trade_link_started";
     public const string TradeRelief = "trade_relief";

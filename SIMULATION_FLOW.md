@@ -30,9 +30,10 @@ The simulation runs in monthly ticks with yearly aggregation. The full world alw
 8. Annual food-stress events
 9. Annual trade dependency and link maintenance pass
 10. Remove collapsed polities (`Population <= 0`)
-11. Persist resolved year-end food-state snapshot for each active polity
-12. Render yearly focused chronicle (narrative mode) or debug summary (debug mode)
-13. Reset annual food stats
+11. Validate lineage focus and emit any handoff event
+12. Persist resolved year-end food-state snapshot for each active polity
+13. Render yearly focused chronicle (narrative mode) or debug summary (debug mode)
+14. Reset annual food stats
 
 ---
 
@@ -70,6 +71,8 @@ Current refinement details:
 - reachability uses constrained multi-hop local networks
 - continuity of existing links affects partner selection
 - relief metrics include partial and full shortage mitigation
+
+Lineage focus validation happens after collapse cleanup so the selector chooses only surviving successors. The handoff event is emitted before the yearly chronicle renders, which lets the same canonical event appear in both the player-facing report and the structured JSONL history.
 
 ---
 

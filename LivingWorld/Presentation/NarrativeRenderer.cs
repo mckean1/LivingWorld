@@ -272,6 +272,10 @@ public sealed class NarrativeRenderer
             or WorldEventType.StageChanged
             or WorldEventType.Fragmentation
             or WorldEventType.PolityCollapsed
+            or WorldEventType.FocusHandoffFragmentation
+            or WorldEventType.FocusHandoffCollapse
+            or WorldEventType.FocusLineageContinued
+            or WorldEventType.FocusLineageExtinctFallback
             || (isFocusedSubject && evt.Type is WorldEventType.TradeLinkStarted
                 or WorldEventType.TradeRelief
                 or WorldEventType.TradeDependency
@@ -282,17 +286,21 @@ public sealed class NarrativeRenderer
     {
         return evt.Type switch
         {
-            WorldEventType.PolityCollapsed => 0,
-            WorldEventType.Fragmentation => 1,
-            WorldEventType.StageChanged => 2,
-            WorldEventType.TradeDependency => 3,
-            WorldEventType.TradeRelief => 4,
-            WorldEventType.TradeLinkStarted => 5,
-            WorldEventType.TradeLinkCollapsed => 6,
-            WorldEventType.SettlementFounded => 7,
-            WorldEventType.SettlementConsolidated => 8,
-            WorldEventType.KnowledgeDiscovered => 9,
-            _ => 10
+            WorldEventType.FocusHandoffCollapse => 0,
+            WorldEventType.FocusLineageExtinctFallback => 1,
+            WorldEventType.FocusHandoffFragmentation => 2,
+            WorldEventType.FocusLineageContinued => 3,
+            WorldEventType.PolityCollapsed => 4,
+            WorldEventType.Fragmentation => 5,
+            WorldEventType.StageChanged => 6,
+            WorldEventType.TradeDependency => 7,
+            WorldEventType.TradeRelief => 8,
+            WorldEventType.TradeLinkStarted => 9,
+            WorldEventType.TradeLinkCollapsed => 10,
+            WorldEventType.SettlementFounded => 11,
+            WorldEventType.SettlementConsolidated => 12,
+            WorldEventType.KnowledgeDiscovered => 13,
+            _ => 14
         };
     }
 

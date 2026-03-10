@@ -74,11 +74,15 @@ public sealed class FragmentationSystem
                 relatedPolityId: child.Id,
                 relatedPolityName: child.Name,
                 speciesId: polity.SpeciesId,
+                speciesName: world.Species.FirstOrDefault(species => species.Id == polity.SpeciesId)?.Name,
                 regionId: target.Id,
                 regionName: target.Name,
                 metadata: new Dictionary<string, string>
                 {
-                    ["fragmentationPressure"] = polity.FragmentationPressure.ToString("F2")
+                    ["fragmentationPressure"] = polity.FragmentationPressure.ToString("F2"),
+                    ["lineageId"] = polity.LineageId.ToString(),
+                    ["parentPolityId"] = polity.Id.ToString(),
+                    ["childPolityId"] = child.Id.ToString()
                 });
         }
 
@@ -234,6 +238,7 @@ public sealed class FragmentationSystem
             parent.SpeciesId,
             target.Id,
             transferPopulation,
+            parent.LineageId,
             parent.Id,
             DetermineChildStartingStage(parent))
         {

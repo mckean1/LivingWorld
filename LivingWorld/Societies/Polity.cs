@@ -9,6 +9,7 @@ public sealed class Polity
     public int SpeciesId { get; set; }
     public int RegionId { get; set; }
     public int Population { get; set; }
+    public int LineageId { get; set; }
     public int? ParentPolityId { get; set; }
     public PolityStage Stage { get; set; }
 
@@ -78,6 +79,7 @@ public sealed class Polity
         int speciesId,
         int regionId,
         int population,
+        int? lineageId = null,
         int? parentPolityId = null,
         PolityStage stage = PolityStage.Band)
     {
@@ -86,6 +88,7 @@ public sealed class Polity
         SpeciesId = speciesId;
         RegionId = regionId;
         Population = population;
+        LineageId = lineageId ?? id;
         ParentPolityId = parentPolityId;
         Stage = stage;
 

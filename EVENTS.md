@@ -47,6 +47,10 @@ Chronicle view prioritizes focal `Notable` and `Critical` events.
 - `fragmentation`
 - `stage_changed`
 - `polity_collapsed`
+- `focus_handoff_fragmentation`
+- `focus_handoff_collapse`
+- `focus_lineage_continued`
+- `focus_lineage_extinct_fallback`
 - `trade_transfer`
 - `trade_link_started`
 - `trade_relief`
@@ -72,6 +76,7 @@ Chronicle presentation also applies yearly collapsing rules:
 - knowledge breadth debug metrics are not rendered
 - ordinary monthly trade transfers are kept mostly in structured history, while notable trade outcomes appear in chronicle lines
 - rare major milestones can be elevated into banner-style chronicle highlights
+- lineage focus handoff events appear as concise narrative lines when the chronicle actually changes subjects
 
 ### Major Chronicle Milestones (Presentation Classification)
 
@@ -99,6 +104,13 @@ Trade debug history now records additional context for analysis:
 - partial vs full relief outcome
 - link continuity signals (age, activity, collapse)
 
+Focus-transition history records now also capture:
+
+- old/new focused polity ids and names
+- old/new lineage ids
+- transition kind (`Fragmentation`, `Collapse`, `LineageContinuation`, `LineageExtinctionFallback`)
+- the reason that triggered the handoff
+
 ---
 
 ## JSONL History Rules
@@ -117,6 +129,8 @@ Trade debug history now records additional context for analysis:
 - `Red River Clan suffered famine.`
 - `Red River Clan declined from 84 to 71.`
 - `Red River Clan became a Settled Society.`
+- `Red River Clan fractured into rival groups. The chronicle now follows Valley Clan.`
+- `Valley Clan collapsed. Its legacy continued through Hill Tribe.`
 
 ---
 

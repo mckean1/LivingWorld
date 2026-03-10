@@ -43,8 +43,9 @@ public sealed class Simulation : IDisposable
         _chronicleColorWriter = new ChronicleColorWriter();
 
         _chronicleFocus = new ChronicleFocus();
-        _focusSelector = focusSelector ?? new FirstPolityFocusSelector();
-        _chronicleFocus.SetFocusedPolity(_focusSelector.SelectFocusedPolityId(_world, _options));
+        _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
+        ChronicleFocusSelection initialFocus = _focusSelector.SelectInitialFocus(_world, _options);
+        _chronicleFocus.SetFocus(initialFocus.PolityId, initialFocus.LineageId);
 
         if (_options.WriteStructuredHistory)
         {
@@ -105,6 +106,7 @@ public sealed class Simulation : IDisposable
             AddYearlyFoodStressEvents();
 
             _world.Polities.RemoveAll(p => p.Population <= 0);
+            ResolveChronicleFocusForYear();
             PersistYearEndFoodStateSnapshots();
 
             PrintYearReport();
@@ -202,6 +204,91 @@ public sealed class Simulation : IDisposable
             polity.LastResolvedFoodState = ChronicleTextFormatter.ResolveFoodState(polity);
             polity.LastResolvedFoodStateYear = _world.Time.Year;
         }
+    }
+
+    private void ResolveChronicleFocusForYear()
+    {
+        List<WorldEvent> eventsThisYear = _world.Events
+            .Where(evt => evt.Year == _world.Time.Year)
+            .OrderBy(evt => evt.Month)
+            .ThenBy(evt => evt.EventId)
+            .ToList();
+
+        ChronicleFocusTransition? transition = _focusSelector.ResolveYearEndFocus(_world, _chronicleFocus, eventsThisYear);
+        if (transition is null)
+        {
+            return;
+        }
+
+        Polity? successor = _world.Polities.FirstOrDefault(polity => polity.Id == transition.NewPolityId);
+        if (successor is null)
+        {
+            return;
+        }
+
+        EmitFocusTransitionEvent(transition, successor);
+        _chronicleFocus.SetFocus(successor);
+    }
+
+    private void EmitFocusTransitionEvent(ChronicleFocusTransition transition, Polity successor)
+    {
+        string eventType = transition.Kind switch
+        {
+            ChronicleFocusTransitionKind.Fragmentation => WorldEventType.FocusHandoffFragmentation,
+            ChronicleFocusTransitionKind.Collapse => WorldEventType.FocusHandoffCollapse,
+            ChronicleFocusTransitionKind.LineageContinuation => WorldEventType.FocusLineageContinued,
+            ChronicleFocusTransitionKind.LineageExtinctionFallback => WorldEventType.FocusLineageExtinctFallback,
+            _ => WorldEventType.WorldEvent
+        };
+
+        string narrative = transition.Kind switch
+        {
+            ChronicleFocusTransitionKind.Fragmentation =>
+                $"{transition.PreviousPolityName} fractured into rival groups. The chronicle now follows {transition.NewPolityName}",
+            ChronicleFocusTransitionKind.Collapse =>
+                $"{transition.PreviousPolityName} collapsed. Its legacy continued through {transition.NewPolityName}",
+            ChronicleFocusTransitionKind.LineageContinuation =>
+                $"{transition.PreviousPolityName} passed from the chronicle. Its lineage endured through {transition.NewPolityName}",
+            ChronicleFocusTransitionKind.LineageExtinctionFallback =>
+                $"{transition.PreviousPolityName}'s lineage ended. The chronicle now follows {transition.NewPolityName}",
+            _ => $"{transition.NewPolityName} became the new focus"
+        };
+
+        _world.AddEvent(
+            eventType,
+            WorldEventSeverity.Notable,
+            narrative,
+            $"Focus shifted from {transition.PreviousPolityName} ({transition.PreviousPolityId}) to {transition.NewPolityName} ({transition.NewPolityId}) because {transition.Reason}.",
+            reason: transition.Reason,
+            polityId: successor.Id,
+            polityName: successor.Name,
+            relatedPolityId: transition.PreviousPolityId,
+            relatedPolityName: transition.PreviousPolityName,
+            speciesId: successor.SpeciesId,
+            speciesName: _world.Species.FirstOrDefault(species => species.Id == successor.SpeciesId)?.Name,
+            regionId: successor.RegionId,
+            regionName: _world.Regions.First(region => region.Id == successor.RegionId).Name,
+            before: new Dictionary<string, string>
+            {
+                ["focusedPolityId"] = transition.PreviousPolityId.ToString(),
+                ["focusedPolityName"] = transition.PreviousPolityName,
+                ["focusedLineageId"] = transition.PreviousLineageId.ToString()
+            },
+            after: new Dictionary<string, string>
+            {
+                ["focusedPolityId"] = transition.NewPolityId.ToString(),
+                ["focusedPolityName"] = transition.NewPolityName,
+                ["focusedLineageId"] = transition.NewLineageId.ToString()
+            },
+            metadata: new Dictionary<string, string>
+            {
+                ["transitionKind"] = transition.Kind.ToString(),
+                ["previousPolityId"] = transition.PreviousPolityId.ToString(),
+                ["newPolityId"] = transition.NewPolityId.ToString(),
+                ["previousLineageId"] = transition.PreviousLineageId.ToString(),
+                ["newLineageId"] = transition.NewLineageId.ToString(),
+                ["speciesId"] = successor.SpeciesId.ToString()
+            });
     }
 
     private void PrintYearReport()

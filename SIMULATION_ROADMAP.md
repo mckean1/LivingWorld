@@ -18,6 +18,7 @@ Implemented core includes:
 - polity stage progression
 - canonical structured event model
 - focused society chronicle output
+- player lineage focus with deterministic focus handoff across fragmentation and collapse
 - major milestone banner highlights for rare history-defining focal events
 - append-only JSONL event history output
 
@@ -25,19 +26,16 @@ Implemented core includes:
 
 ## Near-Term Priorities
 
-1. Player lineage focus
-Replace initial first-polity focus with explicit player-tracked lineage and better fallback behavior after collapse/absorption.
-
-2. Chronicle quality tuning
+1. Chronicle quality tuning
 Improve event deduping and weighting so migration-heavy years still surface the most meaningful beats.
 
-3. Trade expansion
+2. Trade expansion
 Extend the refined food-first hybrid model into broader resource exchange (timber/stone/metal/livestock/crafted goods), stronger true settlement-level logistics, and eventual route infrastructure.
 
-4. Event taxonomy expansion
+3. Event taxonomy expansion
 Add richer event types (absorption, diplomacy, conflict precursors) while maintaining concise chronicle rendering.
 
-5. History tooling
+4. History tooling
 Add simple post-run analyzers over JSONL (severity distributions, collapse causes, migration pressure trends).
 
 ---

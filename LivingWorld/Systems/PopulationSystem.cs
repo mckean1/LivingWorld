@@ -71,6 +71,7 @@ public sealed class PopulationSystem
                 reason: "population_zero",
                 polityId: polity.Id,
                 polityName: polity.Name,
+                speciesId: polity.SpeciesId,
                 regionId: polity.RegionId,
                 before: new Dictionary<string, string>
                 {
@@ -79,6 +80,11 @@ public sealed class PopulationSystem
                 after: new Dictionary<string, string>
                 {
                     ["population"] = "0"
+                },
+                metadata: new Dictionary<string, string>
+                {
+                    ["lineageId"] = polity.LineageId.ToString(),
+                    ["speciesId"] = polity.SpeciesId.ToString()
                 }
             );
 
@@ -98,6 +104,7 @@ public sealed class PopulationSystem
                     reason: "major_decline",
                     polityId: polity.Id,
                     polityName: polity.Name,
+                    speciesId: polity.SpeciesId,
                     regionId: polity.RegionId,
                     before: new Dictionary<string, string>
                     {
@@ -128,6 +135,7 @@ public sealed class PopulationSystem
             reason: "population_milestone",
             polityId: polity.Id,
             polityName: polity.Name,
+            speciesId: polity.SpeciesId,
             regionId: polity.RegionId,
             before: new Dictionary<string, string>
             {

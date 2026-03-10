@@ -117,15 +117,19 @@ Trade is food-first and hybrid settlement/polity in the current refinement:
 
 ---
 
-## Focal Polity Selection
+## Player Lineage Focus
 
-A lightweight focus abstraction tracks the polity shown in the chronicle.
+A lightweight focus abstraction tracks both the polity shown in the chronicle and the lineage being followed.
 
-Current default selector:
+Default behavior now:
 
-- first starting polity (lowest initial polity id)
+- starts from the selected starting polity (or lowest-id starting polity by default)
+- keeps following that polity while it survives unchanged
+- hands off to the strongest direct child when the focused polity fragments
+- searches the same lineage first when the focused polity collapses or disappears
+- falls back deterministically to the closest strong surviving polity when the lineage is extinct
 
-This is designed to evolve later into explicit player lineage tracking.
+Focus handoffs emit concise chronicle lines and matching structured history events, so the player-facing output reads like one continuous civilization story while the JSONL history keeps the technical transition context.
 
 ---
 

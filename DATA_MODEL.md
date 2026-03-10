@@ -43,7 +43,7 @@ Event responsibilities:
 
 Selected fields:
 
-- identity: `Id`, `Name`, `SpeciesId`, `RegionId`, `ParentPolityId`
+- identity: `Id`, `Name`, `SpeciesId`, `RegionId`, `LineageId`, `ParentPolityId`
 - demographics: `Population`, `YearsSinceFounded`, `Stage`
 - food stress and stores: monthly + annual aggregates
 - migration state: `MigrationPressure`, `MovedThisYear`, `MovesThisYear`
@@ -56,6 +56,13 @@ Selected fields:
   `AnnualFoodImportedInternal`, `AnnualFoodImportedExternal`,
   `TradeReliefMonthsThisYear`, `TradePartialReliefMonthsThisYear`, `TradeFullReliefMonthsThisYear`,
   `AnnualTradeNeedMitigated`, `TradePartnerCountThisYear`
+
+Lineage rules:
+
+- each starting polity founds its own lineage (`LineageId = Id`)
+- fragmentation children inherit the parent's `LineageId`
+- fragmentation children record `ParentPolityId = source polity id`
+- lineage identity stays stable even when the original polity collapses
 
 ---
 
@@ -75,8 +82,11 @@ This model supports both narrative rendering and structured persistence.
 
 ## Presentation and Persistence Types
 
-- `ChronicleFocus`: stores current focal polity id
-- `IPolityFocusSelector`: selects initial focus
+- `ChronicleFocus`: stores current focal polity id and focal lineage id
+- `ChronicleFocusSelection`: initial focus result (`PolityId`, `LineageId`)
+- `ChronicleFocusTransition`: year-end focus handoff result (`Kind`, old/new polity, old/new lineage, reason)
+- `IPolityFocusSelector`: selects initial focus and resolves year-end focus handoff
+- `LineagePolityFocusSelector`: lineage-aware focus selector/handoff service
 - `HistoryJsonlWriter`: append-only writer for structured event history
 - `NarrativeRenderer` major-milestone presentation classification (banner titles/categories for rare focal events)
 

@@ -77,7 +77,40 @@ Outputs:
 - optional notable before/after changes
 - optional rare world notes (0-2)
 
-Chronicle focus is tracked by `ChronicleFocus` and chosen by `IPolityFocusSelector` (default: first starting polity).
+Chronicle focus is tracked by `ChronicleFocus` and chosen/validated by `IPolityFocusSelector` (default: `LineagePolityFocusSelector`).
+
+### Player Lineage Focus
+
+`ChronicleFocus` stores:
+
+- current focal polity id
+- current focal lineage id
+
+`LineagePolityFocusSelector` handles two responsibilities:
+
+1. initial focus selection at simulation start
+2. year-end validation and deterministic handoff when continuity breaks
+
+Year-end handoff rules:
+
+- if the focused polity survives and did not fragment, keep following it
+- if it fragmented this year, choose the strongest direct child in the same lineage
+- if it collapsed or vanished, choose the best surviving polity in the same lineage
+- if the lineage is extinct, fall back to the closest strong surviving polity outside the lineage
+
+Successor choice is deterministic and weighted from existing simulation state:
+
+- population
+- settlement count
+- stage
+- direct descent distance
+- regional continuity
+- species continuity for fallback cases
+
+When focus changes, `Simulation` emits a canonical focus-transition `WorldEvent` before chronicle rendering. That same event feeds both:
+
+- the concise narrative chronicle
+- the append-only JSONL history
 
 Food-state notable changes use a persisted prior-year snapshot on each polity (`LastResolvedFoodState` + capture year), not recomputation after annual counters reset.
 Yearly chronicle rendering now collapses:
@@ -119,6 +152,7 @@ Year-end:
 
 - population, advancement, settlement, fragmentation, stage, annual agriculture events, annual food stress events, annual trade dependency/link maintenance
 - persist each active polity's resolved year-end food state snapshot
+- validate lineage focus and emit a handoff event if the chronicle switches to a successor
 - focused chronicle rendering
 - annual stat reset
 
