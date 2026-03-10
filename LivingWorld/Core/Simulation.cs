@@ -19,6 +19,7 @@ public sealed class Simulation : IDisposable
     private readonly PolityStageSystem _polityStageSystem;
     private readonly SimulationOptions _options;
     private readonly NarrativeRenderer _narrativeRenderer;
+    private readonly ChronicleColorWriter _chronicleColorWriter;
     private readonly ChronicleFocus _chronicleFocus;
     private readonly IPolityFocusSelector _focusSelector;
     private readonly HistoryJsonlWriter? _historyWriter;
@@ -39,6 +40,7 @@ public sealed class Simulation : IDisposable
         _polityStageSystem = new PolityStageSystem();
         _options = options ?? new SimulationOptions();
         _narrativeRenderer = new NarrativeRenderer();
+        _chronicleColorWriter = new ChronicleColorWriter();
 
         _chronicleFocus = new ChronicleFocus();
         _focusSelector = focusSelector ?? new FirstPolityFocusSelector();
@@ -217,7 +219,7 @@ public sealed class Simulation : IDisposable
 
         foreach (string line in report)
         {
-            Console.WriteLine(line);
+            _chronicleColorWriter.WriteLine(line, _world);
         }
     }
 
@@ -235,7 +237,7 @@ public sealed class Simulation : IDisposable
 
         foreach (string line in _narrativeRenderer.RenderTickChronicle(_world))
         {
-            Console.WriteLine(line);
+            _chronicleColorWriter.WriteLine(line, _world);
         }
 
         if (_options.TickDelayMilliseconds > 0)

@@ -45,6 +45,8 @@ Sinks:
 - focused chronicle renderer (year-end)
 - JSONL writer (immediate append)
 
+Chronicle console output passes through a centralized semantic color writer in the presentation layer; event capture/storage stays color-free.
+
 ---
 
 ## Focused Chronicle Output (Default)

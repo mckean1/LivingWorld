@@ -44,6 +44,20 @@ Knowledge breadth diffs are no longer shown in the player-facing chronicle.
 
 The wider world still simulates fully; only presentation is filtered.
 
+Chronicle console output also applies lightweight semantic color styling for readability:
+
+- Year headers: cyan
+- Section headers (`This Year`, `Notable Changes`): dark gray
+- Polity/actor names only: yellow
+- Regions/places: blue
+- Knowledge/discoveries: magenta
+- Positive outcomes: green
+- Warnings/shortages: dark yellow
+- Catastrophes: red
+- Food status values: `Surplus` green, `Hunger` dark yellow, `Famine` red, `Stable` dark gray (label remains neutral)
+
+Coloring is presentation-only and does not affect structured history output.
+
 ---
 
 ## Structured Event History (Developer Output)

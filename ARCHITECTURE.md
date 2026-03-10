@@ -89,6 +89,10 @@ Knowledge breadth debug diffs are omitted from player-facing output.
 
 Trade milestones use the same event pipeline, while ordinary monthly transfers stay mostly in structured history.
 
+Console coloring is handled by a centralized presentation helper (`ChronicleColorWriter`) that applies semantic colors to chronicle text segments without changing simulation/event data.
+It supports segmented line styling (for example, `Year N` and polity name rendered separately, dim section headers, and value-only food status coloring).
+Chronicle color semantics reserve yellow for actor names only; warning/shortage phrases use dark yellow so actor identity and risk state remain visually distinct.
+
 ---
 
 ## Structured History Path

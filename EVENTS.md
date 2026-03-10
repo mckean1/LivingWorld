@@ -72,6 +72,10 @@ Chronicle presentation also applies yearly collapsing rules:
 - knowledge breadth debug metrics are not rendered
 - ordinary monthly trade transfers are kept mostly in structured history, while notable trade outcomes appear in chronicle lines
 
+The player-facing console renderer may color semantic segments (year headers, polity/place names, discoveries, positive/warning/crisis phrases), while structured history remains plain structured data.
+Yellow is reserved for actor/polity names; warning phrases are rendered in dark yellow.
+Section headers are intentionally dimmed to keep historical events visually primary.
+
 Trade debug history now records additional context for analysis:
 
 - internal-priority vs external trade mode
