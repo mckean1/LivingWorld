@@ -76,6 +76,13 @@ Example:
 Green Barrow Clan split from Deepfield Tribe in Green Barrow
 ```
 
+Repeated splits into the same region keep readable names by using simple historical suffixes such as:
+
+```
+Green Barrow Clan II
+Green Barrow Colony III
+```
+
 Splits may occur due to:
 
 * population pressure

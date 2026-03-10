@@ -67,6 +67,8 @@ Triggers may include:
 * population pressure
 * better neighboring regions
 
+Migration moves an existing polity as a whole. It does not create child polities.
+
 ### 5. Settlement Updates
 
 Settlement status remains part of yearly progression, but monthly movement and food conditions shape whether a polity is stable enough to settle later.
@@ -111,6 +113,8 @@ Yearly fragmentation details:
 * only polities above a minimum population and outside their split cooldown can fragment
 * successful splits create a child polity in a connected region
 * the child receives transferred population, food, and some inherited knowledge
+* the child starts without settlement state until the settlement system later founds one
+* child names stay readable through simple uniqueness suffixes such as `II` and `III`
 * a short history entry is emitted for the split
 
 ---

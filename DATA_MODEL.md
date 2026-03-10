@@ -146,6 +146,7 @@ Fragmentation-related notes:
 * `FragmentationPressure` stores the current yearly split-pressure score for inspection and tuning
 * `FoodStressYears` tracks sustained shortage pressure across years
 * `SplitCooldownYears` prevents immediate repeat fragmentation
+* settlement-related fields continue to represent actual established settlement presence; fragmented children begin without settlement state until the settlement system creates it
 
 ---
 

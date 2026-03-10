@@ -205,6 +205,15 @@ Fragmentation is evaluated yearly through a simple split-pressure score based on
 
 When pressure stays high enough, a polity may found a colony-style child polity in a connected region. The child keeps the parent species, inherits some knowledge, and takes a share of population and stored food.
 
+Migration and fragmentation now serve different roles:
+
+* migration relocates an existing polity
+* fragmentation creates a new child polity
+
+There is no separate yearly expansion system. The earlier colony-style offshoot role is now handled by fragmentation.
+
+Fragmented children remain region-based at birth. They do **not** start with settlement counts or settled status unless the settlement system later establishes a real first settlement.
+
 This produces natural expansion and cultural divergence across regions.
 
 ---

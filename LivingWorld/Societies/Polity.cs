@@ -82,9 +82,7 @@ public sealed class Polity
         AnnualFoodShortage = 0;
         StarvationMonthsThisYear = 0;
 
-        SettlementStatus = SettlementStatus.Nomadic;
-        SettlementCount = 0;
-        YearsSinceFirstSettlement = 0;
+        ClearSettlementState();
         Advancements = new HashSet<AdvancementId>();
     }
 
@@ -110,5 +108,12 @@ public sealed class Polity
         {
             Advancements.Add(advancement);
         }
+    }
+
+    public void ClearSettlementState()
+    {
+        SettlementStatus = SettlementStatus.Nomadic;
+        SettlementCount = 0;
+        YearsSinceFirstSettlement = 0;
     }
 }

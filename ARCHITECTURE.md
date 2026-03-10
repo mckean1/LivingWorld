@@ -182,6 +182,8 @@ Migration may occur due to:
 
 Migration spreads societies across regions.
 
+Migration handles **whole-polity relocation**. It does not create new polities.
+
 ---
 
 ## Fragmentation System
@@ -199,6 +201,9 @@ Responsibilities include:
 
 The first implementation focuses on **colony/offshoot fragmentation**.
 
+This system intentionally replaces the earlier standalone colony expansion pass.
+Expansion through relocation remains part of the migration system, while branching expansion is handled here.
+
 Its pressure model is intentionally simple and tunable. Current inputs are:
 
 * polity population size
@@ -213,8 +218,10 @@ When a split succeeds, the child polity:
 * inherits some of the parent's advancements
 * receives a modest share of the parent population and food stores
 * records lineage through `ParentPolityId`
+* starts without concrete settlement state until the settlement system founds one
 
 This version remains **region-based** rather than using discrete branch settlements.
+Settlement-related polity fields continue to represent actual established settlement presence, not abstract colony intent.
 
 ---
 

@@ -27,8 +27,13 @@ public sealed class FragmentationSystem
             return;
         }
 
+        // Fragmentation intentionally absorbs the old offshoot-expansion role.
+        // Monthly migration still handles whole-polity relocation; this system only creates child polities.
         List<Polity> newPolities = new();
         int nextId = world.Polities.Count == 0 ? 0 : world.Polities.Max(p => p.Id) + 1;
+        HashSet<string> reservedNames = world.Polities
+            .Select(polity => polity.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (Polity polity in world.Polities.Where(p => p.Population > 0).ToList())
         {
@@ -49,7 +54,7 @@ public sealed class FragmentationSystem
                 continue;
             }
 
-            Polity? child = CreateChildPolity(world, polity, target, nextId);
+            Polity? child = CreateChildPolity(world, polity, target, nextId, reservedNames);
             if (child is null)
             {
                 continue;
@@ -190,7 +195,7 @@ public sealed class FragmentationSystem
             .FirstOrDefault();
     }
 
-    private Polity? CreateChildPolity(World world, Polity parent, Region target, int id)
+    private Polity? CreateChildPolity(World world, Polity parent, Region target, int id, HashSet<string> reservedNames)
     {
         int transferPopulation = CalculateTransferPopulation(parent);
         if (transferPopulation <= 0)
@@ -212,24 +217,22 @@ public sealed class FragmentationSystem
 
         Polity child = new(
             id,
-            BuildChildName(parent, target),
+            BuildChildName(parent, target, reservedNames),
             parent.SpeciesId,
             target.Id,
             transferPopulation,
             parent.Id)
         {
             FoodStores = foodTransfer,
-            SettlementStatus = parent.SettlementStatus == SettlementStatus.Settled
-                ? SettlementStatus.SemiSettled
-                : SettlementStatus.Nomadic,
-            SettlementCount = parent.SettlementStatus == SettlementStatus.Settled ? 1 : 0,
-            YearsSinceFirstSettlement = 0,
             YearsInCurrentRegion = 0,
             PreviousRegionId = parent.RegionId,
             SplitCooldownYears = SplitCooldownYears,
             FoodStressYears = Math.Max(0, parent.FoodStressYears - 1)
         };
 
+        // Fragmentation is still region-based. A child polity starts mobile until the settlement system
+        // explicitly establishes its first settlement.
+        child.ClearSettlementState();
         child.InheritAdvancements(SelectInheritedAdvancements(parent));
 
         return child;
@@ -260,11 +263,50 @@ public sealed class FragmentationSystem
         }
     }
 
-    private static string BuildChildName(Polity parent, Region target)
+    private static string BuildChildName(Polity parent, Region target, HashSet<string> reservedNames)
     {
-        string suffix = parent.SettlementStatus == SettlementStatus.Settled ? "Colony" : "Clan";
-        return $"{target.Name} {suffix}";
+        string suffix = parent.HasSettlements ? "Colony" : "Clan";
+        string baseName = $"{target.Name} {suffix}";
+        return ReserveUniquePolityName(baseName, reservedNames);
     }
+
+    private static string ReserveUniquePolityName(string baseName, HashSet<string> reservedNames)
+    {
+        if (reservedNames.Add(baseName))
+        {
+            return baseName;
+        }
+
+        for (int ordinal = 2; ordinal <= 12; ordinal++)
+        {
+            string candidate = $"{baseName} {ToRomanNumeral(ordinal)}";
+            if (reservedNames.Add(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        string fallback = $"New {baseName}";
+        reservedNames.Add(fallback);
+        return fallback;
+    }
+
+    private static string ToRomanNumeral(int value)
+        => value switch
+        {
+            2 => "II",
+            3 => "III",
+            4 => "IV",
+            5 => "V",
+            6 => "VI",
+            7 => "VII",
+            8 => "VIII",
+            9 => "IX",
+            10 => "X",
+            11 => "XI",
+            12 => "XII",
+            _ => value.ToString()
+        };
 
     private static double GetAnnualFoodRatio(Polity polity)
         => polity.AnnualFoodNeeded <= 0

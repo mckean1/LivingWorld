@@ -67,6 +67,7 @@ Settlements grow as population increases.
 Polity Splits
 Large societies may fragment into new groups.
 The first implementation uses a simple yearly fragmentation pressure model with colony-style offshoots, leaving room for later schisms and collapse-driven splits.
+This now also covers the older standalone colony expansion role; migration remains responsible for whole-polity relocation.
 
 Early Agricultural Development
 Agriculture begins supporting larger populations.
