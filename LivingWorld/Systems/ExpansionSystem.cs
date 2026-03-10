@@ -89,7 +89,11 @@ public sealed class ExpansionSystem
 
             newPolities.Add(child);
 
-            world.AddEvent("COLONY", $"{polity.Name} founded {child.Name} in Region {target.Id} with population {splitPopulation}.");
+            world.AddEvent(
+                "COLONY",
+                $"{polity.Name} sent settlers into {target.Name}, founding {child.Name}.",
+                $"{polity.Name} founded {child.Name} in Region {target.Id} with population {splitPopulation}."
+            );
         }
 
         world.Polities.AddRange(newPolities);

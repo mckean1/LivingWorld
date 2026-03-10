@@ -20,8 +20,8 @@ public sealed class World
         Time = time;
     }
 
-    public void AddEvent(string type, string message)
+    public void AddEvent(string type, string narrative, string? details = null)
     {
-        Events.Add(new WorldEvent(Time.Year, Time.Month, type, message));
+        Events.Add(new WorldEvent(Time.Year, Time.Month, type, narrative, details));
     }
 }

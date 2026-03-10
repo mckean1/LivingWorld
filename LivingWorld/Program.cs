@@ -1,6 +1,7 @@
 
 using LivingWorld.Core;
 using LivingWorld.Generation;
+using LivingWorld.Presentation;
 
 namespace LivingWorld;
 
@@ -15,7 +16,9 @@ class Program
         WorldGenerator generator = new(seed);
         World world = generator.Generate();
 
-        Simulation simulation = new(world);
+        SimulationOptions options = SimulationOptions.NarrativeChronicle(tickDelayMilliseconds: 1000);
+
+        Simulation simulation = new(world, options);
 
         Console.WriteLine("Press any key to start simulation.");
         Console.ReadKey();

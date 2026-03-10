@@ -1,5 +1,7 @@
 using LivingWorld.Societies;
+using LivingWorld.Presentation;
 using LivingWorld.Systems;
+using System.Threading;
 
 namespace LivingWorld.Core;
 
@@ -10,14 +12,18 @@ public sealed class Simulation
     private readonly PopulationSystem _populationSystem;
     private readonly MigrationSystem _migrationSystem;
     private readonly ExpansionSystem _expansionSystem;
+    private readonly SimulationOptions _options;
+    private readonly NarrativeRenderer _narrativeRenderer;
 
-    public Simulation(World world)
+    public Simulation(World world, SimulationOptions? options = null)
     {
         _world = world;
         _foodSystem = new FoodSystem();
         _populationSystem = new PopulationSystem();
         _migrationSystem = new MigrationSystem();
         _expansionSystem = new ExpansionSystem();
+        _options = options ?? new SimulationOptions();
+        _narrativeRenderer = new NarrativeRenderer();
     }
 
     public void RunMonths(int months)
@@ -36,6 +42,7 @@ public sealed class Simulation
         _foodSystem.GatherFood(_world);
         _foodSystem.ConsumeFood(_world);
         _migrationSystem.UpdateMigration(_world);
+        PrintTickReport();
 
         // Year-end systems
         if (_world.Time.Month == 12)
@@ -55,8 +62,7 @@ public sealed class Simulation
 
             _world.Polities.RemoveAll(p => p.Population <= 0);
 
-            PrintYearSummary();
-            PrintYearEvents();
+            PrintYearReport();
             ResetAnnualStats();
             Console.ReadKey();
         }
@@ -79,6 +85,7 @@ public sealed class Simulation
 
             _world.AddEvent(
                 "FOOD-STRESS",
+                BuildFoodStressNarrative(polity, annualFoodRatio),
                 $"{polity.Name} endured {polity.StarvationMonthsThisYear} starvation months; AFR={annualFoodRatio:F2}."
             );
         }
@@ -92,7 +99,45 @@ public sealed class Simulation
         }
     }
 
-    private void PrintYearEvents()
+    private void PrintYearReport()
+    {
+        if (_options.OutputMode == OutputMode.Debug)
+        {
+            PrintDebugYearSummary();
+            PrintDebugYearEvents();
+            return;
+        }
+
+        foreach (string line in _narrativeRenderer.RenderYearReport(_world))
+        {
+            Console.WriteLine(line);
+        }
+    }
+
+    private void PrintTickReport()
+    {
+        if (!_options.StreamTickChronicle)
+        {
+            return;
+        }
+
+        if (_options.OutputMode == OutputMode.Debug)
+        {
+            return;
+        }
+
+        foreach (string line in _narrativeRenderer.RenderTickChronicle(_world))
+        {
+            Console.WriteLine(line);
+        }
+
+        if (_options.TickDelayMilliseconds > 0)
+        {
+            Thread.Sleep(_options.TickDelayMilliseconds);
+        }
+    }
+
+    private void PrintDebugYearEvents()
     {
         var eventsThisYear = _world.Events
             .Where(e => e.Year == _world.Time.Year)
@@ -112,7 +157,7 @@ public sealed class Simulation
         }
     }
 
-    private void PrintYearSummary()
+    private void PrintDebugYearSummary()
     {
         int activePolities = _world.Polities.Count(p => p.Population > 0);
         int totalPopulation = _world.Polities.Where(p => p.Population > 0).Sum(p => p.Population);
@@ -137,5 +182,20 @@ public sealed class Simulation
                 $"Starve={polity.StarvationMonthsThisYear,2} " +
                 $"Move={polity.MigrationPressure,4:F2}");
         }
+    }
+
+    private static string BuildFoodStressNarrative(Polity polity, double annualFoodRatio)
+    {
+        if (annualFoodRatio < 0.50)
+        {
+            return $"{polity.Name} slipped into famine after months of hunger and loss.";
+        }
+
+        if (annualFoodRatio < 0.75)
+        {
+            return $"{polity.Name} weathered a hard year of rationing and thin stores.";
+        }
+
+        return $"{polity.Name} faced repeated shortages, and hunger shadowed much of the year.";
     }
 }
