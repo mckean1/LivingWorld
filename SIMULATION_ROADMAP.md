@@ -30,7 +30,7 @@ Ecology System
 Regional biomass and environmental productivity
 
 Food System
-Food harvesting, consumption, and famine dynamics
+Wild harvesting, settlement agriculture, consumption, and famine dynamics
 
 Population System
 Aggregated population growth and decline
@@ -73,7 +73,7 @@ The first implementation uses a simple yearly fragmentation pressure model with 
 This now also covers the older standalone colony expansion role; migration remains responsible for whole-polity relocation.
 
 Early Agricultural Development
-Agriculture begins supporting larger populations.
+A settlement-anchored seasonal agriculture system now supports larger populations where regional conditions allow.
 
 Knowledge Diversity
 Different societies begin discovering different capabilities.

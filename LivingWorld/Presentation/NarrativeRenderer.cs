@@ -135,7 +135,8 @@ public sealed class NarrativeRenderer
             _ => "as a mobile people"
         };
 
-        return $"{polity.Name} {foodBeat} {movementBeat}, {settlementBeat}, {storeBeat}.";
+        string foodSourceBeat = DescribeFoodSource(polity);
+        return $"{polity.Name} {foodBeat} {movementBeat}, {settlementBeat}, {foodSourceBeat}, {storeBeat}.";
     }
 
     private static RegionSnapshot GetRegionSnapshot(World world, int regionId)
@@ -260,6 +261,21 @@ public sealed class NarrativeRenderer
                 .Select(id => AdvancementCatalog.Get(id).Name.ToLowerInvariant()));
 
         return $"Their traditions now include {featured}.";
+    }
+
+    private static string DescribeFoodSource(Polity polity)
+    {
+        if (polity.FoodFarmedThisMonth <= 0)
+        {
+            return "living mainly by foraging";
+        }
+
+        if (polity.FoodFarmedThisMonth >= polity.FoodGatheredThisMonth)
+        {
+            return "drawing most food from their fields";
+        }
+
+        return "mixing field crops with gathered food";
     }
 
     private static string FormatMonth(int month)

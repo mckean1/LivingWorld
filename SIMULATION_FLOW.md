@@ -43,26 +43,29 @@ Regions regenerate ecological biomass depending on climate and fertility.
 
 ### 2. Food Harvesting
 
-Polities harvest biomass from their region.
-Harvest output is modified by each polity's derived capability profile (for example, Stone Tools harvest bonuses).
+Polities gather wild biomass from their region.
+Gather output is modified by each polity's derived capability profile (for example, Stone Tools harvest bonuses).
 
 This may represent:
 
 * hunting
 * gathering
 * fishing
-* agriculture
 
-### 3. Food Consumption
+### 3. Agriculture Production
+
+Settled polities with farming capability produce crop food through cultivated land.
+Cultivated capacity is region-limited and seasonal.
+Nomadic polities do not farm in this way.
+
+### 4. Food Consumption
 
 Population consumes available food.
 Consumption and spoilage are also capability-aware (for example, Fire survival benefit and Storage spoilage reduction).
 
-If a polity has farming capability enabled, it also receives baseline farming food yield in fertile seasons.
-
 Food deficits may cause starvation or famine.
 
-### 4. Migration Evaluation
+### 5. Migration Evaluation
 
 Polities evaluate whether to migrate.
 
@@ -74,7 +77,7 @@ Triggers may include:
 
 Migration moves an existing polity as a whole. It does not create child polities.
 
-### 5. Settlement Updates
+### 6. Settlement Updates
 
 Settlement status remains part of yearly progression, but monthly movement and food conditions shape whether a polity is stable enough to settle later.
 
@@ -104,6 +107,7 @@ Typical yearly events include:
 Population growth or decline
 Knowledge discovery
 Capability derivation from discovered knowledge
+Annual agriculture outcomes and notable harvest events
 Settlement expansion
 Migration outcomes
 Polity fragmentation

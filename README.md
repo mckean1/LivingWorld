@@ -145,9 +145,10 @@ This biomass represents food accessible through activities such as:
 Food dynamics include:
 
 * seasonal growth
-* harvesting
+* wild harvesting
+* seasonal settlement-based farming
 * capability-based gathering bonuses
-* early farming yield
+* cultivated capacity limits by region quality
 * storage
 * capability-based spoilage reduction
 * famine events
@@ -193,7 +194,7 @@ Examples of currently implemented effects include:
 * Fire: modest survival and food-use benefit
 * Stone Tools: harvest efficiency bonus
 * Storage: reduced food spoilage
-* Agriculture: enables early farming yield through a dedicated capability hook
+* Agriculture: enables true farming through settlement-anchored cultivated land and seasonal crop yield
 
 This makes discoveries materially affect food production, survival, and long-term growth.
 

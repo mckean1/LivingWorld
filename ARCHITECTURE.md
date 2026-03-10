@@ -158,13 +158,28 @@ Processes include:
 
 * harvesting biomass
 * capability-modified harvest efficiency
-* early farming yield when farming is enabled
 * food storage
 * capability-modified spoilage
 * food consumption
 * famine detection
 
 Food availability directly influences population growth and migration.
+
+---
+
+## Agriculture System
+
+The agriculture system computes crop production as a distinct process from wild harvesting.
+
+Processes include:
+
+* settlement-anchored farming eligibility checks
+* cultivated land allocation constrained by regional arable capacity
+* gradual cultivation expansion for established settlements
+* seasonal crop yield calculations
+* annual notable cultivation and harvest events
+
+Agriculture output is tracked separately from gathered biomass and then added to polity food stores.
 
 ---
 
@@ -259,7 +274,7 @@ Current first-pass capability effects include:
 * Fire: lowers effective food need and slightly improves food use
 * Stone Tools: improves harvest efficiency
 * Storage: reduces spoilage losses
-* Agriculture: enables farming and adds baseline farming yield
+* Agriculture: enables settlement-anchored farming and cultivated land growth
 
 ---
 

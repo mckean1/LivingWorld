@@ -28,6 +28,7 @@ public sealed class Polity
 
     // Monthly food tracking
     public double FoodGatheredThisMonth { get; set; }
+    public double FoodFarmedThisMonth { get; set; }
     public double FoodConsumedThisMonth { get; set; }
     public double FoodNeededThisMonth { get; set; }
     public double FoodShortageThisMonth { get; set; }
@@ -38,6 +39,16 @@ public sealed class Polity
     public double AnnualFoodNeeded { get; set; }
     public double AnnualFoodConsumed { get; set; }
     public double AnnualFoodShortage { get; set; }
+    public double AnnualFoodGathered { get; set; }
+    public double AnnualFoodFarmed { get; set; }
+
+    // Agriculture tracking
+    public double CultivatedLand { get; set; }
+    public double AnnualCultivatedLandTotal { get; set; }
+    public int FarmingMonthsThisYear { get; set; }
+    public double LastYearAverageCultivatedLand { get; set; }
+    public int ConsecutiveFarmingYears { get; set; }
+    public int AgricultureEventCooldownYears { get; set; }
 
     // Ongoing stress
     public int StarvationMonthsThisYear { get; set; }
@@ -81,6 +92,7 @@ public sealed class Polity
         MovesThisYear = 0;
 
         FoodGatheredThisMonth = 0;
+        FoodFarmedThisMonth = 0;
         FoodConsumedThisMonth = 0;
         FoodNeededThisMonth = 0;
         FoodShortageThisMonth = 0;
@@ -90,7 +102,16 @@ public sealed class Polity
         AnnualFoodNeeded = 0;
         AnnualFoodConsumed = 0;
         AnnualFoodShortage = 0;
+        AnnualFoodGathered = 0;
+        AnnualFoodFarmed = 0;
         StarvationMonthsThisYear = 0;
+
+        CultivatedLand = 0;
+        AnnualCultivatedLandTotal = 0;
+        FarmingMonthsThisYear = 0;
+        LastYearAverageCultivatedLand = 0;
+        ConsecutiveFarmingYears = 0;
+        AgricultureEventCooldownYears = 0;
 
         ClearSettlementState();
         Advancements = new HashSet<AdvancementId>();
@@ -102,6 +123,10 @@ public sealed class Polity
         AnnualFoodNeeded = 0;
         AnnualFoodConsumed = 0;
         AnnualFoodShortage = 0;
+        AnnualFoodGathered = 0;
+        AnnualFoodFarmed = 0;
+        AnnualCultivatedLandTotal = 0;
+        FarmingMonthsThisYear = 0;
         StarvationMonthsThisYear = 0;
         MovedThisYear = false;
         MovesThisYear = 0;

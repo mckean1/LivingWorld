@@ -106,7 +106,7 @@ public sealed class SettlementSystem
         double stabilityRatio = 1.0 - Math.Clamp(polity.MigrationPressure, 0.0, 1.0);
 
         double chance = 0.0;
-        chance += polity.HasAdvancement(AdvancementId.Agriculture) ? 0.090 : 0.0;
+        chance += polity.Capabilities.CanFarm ? 0.090 : 0.0;
         chance += polity.HasAdvancement(AdvancementId.BasicConstruction) ? 0.065 : 0.0;
         chance += polity.HasAdvancement(AdvancementId.FoodStorage) ? 0.035 : 0.0;
         chance += polity.HasAdvancement(AdvancementId.LeadershipTraditions)
@@ -142,7 +142,7 @@ public sealed class SettlementSystem
         double stabilityRatio = 1.0 - Math.Clamp(polity.MigrationPressure, 0.0, 1.0);
 
         double chance = 0.010;
-        chance += polity.HasAdvancement(AdvancementId.Agriculture) ? 0.045 : 0.0;
+        chance += polity.Capabilities.CanFarm ? 0.045 : 0.0;
         chance += polity.HasAdvancement(AdvancementId.BasicConstruction) ? 0.040 : 0.0;
         chance += polity.HasAdvancement(AdvancementId.FoodStorage) ? 0.020 : 0.0;
         chance += polity.HasAdvancement(AdvancementId.LeadershipTraditions) ? 0.020 : 0.0;
@@ -186,13 +186,13 @@ public sealed class SettlementSystem
         => polity.MovedThisYear ? 0 : polity.YearsInCurrentRegion + 1;
 
     private static bool HasSettlementKnowledge(Polity polity)
-        => polity.HasAdvancement(AdvancementId.Agriculture)
+        => polity.Capabilities.CanFarm
             || polity.HasAdvancement(AdvancementId.BasicConstruction)
             || (polity.HasAdvancement(AdvancementId.FoodStorage)
                 && polity.HasAdvancement(AdvancementId.LeadershipTraditions));
 
     private static string BuildFirstSettlementNarrative(Polity polity, Region region)
-        => polity.HasAdvancement(AdvancementId.Agriculture)
+        => polity.Capabilities.CanFarm
             ? $"{polity.Name} founded a settlement in {region.Name}"
             : $"{polity.Name} founded a settlement in {region.Name}";
 

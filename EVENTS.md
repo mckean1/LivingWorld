@@ -133,6 +133,23 @@ Famines may lead to:
 
 ---
 
+# Agriculture and Harvest Events
+
+Agriculture events occur when settled farming expands or produces notable outcomes.
+
+Examples:
+
+```
+Red Valley began farming in Green Plains
+Ash Tribe expanded cultivation in Green Plains
+Riverhold harvested a strong crop
+Stone Fork suffered a poor harvest
+```
+
+These events are yearly and notable-only so default history stays concise.
+
+---
+
 # Example Historical Output
 
 ```

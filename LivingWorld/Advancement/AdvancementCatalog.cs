@@ -117,9 +117,7 @@ public static class AdvancementCatalog
             [
                 Effect(
                     enablesFarming: true,
-                    farmingYieldPerPerson: 0.10,
-                    harvestEfficiencyBonus: 0.06,
-                    foodSpoilageMultiplier: 0.95)
+                    farmingYieldPerPerson: 0.12)
             ],
             discoveryNarrative: polity => $"{polity.Name} began farming"),
         new AdvancementDefinition(

@@ -127,6 +127,7 @@ Settlements
 CurrentRegion
 KnownKnowledge
 ActiveCapabilities
+CultivatedLand
 YearsSinceFounded
 ParentPolityId
 FragmentationPressure
@@ -155,6 +156,8 @@ Polities evolve over time and may transition into civilizations.
 
 `ActiveCapabilities` is a derived profile rebuilt from `KnownKnowledge`.
 It exposes reusable flags and modifiers consumed by simulation systems.
+
+`CultivatedLand` stores active settlement-anchored farmland usage for polities that can farm.
 
 Fragmentation-related notes:
 
@@ -238,6 +241,25 @@ MilitaryPowerMultiplier
 ```
 
 These values are designed to be extensible for future systems such as trade, movement, and military modeling.
+
+---
+
+# Food Production Tracking
+
+Food production is tracked with separate wild and farm streams.
+
+Typical fields include:
+
+```
+FoodGatheredThisMonth
+FoodFarmedThisMonth
+AnnualFoodGathered
+AnnualFoodFarmed
+AnnualCultivatedLandTotal
+FarmingMonthsThisYear
+```
+
+This separation makes it possible to distinguish societies surviving through foraging from societies sustained by settlement agriculture.
 
 ---
 

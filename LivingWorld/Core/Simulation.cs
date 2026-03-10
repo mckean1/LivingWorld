@@ -9,6 +9,7 @@ public sealed class Simulation
 {
     private readonly World _world;
     private readonly FoodSystem _foodSystem;
+    private readonly AgricultureSystem _agricultureSystem;
     private readonly PopulationSystem _populationSystem;
     private readonly MigrationSystem _migrationSystem;
     private readonly AdvancementSystem _advancementSystem;
@@ -22,6 +23,7 @@ public sealed class Simulation
     {
         _world = world;
         _foodSystem = new FoodSystem();
+        _agricultureSystem = new AgricultureSystem();
         _populationSystem = new PopulationSystem();
         _migrationSystem = new MigrationSystem();
         _advancementSystem = new AdvancementSystem();
@@ -46,6 +48,7 @@ public sealed class Simulation
         // Monthly systems
         _foodSystem.UpdateRegionEcology(_world);
         _foodSystem.GatherFood(_world);
+        _agricultureSystem.ProduceFarmFood(_world);
         _foodSystem.ConsumeFood(_world);
         _migrationSystem.UpdateMigration(_world);
         PrintTickReport();
@@ -66,6 +69,7 @@ public sealed class Simulation
             _settlementSystem.UpdateSettlements(_world);
             _fragmentationSystem.UpdateFragmentation(_world);
             _polityStageSystem.UpdatePolityStages(_world);
+            _agricultureSystem.UpdateAnnualAgriculture(_world);
 
             AddYearlyFoodStressEvents();
 
@@ -192,6 +196,8 @@ public sealed class Simulation
                 $"Reg={polity.RegionId,2} " +
                 $"Food={polity.FoodStores,6:F1} " +
                 $"AFR={annualFoodRatio,4:F2} " +
+                $"Wild={polity.AnnualFoodGathered,6:F0} " +
+                $"Farm={polity.AnnualFoodFarmed,6:F0} " +
                 $"Starve={polity.StarvationMonthsThisYear,2} " +
                 $"Move={polity.MigrationPressure,4:F2} " +
                 $"Frag={polity.FragmentationPressure,4:F2} " +

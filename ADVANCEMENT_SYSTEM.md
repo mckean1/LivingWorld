@@ -63,7 +63,7 @@ Name: Agriculture
 Category: Food Production
 Prerequisites: Seasonal Planning, Storage
 DiscoveryConditions: Fertile region, water access, enough stability
-CapabilityEffects: Enables farming + baseline farming yield
+CapabilityEffects: Enables farming capability and farming efficiency
 ```
 
 ---
@@ -160,7 +160,7 @@ First-pass implemented effects:
   * reduces spoilage losses
 * Agriculture
   * enables farming capability
-  * adds baseline farming yield per population based on fertility, water, and season
+  * unlocks settlement-anchored crop production in the agriculture subsystem
 
 This creates direct consequence chains such as:
 
