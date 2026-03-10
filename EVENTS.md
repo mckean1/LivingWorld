@@ -55,7 +55,9 @@ Knowledge events occur when a polity discovers new capabilities.
 Example:
 
 ```
-Stone Ford discovered Agriculture
+Stone Ford discovered Stone Tools
+Ash Tribe improved food stores
+River Folk began farming
 ```
 
 Knowledge discoveries may enable:

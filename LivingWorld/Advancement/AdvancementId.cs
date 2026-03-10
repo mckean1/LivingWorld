@@ -8,5 +8,7 @@ public enum AdvancementId
     Agriculture = 4,
     BasicConstruction = 5,
     LeadershipTraditions = 6,
-    CraftSpecialization = 7
+    CraftSpecialization = 7,
+    Fire = 8,
+    StoneTools = 9
 }

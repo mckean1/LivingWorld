@@ -47,6 +47,7 @@ public sealed class Polity
     public int YearsSinceFirstSettlement { get; set; }
 
     public HashSet<AdvancementId> Advancements { get; }
+    public PolityCapabilities Capabilities { get; private set; }
     public bool HasSettlements => SettlementCount > 0;
 
     public Polity(
@@ -93,6 +94,7 @@ public sealed class Polity
 
         ClearSettlementState();
         Advancements = new HashSet<AdvancementId>();
+        Capabilities = PolityCapabilities.FromAdvancements(Advancements);
     }
 
     public void ResetAnnualFoodStats()
@@ -109,15 +111,32 @@ public sealed class Polity
         => Advancements.Contains(advancementId);
 
     public bool DiscoverAdvancement(AdvancementId advancementId)
-        => Advancements.Add(advancementId);
+    {
+        if (!Advancements.Add(advancementId))
+        {
+            return false;
+        }
+
+        RefreshCapabilities();
+        return true;
+    }
 
     public void InheritAdvancements(IEnumerable<AdvancementId> advancements)
     {
+        bool changed = false;
         foreach (AdvancementId advancement in advancements)
         {
-            Advancements.Add(advancement);
+            changed |= Advancements.Add(advancement);
+        }
+
+        if (changed)
+        {
+            RefreshCapabilities();
         }
     }
+
+    public void RefreshCapabilities()
+        => Capabilities = PolityCapabilities.FromAdvancements(Advancements);
 
     public void ClearSettlementState()
     {

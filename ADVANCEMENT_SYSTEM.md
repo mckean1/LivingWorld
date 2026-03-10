@@ -52,7 +52,8 @@ Name
 Category
 Prerequisites
 DiscoveryConditions
-Effects
+CapabilityEffects
+DiscoveryNarrative
 ```
 
 Example:
@@ -60,9 +61,9 @@ Example:
 ```
 Name: Agriculture
 Category: Food Production
-Prerequisites: None
-DiscoveryConditions: Fertile region, stable settlement
-Effects: Increased food production
+Prerequisites: Seasonal Planning, Storage
+DiscoveryConditions: Fertile region, water access, enough stability
+CapabilityEffects: Enables farming + baseline farming yield
 ```
 
 ---
@@ -138,23 +139,32 @@ Some discoveries become more likely as time passes.
 
 # Knowledge Effects
 
-Knowledge unlocks new capabilities in the simulation.
+Knowledge unlocks structured capability effects in the simulation.
 
-Examples include:
+Each advancement can define one or more effects composed of:
 
-Agriculture
-Improves food production in fertile regions.
+* capability flags (example: `CanFarm`)
+* numeric modifiers (example: `HarvestEfficiencyBonus`, `FoodSpoilageMultiplier`)
 
-Pottery
-Allows food storage and improves famine resistance.
+Each polity derives one aggregated capability profile from known advancements.
+That profile is then consumed by simulation systems each tick.
 
-Animal Domestication
-Provides additional food sources and transportation potential.
+First-pass implemented effects:
 
-Construction Techniques
-Improves settlement stability and expansion.
+* Fire
+  * lowers effective food need slightly
+  * provides a modest food-use/harvest efficiency bonus
+* Stone Tools
+  * increases harvest efficiency
+* Storage
+  * reduces spoilage losses
+* Agriculture
+  * enables farming capability
+  * adds baseline farming yield per population based on fertility, water, and season
 
-These effects modify how societies interact with the world.
+This creates direct consequence chains such as:
+
+`Stone Tools -> higher harvest efficiency -> more food stores -> stronger annual food ratio -> better population outcomes`
 
 Advancements also contribute to polity stage progression indirectly. Higher stage thresholds now consider advancement count alongside settlement durability, population, longevity, and food stability.
 
@@ -163,6 +173,7 @@ Advancements also contribute to polity stage progression indirectly. Higher stag
 # Knowledge Storage
 
 Knowledge is tracked at the **polity level**.
+Capabilities are derived at the polity level from that knowledge.
 
 Example structure:
 
@@ -172,7 +183,8 @@ Polity
  ├─ Species
  ├─ Population
  ├─ Settlements
- └─ KnownKnowledge
+ ├─ KnownKnowledge
+ └─ ActiveCapabilities
 ```
 
 This allows different civilizations to develop unique technological profiles.
@@ -210,7 +222,9 @@ When knowledge is discovered, a historical event is recorded.
 Example:
 
 ```
-Stone Ford discovered Agriculture
+Stone Ford discovered Stone Tools
+Ash Tribe improved food stores
+River Folk began farming
 ```
 
 These discoveries become part of the world's historical narrative.
@@ -226,13 +240,13 @@ Year 112
 Red River Clan founded Stone Ford
 
 Year 147
-Stone Ford discovered Agriculture
+Stone Ford discovered Fire
 
 Year 182
-Stone Ford discovered Pottery
+Stone Ford discovered Stone Tools
 
 Year 230
-Stone Ford domesticated herd animals
+Stone Ford began farming
 ```
 
 Different societies may follow completely different advancement paths depending on environment and historical conditions.

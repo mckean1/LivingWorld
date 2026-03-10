@@ -157,7 +157,10 @@ The food system converts ecological resources into usable food.
 Processes include:
 
 * harvesting biomass
+* capability-modified harvest efficiency
+* early farming yield when farming is enabled
 * food storage
+* capability-modified spoilage
 * food consumption
 * famine detection
 
@@ -247,7 +250,16 @@ Discovery may depend on:
 * prerequisite knowledge
 * available surplus
 
-Knowledge unlocks new capabilities in the simulation.
+Each advancement now carries one or more structured capability effects.
+Each polity derives an active capability profile from discovered advancements.
+Simulation systems consume derived capability flags and numeric modifiers instead of relying on one-off advancement checks.
+
+Current first-pass capability effects include:
+
+* Fire: lowers effective food need and slightly improves food use
+* Stone Tools: improves harvest efficiency
+* Storage: reduces spoilage losses
+* Agriculture: enables farming and adds baseline farming yield
 
 ---
 

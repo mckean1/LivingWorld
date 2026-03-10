@@ -44,6 +44,7 @@ Regions regenerate ecological biomass depending on climate and fertility.
 ### 2. Food Harvesting
 
 Polities harvest biomass from their region.
+Harvest output is modified by each polity's derived capability profile (for example, Stone Tools harvest bonuses).
 
 This may represent:
 
@@ -55,6 +56,9 @@ This may represent:
 ### 3. Food Consumption
 
 Population consumes available food.
+Consumption and spoilage are also capability-aware (for example, Fire survival benefit and Storage spoilage reduction).
+
+If a polity has farming capability enabled, it also receives baseline farming food yield in fertile seasons.
 
 Food deficits may cause starvation or famine.
 
@@ -99,6 +103,7 @@ Typical yearly events include:
 ```
 Population growth or decline
 Knowledge discovery
+Capability derivation from discovered knowledge
 Settlement expansion
 Migration outcomes
 Polity fragmentation

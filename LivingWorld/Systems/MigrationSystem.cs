@@ -35,7 +35,8 @@ public sealed class MigrationSystem
 
                     polity.MovedThisYear = true;
                     polity.MovesThisYear++;
-                    polity.FoodStores *= 0.75; // moving costs food
+                    double moveCostRate = Math.Clamp(0.25 * polity.Capabilities.TravelCostMultiplier, 0.05, 0.90);
+                    polity.FoodStores *= 1.0 - moveCostRate;
 
                     world.AddEvent(
                         "MIGRATION",

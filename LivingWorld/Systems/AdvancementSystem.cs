@@ -100,5 +100,6 @@ public sealed class AdvancementSystem
         => definition.Prerequisites.All(polity.HasAdvancement);
 
     private static string BuildDiscoveryNarrative(Polity polity, AdvancementDefinition definition)
-        => $"{polity.Name} discovered {definition.Name}";
+        => definition.DiscoveryNarrative?.Invoke(polity)
+            ?? $"{polity.Name} discovered {definition.Name}";
 }

@@ -10,6 +10,8 @@ public sealed class AdvancementDefinition
     public string Description { get; }
     public IReadOnlyList<AdvancementId> Prerequisites { get; }
     public Func<AdvancementContext, double> DiscoveryChance { get; }
+    public IReadOnlyList<AdvancementCapabilityEffect> CapabilityEffects { get; }
+    public Func<Polity, string>? DiscoveryNarrative { get; }
     public Action<World, Polity>? OnDiscovered { get; }
 
     public AdvancementDefinition(
@@ -18,6 +20,8 @@ public sealed class AdvancementDefinition
         string description,
         IEnumerable<AdvancementId>? prerequisites,
         Func<AdvancementContext, double> discoveryChance,
+        IEnumerable<AdvancementCapabilityEffect>? capabilityEffects = null,
+        Func<Polity, string>? discoveryNarrative = null,
         Action<World, Polity>? onDiscovered = null)
     {
         Id = id;
@@ -25,6 +29,8 @@ public sealed class AdvancementDefinition
         Description = description;
         Prerequisites = prerequisites?.ToArray() ?? Array.Empty<AdvancementId>();
         DiscoveryChance = discoveryChance;
+        CapabilityEffects = capabilityEffects?.ToArray() ?? Array.Empty<AdvancementCapabilityEffect>();
+        DiscoveryNarrative = discoveryNarrative;
         OnDiscovered = onDiscovered;
     }
 }

@@ -146,7 +146,10 @@ Food dynamics include:
 
 * seasonal growth
 * harvesting
+* capability-based gathering bonuses
+* early farming yield
 * storage
+* capability-based spoilage reduction
 * famine events
 
 Food availability strongly influences migration, settlement stability, and population growth.
@@ -182,14 +185,17 @@ Knowledge discovery depends on factors such as:
 * available surplus
 * time
 
-Examples of knowledge include:
+Each polity derives an active **capability profile** from its discovered knowledge.
+Simulation systems consume this profile instead of checking advancement names directly.
 
-* agriculture
-* pottery
-* animal domestication
-* construction techniques
+Examples of currently implemented effects include:
 
-Knowledge unlocks **new capabilities in the simulation**, affecting food production, settlement development, and societal complexity.
+* Fire: modest survival and food-use benefit
+* Stone Tools: harvest efficiency bonus
+* Storage: reduced food spoilage
+* Agriculture: enables early farming yield through a dedicated capability hook
+
+This makes discoveries materially affect food production, survival, and long-term growth.
 
 ---
 

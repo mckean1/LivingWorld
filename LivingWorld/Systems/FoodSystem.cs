@@ -60,7 +60,7 @@ public sealed class FoodSystem
             polity.FoodConsumedThisMonth = 0;
             polity.FoodShortageThisMonth = 0;
             polity.FoodSurplusThisMonth = 0;
-            polity.FoodNeededThisMonth = polity.Population;
+            polity.FoodNeededThisMonth = polity.Population * polity.Capabilities.FoodNeedMultiplier;
         }
 
         foreach (Region region in world.Regions)
@@ -76,11 +76,11 @@ public sealed class FoodSystem
 
             Dictionary<int, double> plantDemand = localPolities.ToDictionary(
                 p => p.Id,
-                p => p.Population * 0.85);
+                p => p.Population * 0.85 * p.Capabilities.HarvestEfficiencyMultiplier);
 
             Dictionary<int, double> animalDemand = localPolities.ToDictionary(
                 p => p.Id,
-                p => p.Population * 0.35);
+                p => p.Population * 0.35 * p.Capabilities.HarvestEfficiencyMultiplier);
 
             double totalPlantDemand = plantDemand.Values.Sum();
             double totalAnimalDemand = animalDemand.Values.Sum();
@@ -105,6 +105,7 @@ public sealed class FoodSystem
                 double gatheredAnimals = Math.Min(animalShare, animalDemand[polity.Id]);
 
                 double totalFood = gatheredPlants + gatheredAnimals;
+                totalFood += CalculateFarmYield(polity, region, world.Time.Season);
 
                 polity.FoodGatheredThisMonth += totalFood;
                 polity.FoodStores += totalFood;
@@ -137,6 +138,7 @@ public sealed class FoodSystem
             polity.FoodStores -= eaten;
 
             double spoiled = polity.FoodStores * BaseSpoilageRate;
+            spoiled *= polity.Capabilities.FoodSpoilageMultiplier;
             polity.FoodStores = Math.Max(0, polity.FoodStores - spoiled);
 
             polity.FoodSurplusThisMonth = polity.FoodStores;
@@ -152,4 +154,29 @@ public sealed class FoodSystem
             }
         }
     }
+
+    private static double CalculateFarmYield(Polity polity, Region region, Season season)
+    {
+        if (!polity.Capabilities.CanFarm || polity.Population <= 0)
+        {
+            return 0.0;
+        }
+
+        double farmlandQuality = (region.Fertility * 0.70) + (region.WaterAvailability * 0.30);
+        double seasonalFactor = GetFarmSeasonalFactor(season);
+
+        return polity.Population
+            * polity.Capabilities.FarmingYieldPerPerson
+            * farmlandQuality
+            * seasonalFactor;
+    }
+
+    private static double GetFarmSeasonalFactor(Season season)
+        => season switch
+        {
+            Season.Winter => 0.25,
+            Season.Spring => 1.20,
+            Season.Summer => 1.00,
+            _ => 0.75
+        };
 }

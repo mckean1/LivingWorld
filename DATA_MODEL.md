@@ -20,6 +20,7 @@ Polity
 PolityStage
 Settlement
 Knowledge
+PolityCapabilities
 HistoricalEvent
 ```
 
@@ -125,6 +126,7 @@ Stage
 Settlements
 CurrentRegion
 KnownKnowledge
+ActiveCapabilities
 YearsSinceFounded
 ParentPolityId
 FragmentationPressure
@@ -150,6 +152,9 @@ Polities evolve over time and may transition into civilizations.
 * Civilization
 
 `Civilization` is reserved for polities with a multi-settlement structure (at least two settlements), alongside the other stage thresholds.
+
+`ActiveCapabilities` is a derived profile rebuilt from `KnownKnowledge`.
+It exposes reusable flags and modifiers consumed by simulation systems.
 
 Fragmentation-related notes:
 
@@ -201,17 +206,38 @@ Name
 Category
 Prerequisites
 DiscoveryConditions
-Effects
+CapabilityEffects
 ```
 
 Examples:
 
+* Fire
+* Stone Tools
+* Storage
 * Agriculture
-* Pottery
-* Animal Domestication
-* Construction
 
-Knowledge unlocks new simulation behaviors.
+Knowledge unlocks capability effects such as harvest bonuses, spoilage multipliers, and farming enablement.
+
+---
+
+# PolityCapabilities
+
+`PolityCapabilities` stores the derived, simulation-facing effects of known knowledge.
+
+Typical properties:
+
+```
+CanFarm
+HarvestEfficiencyMultiplier
+FoodSpoilageMultiplier
+FoodNeedMultiplier
+FarmingYieldPerPerson
+TravelCostMultiplier
+TradeEfficiencyMultiplier
+MilitaryPowerMultiplier
+```
+
+These values are designed to be extensible for future systems such as trade, movement, and military modeling.
 
 ---
 

@@ -5,6 +5,43 @@ public static class AdvancementCatalog
     public static IReadOnlyList<AdvancementDefinition> All { get; } =
     [
         new AdvancementDefinition(
+            AdvancementId.Fire,
+            "Fire",
+            "Controlled fire improves warmth, safety, and food preparation through the year.",
+            prerequisites: null,
+            discoveryChance: context =>
+            {
+                double chance = 0.012;
+                chance += context.FoodStressRatio * 0.015;
+                chance += context.IsMobile ? 0.008 : 0.003;
+                chance += context.Species.Intelligence * 0.012;
+                chance += context.Species.Cooperation * 0.010;
+                return ClampChance(chance);
+            },
+            capabilityEffects:
+            [
+                Effect(foodNeedMultiplier: 0.97, harvestEfficiencyBonus: 0.03)
+            ],
+            discoveryNarrative: polity => $"{polity.Name} mastered Fire"),
+        new AdvancementDefinition(
+            AdvancementId.StoneTools,
+            "Stone Tools",
+            "Sharper stone tools improve extraction, processing, and handling of gathered food.",
+            prerequisites: null,
+            discoveryChance: context =>
+            {
+                double chance = 0.012;
+                chance += context.IsMobile ? 0.010 : 0.004;
+                chance += context.LocalPopulationRatio * 0.020;
+                chance += context.Species.Intelligence * 0.015;
+                chance += context.Polity.HasAdvancement(AdvancementId.Fire) ? 0.006 : 0.0;
+                return ClampChance(chance);
+            },
+            capabilityEffects:
+            [
+                Effect(harvestEfficiencyBonus: 0.14)
+            ]),
+        new AdvancementDefinition(
             AdvancementId.OrganizedHunting,
             "Organized Hunting",
             "Coordinated hunting parties improve how large groups track, drive, and harvest animals.",
@@ -19,7 +56,11 @@ public static class AdvancementCatalog
                 chance += context.Species.Cooperation * 0.015;
                 chance += context.Polity.HasAdvancement(AdvancementId.Agriculture) ? -0.015 : 0.008;
                 return ClampChance(chance);
-            }),
+            },
+            capabilityEffects:
+            [
+                Effect(harvestEfficiencyBonus: 0.08)
+            ]),
         new AdvancementDefinition(
             AdvancementId.SeasonalPlanning,
             "Seasonal Planning",
@@ -37,7 +78,7 @@ public static class AdvancementCatalog
             }),
         new AdvancementDefinition(
             AdvancementId.FoodStorage,
-            "Food Storage",
+            "Storage",
             "Drying, caching, and protecting food lets a people carry abundance forward into harder months.",
             prerequisites: [AdvancementId.SeasonalPlanning],
             discoveryChance: context =>
@@ -49,7 +90,12 @@ public static class AdvancementCatalog
                 chance += context.Region.Fertility * 0.008;
                 chance += context.Species.Intelligence * 0.010;
                 return ClampChance(chance);
-            }),
+            },
+            capabilityEffects:
+            [
+                Effect(foodSpoilageMultiplier: 0.70)
+            ],
+            discoveryNarrative: polity => $"{polity.Name} improved food stores"),
         new AdvancementDefinition(
             AdvancementId.Agriculture,
             "Agriculture",
@@ -66,7 +112,16 @@ public static class AdvancementCatalog
                 chance += context.Species.Intelligence * 0.012;
                 chance += context.Species.Cooperation * 0.006;
                 return ClampChance(chance);
-            }),
+            },
+            capabilityEffects:
+            [
+                Effect(
+                    enablesFarming: true,
+                    farmingYieldPerPerson: 0.10,
+                    harvestEfficiencyBonus: 0.06,
+                    foodSpoilageMultiplier: 0.95)
+            ],
+            discoveryNarrative: polity => $"{polity.Name} began farming"),
         new AdvancementDefinition(
             AdvancementId.BasicConstruction,
             "Basic Construction",
@@ -116,6 +171,27 @@ public static class AdvancementCatalog
 
     public static AdvancementDefinition Get(AdvancementId id)
         => All.First(definition => definition.Id == id);
+
+    private static AdvancementCapabilityEffect Effect(
+        bool enablesFarming = false,
+        double harvestEfficiencyBonus = 0.0,
+        double foodSpoilageMultiplier = 1.0,
+        double foodNeedMultiplier = 1.0,
+        double farmingYieldPerPerson = 0.0,
+        double travelCostMultiplier = 1.0,
+        double tradeEfficiencyBonus = 0.0,
+        double militaryPowerBonus = 0.0)
+        => new()
+        {
+            EnablesFarming = enablesFarming,
+            HarvestEfficiencyBonus = harvestEfficiencyBonus,
+            FoodSpoilageMultiplier = foodSpoilageMultiplier,
+            FoodNeedMultiplier = foodNeedMultiplier,
+            FarmingYieldPerPerson = farmingYieldPerPerson,
+            TravelCostMultiplier = travelCostMultiplier,
+            TradeEfficiencyBonus = tradeEfficiencyBonus,
+            MilitaryPowerBonus = militaryPowerBonus
+        };
 
     private static double ClampChance(double chance)
         => Math.Clamp(chance, 0.0, 0.35);
