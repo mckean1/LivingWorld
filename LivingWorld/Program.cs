@@ -20,8 +20,11 @@ class Program
 
         Simulation simulation = new(world, options);
 
-        Console.WriteLine("Press any key to start simulation.");
-        Console.ReadKey();
+        if (options.PauseBeforeStart)
+        {
+            Console.WriteLine("Press any key to start simulation.");
+            Console.ReadKey();
+        }
 
         simulation.RunMonths(yearsToSimulate * monthsInYear);
 

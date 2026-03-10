@@ -196,6 +196,15 @@ Migration may be triggered by:
 
 Societies may also split into new groups when internal pressures become too large.
 
+Fragmentation is evaluated yearly through a simple split-pressure score based on:
+
+* polity population size
+* repeated food stress and starvation
+* regional crowding
+* migration strain
+
+When pressure stays high enough, a polity may found a colony-style child polity in a connected region. The child keeps the parent species, inherits some knowledge, and takes a share of population and stored food.
+
 This produces natural expansion and cultural divergence across regions.
 
 ---
@@ -214,6 +223,7 @@ Year 412
 Red River Clan migrated to Northern Plains
 Stone Ford discovered Agriculture
 Oak Valley Society founded River Camp
+Ashen Vale Clan split from Riverwatch Clan in Ashen Vale
 ```
 
 Only **notable events** are included in the default output to maintain readability.

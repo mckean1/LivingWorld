@@ -73,14 +73,15 @@ Societies may fragment into multiple groups.
 Example:
 
 ```
-The Oak Valley Clan split, forming the Pine Forest Clan
+Green Barrow Clan split from Deepfield Tribe in Green Barrow
 ```
 
 Splits may occur due to:
 
 * population pressure
-* migration
-* internal social tension
+* repeated food stress
+* regional crowding
+* migration strain
 
 ---
 
@@ -114,7 +115,7 @@ Oak Valley Clan founded River Camp
 Year 417
 
 River Camp suffered a famine
-The Oak Valley Clan split, forming the Pine Forest Clan
+Green Barrow Clan split from Deepfield Tribe in Green Barrow
 ```
 
 The goal of the event system is to produce a **clear historical narrative** of how the world evolved.

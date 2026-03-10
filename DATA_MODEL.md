@@ -124,6 +124,10 @@ Settlements
 CurrentRegion
 KnownKnowledge
 YearsSinceFounded
+ParentPolityId
+FragmentationPressure
+FoodStressYears
+SplitCooldownYears
 ```
 
 Responsibilities:
@@ -135,6 +139,13 @@ Responsibilities:
 * splitting into new groups
 
 Polities evolve over time and may transition into civilizations.
+
+Fragmentation-related notes:
+
+* `ParentPolityId` records simple parent-child lineage for split-off polities
+* `FragmentationPressure` stores the current yearly split-pressure score for inspection and tuning
+* `FoodStressYears` tracks sustained shortage pressure across years
+* `SplitCooldownYears` prevents immediate repeat fragmentation
 
 ---
 

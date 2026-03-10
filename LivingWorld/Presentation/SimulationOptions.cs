@@ -7,7 +7,9 @@ public sealed class SimulationOptions
         {
             OutputMode = OutputMode.Narrative,
             StreamTickChronicle = false,
-            TickDelayMilliseconds = tickDelayMilliseconds
+            TickDelayMilliseconds = tickDelayMilliseconds,
+            PauseBeforeStart = false,
+            PauseAfterEachYear = false
         };
 
     public OutputMode OutputMode { get; init; } = OutputMode.Narrative;
@@ -15,4 +17,8 @@ public sealed class SimulationOptions
     public bool StreamTickChronicle { get; init; }
 
     public int TickDelayMilliseconds { get; init; }
+
+    public bool PauseBeforeStart { get; init; }
+
+    public bool PauseAfterEachYear { get; init; }
 }

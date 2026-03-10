@@ -103,7 +103,7 @@ Polities are responsible for:
 * founding settlements
 * migrating between regions
 * discovering knowledge
-* splitting into new societies
+* splitting into new societies through yearly fragmentation checks
 
 Over time, polities may transition into **civilizations** as their complexity grows.
 
@@ -181,6 +181,40 @@ Migration may occur due to:
 * social instability
 
 Migration spreads societies across regions.
+
+---
+
+## Fragmentation System
+
+The fragmentation system evaluates each active polity once per year.
+
+Responsibilities include:
+
+* calculating a yearly `FragmentationPressure` value
+* tracking repeated food-stress years
+* applying anti-chain-splitting cooldowns
+* creating child polities when pressure triggers a split
+* conserving transferred population and stored food
+* recording short historical split events
+
+The first implementation focuses on **colony/offshoot fragmentation**.
+
+Its pressure model is intentionally simple and tunable. Current inputs are:
+
+* polity population size
+* starvation months and annual food stress
+* regional crowding in the home region
+* migration strain from movement pressure and repeated moves
+
+When a split succeeds, the child polity:
+
+* keeps the parent species
+* starts in a connected target region
+* inherits some of the parent's advancements
+* receives a modest share of the parent population and food stores
+* records lineage through `ParentPolityId`
+
+This version remains **region-based** rather than using discrete branch settlements.
 
 ---
 

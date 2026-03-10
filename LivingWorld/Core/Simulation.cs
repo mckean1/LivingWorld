@@ -13,7 +13,7 @@ public sealed class Simulation
     private readonly MigrationSystem _migrationSystem;
     private readonly AdvancementSystem _advancementSystem;
     private readonly SettlementSystem _settlementSystem;
-    private readonly ExpansionSystem _expansionSystem;
+    private readonly FragmentationSystem _fragmentationSystem;
     private readonly SimulationOptions _options;
     private readonly NarrativeRenderer _narrativeRenderer;
 
@@ -25,7 +25,7 @@ public sealed class Simulation
         _migrationSystem = new MigrationSystem();
         _advancementSystem = new AdvancementSystem();
         _settlementSystem = new SettlementSystem();
-        _expansionSystem = new ExpansionSystem();
+        _fragmentationSystem = new FragmentationSystem();
         _options = options ?? new SimulationOptions();
         _narrativeRenderer = new NarrativeRenderer();
     }
@@ -62,7 +62,7 @@ public sealed class Simulation
             _populationSystem.UpdatePopulation(_world);
             _advancementSystem.UpdateAdvancements(_world);
             _settlementSystem.UpdateSettlements(_world);
-            _expansionSystem.UpdateExpansion(_world);
+            _fragmentationSystem.UpdateFragmentation(_world);
 
             AddYearlyFoodStressEvents();
 
@@ -70,7 +70,11 @@ public sealed class Simulation
 
             PrintYearReport();
             ResetAnnualStats();
-            Console.ReadKey();
+
+            if (_options.PauseAfterEachYear)
+            {
+                Console.ReadKey();
+            }
         }
 
         _world.Time.AdvanceOneMonth();
@@ -187,6 +191,8 @@ public sealed class Simulation
                 $"AFR={annualFoodRatio,4:F2} " +
                 $"Starve={polity.StarvationMonthsThisYear,2} " +
                 $"Move={polity.MigrationPressure,4:F2} " +
+                $"Frag={polity.FragmentationPressure,4:F2} " +
+                $"Cool={polity.SplitCooldownYears,2} " +
                 $"Know={polity.Advancements.Count,2} " +
                 $"Settle={polity.SettlementStatus,-11}");
         }

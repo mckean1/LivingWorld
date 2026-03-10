@@ -66,6 +66,7 @@ Settlements grow as population increases.
 
 Polity Splits
 Large societies may fragment into new groups.
+The first implementation uses a simple yearly fragmentation pressure model with colony-style offshoots, leaving room for later schisms and collapse-driven splits.
 
 Early Agricultural Development
 Agriculture begins supporting larger populations.
@@ -248,6 +249,8 @@ Alliances and rivalries.
 
 Civilization Collapse
 Instability leading to fragmentation.
+
+This later phase can build on the current parent-child lineage, split cooldowns, and yearly pressure model rather than replacing them outright.
 
 These systems complete the transformation from early societies to complex civilizations.
 

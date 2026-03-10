@@ -12,22 +12,22 @@ The simulation operates using **monthly ticks**, with seasonal and yearly system
 
 ```
 Month
- ├─ Resource updates
- ├─ Food harvesting
- ├─ Food consumption
- ├─ Population changes
- ├─ Migration checks
- └─ Settlement updates
+ |- Resource updates
+ |- Food harvesting
+ |- Food consumption
+ |- Migration checks
+ `- Settlement updates
 
 Season
- ├─ Ecological growth cycles
- └─ Harvest periods
+ |- Ecological growth cycles
+ `- Harvest periods
 
 Year
- ├─ Settlement expansion
- ├─ Polity splits
- ├─ Knowledge discovery
- └─ Historical event recording
+ |- Population adjustment
+ |- Knowledge discovery
+ |- Settlement progression
+ |- Fragmentation checks
+ `- Historical event recording
 ```
 
 ---
@@ -57,17 +57,7 @@ Population consumes available food.
 
 Food deficits may cause starvation or famine.
 
-### 4. Population Adjustment
-
-Population changes based on food availability.
-
-Possible outcomes:
-
-* growth
-* stability
-* decline
-
-### 5. Migration Evaluation
+### 4. Migration Evaluation
 
 Polities evaluate whether to migrate.
 
@@ -77,9 +67,9 @@ Triggers may include:
 * population pressure
 * better neighboring regions
 
-### 6. Settlement Updates
+### 5. Settlement Updates
 
-Settlements update their population and food production.
+Settlement status remains part of yearly progression, but monthly movement and food conditions shape whether a polity is stable enough to settle later.
 
 ---
 
@@ -105,14 +95,23 @@ Typical yearly events include:
 
 ```
 Population growth or decline
+Knowledge discovery
 Settlement expansion
 Migration outcomes
 Polity fragmentation
-Knowledge discovery
 Historical event generation
 ```
 
 These events represent the most visible changes in the simulation history.
+
+Yearly fragmentation details:
+
+* each active polity calculates a `FragmentationPressure` score
+* pressure is driven by population size, food stress, regional crowding, and migration strain
+* only polities above a minimum population and outside their split cooldown can fragment
+* successful splits create a child polity in a connected region
+* the child receives transferred population, food, and some inherited knowledge
+* a short history entry is emitted for the split
 
 ---
 

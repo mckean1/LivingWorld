@@ -9,12 +9,16 @@ public sealed class Polity
     public int SpeciesId { get; set; }
     public int RegionId { get; set; }
     public int Population { get; set; }
+    public int? ParentPolityId { get; set; }
 
     public int YearsSinceFounded { get; set; }
     public int YearsInCurrentRegion { get; set; }
 
     public double FoodStores { get; set; }
     public double MigrationPressure { get; set; }
+    public double FragmentationPressure { get; set; }
+    public int FoodStressYears { get; set; }
+    public int SplitCooldownYears { get; set; }
 
     // Migration tracking
     public int PreviousRegionId { get; set; }
@@ -44,19 +48,23 @@ public sealed class Polity
     public HashSet<AdvancementId> Advancements { get; }
     public bool HasSettlements => SettlementCount > 0;
 
-    public Polity(int id, string name, int speciesId, int regionId, int population)
+    public Polity(int id, string name, int speciesId, int regionId, int population, int? parentPolityId = null)
     {
         Id = id;
         Name = name;
         SpeciesId = speciesId;
         RegionId = regionId;
         Population = population;
+        ParentPolityId = parentPolityId;
 
         YearsSinceFounded = 0;
         YearsInCurrentRegion = 0;
 
         FoodStores = 0;
         MigrationPressure = 0;
+        FragmentationPressure = 0;
+        FoodStressYears = 0;
+        SplitCooldownYears = 0;
 
         PreviousRegionId = regionId;
         MovedThisYear = false;
@@ -103,5 +111,4 @@ public sealed class Polity
             Advancements.Add(advancement);
         }
     }
-
 }
