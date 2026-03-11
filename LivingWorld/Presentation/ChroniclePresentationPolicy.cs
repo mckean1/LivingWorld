@@ -10,9 +10,9 @@ public sealed class ChroniclePresentationPolicy
     {
         _cooldownRules = new Dictionary<string, ChronicleCooldownRule>(StringComparer.Ordinal)
         {
-            [WorldEventType.Migration] = new ChronicleCooldownRule(20, BuildActorScopeKey),
-            [WorldEventType.SettlementConsolidated] = new ChronicleCooldownRule(25, BuildActorScopeKey),
-            [WorldEventType.FoodStress] = new ChronicleCooldownRule(15, BuildActorScopeKey)
+            [WorldEventType.Migration] = new ChronicleCooldownRule(20, BuildChronicleScopeKey),
+            [WorldEventType.SettlementConsolidated] = new ChronicleCooldownRule(25, BuildChronicleScopeKey),
+            [WorldEventType.FoodStress] = new ChronicleCooldownRule(15, BuildChronicleScopeKey)
         };
     }
 
@@ -36,8 +36,7 @@ public sealed class ChroniclePresentationPolicy
             return false;
         }
 
-        int focusedPolityId = focus.FocusedPolityId.Value;
-        if (!IsFocusedEvent(worldEvent, focusedPolityId))
+        if (!focus.IsEventInFocusedLine(worldEvent))
         {
             return false;
         }
@@ -72,9 +71,6 @@ public sealed class ChroniclePresentationPolicy
         return worldEvent.Year - previousRecord.Year >= cooldownRule.Years;
     }
 
-    private static bool IsFocusedEvent(WorldEvent worldEvent, int focusedPolityId)
-        => worldEvent.PolityId == focusedPolityId || worldEvent.RelatedPolityId == focusedPolityId;
-
     private static bool IsPlayerFacingChronicleEvent(WorldEvent worldEvent)
     {
         return worldEvent.Type is
@@ -83,7 +79,6 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.SettlementConsolidated or
             WorldEventType.KnowledgeDiscovered or
             WorldEventType.FoodStress or
-            WorldEventType.PopulationChanged or
             WorldEventType.Fragmentation or
             WorldEventType.StageChanged or
             WorldEventType.PolityCollapsed or
@@ -116,7 +111,10 @@ public sealed class ChroniclePresentationPolicy
             "hardship_recovered";
     }
 
-    private static string? BuildActorScopeKey(WorldEvent worldEvent)
+    // Scope keys are presentation-only throttling keys. Prefer the primary actor
+    // whose visible story beat is being suppressed so unrelated actors do not
+    // accidentally mute one another and future species-facing events can plug in cleanly.
+    private static string? BuildChronicleScopeKey(WorldEvent worldEvent)
     {
         if (worldEvent.PolityId.HasValue)
         {

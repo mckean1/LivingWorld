@@ -2,7 +2,7 @@
 
 LivingWorld is a command-line autonomous world simulation where ecosystems, species, and polities evolve over time.
 
-The player-facing experience is chronicle-first: the console watches one focal polity's history, while the full simulation continues running for the whole world underneath.
+The player-facing experience is chronicle-first: the console watches one focal line of history, while the full simulation continues running for the whole world underneath.
 
 ## Core Principles
 
@@ -23,7 +23,7 @@ Watch mode shows:
 - a chronicle viewport sized from the current console height
 - only `Major` and `Legendary` events by default
 
-Default player-facing output no longer prints large yearly report blocks.
+The watch experience follows one focal polity line across fragmentation, collapse, and lineage handoff events. Routine population change messages are not shown by default; they remain available in structured history and debug output.
 
 Examples of chronicle lines:
 
@@ -39,9 +39,9 @@ LivingWorld keeps simulation, storage, formatting, and playback separate:
 
 `simulation systems -> World.AddEvent -> structured WorldEvent store -> ChronicleEventFormatter -> ChronicleWatchRenderer + HistoryJsonlWriter`
 
-The chronicle is a filtered presentation layer over the richer event stream. Lower-severity events still remain available in structured history and debug views even when they do not appear in the live chronicle.
+The chronicle is a filtered presentation layer over the richer event stream. Lower-severity events and chronicle-suppressed events remain available in structured history and debug views even when they do not appear in the live chronicle.
 
-Per-event chronicle cooldowns suppress repeated narrative lines for the same actor scope, while bypass rules still allow real turning points such as severity escalation, famine entry/recovery, stage changes, settlement founding, fragmentation, and collapse to appear immediately.
+Per-event chronicle cooldowns suppress repeated narrative lines for the same actor scope, while bypass rules still allow real turning points such as severity escalation, famine entry and recovery, stage changes, settlement founding, fragmentation, collapse, and lineage handoffs to appear immediately.
 
 ## Structured History
 
@@ -55,7 +55,7 @@ Stored fields include, when available:
 
 - `eventId`, `year`, `month`, `season`
 - `type`, `severity`, `reason`
-- polity, related polity, region, and settlement identifiers/names
+- polity, related polity, region, and settlement identifiers and names
 - `before`, `after`, `metadata`
 - concise narrative text
 
@@ -86,7 +86,7 @@ The simulation runs in monthly ticks with yearly system passes:
 3. migration checks
 4. year-end population, advancement, settlement, fragmentation, and stage passes
 5. structured event emission and persistence
-6. chronicle filtering by severity and cooldown in watch mode
+6. chronicle filtering by severity, focal-line matching, and cooldown in watch mode
 
 ## Long-Term Direction
 
