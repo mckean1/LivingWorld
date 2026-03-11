@@ -1,13 +1,18 @@
 # LivingWorld Event System
 
-LivingWorld uses a canonical structured event model for simulation events, then routes those events into separate storage and presentation paths.
+LivingWorld uses a canonical structured event model for simulation events, then routes those events into separate storage, propagation, and presentation paths.
 
 ## Event Model
 
 Core fields:
 
-- `eventId`, `year`, `month`, `season`
-- `type`, `severity`, `narrative`, `details`, `reason`
+- `eventId`
+- `rootEventId`
+- `parentEventIds`
+- `propagationDepth`
+- `year`, `month`, `season`
+- `type`, `severity`, `scope`
+- `narrative`, `details`, `reason`
 - `polityId`, `polityName`
 - `relatedPolityId`, `relatedPolityName`
 - `speciesId`, `speciesName`
@@ -25,38 +30,74 @@ Core fields:
 
 Structured history keeps the full event stream. Default chronicle playback only surfaces `Major` and `Legendary` events for the current focal line.
 
-## Storage Versus Presentation
+## Scope
+
+Supported scopes:
+
+- `Local`
+- `Regional`
+- `Polity`
+- `World`
+
+Handlers should only react to events relevant to their domain and scope.
+
+Examples:
+
+- settlement founding: `Local`
+- migration between connected regions: `Regional`
+- food hardship for one polity: `Polity`
+- future climate shifts: `World`
+
+## Storage Versus Propagation Versus Presentation
 
 `World.AddEvent(...)` is the source of truth.
 
-- `World.Events` remains append-only in chronological order
+- `World.Events` remains append-only
+- `EventPropagationCoordinator` processes follow-up events
 - `HistoryJsonlWriter` persists the structured stream
 - `ChronicleEventFormatter` applies player-facing filtering
 - `ChronicleWatchRenderer` only renders what survives presentation filtering
 
-Suppressed chronicle events are still preserved in structured history with their metadata, causal context, and before/after state.
+Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
 
-## Important Event Types
+## Causal Links
+
+Propagation adds:
+
+- direct parent links through `parentEventIds`
+- root ancestry through `rootEventId`
+- step depth through `propagationDepth`
+
+This allows history/debug tooling to follow:
+
+`root event -> follow-up event -> later consequence`
+
+## Current Important Event Types
+
+Major chronicle-facing types:
 
 - `migration`
-- `knowledge_discovered`
 - `settlement_founded`
 - `settlement_consolidated`
+- `learned_advancement`
 - `food_stress`
-- `population_changed`
+- `food_stabilized`
 - `fragmentation`
+- `polity_founded`
 - `stage_changed`
 - `polity_collapsed`
-- `focus_handoff_fragmentation`
-- `focus_handoff_collapse`
-- `focus_lineage_continued`
-- `focus_lineage_extinct_fallback`
+- focus handoff events
+
+Structured-first follow-up types:
+
+- `migration_pressure`
+- `starvation_risk`
+- `cultivation_expanded`
+- `settlement_stabilized`
+- `schism_risk`
+- `local_tension`
 - `trade_transfer`
-- `trade_link_started`
 - `trade_relief`
-- `trade_dependency`
-- `trade_link_collapsed`
-- `world_event`
 
 ## Chronicle Filtering Rules
 
@@ -65,77 +106,26 @@ Normal player-facing watch mode:
 - follows one focal polity line and its handoffs over time
 - shows concise historical beats rather than telemetry
 - keeps storage chronological but renders the visible watch buffer newest-first
-- suppresses yearly report formatting entirely
-- suppresses noisy bookkeeping and most non-focal telemetry
+- suppresses noisy follow-up events by default
 
-Current chronicle formatting favors:
+The main chronicle favors:
 
 - migration and relocation turning points
 - settlement founding and durable consolidation
-- stage changes and civilization formation
-- breakthrough discoveries such as fire or agriculture
-- major hardship transitions such as shortages beginning, famine striking, and famine recovery
-- fragmentation, collapse, and lineage handoff beats
+- learned capability breakthroughs such as agriculture
+- major hardship transitions such as shortages beginning and recovery
+- fragmentation, collapse, polity founding, and focus handoff beats
 
-Population change events are still stored, but they are structured-only by default. Demographic consequences reach the chronicle through stronger turning-point events such as hardship, migration, fragmentation, collapse, settlement change, and stage change.
+## Anti-Spam Rules
 
-## Focal-Line Matching
-
-Chronicle presentation is anchored to the active focus stored in `ChronicleFocus`.
-
-- ordinary events are matched against the currently focused polity
-- focus handoff events are treated as the explicit bridge between old and new focal subjects
-- once a handoff is resolved, future chronicle events follow the successor polity
-
-This keeps the watch experience lineage-consistent without opening the chronicle to all same-lineage side activity.
-
-## Chronicle Cooldowns
-
-Cooldowns apply only to chronicle presentation, never to event storage.
-
-Baseline cooldowns:
-
-- `migration`: 20 years per polity
-- `settlement_consolidated`: 25 years per polity
-- `food_stress`: 15 years per polity for repeated reminders
-
-No chronicle cooldown:
-
-- `knowledge_discovered`
-- `settlement_founded`
-- `stage_changed`
-- `fragmentation`
-- `polity_collapsed`
-- lineage handoff events
-
-Cooldown bypass rules:
-
-- severity increases
-- a condition starts, worsens, improves, or ends
-- a rare defining milestone occurs
-- a major cause-and-effect turning point occurs
-
-In practice this means `shortage -> famine`, `famine -> recovery`, settlement founding, stage transitions, fragmentation, collapse, and major discoveries still appear even if related events happened recently.
-
-## JSONL History Rules
-
-- append-only during the run
-- captures lower-severity and chronicle-suppressed events as well as visible turning points
-- remains the canonical stored history beneath the chronicle
-- keeps `before` / `after` / `metadata` context for later tools and history views
-
-## Example Chronicle Lines
-
-- `Year 18 - River Clan migrated to Red Valley.`
-- `Year 41 - River Clan began farming.`
-- `Year 57 - River Clan founded a settlement in Red Valley.`
-- `Year 84 - River Clan became a Settled Society.`
-- `Year 133 - Famine struck River Clan.`
-- `Year 149 - River Clan recovered from famine.`
-- `Year 136 - Stone Clan split from River Clan in High Ridge.`
+- systems emit events on state transitions, not repeated unchanged conditions
+- the propagation coordinator dedupes identical follow-up events inside one step
+- propagation depth is capped
+- total events per source event are capped
+- chronicle cooldowns still suppress repeated visible beats for the same actor scope
 
 ## Example JSONL Record
 
 ```json
-{"eventId":42,"year":118,"month":12,"season":"Winter","type":"stage_changed","severity":"Major","narrative":"Red River Clan became a Settled Society.","polityId":3,"polityName":"Red River Clan","regionId":7,"regionName":"Lower Valley","before":{"stage":"Tribe"},"after":{"stage":"SettledSociety"},"metadata":{}}
+{"eventId":42,"rootEventId":40,"parentEventIds":[41],"propagationDepth":2,"year":118,"month":12,"season":"Winter","type":"food_stabilized","severity":"Major","scope":"Polity","narrative":"Red River Clan stabilized after hardship.","polityId":3,"polityName":"Red River Clan","regionId":7,"regionName":"Lower Valley","before":{"hardshipTier":"Famine"},"after":{"hardshipTier":"Stable"},"metadata":{}}
 ```

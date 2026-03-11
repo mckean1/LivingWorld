@@ -1,495 +1,108 @@
-# LivingWorld – Cause and Effect Systems
+# LivingWorld Cause And Effect
 
-## Philosophy
+LivingWorld is designed around deterministic cause-and-effect simulation rather than scripted events.
 
-LivingWorld is designed around **deterministic cause-and-effect simulation** rather than scripted events.
+The guiding rule remains:
 
-Every historical development in the simulation must originate from:
+> Nothing happens without a reason.
 
-- environmental pressures
-- species traits
-- resource availability
-- societal needs
-- prior historical events
+## Core Model
 
-Events exist to **expose the chain of causality** to the player through the chronicle system.
+Every meaningful change follows this pattern:
 
-The guiding rule:
-
-> **Nothing happens without a reason.**
-
-If a system change cannot be traced to a clear cause, the design should be reconsidered.
-
----
-
-# Core Cause-Effect Model
-
-Every simulation change follows this pattern:
-
-```
-Simulation State Change
-        ↓
-Pressure or Condition Detected
-        ↓
-System Reaction
-        ↓
-Event Emitted
-        ↓
-Event Propagation
-        ↓
-Consequences in Other Systems
-```
+`state transition -> canonical event -> propagation -> downstream state or event`
 
 Example:
 
-```
-Food shortage
-    ↓
-Population stress
-    ↓
-Migration attempt
-    ↓
-Migration event
-    ↓
-Settlement founded in neighboring region
-```
+`food shortage -> food_stress -> migration_pressure -> migration -> local tension or settlement momentum`
 
----
+## Why Propagation Exists
 
-# Event Object Structure
+Without propagation, systems can truthfully log their own state changes but still feel isolated.
 
-Events represent **observable consequences** of system state changes.
+Propagation lets LivingWorld express:
 
-Example structure:
+- visible causes
+- structured follow-up consequences
+- traceable ancestry in JSONL history
+- concise player-facing chronicle output
 
-```
-Event
-{
-    Type
-    Time
-    Location
-    Actors
-    Tags
-    Causes
-    Severity
-}
-```
+## Current Pressure Categories
 
-Example:
+### Food Pressure
 
-```
-FoodShortageEvent
-{
-    Type: FoodShortage
-    Time: Year 312
-    Location: River Valley
-    Actors: Wolf Tribe (Gray Wolves)
-    Causes: [LowHarvest, PopulationGrowth]
-    Severity: Moderate
-}
-```
+Low food satisfaction, weak reserves, and repeated starvation are the strongest current historical drivers.
 
-Chronicle output:
+Implemented chain:
 
-```
-Year 312 — Wolf Tribe (Gray Wolves) faces food shortages in the River Valley.
-```
+`food_stress -> migration_pressure`
 
----
+`food_stress -> starvation_risk`
 
-# Event Propagation
+`food_recovery or trade relief -> food_stabilized`
 
-Events are not the end of the chain.
+### Settlement Pressure
 
-Systems subscribe to events and may produce **secondary consequences**.
+Learned Agriculture and stable settlement context can now create downstream cultivation and settlement stabilization events.
 
-Example:
+Implemented chain:
 
-```
-FoodShortageEvent
-        ↓
-MigrationSystem reacts
-        ↓
-MigrationEvent
-        ↓
-SettlementSystem reacts
-        ↓
-SettlementFoundedEvent
-```
+`learned_advancement (Agriculture) -> cultivation_expanded -> settlement_stabilized`
 
-This produces **historical chains of events**.
+### Migration Pressure
 
-Example chronicle:
+Migration is now both a result and a cause.
 
-```
-Year 312 — Wolf Tribe faces food shortages.
-Year 313 — Several clans migrate east.
-Year 314 — A new settlement is founded in the Green Plains.
-```
+Implemented chain:
 
----
+`migration_pressure -> migration`
 
-# Core Pressure Categories
+`migration -> local_tension`
 
-## Environmental Pressure
+`migration -> higher settlement chance`
 
-Caused by climate, fertility, geography, or ecosystems.
+### Fragmentation Pressure
 
-Examples:
+Internal strain can be made visible before or during a split.
 
-- drought
-- poor soil fertility
-- harsh winters
-- predator pressure
+Implemented chain:
 
-Effects:
+`fragmentation threshold -> schism_risk`
 
-```
-Low biomass
-    → reduced hunting success
-    → food shortages
-    → migration pressure
-```
+`fragmentation -> polity_founded`
 
----
+## Event Ancestry
 
-## Population Pressure
+Follow-up events preserve causal structure through:
 
-Occurs when population exceeds local carrying capacity.
+- `parentEventIds`
+- `rootEventId`
+- `propagationDepth`
 
-Example:
+This means a later outcome can still be traced back to the original trigger event.
 
-```
-Population > Available Food
-```
+## State-Transition Rule
 
-Effects:
+LivingWorld does not emit follow-up events every tick.
 
-```
-food shortages
-migration
-settlement expansion
-conflict
-```
+Instead it favors:
 
----
+- threshold crossings
+- condition entry
+- condition worsening
+- condition improvement
+- durable recovery
 
-## Resource Pressure
+This is why yearly hardship transitions remain important: they summarize meaningful changes without narrating every month of unchanged suffering.
 
-Triggered when societies require resources they cannot obtain locally.
+## Safeguards
 
-Examples:
+- handler reactions are deterministic
+- propagation is capped by depth
+- propagation is capped by event count per source event
+- identical follow-ups within a step are deduped
+- chronicle presentation still filters and cools down repeated visible beats
 
-```
-lack of food
-lack of arable land
-lack of animals to hunt
-```
+## Player Experience
 
-Effects:
-
-```
-migration
-trade attempts
-territorial expansion
-agriculture adoption
-```
-
----
-
-## Social Pressure
-
-Generated internally within societies.
-
-Examples:
-
-```
-population fragmentation
-distance from core settlements
-cultural drift
-leadership conflict
-```
-
-Effects:
-
-```
-clan splits
-new societies
-civilization fragmentation
-```
-
----
-
-## Knowledge Pressure
-
-Societies attempt to solve problems through discovery.
-
-Example triggers:
-
-```
-food shortages
-stable settlements
-long-term surplus
-environmental interaction
-```
-
-Possible outcomes:
-
-```
-Agriculture discovered
-Animal domestication
-Improved tools
-```
-
----
-
-# Cross-System Cause Chains
-
-LivingWorld systems interact through cascading events.
-
-Example chain:
-
-```
-Drought
-    ↓
-Reduced plant growth
-    ↓
-Herbivore population decline
-    ↓
-Reduced hunting success
-    ↓
-Food shortages
-    ↓
-Migration
-    ↓
-Settlement founding
-```
-
-This produces visible historical narrative.
-
----
-
-# Example Historical Chain
-
-Example simulation timeline:
-
-```
-Year 187 — Harsh winters reduce game populations.
-Year 188 — Wolf Tribe struggles to find enough food.
-Year 189 — Several clans migrate south.
-Year 191 — A new settlement is founded along the Silver River.
-Year 197 — The tribe discovers agriculture.
-```
-
-Every step results from **previous pressures**.
-
----
-
-# System Responsibilities
-
-## Ecology System
-
-Responsible for:
-
-- plant growth
-- biomass generation
-- ecosystem balance
-
-Causes:
-
-```
-climate
-fertility
-species population dynamics
-```
-
-Effects:
-
-```
-food availability
-animal populations
-hunting success
-```
-
----
-
-## Population System
-
-Responsible for:
-
-- births
-- deaths
-- demographic pressure
-
-Effects:
-
-```
-population growth
-migration pressure
-labor availability
-```
-
----
-
-## Migration System
-
-Triggered when pressure thresholds exceed tolerance.
-
-Triggers:
-
-```
-food shortage
-population pressure
-environmental collapse
-```
-
-Effects:
-
-```
-population movement
-regional colonization
-founder populations
-future speciation opportunities
-```
-
----
-
-## Settlement System
-
-Creates and maintains settlements.
-
-Triggers:
-
-```
-migration
-stable food supply
-agriculture adoption
-```
-
-Effects:
-
-```
-permanent population centers
-civilization formation
-resource extraction
-```
-
----
-
-## Advancement System
-
-Represents knowledge discovery.
-
-Triggers:
-
-```
-environmental exposure
-societal need
-time and experimentation
-surplus capacity
-```
-
-Example:
-
-```
-Food instability
-    ↓
-Need for reliable food
-    ↓
-Agriculture discovery
-```
-
----
-
-# Species Cause-Effect
-
-Species traits influence outcomes.
-
-Example:
-
-```
-High Intelligence
-    → higher chance of discovery
-
-High Sociality
-    → larger societies
-
-High Aggression
-    → more conflict events
-
-High Fertility
-    → faster population growth
-```
-
-Species evolution can therefore **change the trajectory of civilizations**.
-
----
-
-# Design Rule
-
-Every new system added to LivingWorld must answer:
-
-1. **What pressures does this system detect?**
-2. **What state changes does it create?**
-3. **What events does it emit?**
-4. **What systems react to those events?**
-
-If a feature cannot be expressed through cause-and-effect chains, it should not be implemented.
-
----
-
-# Debugging Cause-Effect
-
-The structured event history file records full causal chains.
-
-Example:
-
-```
-Event: Migration
-Causes:
- - FoodShortageEvent
- - PopulationPressureEvent
-```
-
-This allows developers to trace:
-
-```
-Effect → Cause → Root Cause
-```
-
-Ensuring the simulation remains **explainable and emergent**.
-
----
-
-# Player Experience
-
-Players observe the simulation through the chronicle.
-
-The chronicle shows **effects**, while the simulation internally tracks **causes**.
-
-Example:
-
-Chronicle:
-
-```
-Year 412 — The Red Antler Tribe discovers agriculture.
-```
-
-Internal causal chain:
-
-```
-Food instability
-    + fertile river valley
-    + permanent settlement
-    → Agriculture discovery
-```
-
----
-
-# Final Principle
-
-LivingWorld should feel like **watching real history unfold**.
-
-History is not random.
-
-It is the **inevitable result of pressures acting on societies over time**.
+The chronicle still mainly shows effects, but those effects now come from a stronger underlying cause-and-effect chain. Structured history retains the intermediate steps for debugging and future history views.

@@ -1,16 +1,16 @@
 # LivingWorld System Interactions
 
-LivingWorld systems interact through shared state and the structured event pipeline rather than by writing directly to the player chronicle.
+LivingWorld systems interact through shared state and the structured event pipeline rather than by writing directly to the chronicle.
 
-## Interaction Pattern
+## Standard Pattern
 
 Each major system:
 
 - reads world state
-- evaluates pressure or opportunity
+- detects pressure or opportunity
 - updates its own domain state
 - emits canonical events on meaningful transitions
-- lets other systems and sinks react afterward
+- lets propagation handlers and sinks react afterward
 
 ## Current Major Systems
 
@@ -24,52 +24,74 @@ Each major system:
 - polity stage progression
 - advancement
 
+## Current Propagation Subscriptions
+
+### FoodStressPropagationHandler
+
+Subscribes to:
+
+- `food_stress`
+- `trade_relief`
+
+Reacts by:
+
+- raising migration pressure bonuses
+- raising starvation risk events
+- easing pressure when hardship recovers or trade relief stabilizes food
+
+### AgriculturePropagationHandler
+
+Subscribes to:
+
+- `learned_advancement`
+- `cultivation_expanded`
+
+Reacts by:
+
+- remembering the causal agriculture event
+- creating field-preparation follow-ups
+- improving settlement momentum
+- creating settlement stabilization events when cultivation becomes meaningful
+
+### MigrationPropagationHandler
+
+Subscribes to:
+
+- `migration_pressure`
+- `migration`
+
+Reacts by:
+
+- surfacing schism risk when migration pressure overlaps with internal strain
+- adding settlement momentum after relocation
+- emitting local tension when crowded destinations are stressed
+
+### FragmentationPropagationHandler
+
+Subscribes to:
+
+- `fragmentation`
+
+Reacts by:
+
+- emitting `polity_founded` for the child polity
+
+## Shared-State Reactions
+
+Some handlers do more than emit follow-up events. They can also update temporary polity pressure bonuses that later systems consume:
+
+- migration pressure bonus
+- fragmentation pressure bonus
+- settlement chance bonus
+
+These bonuses decay over time, so the propagation effects stay lightweight and deterministic.
+
 ## Chronicle Separation
 
-Systems may emit many meaningful events in one year, but only `Major` and `Legendary` turning points are shown in the default chronicle.
+Simulation and propagation may create many structured events in one year, but only `Major` and `Legendary` turning points are shown in the default chronicle.
 
 That separation keeps the architecture clean:
 
 - simulation systems stay honest about causality
-- structured history preserves the full event stream
+- structured history preserves the full chain
 - chronicle presentation stays readable
-
-Population change is a good example: the event still matters to the simulation and the structured record, but it is not part of the default live chronicle unless another stronger turning point makes the historical change visible.
-
-## Focal-Line Ownership
-
-Chronicle ownership is handled centrally:
-
-- systems emit events without deciding whether they belong in the live chronicle
-- `ChronicleFocus` determines whether an event belongs to the active focal line
-- focus handoff events keep continuity explicit across fragmentation, collapse, and lineage fallback
-- `ChroniclePresentationPolicy` then applies severity, eligibility, and cooldown rules
-
-## Common Interaction Chains
-
-```text
-Food stress
-  -> migration
-  -> settlement change
-  -> stage change or fragmentation
-```
-
-```text
-Stable settlement
-  -> advancement discovery
-  -> farming output
-  -> stronger food position
-  -> larger historical turning point later
-```
-
-```text
-Trade relief
-  -> hardship easing
-  -> possible famine recovery
-```
-
-Trade transfers themselves are often structured-only, while the resulting major transition can still surface in the chronicle.
-
-## Design Standard
-
-Systems should emit events for state transitions, not for repeated unchanged conditions.

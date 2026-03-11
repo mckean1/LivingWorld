@@ -1,10 +1,10 @@
 # LivingWorld Architecture
 
-LivingWorld keeps simulation logic, event storage, formatting, and console playback separate.
+LivingWorld keeps simulation logic, event storage, propagation, formatting, and console playback separate.
 
 ## Core Structure
 
-World contains:
+`World` contains:
 
 - regions
 - species
@@ -24,95 +24,128 @@ Major systems:
 - fragmentation
 - polity stage progression
 
-## Event Architecture
+## Canonical Event Architecture
 
-Canonical flow:
+The canonical flow is now:
 
-`simulation systems -> World.AddEvent -> World.Events + EventRecorded -> output sinks`
+`simulation systems -> World.AddEvent -> EventPropagationCoordinator -> World.Events + EventRecorded -> output sinks`
 
-Primary sinks:
+### Event Source Of Truth
 
-1. `HistoryJsonlWriter` for append-only structured history
-2. `ChronicleEventFormatter` for player-facing chronicle filtering and text formatting
-3. `ChronicleWatchRenderer` for live console playback
+`World.AddEvent(...)` is still the only supported entry point for canonical events. It is responsible for:
 
-### Canonical Event Model
+- assigning event ids
+- stamping time
+- copying structured payloads
+- recording chronological history
+- invoking the propagation coordinator
+- publishing `EventRecorded`
+
+### EventPropagationCoordinator
+
+The coordinator is a lightweight in-process dispatcher. It:
+
+- records the initial event
+- routes it to subscribed handlers
+- enqueues deterministic follow-up events
+- preserves parent-child causal links
+- enforces per-step dedupe
+- enforces max propagation depth
+- enforces max events per source event
+
+Current default limits:
+
+- max depth: `4`
+- max events per step: `64`
+
+### Current Handler Subscriptions
+
+- `FoodStressPropagationHandler`
+  - listens to `food_stress`, `trade_relief`
+  - can emit `migration_pressure`, `starvation_risk`, `food_stabilized`
+- `AgriculturePropagationHandler`
+  - listens to `learned_advancement`, `cultivation_expanded`
+  - can emit `cultivation_expanded`, `settlement_stabilized`
+- `MigrationPropagationHandler`
+  - listens to `migration_pressure`, `migration`
+  - can emit `schism_risk`, `local_tension`
+- `FragmentationPropagationHandler`
+  - listens to `fragmentation`
+  - emits `polity_founded`
+
+## Canonical Event Model
 
 `WorldEvent` stores:
 
-- `EventId`, `Year`, `Month`, `Season`
-- `Type`, `Severity`, `Narrative`, `Details`, `Reason`
-- polity / related polity / species / region / settlement identifiers and names
-- optional `Before`, `After`, `Metadata`
+- `eventId`
+- `rootEventId`
+- `parentEventIds`
+- `propagationDepth`
+- `year`, `month`, `season`
+- `type`, `severity`, `scope`
+- `narrative`, `details`, `reason`
+- polity / related polity / species / region / settlement references
+- `before`, `after`, `metadata`
 
-`World.AddEvent(...)` is the source of truth. It timestamps, ids, stores, and publishes each event.
+`scope` is used to express how far an event matters:
+
+- `Local`
+- `Regional`
+- `Polity`
+- `World`
 
 ## Player-Facing Chronicle Path
 
-Default player output uses watch mode rather than yearly report rendering.
+Default player output still uses watch mode rather than yearly reports.
 
-Watch mode is built from two presentation pieces:
+Watch mode is built from:
 
-- `ChronicleEventFormatter`: applies the default `Major+` severity threshold, event-type eligibility rules, and per-event chronicle cooldowns
-- `ChronicleWatchRenderer`: maintains the reverse-chronological chronicle buffer and redraws only the docked status panel lines and chronicle viewport lines that changed
+- `ChronicleEventFormatter`
+- `ChronicleWatchRenderer`
 
 Important traits:
 
-- the structured event list remains chronological and append-only
+- structured history remains chronological and append-only
 - the visible chronicle buffer is rendered newest-first
-- the chronicle viewport height is derived from the current console height after reserving the docked panel
-- only major focal-polity turning points are shown in normal player mode
-- hardship chronicle events emphasize entry, escalation, and recovery rather than repeated yearly warnings
-- yearly debug summaries remain available only through `OutputMode.Debug`
+- only `Major+` turning points are shown in normal player mode
+- internal propagation events remain structured-first unless they are promoted into genuine historical beats
 
-### Docked Status Panel
-
-The watch panel is a stable HUD for the currently focused polity. It shows:
-
-- polity name
-- polity stage
-- current region
-- population
-- settlement count
-- food stores with resolved food state
-- concise knowledge summary
-- current year
-
-## Focus and Continuity
+## Focus And Continuity
 
 `ChronicleFocus` stores the currently watched polity and lineage.
 
-`LineagePolityFocusSelector` is responsible for:
+`LineagePolityFocusSelector` handles:
 
 1. initial focus selection
 2. deterministic year-end handoff when the watched polity fragments, collapses, or disappears
 
-Focus handoffs are themselves canonical `WorldEvent` records, so they appear in both:
-
-- structured JSONL history
-- the live chronicle when they are `Major+`
+Focus handoff events are still canonical `WorldEvent` records.
 
 ## Simulation Loop Notes
 
 Monthly:
 
 - ecology, gathering, farming, trade redistribution, consumption, migration
-- systems emit structured events whenever meaningful outcomes happen
-- watch mode immediately considers those events for chronicle presentation
+- propagation state bonuses tick down
+- systems emit canonical events on meaningful transitions
+- follow-up events are processed immediately through the same event pipeline
 
 Year-end:
 
-- population, advancement, settlement, fragmentation, stage, agriculture, and annual trade passes
-- annual food stress events
-- focus validation and handoff events
-- persisted year-end food-state snapshot updates
-- status panel refresh
-- annual stat reset
+- population
+- learned advancements
+- settlement progression
+- fragmentation
+- stage progression
+- annual agriculture and trade review
+- annual hardship transition events
+- focus validation and handoff
 
-## Extensibility Path
+## Design Direction
 
-The current architecture intentionally preserves a path for:
+The architecture continues to prioritize:
 
-- Civilization History views built from the same stored event stream
-- multiple chronicle perspectives over the same world history
-- richer post-run history tooling without rewriting simulation systems
+- one structured event stream
+- explainable cause-and-effect
+- concise chronicle presentation
+- future alternate history views without rewriting simulation systems

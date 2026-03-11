@@ -2,64 +2,90 @@
 
 LivingWorld is a command-line autonomous world simulation where ecosystems, species, and polities evolve over time.
 
-The player-facing experience is chronicle-first: the console watches one focal line of history, while the full simulation continues running for the whole world underneath.
+The player-facing experience is chronicle-first: the console follows one focal line of history, while the full simulation and structured event history continue underneath.
 
 ## Core Principles
 
 - Full-world simulation, focused player presentation
 - Chronicle lines over yearly diagnostics
 - Structured append-only history under every visible event
+- Cause-and-effect propagation between systems
 - Low-noise output that favors meaningful historical turning points
 
-## Default Player Experience
+## Event Pipeline
 
-Default runs use watch mode.
+LivingWorld now uses a propagation-aware event pipeline:
 
-Watch mode shows:
+`simulation systems -> World.AddEvent -> EventPropagationCoordinator -> subscribed handlers -> World.Events + EventRecorded -> ChronicleEventFormatter + HistoryJsonlWriter`
 
-- a fixed polity status panel docked at the top of the console
-- a live chronicle beneath it
-- newest chronicle entries at the top, older entries below
-- a chronicle viewport sized from the current console height
-- only `Major` and `Legendary` events by default
+`World.AddEvent(...)` remains the canonical entry point. Every event is timestamped, assigned an id, recorded in chronological order, and then made available to output sinks. Follow-up events are emitted through the same path, so chronicle lines and JSONL history share one source of truth.
 
-The watch experience follows one focal polity line across fragmentation, collapse, and lineage handoff events. Routine population change messages are not shown by default; they remain available in structured history and debug output.
+## Structured Event Model
 
-Examples of chronicle lines:
+`WorldEvent` stores:
 
-- `Year 18 - River Clan migrated to Red Valley.`
-- `Year 41 - River Clan began farming.`
-- `Year 84 - River Clan became a Settled Society.`
-- `Year 136 - Stone Clan split from River Clan in High Ridge.`
-- `Year 179 - River Clan recovered from famine.`
+- `eventId`
+- `rootEventId`
+- `parentEventIds`
+- `propagationDepth`
+- `type`
+- `severity`
+- `scope`
+- `year`, `month`, `season`
+- polity, related polity, species, region, and settlement references
+- `reason`, `narrative`, `details`
+- `before`, `after`, `metadata`
 
-## Chronicle Pipeline
+This keeps causal ancestry visible in structured history without forcing every follow-up event into the player chronicle.
 
-LivingWorld keeps simulation, storage, formatting, and playback separate:
+## Current Propagation Examples
 
-`simulation systems -> World.AddEvent -> structured WorldEvent store -> ChronicleEventFormatter -> ChronicleWatchRenderer + HistoryJsonlWriter`
+- Food stress transitions can emit migration pressure, starvation risk, and food stabilization follow-ups.
+- Learned agriculture can create cultivation expansion events and settlement stabilization momentum.
+- Migration can create local tension or settlement momentum in the destination region.
+- Fragmentation can emit a downstream `polity_founded` event for the child polity.
 
-The chronicle is a filtered presentation layer over the richer event stream. Lower-severity events and chronicle-suppressed events remain available in structured history and debug views even when they do not appear in the live chronicle.
+These are deterministic follow-ups based on state transitions, not random story injections.
 
-Per-event chronicle cooldowns suppress repeated narrative lines for the same actor scope, while bypass rules still allow real turning points such as severity escalation, famine entry and recovery, stage changes, settlement founding, fragmentation, collapse, and lineage handoffs to appear immediately.
+## Chronicle Behavior
+
+Default watch mode still shows:
+
+- a fixed polity status panel docked at the top
+- a reverse-chronological chronicle beneath it
+- only `Major` and `Legendary` turning points by default
+
+The main chronicle continues to favor:
+
+- migration and relocation beats
+- learned advancements such as agriculture
+- settlement founding and durable consolidation
+- food hardship entry, escalation, and recovery
+- fragmentation, collapse, and focus handoff events
+
+Internal follow-up events such as migration pressure, starvation risk, cultivation growth, and local tension remain structured-first unless they rise to the level of a true historical turning point.
+
+## Propagation Safeguards
+
+- systems emit on meaningful transitions, not every tick
+- the coordinator dedupes identical follow-up events within a propagation step
+- propagation depth is capped
+- total emitted events per source event are capped
+- chronicle cooldowns still apply after storage
+
+This keeps the world explainable without turning the chronicle into telemetry.
 
 ## Structured History
 
-Important events are stored as structured append-only JSONL records.
+Important events are stored as append-only JSONL records.
 
 Default path:
 
 - `logs/history-{timestamp}.jsonl`
 
-Stored fields include, when available:
+The JSONL history includes causal ids and propagation depth, so downstream debugging can trace:
 
-- `eventId`, `year`, `month`, `season`
-- `type`, `severity`, `reason`
-- polity, related polity, region, and settlement identifiers and names
-- `before`, `after`, `metadata`
-- concise narrative text
-
-The console chronicle is only a presentation layer over this data.
+`effect -> parent event -> root event`
 
 ## Runtime Options
 
@@ -76,18 +102,3 @@ Example:
 ```powershell
 dotnet run --project LivingWorld -- --years 120 --delay-ms 250
 ```
-
-## Simulation Overview
-
-The simulation runs in monthly ticks with yearly system passes:
-
-1. ecology and food updates
-2. trade and redistribution checks
-3. migration checks
-4. year-end population, advancement, settlement, fragmentation, and stage passes
-5. structured event emission and persistence
-6. chronicle filtering by severity, focal-line matching, and cooldown in watch mode
-
-## Long-Term Direction
-
-LivingWorld is moving toward a playable history experience where the chronicle is the game, while the underlying event model remains strong enough to support richer history views later.
