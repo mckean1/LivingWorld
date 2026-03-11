@@ -49,7 +49,7 @@ public sealed class PolityStageSystem
 
             world.AddEvent(
                 WorldEventType.StageChanged,
-                WorldEventSeverity.Notable,
+                ResolveStageSeverity(evaluated),
                 BuildStageChangeNarrative(polity, evaluated),
                 $"{polity.Name} advanced from {current} to {evaluated}.",
                 reason: "stage_threshold_met",
@@ -137,5 +137,13 @@ public sealed class PolityStageSystem
             PolityStage.SettledSociety => $"{polity.Name} became a Settled Society",
             PolityStage.Civilization => $"{polity.Name} formed a Civilization",
             _ => $"{polity.Name} changed stage"
+        };
+
+    private static WorldEventSeverity ResolveStageSeverity(PolityStage stage)
+        => stage switch
+        {
+            PolityStage.Civilization => WorldEventSeverity.Legendary,
+            PolityStage.Tribe or PolityStage.SettledSociety => WorldEventSeverity.Major,
+            _ => WorldEventSeverity.Notable
         };
 }

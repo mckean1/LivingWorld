@@ -193,7 +193,7 @@ public sealed class TradeSystem
 
         world.AddEvent(
             WorldEventType.TradeTransfer,
-            WorldEventSeverity.Normal,
+            WorldEventSeverity.Minor,
             $"{exporter.Name} sent food to {importer.Name}",
             $"{exporter.Name} transferred {quantity:F1} food to {importer.Name}.",
             reason: internalPriorityMode ? "internal_priority_trade_transfer" : "external_trade_transfer",
@@ -232,7 +232,7 @@ public sealed class TradeSystem
         {
             world.AddEvent(
                 WorldEventType.TradeRelief,
-                relief == ReliefOutcome.Full ? WorldEventSeverity.Notable : WorldEventSeverity.Normal,
+                relief == ReliefOutcome.Full ? WorldEventSeverity.Notable : WorldEventSeverity.Minor,
                 relief == ReliefOutcome.Full
                     ? $"{importer.Name} stabilized through imported food"
                     : $"{importer.Name} eased shortages through imported food",
@@ -289,7 +289,7 @@ public sealed class TradeSystem
 
         world.AddEvent(
             WorldEventType.TradeLinkStarted,
-            initialQuantity >= NotableLinkStartQuantity ? WorldEventSeverity.Notable : WorldEventSeverity.Normal,
+            initialQuantity >= NotableLinkStartQuantity ? WorldEventSeverity.Notable : WorldEventSeverity.Minor,
             $"{exporter.Name} began trading food with {importer.Name}",
             $"{exporter.Name} established a food trade link to {importer.Name}.",
             reason: internalPriorityMode ? "internal_priority_trade_link_created" : "external_trade_link_created",

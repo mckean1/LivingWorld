@@ -28,7 +28,7 @@ At year-end, for each polity:
 1. capability changes consumed by simulation systems
 2. canonical structured event data containing:
    - event type and severity
-   - polity/species/region references
+   - polity / species / region references
    - advancement metadata and probability
    - concise narrative text
 
@@ -40,4 +40,4 @@ They flow through:
 
 `AdvancementSystem -> World.AddEvent(knowledge_discovered) -> ChronicleEventFormatter / HistoryJsonlWriter`
 
-This keeps discovery logic independent from player presentation while preserving a future path for alternate history views.
+Breakthrough discoveries such as fire, agriculture, leadership traditions, and craft specialization are classified as `Major`, so they can appear in the default chronicle. Lower-level discoveries remain in structured history even when they do not surface live.

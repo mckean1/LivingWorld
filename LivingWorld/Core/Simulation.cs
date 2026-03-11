@@ -133,12 +133,13 @@ public sealed class Simulation : IDisposable
 
     private void OnWorldEventRecorded(WorldEvent worldEvent)
     {
+        _historyWriter?.Write(worldEvent);
+
         if (worldEvent.Severity == WorldEventSeverity.Debug)
         {
             return;
         }
 
-        _historyWriter?.Write(worldEvent);
         _chronicleWatchRenderer.Record(_world, _chronicleFocus, worldEvent);
     }
 
@@ -275,7 +276,7 @@ public sealed class Simulation : IDisposable
 
         _world.AddEvent(
             eventType,
-            WorldEventSeverity.Notable,
+            WorldEventSeverity.Major,
             narrative,
             $"Focus shifted from {transition.PreviousPolityName} ({transition.PreviousPolityId}) to {transition.NewPolityName} ({transition.NewPolityId}) because {transition.Reason}.",
             reason: transition.Reason,
@@ -488,13 +489,20 @@ public sealed class Simulation : IDisposable
     {
         if (currentTier == HardshipTier.Stable)
         {
-            return WorldEventSeverity.Notable;
+            return previousTier == HardshipTier.Famine
+                ? WorldEventSeverity.Major
+                : WorldEventSeverity.Notable;
+        }
+
+        if (currentTier == HardshipTier.Shortages && previousTier < HardshipTier.Shortages)
+        {
+            return WorldEventSeverity.Major;
         }
 
         return currentTier switch
         {
-            HardshipTier.Famine => WorldEventSeverity.Critical,
-            HardshipTier.Crisis when previousTier < HardshipTier.Crisis => WorldEventSeverity.Critical,
+            HardshipTier.Famine => WorldEventSeverity.Major,
+            HardshipTier.Crisis when previousTier < HardshipTier.Crisis => WorldEventSeverity.Major,
             _ => WorldEventSeverity.Notable
         };
     }

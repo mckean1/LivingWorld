@@ -11,7 +11,6 @@ public sealed class ChronicleWatchRenderer : IDisposable
     private readonly ChronicleColorWriter _colorWriter;
     private readonly ChronicleEventFormatter _formatter;
     private readonly List<string> _chronicleEntries = [];
-    private readonly HashSet<string> _displayedChronicleKeys = [];
 
     private IReadOnlyList<string> _lastStatusLines = [];
     private IReadOnlyList<string> _lastChronicleLines = [];
@@ -49,11 +48,6 @@ public sealed class ChronicleWatchRenderer : IDisposable
         }
 
         if (!_formatter.TryFormat(worldEvent, focus, out string chronicleLine))
-        {
-            return;
-        }
-
-        if (!ShouldDisplay(worldEvent))
         {
             return;
         }
@@ -253,17 +247,6 @@ public sealed class ChronicleWatchRenderer : IDisposable
         {
             _chronicleEntries.RemoveAt(_chronicleEntries.Count - 1);
         }
-    }
-
-    private bool ShouldDisplay(WorldEvent worldEvent)
-    {
-        string key = worldEvent.Type switch
-        {
-            WorldEventType.Migration => $"migration:{worldEvent.PolityId}:{worldEvent.Year}",
-            _ => $"event:{worldEvent.EventId}"
-        };
-
-        return _displayedChronicleKeys.Add(key);
     }
 
     private static int ResolveWindowWidth()

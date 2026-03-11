@@ -52,7 +52,7 @@ public sealed class AdvancementSystem
                 definition.OnDiscovered?.Invoke(world, polity);
                 world.AddEvent(
                     WorldEventType.KnowledgeDiscovered,
-                    WorldEventSeverity.Notable,
+                    ResolveDiscoverySeverity(definition.Id),
                     BuildDiscoveryNarrative(polity, definition),
                     $"{polity.Name} discovered {definition.Name} with annual chance {chance:F3}.",
                     reason: "discovery_roll_success",
@@ -116,4 +116,14 @@ public sealed class AdvancementSystem
     private static string BuildDiscoveryNarrative(Polity polity, AdvancementDefinition definition)
         => definition.DiscoveryNarrative?.Invoke(polity)
             ?? $"{polity.Name} discovered {definition.Name}";
+
+    private static WorldEventSeverity ResolveDiscoverySeverity(AdvancementId advancementId)
+        => advancementId switch
+        {
+            AdvancementId.Fire => WorldEventSeverity.Major,
+            AdvancementId.Agriculture => WorldEventSeverity.Major,
+            AdvancementId.LeadershipTraditions => WorldEventSeverity.Major,
+            AdvancementId.CraftSpecialization => WorldEventSeverity.Major,
+            _ => WorldEventSeverity.Notable
+        };
 }

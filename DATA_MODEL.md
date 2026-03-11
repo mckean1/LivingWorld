@@ -58,6 +58,14 @@ It includes:
 - entity references: polity, related polity, species, region, settlement ids and names
 - context maps: `Before`, `After`, `Metadata`
 
+Severity now uses:
+
+- `Debug`
+- `Minor`
+- `Notable`
+- `Major`
+- `Legendary`
+
 The console chronicle is derived from this model. It is not a separate source of truth.
 
 ## Presentation and Persistence Types
@@ -65,19 +73,21 @@ The console chronicle is derived from this model. It is not a separate source of
 - `ChronicleFocus`: currently watched polity and lineage
 - `ChronicleFocusSelection`: initial focus result
 - `ChronicleFocusTransition`: year-end focus handoff result
-- `IPolityFocusSelector`: focus selection/handoff abstraction
+- `IPolityFocusSelector`: focus selection / handoff abstraction
 - `LineagePolityFocusSelector`: default lineage-aware selector
-- `ChronicleEventFormatter`: lightweight formatter/filter for player-facing chronicle text
+- `ChroniclePresentationPolicy`: centralized chronicle severity threshold, event eligibility, cooldowns, and bypass rules
+- `ChronicleEventFormatter`: player-facing line formatter backed by the presentation policy
 - `ChronicleWatchRenderer`: fixed-panel live chronicle playback
 - `HistoryJsonlWriter`: append-only structured history sink
 
 The visible chronicle buffer in watch mode is presentation state only. Chronological history remains in `World.Events` and the JSONL log.
 
-Annual hardship transition tracking is held in simulation/runtime state rather than replacing canonical event history. It exists to decide when to emit new hardship chronicle events for a polity as conditions begin, worsen, persist, or recover.
+Annual hardship transition tracking is held in simulation/runtime state rather than replacing canonical event history. It exists to decide when to emit new hardship events for a polity as conditions begin, worsen, persist, or recover.
 
 ## Design Notes
 
 - simulation behavior remains full-world
 - event capture is source-of-truth and output-agnostic
 - storage order and display order are intentionally different
+- lower-severity and cooldown-suppressed events remain structured even when hidden from the live chronicle
 - this separation preserves a future path for Civilization History and multiple chronicle perspectives

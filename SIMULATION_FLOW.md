@@ -1,6 +1,6 @@
 # LivingWorld Simulation Flow
 
-LivingWorld runs the full world in monthly ticks. Player-facing output is now live chronicle playback, not a yearly report.
+LivingWorld runs the full world in monthly ticks. Player-facing output is live chronicle playback, not a yearly report.
 
 ## Monthly Flow
 
@@ -10,7 +10,7 @@ LivingWorld runs the full world in monthly ticks. Player-facing output is now li
 4. trade evaluation and food redistribution
 5. food consumption and starvation tracking
 6. migration evaluation and relocation
-7. notable structured events emitted immediately
+7. structured events emitted immediately into the canonical event pipeline
 8. watch mode formats and displays qualifying focal-polity chronicle entries
 
 ## Year-End Flow
@@ -25,7 +25,7 @@ When `Month == 12`:
 6. evaluate polity stage progression
 7. apply annual agriculture events
 8. apply annual trade maintenance
-9. evaluate annual hardship transitions and emit food-stress entry/escalation/persistence/recovery events
+9. evaluate annual hardship transitions and emit food-stress events
 10. remove collapsed polities
 11. validate lineage focus and emit any handoff event
 12. persist resolved year-end food-state snapshots
@@ -38,9 +38,11 @@ When `Month == 12`:
 
 Sinks:
 
-- `HistoryJsonlWriter` writes append-only JSONL history
-- `ChronicleEventFormatter` converts selected notable events into player-facing lines
+- `HistoryJsonlWriter` writes append-only structured history
+- `ChronicleEventFormatter` applies chronicle severity filtering and cooldown suppression
 - `ChronicleWatchRenderer` redraws the watch console with newest entries first
+
+Simulation emits and records events before chronicle presentation. The chronicle is not the source of truth.
 
 ## Default Watch Output
 
@@ -49,14 +51,15 @@ Default player mode shows:
 - a fixed status panel at the top
 - a chronicle viewport beneath it sized from the available console height
 - newest messages first
-- concise notable history only
+- concise `Major` and `Legendary` history only
 
 It does not show:
 
 - yearly stat blocks
 - broad annual diagnostics
 - routine monthly bookkeeping
-- most trade/telemetry internals
+- most trade and telemetry internals
+- repeated status reminders that do not mark a new historical transition
 
 ## Debug Output
 

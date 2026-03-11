@@ -113,7 +113,7 @@ public sealed class AgricultureSystem
             {
                 world.AddEvent(
                     WorldEventType.WorldEvent,
-                    WorldEventSeverity.Normal,
+                    WorldEventSeverity.Minor,
                     $"{polity.Name} expanded cultivation in {region.Name}",
                     $"{polity.Name} expanded cultivated land from {polity.LastYearAverageCultivatedLand:F1} to {averageCultivatedLand:F1}.",
                     reason: "cultivation_growth",

@@ -3,7 +3,8 @@ namespace LivingWorld.Core;
 public enum WorldEventSeverity
 {
     Debug,
-    Normal,
+    Minor,
     Notable,
-    Critical
+    Major,
+    Legendary
 }

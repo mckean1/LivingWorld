@@ -18,11 +18,23 @@ Core fields:
 ## Severity
 
 - `Debug`
-- `Normal`
+- `Minor`
 - `Notable`
-- `Critical`
+- `Major`
+- `Legendary`
 
-Default chronicle playback only surfaces selected `Notable` and `Critical` events for the focused polity.
+Structured history keeps the full event stream. Default chronicle playback only surfaces `Major` and `Legendary` events for the focused polity.
+
+## Storage Versus Presentation
+
+`World.AddEvent(...)` is the source of truth.
+
+- `World.Events` remains append-only in chronological order
+- `HistoryJsonlWriter` persists the structured stream
+- `ChronicleEventFormatter` applies player-facing filtering
+- `ChronicleWatchRenderer` only renders what survives presentation filtering
+
+Suppressed chronicle events are still preserved in structured history with their metadata, causal context, and before/after state.
 
 ## Important Event Types
 
@@ -50,49 +62,76 @@ Default chronicle playback only surfaces selected `Notable` and `Critical` event
 
 Normal player-facing watch mode:
 
-- follows one focal polity/lineage
-- shows notable focal historical beats as short lines
+- follows one focal polity or lineage
+- shows concise historical beats rather than telemetry
 - keeps storage chronological but renders the visible watch buffer newest-first
 - suppresses yearly report formatting entirely
 - suppresses noisy bookkeeping and most non-focal telemetry
 
 Current chronicle formatting favors:
 
-- polity formation/splits/collapse
-- migration
-- settlement founding and consolidation
-- stage changes
-- knowledge discoveries
-- severe food stress
-- major population shifts and milestone growth
-- focus handoffs when the watched lineage changes subject
+- migration and relocation turning points
+- settlement founding and durable consolidation
+- stage changes and civilization formation
+- breakthrough discoveries such as fire or agriculture
+- major hardship transitions such as shortages beginning, famine striking, and famine recovery
+- fragmentation, collapse, and lineage handoffs
+- major population declines and large milestone growth
 
-Current noise-control rules include:
+Lower-level reminders remain structured-only by default:
 
-- only selected notable event types reach the player chronicle
-- repeated focal migrations are collapsed to one visible chronicle entry per year
-- hardship events emit on entry, escalation, long-duration persistence summaries, and recovery instead of repeating the same yearly warning
-- structured history still records the full underlying event stream
+- repeated hardship persistence messages
+- trade transfers and low-level relief events
+- cultivation expansion bookkeeping
+- smaller discoveries and ongoing status updates
+
+## Chronicle Cooldowns
+
+Cooldowns apply only to chronicle presentation, never to event storage.
+
+Baseline cooldowns:
+
+- `migration`: 20 years per polity
+- `settlement_consolidated`: 25 years per polity
+- `food_stress`: 15 years per polity for repeated reminders
+
+No chronicle cooldown:
+
+- `knowledge_discovered`
+- `settlement_founded`
+- `stage_changed`
+- `fragmentation`
+- `polity_collapsed`
+- lineage handoff events
+
+Cooldown bypass rules:
+
+- severity increases
+- a condition starts, worsens, improves, or ends
+- a rare defining milestone occurs
+- a major cause-and-effect turning point occurs
+
+In practice this means `shortage -> famine`, `famine -> recovery`, settlement founding, stage transitions, fragmentation, collapse, and major discoveries still appear even if related events happened recently.
 
 ## JSONL History Rules
 
 - append-only during the run
-- captures important events across the whole world
+- captures lower-severity and chronicle-suppressed events as well as visible turning points
 - remains the canonical stored history beneath the chronicle
 - keeps `before` / `after` / `metadata` context for later tools and history views
 
 ## Example Chronicle Lines
 
 - `Year 18 - River Clan migrated to Red Valley.`
-- `Year 41 - River Clan discovered Agriculture.`
+- `Year 41 - River Clan began farming.`
 - `Year 57 - River Clan founded a settlement in Red Valley.`
 - `Year 84 - River Clan became a Settled Society.`
-- `Year 133 - River Clan suffered famine.`
-- `Year 149 - Food stores in River Clan stabilized.`
+- `Year 133 - Famine struck River Clan.`
+- `Year 149 - River Clan recovered from famine.`
 - `Year 136 - Stone Clan split from River Clan in High Ridge.`
 
 ## Example JSONL Record
 
 ```json
-{"eventId":42,"year":118,"month":12,"season":"Winter","type":"stage_changed","severity":"Notable","narrative":"Red River Clan became a Settled Society.","polityId":3,"polityName":"Red River Clan","regionId":7,"regionName":"Lower Valley","before":{"stage":"Tribe"},"after":{"stage":"SettledSociety"},"metadata":{}}
+{"eventId":42,"year":118,"month":12,"season":"Winter","type":"stage_changed","severity":"Major","narrative":"Red River Clan became a Settled Society.","polityId":3,"polityName":"Red River Clan","regionId":7,"regionName":"Lower Valley","before":{"stage":"Tribe"},"after":{"stage":"SettledSociety"},"metadata":{}}
 ```

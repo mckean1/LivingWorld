@@ -65,7 +65,7 @@ public sealed class PopulationSystem
 
             world.AddEvent(
                 WorldEventType.PolityCollapsed,
-                WorldEventSeverity.Critical,
+                WorldEventSeverity.Major,
                 collapseNarrative,
                 $"{polity.Name} fell from population {previousPopulation} to 0.",
                 reason: "population_zero",
@@ -98,7 +98,7 @@ public sealed class PopulationSystem
             {
                 world.AddEvent(
                     WorldEventType.PopulationChanged,
-                    declineRatio >= 0.30 ? WorldEventSeverity.Critical : WorldEventSeverity.Notable,
+                    declineRatio >= 0.50 ? WorldEventSeverity.Legendary : WorldEventSeverity.Major,
                     $"{polity.Name} declined from {previousPopulation} to {polity.Population}",
                     $"{polity.Name} declined by {declineRatio:P0} in one year.",
                     reason: "major_decline",
@@ -129,7 +129,7 @@ public sealed class PopulationSystem
 
         world.AddEvent(
             WorldEventType.PopulationChanged,
-            WorldEventSeverity.Notable,
+            ResolvePopulationMilestoneSeverity(milestone.Value),
             $"{polity.Name} grew to {milestone.Value} people",
             $"{polity.Name} grew from population {previousPopulation} to {polity.Population}, crossing milestone {milestone.Value}.",
             reason: "population_milestone",
@@ -151,4 +151,12 @@ public sealed class PopulationSystem
             }
         );
     }
+
+    private static WorldEventSeverity ResolvePopulationMilestoneSeverity(int milestone)
+        => milestone switch
+        {
+            >= 1000 => WorldEventSeverity.Legendary,
+            >= 250 => WorldEventSeverity.Major,
+            _ => WorldEventSeverity.Notable
+        };
 }

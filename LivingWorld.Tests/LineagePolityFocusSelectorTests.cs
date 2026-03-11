@@ -34,7 +34,7 @@ public sealed class LineagePolityFocusSelectorTests
 
         world.AddEvent(
             WorldEventType.Fragmentation,
-            WorldEventSeverity.Notable,
+            WorldEventSeverity.Major,
             "River Clan fractured",
             polityId: focused.Id,
             polityName: focused.Name,
@@ -42,7 +42,7 @@ public sealed class LineagePolityFocusSelectorTests
             relatedPolityName: weakerChild.Name);
         world.AddEvent(
             WorldEventType.Fragmentation,
-            WorldEventSeverity.Notable,
+            WorldEventSeverity.Major,
             "River Clan fractured",
             polityId: focused.Id,
             polityName: focused.Name,
@@ -70,7 +70,7 @@ public sealed class LineagePolityFocusSelectorTests
 
         world.AddEvent(
             WorldEventType.PolityCollapsed,
-            WorldEventSeverity.Critical,
+            WorldEventSeverity.Major,
             "River Clan collapsed",
             polityId: 1,
             polityName: "River Clan",
@@ -101,7 +101,7 @@ public sealed class LineagePolityFocusSelectorTests
 
         world.AddEvent(
             WorldEventType.PolityCollapsed,
-            WorldEventSeverity.Critical,
+            WorldEventSeverity.Major,
             "River Clan collapsed",
             polityId: 1,
             polityName: "River Clan",
@@ -135,7 +135,7 @@ public sealed class LineagePolityFocusSelectorTests
 
             world.AddEvent(
                 WorldEventType.PolityCollapsed,
-                WorldEventSeverity.Critical,
+                WorldEventSeverity.Major,
                 "River Clan collapsed",
                 polityId: 1,
                 polityName: "River Clan",

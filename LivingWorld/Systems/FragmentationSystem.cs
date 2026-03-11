@@ -65,7 +65,7 @@ public sealed class FragmentationSystem
 
             world.AddEvent(
                 WorldEventType.Fragmentation,
-                WorldEventSeverity.Notable,
+                WorldEventSeverity.Major,
                 BuildFragmentationNarrative(polity, child, target),
                 $"{polity.Name} split to form {child.Name} in Region {target.Id}; pressure={polity.FragmentationPressure:F2}.",
                 reason: "fragmentation_pressure",

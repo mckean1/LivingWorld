@@ -33,7 +33,7 @@ Canonical flow:
 Primary sinks:
 
 1. `HistoryJsonlWriter` for append-only structured history
-2. `ChronicleEventFormatter` for player-facing chronicle text
+2. `ChronicleEventFormatter` for player-facing chronicle filtering and text formatting
 3. `ChronicleWatchRenderer` for live console playback
 
 ### Canonical Event Model
@@ -51,9 +51,9 @@ Primary sinks:
 
 Default player output uses watch mode rather than yearly report rendering.
 
-Watch mode is built from two small presentation pieces:
+Watch mode is built from two presentation pieces:
 
-- `ChronicleEventFormatter`: filters structured events into concise chronicle lines
+- `ChronicleEventFormatter`: applies the default `Major+` severity threshold, event-type eligibility rules, and per-event chronicle cooldowns
 - `ChronicleWatchRenderer`: maintains the reverse-chronological chronicle buffer and redraws only the docked status panel lines and chronicle viewport lines that changed
 
 Important traits:
@@ -61,8 +61,8 @@ Important traits:
 - the structured event list remains chronological and append-only
 - the visible chronicle buffer is rendered newest-first
 - the chronicle viewport height is derived from the current console height after reserving the docked panel
-- only notable focal-polity events are shown in normal player mode
-- hardship chronicle events are emitted as state transitions rather than repeated yearly warnings
+- only major focal-polity turning points are shown in normal player mode
+- hardship chronicle events emphasize entry, escalation, and recovery rather than repeated yearly warnings
 - yearly debug summaries remain available only through `OutputMode.Debug`
 
 ### Docked Status Panel
@@ -90,15 +90,15 @@ The watch panel is a stable HUD for the currently focused polity. It shows:
 Focus handoffs are themselves canonical `WorldEvent` records, so they appear in both:
 
 - structured JSONL history
-- the live chronicle
+- the live chronicle when they are `Major+`
 
 ## Simulation Loop Notes
 
 Monthly:
 
 - ecology, gathering, farming, trade redistribution, consumption, migration
-- systems emit structured events as notable outcomes happen
-- watch mode immediately formats and plays qualifying chronicle entries
+- systems emit structured events whenever meaningful outcomes happen
+- watch mode immediately considers those events for chronicle presentation
 
 Year-end:
 

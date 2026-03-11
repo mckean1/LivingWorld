@@ -2,14 +2,14 @@
 
 LivingWorld is a command-line autonomous world simulation where ecosystems, species, and polities evolve over time.
 
-The player-facing experience is now chronicle-first: the console is a live watch view of one focal polity's history, while the full simulation continues running for the whole world in the background.
+The player-facing experience is chronicle-first: the console watches one focal polity's history, while the full simulation continues running for the whole world underneath.
 
 ## Core Principles
 
 - Full-world simulation, focused player presentation
 - Chronicle lines over yearly diagnostics
 - Structured append-only history under every visible event
-- Low-noise output that favors meaningful historical beats
+- Low-noise output that favors meaningful historical turning points
 
 ## Default Player Experience
 
@@ -21,17 +21,17 @@ Watch mode shows:
 - a live chronicle beneath it
 - newest chronicle entries at the top, older entries below
 - a chronicle viewport sized from the current console height
-- concise notable events only
+- only `Major` and `Legendary` events by default
 
 Default player-facing output no longer prints large yearly report blocks.
 
 Examples of chronicle lines:
 
 - `Year 18 - River Clan migrated to Red Valley.`
-- `Year 41 - River Clan discovered Agriculture.`
+- `Year 41 - River Clan began farming.`
 - `Year 84 - River Clan became a Settled Society.`
-- `Year 136 - Stone Clan split from River Clan.`
-- `Year 179 - Food stores in River Clan stabilized.`
+- `Year 136 - Stone Clan split from River Clan in High Ridge.`
+- `Year 179 - River Clan recovered from famine.`
 
 ## Chronicle Pipeline
 
@@ -39,15 +39,13 @@ LivingWorld keeps simulation, storage, formatting, and playback separate:
 
 `simulation systems -> World.AddEvent -> structured WorldEvent store -> ChronicleEventFormatter -> ChronicleWatchRenderer + HistoryJsonlWriter`
 
-This preserves a clean path for future features such as:
+The chronicle is a filtered presentation layer over the richer event stream. Lower-severity events still remain available in structured history and debug views even when they do not appear in the live chronicle.
 
-- Civilization History views
-- alternate chronicle perspectives over the same event stream
-- post-run analysis tools
+Per-event chronicle cooldowns suppress repeated narrative lines for the same actor scope, while bypass rules still allow real turning points such as severity escalation, famine entry/recovery, stage changes, settlement founding, fragmentation, and collapse to appear immediately.
 
 ## Structured History
 
-Important events are still stored as structured append-only JSONL records.
+Important events are stored as structured append-only JSONL records.
 
 Default path:
 
@@ -88,7 +86,7 @@ The simulation runs in monthly ticks with yearly system passes:
 3. migration checks
 4. year-end population, advancement, settlement, fragmentation, and stage passes
 5. structured event emission and persistence
-6. live chronicle playback in watch mode
+6. chronicle filtering by severity and cooldown in watch mode
 
 ## Long-Term Direction
 

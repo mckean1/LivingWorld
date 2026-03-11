@@ -40,7 +40,7 @@ public sealed class MigrationSystem
 
                     world.AddEvent(
                         WorldEventType.Migration,
-                        WorldEventSeverity.Notable,
+                        WorldEventSeverity.Major,
                         $"{polity.Name} migrated to {target.Name}",
                         $"{polity.Name} migrated from Region {currentRegion.Id} to Region {target.Id}.",
                         reason: "migration_pressure",

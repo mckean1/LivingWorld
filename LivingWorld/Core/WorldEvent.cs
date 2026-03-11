@@ -7,7 +7,7 @@ public sealed class WorldEvent
     public int Month { get; init; }
     public Season Season { get; init; }
     public string Type { get; init; } = WorldEventType.WorldEvent;
-    public WorldEventSeverity Severity { get; init; } = WorldEventSeverity.Normal;
+    public WorldEventSeverity Severity { get; init; } = WorldEventSeverity.Minor;
     public string Narrative { get; init; } = string.Empty;
     public string? Details { get; init; }
     public string? Reason { get; init; }

@@ -61,7 +61,7 @@ public sealed class SettlementSystem
 
         world.AddEvent(
             WorldEventType.SettlementFounded,
-            WorldEventSeverity.Notable,
+            WorldEventSeverity.Major,
             BuildFirstSettlementNarrative(polity, region),
             $"{polity.Name} established its first settlement in {region.Name}; chance={chance:F3}.",
             reason: "first_settlement_roll_success",
@@ -97,7 +97,7 @@ public sealed class SettlementSystem
 
         world.AddEvent(
             WorldEventType.SettlementConsolidated,
-            WorldEventSeverity.Notable,
+            WorldEventSeverity.Major,
             BuildSettledSocietyNarrative(polity, region),
             $"{polity.Name} consolidated into a settled society in {region.Name}; chance={chance:F3}.",
             reason: "settlement_consolidation_roll_success",
