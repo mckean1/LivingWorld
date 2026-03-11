@@ -42,6 +42,27 @@ public sealed class FragmentationSystem
 
             polity.FragmentationPressure = CalculateFragmentationPressure(world, polity);
 
+            if (polity.FragmentationPressure >= SplitThreshold
+                && polity.SplitCooldownYears == 0
+                && polity.YearsSinceFounded >= MinimumPolityAgeYears)
+            {
+                world.AddEvent(
+                    WorldEventType.SchismRisk,
+                    WorldEventSeverity.Notable,
+                    $"{polity.Name} stood on the edge of schism",
+                    $"{polity.Name} reached fragmentation pressure {polity.FragmentationPressure:F2}.",
+                    reason: "fragmentation_threshold_crossed",
+                    scope: WorldEventScope.Polity,
+                    polityId: polity.Id,
+                    polityName: polity.Name,
+                    regionId: polity.RegionId,
+                    regionName: world.Regions.First(region => region.Id == polity.RegionId).Name,
+                    after: new Dictionary<string, string>
+                    {
+                        ["fragmentationPressure"] = polity.FragmentationPressure.ToString("F2")
+                    });
+            }
+
             if (!CanSplit(world, polity))
             {
                 continue;
@@ -69,6 +90,7 @@ public sealed class FragmentationSystem
                 BuildFragmentationNarrative(polity, child, target),
                 $"{polity.Name} split to form {child.Name} in Region {target.Id}; pressure={polity.FragmentationPressure:F2}.",
                 reason: "fragmentation_pressure",
+                scope: WorldEventScope.Polity,
                 polityId: polity.Id,
                 polityName: polity.Name,
                 relatedPolityId: child.Id,
@@ -136,6 +158,8 @@ public sealed class FragmentationSystem
             (sustainedStressPressure * 0.25) +
             (spreadPressure * 0.10) +
             (migrationStrain * 0.10);
+
+        pressure += polity.EventDrivenFragmentationPressureBonus;
 
         if (polity.HasSettlements)
         {

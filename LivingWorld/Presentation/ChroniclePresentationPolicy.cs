@@ -77,9 +77,13 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.Migration or
             WorldEventType.SettlementFounded or
             WorldEventType.SettlementConsolidated or
+            WorldEventType.SettlementStabilized or
             WorldEventType.KnowledgeDiscovered or
+            WorldEventType.LearnedAdvancement or
             WorldEventType.FoodStress or
+            WorldEventType.FoodStabilized or
             WorldEventType.Fragmentation or
+            WorldEventType.PolityFounded or
             WorldEventType.StageChanged or
             WorldEventType.PolityCollapsed or
             WorldEventType.FocusHandoffFragmentation or

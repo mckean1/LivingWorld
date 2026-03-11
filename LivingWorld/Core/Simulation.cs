@@ -47,6 +47,13 @@ public sealed class Simulation : IDisposable
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
         ChronicleFocusSelection initialFocus = _focusSelector.SelectInitialFocus(_world, _options);
         _chronicleFocus.SetFocus(initialFocus.PolityId, initialFocus.LineageId);
+        _world.ConfigureEventPropagation(new EventPropagationCoordinator(
+        [
+            new FoodStressPropagationHandler(),
+            new AgriculturePropagationHandler(),
+            new MigrationPropagationHandler(),
+            new FragmentationPropagationHandler()
+        ]));
 
         if (_options.WriteStructuredHistory)
         {
@@ -86,6 +93,11 @@ public sealed class Simulation : IDisposable
 
     private void RunTick()
     {
+        foreach (Polity polity in _world.Polities)
+        {
+            polity.TickPropagationState();
+        }
+
         // Monthly systems
         _foodSystem.UpdateRegionEcology(_world);
         _foodSystem.GatherFood(_world);
@@ -169,6 +181,7 @@ public sealed class Simulation : IDisposable
                 narrative,
                 details,
                 reason: reason,
+                scope: WorldEventScope.Polity,
                 polityId: polity.Id,
                 polityName: polity.Name,
                 regionId: polity.RegionId,
@@ -280,6 +293,7 @@ public sealed class Simulation : IDisposable
             narrative,
             $"Focus shifted from {transition.PreviousPolityName} ({transition.PreviousPolityId}) to {transition.NewPolityName} ({transition.NewPolityId}) because {transition.Reason}.",
             reason: transition.Reason,
+            scope: WorldEventScope.Polity,
             polityId: successor.Id,
             polityName: successor.Name,
             relatedPolityId: transition.PreviousPolityId,

@@ -18,12 +18,12 @@ public sealed class ChronicleEventFormatterTests
     public void DefaultChronicle_ShowsOnlyMajorAndLegendaryEvents()
     {
         WorldEvent notableEvent = CreateEvent(
-            WorldEventType.KnowledgeDiscovered,
+            WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Notable,
             year: 40,
             narrative: "River Clan refined storage");
         WorldEvent majorEvent = CreateEvent(
-            WorldEventType.KnowledgeDiscovered,
+            WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Major,
             year: 41,
             narrative: "River Clan began farming");
@@ -114,12 +114,12 @@ public sealed class ChronicleEventFormatterTests
     public void NoCooldownEventTypes_AlwaysAppear()
     {
         WorldEvent firstDiscovery = CreateEvent(
-            WorldEventType.KnowledgeDiscovered,
+            WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Major,
             year: 130,
             narrative: "River Clan mastered Fire");
         WorldEvent secondDiscovery = CreateEvent(
-            WorldEventType.KnowledgeDiscovered,
+            WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Major,
             year: 131,
             narrative: "River Clan began farming");
@@ -186,13 +186,13 @@ public sealed class ChronicleEventFormatterTests
         _focus.SetFocus(polityId: 11, lineageId: 7);
 
         WorldEvent oldPolityEvent = CreateEvent(
-            WorldEventType.KnowledgeDiscovered,
+            WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Major,
             year: 181,
             polityId: 7,
             narrative: "River Clan mastered Fire");
         WorldEvent successorEvent = CreateEvent(
-            WorldEventType.KnowledgeDiscovered,
+            WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Major,
             year: 181,
             polityId: 11,
@@ -227,6 +227,18 @@ public sealed class ChronicleEventFormatterTests
             narrative: "Marsh Clan became a Settled Society");
 
         Assert.True(_formatter.TryFormat(successorStageChange, _focus, out _));
+    }
+
+    [Fact]
+    public void InternalPropagationEvents_RemainSuppressedFromDefaultChronicle()
+    {
+        WorldEvent migrationPressure = CreateEvent(
+            WorldEventType.MigrationPressure,
+            WorldEventSeverity.Legendary,
+            year: 200,
+            narrative: "River Clan came under migration pressure");
+
+        Assert.False(_formatter.TryFormat(migrationPressure, _focus, out _));
     }
 
     private static WorldEvent CreateEvent(

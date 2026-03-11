@@ -18,9 +18,16 @@ public sealed class Polity
 
     public double FoodStores { get; set; }
     public double MigrationPressure { get; set; }
+    public double EventDrivenMigrationPressureBonus { get; set; }
     public double FragmentationPressure { get; set; }
+    public double EventDrivenFragmentationPressureBonus { get; set; }
+    public double EventDrivenSettlementChanceBonus { get; set; }
     public int FoodStressYears { get; set; }
     public int SplitCooldownYears { get; set; }
+    public int MigrationPressureBonusMonthsRemaining { get; set; }
+    public int FragmentationPressureBonusMonthsRemaining { get; set; }
+    public int SettlementChanceBonusMonthsRemaining { get; set; }
+    public long? LastLearnedAgricultureEventId { get; set; }
 
     // Migration tracking
     public int PreviousRegionId { get; set; }
@@ -97,9 +104,16 @@ public sealed class Polity
 
         FoodStores = 0;
         MigrationPressure = 0;
+        EventDrivenMigrationPressureBonus = 0;
         FragmentationPressure = 0;
+        EventDrivenFragmentationPressureBonus = 0;
+        EventDrivenSettlementChanceBonus = 0;
         FoodStressYears = 0;
         SplitCooldownYears = 0;
+        MigrationPressureBonusMonthsRemaining = 0;
+        FragmentationPressureBonusMonthsRemaining = 0;
+        SettlementChanceBonusMonthsRemaining = 0;
+        LastLearnedAgricultureEventId = null;
 
         PreviousRegionId = regionId;
         MovedThisYear = false;
@@ -202,5 +216,34 @@ public sealed class Polity
         SettlementStatus = SettlementStatus.Nomadic;
         SettlementCount = 0;
         YearsSinceFirstSettlement = 0;
+    }
+
+    public void TickPropagationState()
+    {
+        (MigrationPressureBonusMonthsRemaining, EventDrivenMigrationPressureBonus) = TickBonus(
+            MigrationPressureBonusMonthsRemaining,
+            EventDrivenMigrationPressureBonus);
+        (FragmentationPressureBonusMonthsRemaining, EventDrivenFragmentationPressureBonus) = TickBonus(
+            FragmentationPressureBonusMonthsRemaining,
+            EventDrivenFragmentationPressureBonus);
+        (SettlementChanceBonusMonthsRemaining, EventDrivenSettlementChanceBonus) = TickBonus(
+            SettlementChanceBonusMonthsRemaining,
+            EventDrivenSettlementChanceBonus);
+    }
+
+    private static (int monthsRemaining, double bonus) TickBonus(int monthsRemaining, double bonus)
+    {
+        if (monthsRemaining <= 0)
+        {
+            return (0, 0);
+        }
+
+        monthsRemaining--;
+        if (monthsRemaining == 0)
+        {
+            bonus = 0;
+        }
+
+        return (monthsRemaining, bonus);
     }
 }

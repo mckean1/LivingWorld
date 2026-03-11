@@ -1,6 +1,6 @@
 namespace LivingWorld.Core;
 
-public sealed class WorldEvent
+public sealed record WorldEvent
 {
     public long EventId { get; init; }
     public int Year { get; init; }
@@ -8,6 +8,7 @@ public sealed class WorldEvent
     public Season Season { get; init; }
     public string Type { get; init; } = WorldEventType.WorldEvent;
     public WorldEventSeverity Severity { get; init; } = WorldEventSeverity.Minor;
+    public WorldEventScope Scope { get; init; } = WorldEventScope.Polity;
     public string Narrative { get; init; } = string.Empty;
     public string? Details { get; init; }
     public string? Reason { get; init; }
@@ -21,6 +22,9 @@ public sealed class WorldEvent
     public string? RegionName { get; init; }
     public int? SettlementId { get; init; }
     public string? SettlementName { get; init; }
+    public long? RootEventId { get; init; }
+    public int PropagationDepth { get; init; }
+    public IReadOnlyList<long> ParentEventIds { get; init; } = Array.Empty<long>();
     public Dictionary<string, string> Before { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> After { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> Metadata { get; init; } = new(StringComparer.OrdinalIgnoreCase);

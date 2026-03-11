@@ -44,6 +44,7 @@ public sealed class MigrationSystem
                         $"{polity.Name} migrated to {target.Name}",
                         $"{polity.Name} migrated from Region {currentRegion.Id} to Region {target.Id}.",
                         reason: "migration_pressure",
+                        scope: WorldEventScope.Regional,
                         polityId: polity.Id,
                         polityName: polity.Name,
                         regionId: target.Id,
@@ -103,6 +104,8 @@ public sealed class MigrationSystem
             (ecologyPressure * 0.20) +
             (crowdingPressure * 0.15) -
             settlementAnchor;
+
+        pressure += polity.EventDrivenMigrationPressureBonus;
 
         return Math.Clamp(pressure, 0.0, 1.0);
     }

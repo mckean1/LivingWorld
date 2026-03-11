@@ -65,6 +65,7 @@ public sealed class SettlementSystem
             BuildFirstSettlementNarrative(polity, region),
             $"{polity.Name} established its first settlement in {region.Name}; chance={chance:F3}.",
             reason: "first_settlement_roll_success",
+            scope: WorldEventScope.Local,
             polityId: polity.Id,
             polityName: polity.Name,
             regionId: region.Id,
@@ -81,7 +82,8 @@ public sealed class SettlementSystem
             },
             metadata: new Dictionary<string, string>
             {
-                ["rollChance"] = chance.ToString("F3")
+                ["rollChance"] = chance.ToString("F3"),
+                ["eventDrivenSettlementBonus"] = polity.EventDrivenSettlementChanceBonus.ToString("F3")
             });
     }
 
@@ -101,6 +103,7 @@ public sealed class SettlementSystem
             BuildSettledSocietyNarrative(polity, region),
             $"{polity.Name} consolidated into a settled society in {region.Name}; chance={chance:F3}.",
             reason: "settlement_consolidation_roll_success",
+            scope: WorldEventScope.Local,
             polityId: polity.Id,
             polityName: polity.Name,
             regionId: region.Id,
@@ -115,7 +118,8 @@ public sealed class SettlementSystem
             },
             metadata: new Dictionary<string, string>
             {
-                ["rollChance"] = chance.ToString("F3")
+                ["rollChance"] = chance.ToString("F3"),
+                ["eventDrivenSettlementBonus"] = polity.EventDrivenSettlementChanceBonus.ToString("F3")
             });
     }
 
@@ -150,6 +154,7 @@ public sealed class SettlementSystem
         chance += polity.HasAdvancement(AdvancementId.LeadershipTraditions)
             ? 0.015 + (organizationRatio * 0.020)
             : 0.0;
+        chance += polity.EventDrivenSettlementChanceBonus;
 
         chance += Math.Clamp((polity.Population - 25) / 85.0, 0.0, 1.0) * 0.030;
         chance += region.Fertility * 0.035;
@@ -191,6 +196,7 @@ public sealed class SettlementSystem
         chance += residenceRatio * 0.030;
         chance += Math.Clamp(polity.YearsSinceFirstSettlement / 3.0, 0.0, 1.0) * 0.025;
         chance += stabilityRatio * 0.015;
+        chance += polity.EventDrivenSettlementChanceBonus * 0.75;
 
         chance -= polity.MovedThisYear ? 0.050 : 0.0;
         chance -= Math.Clamp(polity.StarvationMonthsThisYear / 4.0, 0.0, 1.0) * 0.060;

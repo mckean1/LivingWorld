@@ -94,15 +94,17 @@ public sealed class AgricultureSystem
             if (polity.ConsecutiveFarmingYears == 0)
             {
                 world.AddEvent(
-                    WorldEventType.SettlementFounded,
+                    WorldEventType.CultivationExpanded,
                     WorldEventSeverity.Notable,
                     $"{polity.Name} established fields in {region.Name}",
                     $"{polity.Name} produced {annualProduced:F0} farm food in {region.Name}.",
                     reason: "first_viable_farming_year",
+                    scope: WorldEventScope.Local,
                     polityId: polity.Id,
                     polityName: polity.Name,
                     regionId: region.Id,
                     regionName: region.Name,
+                    parentEventIds: polity.LastLearnedAgricultureEventId is long eventId ? [eventId] : null,
                     metadata: new Dictionary<string, string>
                     {
                         ["annualFarmFood"] = annualProduced.ToString("F0")
@@ -112,15 +114,17 @@ public sealed class AgricultureSystem
                 && averageCultivatedLand >= Math.Max(6.0, polity.LastYearAverageCultivatedLand * 1.20))
             {
                 world.AddEvent(
-                    WorldEventType.WorldEvent,
+                    WorldEventType.CultivationExpanded,
                     WorldEventSeverity.Minor,
                     $"{polity.Name} expanded cultivation in {region.Name}",
                     $"{polity.Name} expanded cultivated land from {polity.LastYearAverageCultivatedLand:F1} to {averageCultivatedLand:F1}.",
                     reason: "cultivation_growth",
+                    scope: WorldEventScope.Local,
                     polityId: polity.Id,
                     polityName: polity.Name,
                     regionId: region.Id,
                     regionName: region.Name,
+                    parentEventIds: polity.LastLearnedAgricultureEventId is long growthEventId ? [growthEventId] : null,
                     before: new Dictionary<string, string>
                     {
                         ["averageCultivatedLand"] = polity.LastYearAverageCultivatedLand.ToString("F1")
@@ -137,15 +141,17 @@ public sealed class AgricultureSystem
                 if (farmShare >= 0.65 && annualFoodRatio >= 1.05 && annualProduced >= polity.Population * 5.0)
                 {
                     world.AddEvent(
-                        WorldEventType.Harvest,
+                        WorldEventType.FoodStabilized,
                         WorldEventSeverity.Notable,
-                        $"{polity.Name} harvested a strong crop",
+                        $"{polity.Name} gained stable harvests",
                         $"{polity.Name} farm share reached {farmShare:P0} with annual food ratio {annualFoodRatio:F2}.",
                         reason: "strong_harvest",
+                        scope: WorldEventScope.Polity,
                         polityId: polity.Id,
                         polityName: polity.Name,
                         regionId: region.Id,
                         regionName: region.Name,
+                        parentEventIds: polity.LastLearnedAgricultureEventId is long stabilityEventId ? [stabilityEventId] : null,
                         after: new Dictionary<string, string>
                         {
                             ["farmShare"] = farmShare.ToString("F2"),
@@ -161,6 +167,7 @@ public sealed class AgricultureSystem
                         $"{polity.Name} suffered a poor harvest",
                         $"{polity.Name} farm share was {farmShare:P0} with annual food ratio {annualFoodRatio:F2}.",
                         reason: "poor_harvest",
+                        scope: WorldEventScope.Local,
                         polityId: polity.Id,
                         polityName: polity.Name,
                         regionId: region.Id,

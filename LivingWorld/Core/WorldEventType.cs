@@ -3,14 +3,23 @@ namespace LivingWorld.Core;
 public static class WorldEventType
 {
     public const string Migration = "migration";
+    public const string MigrationPressure = "migration_pressure";
+    public const string StarvationRisk = "starvation_risk";
     public const string SettlementFounded = "settlement_founded";
     public const string SettlementConsolidated = "settlement_consolidated";
+    public const string SettlementStabilized = "settlement_stabilized";
     public const string KnowledgeDiscovered = "knowledge_discovered";
+    public const string LearnedAdvancement = "learned_advancement";
     public const string Famine = "famine";
     public const string FoodStress = "food_stress";
+    public const string FoodStabilized = "food_stabilized";
     public const string Harvest = "harvest";
+    public const string CultivationExpanded = "cultivation_expanded";
     public const string PopulationChanged = "population_changed";
+    public const string SchismRisk = "schism_risk";
     public const string Fragmentation = "fragmentation";
+    public const string PolityFounded = "polity_founded";
+    public const string LocalTension = "local_tension";
     public const string StageChanged = "stage_changed";
     public const string PolityCollapsed = "polity_collapsed";
     public const string FocusHandoffFragmentation = "focus_handoff_fragmentation";
