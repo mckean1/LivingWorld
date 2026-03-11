@@ -23,7 +23,7 @@ Core fields:
 - `Major`
 - `Legendary`
 
-Structured history keeps the full event stream. Default chronicle playback only surfaces `Major` and `Legendary` events for the current focal line.
+Structured history keeps the full event stream. Default chronicle playback only surfaces `Major` and `Legendary` events for the focused polity.
 
 ## Storage Versus Presentation
 
@@ -62,7 +62,7 @@ Suppressed chronicle events are still preserved in structured history with their
 
 Normal player-facing watch mode:
 
-- follows one focal polity line and its handoffs over time
+- follows one focal polity or lineage
 - shows concise historical beats rather than telemetry
 - keeps storage chronological but renders the visible watch buffer newest-first
 - suppresses yearly report formatting entirely
@@ -75,19 +75,15 @@ Current chronicle formatting favors:
 - stage changes and civilization formation
 - breakthrough discoveries such as fire or agriculture
 - major hardship transitions such as shortages beginning, famine striking, and famine recovery
-- fragmentation, collapse, and lineage handoff beats
+- fragmentation, collapse, and lineage handoffs
+- major population declines and large milestone growth
 
-Population change events are still stored, but they are structured-only by default. Demographic consequences reach the chronicle through stronger turning-point events such as hardship, migration, fragmentation, collapse, settlement change, and stage change.
+Lower-level reminders remain structured-only by default:
 
-## Focal-Line Matching
-
-Chronicle presentation is anchored to the active focus stored in `ChronicleFocus`.
-
-- ordinary events are matched against the currently focused polity
-- focus handoff events are treated as the explicit bridge between old and new focal subjects
-- once a handoff is resolved, future chronicle events follow the successor polity
-
-This keeps the watch experience lineage-consistent without opening the chronicle to all same-lineage side activity.
+- repeated hardship persistence messages
+- trade transfers and low-level relief events
+- cultivation expansion bookkeeping
+- smaller discoveries and ongoing status updates
 
 ## Chronicle Cooldowns
 
