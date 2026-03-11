@@ -1,4 +1,5 @@
 using LivingWorld.Advancement;
+using LivingWorld.Life;
 using LivingWorld.Societies;
 
 namespace LivingWorld.Presentation;
@@ -128,5 +129,16 @@ public static class ChronicleTextFormatter
         }
 
         return delta.ToString();
+    }
+
+    public static string DescribeSpeciesName(Polity? polity, IReadOnlyCollection<Species> speciesCatalog)
+    {
+        if (polity is null)
+        {
+            return "Unknown";
+        }
+
+        return speciesCatalog.FirstOrDefault(species => species.Id == polity.SpeciesId)?.Name
+            ?? "Unknown";
     }
 }

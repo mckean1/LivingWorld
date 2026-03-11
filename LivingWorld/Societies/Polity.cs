@@ -75,9 +75,18 @@ public sealed class Polity
     public int YearsSinceFirstSettlement { get; set; }
     public FoodStateSummary? LastResolvedFoodState { get; set; }
     public int? LastResolvedFoodStateYear { get; set; }
+    public double FoodHuntedThisYear { get; set; }
+    public int HuntingCasualtiesThisYear { get; set; }
+    public int LegendaryHuntsThisYear { get; set; }
 
     public HashSet<AdvancementId> Advancements { get; }
     public PolityCapabilities Capabilities { get; private set; }
+    public HashSet<int> KnownEdibleSpeciesIds { get; }
+    public HashSet<int> KnownToxicSpeciesIds { get; }
+    public HashSet<int> KnownDangerousPreySpeciesIds { get; }
+    public Dictionary<int, int> SuccessfulHuntsBySpecies { get; }
+    public Dictionary<int, int> FailedHuntsBySpecies { get; }
+    public Dictionary<int, double> DomesticationInterestBySpecies { get; }
     public bool HasSettlements => SettlementCount > 0;
 
     public Polity(
@@ -153,8 +162,17 @@ public sealed class Polity
         ClearSettlementState();
         LastResolvedFoodState = null;
         LastResolvedFoodStateYear = null;
+        FoodHuntedThisYear = 0;
+        HuntingCasualtiesThisYear = 0;
+        LegendaryHuntsThisYear = 0;
         Advancements = new HashSet<AdvancementId>();
         Capabilities = PolityCapabilities.FromAdvancements(Advancements);
+        KnownEdibleSpeciesIds = [];
+        KnownToxicSpeciesIds = [];
+        KnownDangerousPreySpeciesIds = [];
+        SuccessfulHuntsBySpecies = new Dictionary<int, int>();
+        FailedHuntsBySpecies = new Dictionary<int, int>();
+        DomesticationInterestBySpecies = new Dictionary<int, double>();
     }
 
     public void ResetAnnualFoodStats()
@@ -178,6 +196,9 @@ public sealed class Polity
         StarvationMonthsThisYear = 0;
         MovedThisYear = false;
         MovesThisYear = 0;
+        FoodHuntedThisYear = 0;
+        HuntingCasualtiesThisYear = 0;
+        LegendaryHuntsThisYear = 0;
     }
 
     public bool HasAdvancement(AdvancementId advancementId)
@@ -230,6 +251,25 @@ public sealed class Polity
             SettlementChanceBonusMonthsRemaining,
             EventDrivenSettlementChanceBonus);
     }
+
+    public void RecordSuccessfulHunt(int speciesId)
+        => SuccessfulHuntsBySpecies[speciesId] = GetTrackedValue(SuccessfulHuntsBySpecies, speciesId) + 1;
+
+    public void RecordFailedHunt(int speciesId)
+        => FailedHuntsBySpecies[speciesId] = GetTrackedValue(FailedHuntsBySpecies, speciesId) + 1;
+
+    public void IncreaseDomesticationInterest(int speciesId, double amount)
+    {
+        double current = DomesticationInterestBySpecies.TryGetValue(speciesId, out double existing)
+            ? existing
+            : 0.0;
+        DomesticationInterestBySpecies[speciesId] = Math.Max(0.0, current + amount);
+    }
+
+    private static int GetTrackedValue(IReadOnlyDictionary<int, int> values, int key)
+        => values.TryGetValue(key, out int existing)
+            ? existing
+            : 0;
 
     private static (int monthsRemaining, double bonus) TickBonus(int monthsRemaining, double bonus)
     {

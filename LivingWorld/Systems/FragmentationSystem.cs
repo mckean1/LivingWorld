@@ -55,6 +55,8 @@ public sealed class FragmentationSystem
                     scope: WorldEventScope.Polity,
                     polityId: polity.Id,
                     polityName: polity.Name,
+                    speciesId: polity.SpeciesId,
+                    speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
                     regionId: polity.RegionId,
                     regionName: world.Regions.First(region => region.Id == polity.RegionId).Name,
                     after: new Dictionary<string, string>
@@ -95,6 +97,8 @@ public sealed class FragmentationSystem
                 polityName: polity.Name,
                 relatedPolityId: child.Id,
                 relatedPolityName: child.Name,
+                relatedPolitySpeciesId: child.SpeciesId,
+                relatedPolitySpeciesName: world.Species.FirstOrDefault(species => species.Id == child.SpeciesId)?.Name,
                 speciesId: polity.SpeciesId,
                 speciesName: world.Species.FirstOrDefault(species => species.Id == polity.SpeciesId)?.Name,
                 regionId: target.Id,

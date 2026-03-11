@@ -31,5 +31,18 @@ public static class WorldEventType
     public const string TradeRelief = "trade_relief";
     public const string TradeDependency = "trade_dependency";
     public const string TradeLinkCollapsed = "trade_link_collapsed";
+    public const string SpeciesPopulationEstablished = "species_population_established";
+    public const string LocalSpeciesExtinction = "local_species_extinction";
+    public const string GlobalSpeciesExtinction = "global_species_extinction";
+    public const string PredatorPressure = "predator_pressure";
+    public const string PreyCollapse = "prey_collapse";
+    public const string HuntingSuccess = "hunting_success";
+    public const string HuntingDisaster = "hunting_disaster";
+    public const string DangerousPreyKilledHunters = "dangerous_prey_killed_hunters";
+    public const string ToxicFoodDiscovered = "toxic_food_discovered";
+    public const string EdibleSpeciesDiscovered = "edible_species_discovered";
+    public const string OverhuntingPressure = "overhunting_pressure";
+    public const string EcosystemCollapse = "ecosystem_collapse";
+    public const string LegendaryHunt = "legendary_hunt";
     public const string WorldEvent = "world_event";
 }

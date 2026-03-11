@@ -15,6 +15,9 @@ Each major system:
 ## Current Major Systems
 
 - food and ecology
+- regional species populations
+- ecosystem interactions
+- settlement hunting
 - agriculture
 - trade
 - migration
@@ -83,6 +86,24 @@ Some handlers do more than emit follow-up events. They can also update temporary
 - migration pressure bonus
 - fragmentation pressure bonus
 - settlement chance bonus
+
+## Shared Ecology Layer
+
+The new ecology phase is shared state for multiple systems:
+
+- `Region.SpeciesPopulations` feeds ecosystem predation and prey support
+- hunting reads the same regional populations and writes pressure back into them
+- regional biomass is synchronized from species populations so existing food gathering and migration heuristics still have region-level ecological context
+- polity hunting knowledge and domestication interest are stored on the polity for future systems to consume
+
+## Chronicle Naming Rule
+
+Presentation now splits polity naming context by UI surface:
+
+- fixed watch-mode status panel shows the focal polity species
+- chronicle lines show only the polity name
+
+This keeps species visible without weighing down every visible history line. Debug details, structured history, and internal ids remain unchanged.
 
 These bonuses decay over time, so the propagation effects stay lightweight and deterministic.
 

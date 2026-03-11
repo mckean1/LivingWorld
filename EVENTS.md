@@ -58,6 +58,8 @@ Examples:
 - `ChronicleEventFormatter` applies player-facing filtering
 - `ChronicleWatchRenderer` only renders what survives presentation filtering
 
+Player-facing species context remains available, but it lives in the fixed watch-mode status panel rather than being appended to every chronicle line.
+
 Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
 
 ## Causal Links
@@ -82,6 +84,8 @@ Major chronicle-facing types:
 - `learned_advancement`
 - `food_stress`
 - `food_stabilized`
+- `legendary_hunt`
+- severe `ecosystem_collapse`
 - `fragmentation`
 - `polity_founded`
 - `stage_changed`
@@ -96,6 +100,17 @@ Structured-first follow-up types:
 - `settlement_stabilized`
 - `schism_risk`
 - `local_tension`
+- `species_population_established`
+- `predator_pressure`
+- `prey_collapse`
+- `hunting_success`
+- `hunting_disaster`
+- `dangerous_prey_killed_hunters`
+- `toxic_food_discovered`
+- `edible_species_discovered`
+- `overhunting_pressure`
+- `local_species_extinction`
+- `global_species_extinction`
 - `trade_transfer`
 - `trade_relief`
 
@@ -114,6 +129,7 @@ The main chronicle favors:
 - settlement founding and durable consolidation
 - learned capability breakthroughs such as agriculture
 - major hardship transitions such as shortages beginning and recovery
+- memorable hunts and major ecological collapses
 - fragmentation, collapse, polity founding, and focus handoff beats
 
 ## Anti-Spam Rules

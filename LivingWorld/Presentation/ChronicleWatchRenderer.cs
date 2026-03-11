@@ -91,6 +91,13 @@ public sealed class ChronicleWatchRenderer : IDisposable
     }
 
     private List<string> BuildStatusLines(World world, Polity? polity, int width)
+        => BuildStatusLines(world, polity, width, RenderStageName);
+
+    public static List<string> BuildStatusLines(
+        World world,
+        Polity? polity,
+        int width,
+        Func<PolityStage, string> stageNameFormatter)
     {
         string border = new('=', width);
         List<string> lines = [border];
@@ -105,11 +112,13 @@ public sealed class ChronicleWatchRenderer : IDisposable
         }
 
         string regionName = world.Regions.FirstOrDefault(region => region.Id == polity.RegionId)?.Name ?? "Unknown Region";
+        string speciesName = ChronicleTextFormatter.DescribeSpeciesName(polity, world.Species);
         string knowledge = ChronicleTextFormatter.DescribeKnowledge(polity);
         string foodState = ChronicleTextFormatter.DescribeFoodState(polity);
         string foodStores = Math.Round(polity.FoodStores).ToString("F0");
 
-        lines.Add($" {polity.Name} - {RenderStageName(polity.Stage)}");
+        lines.Add($" {polity.Name} - {stageNameFormatter(polity.Stage)}");
+        lines.Add($" Species: {speciesName}");
         lines.Add($" Region: {regionName}");
         lines.Add($" Population: {polity.Population}");
         lines.Add($" Settlements: {polity.SettlementCount}");

@@ -6,8 +6,9 @@ World generation creates the starting simulation state: regions, species, and in
 
 1. generate regions with fertility, water, and ecology values
 2. connect regions for movement paths
-3. generate species
-4. generate starting polities
+3. generate sapient and wildlife species with trophic roles, habitats, migration traits, and hunting traits
+4. initialize regional species populations from habitat suitability and carrying capacity
+5. generate starting polities from sapient species only
 
 ## Starting Chronicle Focus
 
@@ -29,3 +30,5 @@ After generation:
 - structured history records events for the broader world underneath
 
 World generation does not produce a separate player-facing yearly report path.
+
+Regional species populations now exist before the first polity season resolves, so the first hunting and ecology phase has concrete prey, predators, and producers to work with.

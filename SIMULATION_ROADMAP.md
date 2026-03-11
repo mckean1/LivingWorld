@@ -8,6 +8,8 @@ Implemented core includes:
 
 - world generation
 - ecology and food systems
+- regional species populations and seasonal ecosystem interactions
+- settlement hunting tied to regional wildlife
 - migration, settlement, population, fragmentation
 - advancement and capability effects
 - polity stage progression
@@ -29,8 +31,8 @@ Build a Civilization History view over the stored event stream without changing 
 3. Multiple perspectives
 Allow the same stored history to be rendered through different focal filters or narrative lenses.
 
-4. Event taxonomy expansion
-Add richer event types such as absorption, diplomacy, conflict precursors, and regional shocks while keeping the player chronicle concise.
+4. Domestication and ecology follow-through
+Build on hunting pressure, edible discovery, and domestication interest so repeatedly hunted species can become deliberate domestication candidates.
 
 ## Mid-Term Systems
 

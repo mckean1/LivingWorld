@@ -35,6 +35,8 @@ public sealed class FragmentationPropagationHandler : IWorldEventHandler
             PolityName = childPolity.Name,
             RelatedPolityId = worldEvent.PolityId,
             RelatedPolityName = worldEvent.PolityName,
+            RelatedPolitySpeciesId = worldEvent.SpeciesId,
+            RelatedPolitySpeciesName = worldEvent.SpeciesName,
             SpeciesId = childPolity.SpeciesId,
             SpeciesName = world.Species.FirstOrDefault(species => species.Id == childPolity.SpeciesId)?.Name,
             RegionId = childPolity.RegionId,

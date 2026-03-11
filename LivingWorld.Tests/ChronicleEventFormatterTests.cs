@@ -241,6 +241,34 @@ public sealed class ChronicleEventFormatterTests
         Assert.False(_formatter.TryFormat(migrationPressure, _focus, out _));
     }
 
+    [Fact]
+    public void ChronicleKeepsVisiblePolityNames_WithoutSpeciesSuffix()
+    {
+        WorldEvent fragmentation = new()
+        {
+            EventId = 210,
+            Year = 210,
+            Month = 12,
+            Season = Season.Winter,
+            Type = WorldEventType.Fragmentation,
+            Severity = WorldEventSeverity.Major,
+            Narrative = "River Clan founded Valley Clan in Red Valley",
+            PolityId = 7,
+            PolityName = "River Clan",
+            RelatedPolityId = 11,
+            RelatedPolityName = "Valley Clan",
+            SpeciesId = 1,
+            SpeciesName = "Humans",
+            RelatedPolitySpeciesId = 2,
+            RelatedPolitySpeciesName = "Wolfkin",
+            RegionId = 1,
+            RegionName = "Red Valley"
+        };
+
+        Assert.True(_formatter.TryFormat(fragmentation, _focus, out string chronicleLine));
+        Assert.Equal("Year 210 - River Clan founded Valley Clan in Red Valley.", chronicleLine);
+    }
+
     private static WorldEvent CreateEvent(
         string type,
         WorldEventSeverity severity,

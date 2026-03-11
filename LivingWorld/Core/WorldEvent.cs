@@ -16,6 +16,8 @@ public sealed record WorldEvent
     public string? PolityName { get; init; }
     public int? RelatedPolityId { get; init; }
     public string? RelatedPolityName { get; init; }
+    public int? RelatedPolitySpeciesId { get; init; }
+    public string? RelatedPolitySpeciesName { get; init; }
     public int? SpeciesId { get; init; }
     public string? SpeciesName { get; init; }
     public int? RegionId { get; init; }

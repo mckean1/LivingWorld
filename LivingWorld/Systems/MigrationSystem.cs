@@ -47,6 +47,8 @@ public sealed class MigrationSystem
                         scope: WorldEventScope.Regional,
                         polityId: polity.Id,
                         polityName: polity.Name,
+                        speciesId: polity.SpeciesId,
+                        speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
                         regionId: target.Id,
                         regionName: target.Name,
                         before: new Dictionary<string, string>

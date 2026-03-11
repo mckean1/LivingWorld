@@ -15,6 +15,9 @@ LivingWorld keeps simulation logic, event storage, propagation, formatting, and 
 Major systems:
 
 - food / ecology
+- regional species populations
+- ecosystem interactions
+- settlement hunting
 - agriculture
 - trade
 - migration
@@ -109,6 +112,8 @@ Important traits:
 - the visible chronicle buffer is rendered newest-first
 - only `Major+` turning points are shown in normal player mode
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
+- the fixed top panel shows focal polity context such as species
+- chronicle lines do not append species to every polity name
 
 ## Focus And Continuity
 
@@ -125,7 +130,11 @@ Focus handoff events are still canonical `WorldEvent` records.
 
 Monthly:
 
-- ecology, gathering, farming, trade redistribution, consumption, migration
+- region biomass refresh
+- seasonal regional species population update on season boundaries
+- seasonal ecosystem food-web processing on season boundaries
+- seasonal settlement hunting on season boundaries
+- gathering, farming, trade redistribution, consumption, migration
 - propagation state bonuses tick down
 - systems emit canonical events on meaningful transitions
 - follow-up events are processed immediately through the same event pipeline
@@ -148,4 +157,5 @@ The architecture continues to prioritize:
 - one structured event stream
 - explainable cause-and-effect
 - concise chronicle presentation
+- regional ecology and hunting as shared simulation state rather than isolated subsystems
 - future alternate history views without rewriting simulation systems

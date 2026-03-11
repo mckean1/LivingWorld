@@ -4,6 +4,14 @@ LivingWorld is a command-line autonomous world simulation where ecosystems, spec
 
 The player-facing experience is chronicle-first: the console follows one focal line of history, while the full simulation and structured event history continue underneath.
 
+The current simulation phase now treats ecology, hunting, and polity history as one connected layer:
+
+- regions track explicit per-species populations with carrying capacity, suitability, migration pressure, and recent ecological pressure
+- seasonal ecosystem processing runs food-web interactions between producers, herbivores, omnivores, predators, and apex species
+- settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting or legendary hunts
+- watch mode shows the focal polity species in the fixed status panel
+- visible chronicle lines keep polity names short and do not append species by default
+
 ## Core Principles
 
 - Full-world simulation, focused player presentation
@@ -55,12 +63,15 @@ Default watch mode still shows:
 - a reverse-chronological chronicle beneath it
 - only `Major` and `Legendary` turning points by default
 
+The status panel carries secondary context such as the focal polity species so chronicle lines can stay concise and story-like.
+
 The main chronicle continues to favor:
 
 - migration and relocation beats
 - learned advancements such as agriculture
 - settlement founding and durable consolidation
 - food hardship entry, escalation, and recovery
+- legendary hunts, major overhunting, and severe ecosystem collapses
 - fragmentation, collapse, and focus handoff events
 
 Internal follow-up events such as migration pressure, starvation risk, cultivation growth, and local tension remain structured-first unless they rise to the level of a true historical turning point.

@@ -61,6 +61,38 @@ Implemented chain:
 
 `migration -> higher settlement chance`
 
+### Ecology Pressure
+
+Regional species populations now create a second pressure network beneath polity history.
+
+Implemented chains:
+
+`seasonal habitat + carrying capacity -> regional population growth or decline`
+
+`producer abundance -> herbivore support -> predator support`
+
+`prey collapse -> predator food stress -> predator decline or ecosystem collapse`
+
+`regional pressure -> species migration -> new regional population establishment`
+
+`all local populations gone -> global extinction`
+
+### Hunting Pressure
+
+Settlement hunting is now driven by regional species populations rather than abstract animal biomass.
+
+Implemented chains:
+
+`regional prey abundance + polity hunting knowledge -> target selection`
+
+`hunt success -> food stores + edible discovery + prey decline`
+
+`dangerous prey -> hunter casualties + dangerous-prey knowledge`
+
+`toxic prey -> toxic-food discovery + behavioral avoidance`
+
+`repeated hunting pressure -> overhunting -> local extinction -> ecosystem instability`
+
 ### Fragmentation Pressure
 
 Internal strain can be made visible before or during a split.
@@ -84,6 +116,8 @@ This means a later outcome can still be traced back to the original trigger even
 ## State-Transition Rule
 
 LivingWorld does not emit follow-up events every tick.
+
+That rule still applies to ecology and hunting: most population churn stays structured/internal until it crosses into collapse, extinction, disaster, or other major transition.
 
 Instead it favors:
 

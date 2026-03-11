@@ -38,6 +38,10 @@ public sealed class FoodStressPropagationHandler : IWorldEventHandler
                 PolityName = polity.Name,
                 RelatedPolityId = worldEvent.RelatedPolityId,
                 RelatedPolityName = worldEvent.RelatedPolityName,
+                RelatedPolitySpeciesId = worldEvent.RelatedPolitySpeciesId,
+                RelatedPolitySpeciesName = worldEvent.RelatedPolitySpeciesName,
+                SpeciesId = polity.SpeciesId,
+                SpeciesName = world.Species.First(species => species.Id == polity.SpeciesId).Name,
                 RegionId = polity.RegionId,
                 RegionName = world.Regions.First(region => region.Id == polity.RegionId).Name
             };
@@ -74,6 +78,8 @@ public sealed class FoodStressPropagationHandler : IWorldEventHandler
                     Reason = "food_stress_pressure",
                     PolityId = polity.Id,
                     PolityName = polity.Name,
+                    SpeciesId = polity.SpeciesId,
+                    SpeciesName = world.Species.First(species => species.Id == polity.SpeciesId).Name,
                     RegionId = polity.RegionId,
                     RegionName = regionName,
                     After = new Dictionary<string, string>
@@ -108,6 +114,8 @@ public sealed class FoodStressPropagationHandler : IWorldEventHandler
                     Reason = "food_stress_starvation_risk",
                     PolityId = polity.Id,
                     PolityName = polity.Name,
+                    SpeciesId = polity.SpeciesId,
+                    SpeciesName = world.Species.First(species => species.Id == polity.SpeciesId).Name,
                     RegionId = polity.RegionId,
                     RegionName = regionName,
                     Metadata = new Dictionary<string, string>
@@ -145,6 +153,8 @@ public sealed class FoodStressPropagationHandler : IWorldEventHandler
                     : "food_improved",
                 PolityId = polity.Id,
                 PolityName = polity.Name,
+                SpeciesId = polity.SpeciesId,
+                SpeciesName = world.Species.First(species => species.Id == polity.SpeciesId).Name,
                 RegionId = polity.RegionId,
                 RegionName = regionName
             };

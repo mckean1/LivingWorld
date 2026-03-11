@@ -55,6 +55,8 @@ public sealed class PolityStageSystem
                 reason: "stage_threshold_met",
                 polityId: polity.Id,
                 polityName: polity.Name,
+                speciesId: polity.SpeciesId,
+                speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
                 regionId: polity.RegionId,
                 before: new Dictionary<string, string>
                 {

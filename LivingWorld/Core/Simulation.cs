@@ -9,6 +9,8 @@ public sealed class Simulation : IDisposable
     private const int PersistentHardshipSummaryIntervalYears = 6;
     private readonly World _world;
     private readonly FoodSystem _foodSystem;
+    private readonly EcosystemSystem _ecosystemSystem;
+    private readonly HuntingSystem _huntingSystem;
     private readonly AgricultureSystem _agricultureSystem;
     private readonly TradeSystem _tradeSystem;
     private readonly PopulationSystem _populationSystem;
@@ -30,6 +32,8 @@ public sealed class Simulation : IDisposable
     {
         _world = world;
         _foodSystem = new FoodSystem();
+        _ecosystemSystem = new EcosystemSystem();
+        _huntingSystem = new HuntingSystem();
         _agricultureSystem = new AgricultureSystem();
         _tradeSystem = new TradeSystem();
         _populationSystem = new PopulationSystem();
@@ -47,6 +51,7 @@ public sealed class Simulation : IDisposable
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
         ChronicleFocusSelection initialFocus = _focusSelector.SelectInitialFocus(_world, _options);
         _chronicleFocus.SetFocus(initialFocus.PolityId, initialFocus.LineageId);
+        _ecosystemSystem.InitializeRegionalPopulations(_world);
         _world.ConfigureEventPropagation(new EventPropagationCoordinator(
         [
             new FoodStressPropagationHandler(),
@@ -100,6 +105,11 @@ public sealed class Simulation : IDisposable
 
         // Monthly systems
         _foodSystem.UpdateRegionEcology(_world);
+        if (_world.Time.Month % 3 == 0)
+        {
+            _ecosystemSystem.UpdateSeason(_world);
+            _huntingSystem.UpdateSeason(_world);
+        }
         _foodSystem.GatherFood(_world);
         _agricultureSystem.ProduceFarmFood(_world);
         _tradeSystem.UpdateTrade(_world);
@@ -184,6 +194,8 @@ public sealed class Simulation : IDisposable
                 scope: WorldEventScope.Polity,
                 polityId: polity.Id,
                 polityName: polity.Name,
+                speciesId: polity.SpeciesId,
+                speciesName: _world.Species.First(species => species.Id == polity.SpeciesId).Name,
                 regionId: polity.RegionId,
                 regionName: _world.Regions.First(r => r.Id == polity.RegionId).Name,
                 before: new Dictionary<string, string>
@@ -298,6 +310,10 @@ public sealed class Simulation : IDisposable
             polityName: successor.Name,
             relatedPolityId: transition.PreviousPolityId,
             relatedPolityName: transition.PreviousPolityName,
+            relatedPolitySpeciesId: _world.Polities.FirstOrDefault(polity => polity.Id == transition.PreviousPolityId)?.SpeciesId,
+            relatedPolitySpeciesName: _world.Polities.FirstOrDefault(polity => polity.Id == transition.PreviousPolityId) is Polity previousPolity
+                ? _world.Species.FirstOrDefault(species => species.Id == previousPolity.SpeciesId)?.Name
+                : null,
             speciesId: successor.SpeciesId,
             speciesName: _world.Species.FirstOrDefault(species => species.Id == successor.SpeciesId)?.Name,
             regionId: successor.RegionId,

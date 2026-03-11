@@ -15,6 +15,7 @@ public sealed class Region
     public double MaxAnimalBiomass { get; set; }
 
     public List<int> ConnectedRegionIds { get; } = new();
+    public List<RegionSpeciesPopulation> SpeciesPopulations { get; } = new();
 
     public double CarryingCapacity => 20.0 +
         (Fertility * 80.0) +
@@ -37,5 +38,21 @@ public sealed class Region
 
         if (!ConnectedRegionIds.Contains(regionId))
             ConnectedRegionIds.Add(regionId);
+    }
+
+    public RegionSpeciesPopulation? GetSpeciesPopulation(int speciesId)
+        => SpeciesPopulations.FirstOrDefault(population => population.SpeciesId == speciesId);
+
+    public RegionSpeciesPopulation GetOrCreateSpeciesPopulation(int speciesId)
+    {
+        RegionSpeciesPopulation? existing = GetSpeciesPopulation(speciesId);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        RegionSpeciesPopulation created = new(speciesId, Id, 0);
+        SpeciesPopulations.Add(created);
+        return created;
     }
 }

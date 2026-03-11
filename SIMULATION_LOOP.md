@@ -13,9 +13,14 @@ This document describes the simulation loop in terms of event capture, propagati
 7. `ChronicleEventFormatter` applies chronicle filtering
 8. `ChronicleWatchRenderer` displays the surviving lines
 
+Watch mode keeps species in the fixed status panel and leaves chronicle lines leaner by omitting repeated polity species suffixes.
+
 ## Monthly Systems
 
-- ecology
+- region biomass refresh
+- seasonal regional species population maintenance every third month
+- seasonal ecosystem interactions every third month
+- seasonal settlement hunting every third month
 - food gathering and farming
 - trade redistribution
 - food consumption
@@ -66,5 +71,6 @@ Lineage continuity is still handled at the year boundary.
 The simulation loop now supports:
 
 - stronger cause-and-effect chains
+- ecology, hunting, and polity history sharing one data model
 - structured history with causal ancestry
 - concise chronicle output that still reads like history rather than telemetry

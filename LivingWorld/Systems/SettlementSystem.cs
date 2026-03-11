@@ -68,6 +68,8 @@ public sealed class SettlementSystem
             scope: WorldEventScope.Local,
             polityId: polity.Id,
             polityName: polity.Name,
+            speciesId: polity.SpeciesId,
+            speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
             regionId: region.Id,
             regionName: region.Name,
             before: new Dictionary<string, string>
@@ -106,6 +108,8 @@ public sealed class SettlementSystem
             scope: WorldEventScope.Local,
             polityId: polity.Id,
             polityName: polity.Name,
+            speciesId: polity.SpeciesId,
+            speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
             regionId: region.Id,
             regionName: region.Name,
             before: new Dictionary<string, string>
