@@ -153,7 +153,8 @@ internal sealed class ChronicleLineColorizer
     private static readonly Regex MajorHeaderRegex = new(@"^Year\s+\d+\s+-\s+([A-Z][A-Z\s]+)$", RegexOptions.Compiled);
     private static readonly Regex PopulationRegex = new(@"^Population:\s+\d+\s+\(([^)]+)\)", RegexOptions.Compiled);
     private static readonly Regex RegionRegex = new(@"^Region:\s+(.+)$", RegexOptions.Compiled);
-    private static readonly Regex KnowledgeRegex = new(@"^Knowledge:\s+(.+)$", RegexOptions.Compiled);
+    private static readonly Regex DiscoveryRegex = new(@"^Discoveries:\s+(.+)$", RegexOptions.Compiled);
+    private static readonly Regex LearnedRegex = new(@"^Learned:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex FoodRegex = new(@"^Food:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex SectionHeaderRegex = new(@"^(This Year|Notable Changes)$", RegexOptions.Compiled);
 
@@ -251,10 +252,16 @@ internal sealed class ChronicleLineColorizer
             spans.Add(new SemanticSpan(region.Groups[1].Index, region.Groups[1].Length, ChronicleSemantic.PlaceName, 95));
         }
 
-        Match knowledge = KnowledgeRegex.Match(line);
-        if (knowledge.Success)
+        Match discoveries = DiscoveryRegex.Match(line);
+        if (discoveries.Success)
         {
-            spans.Add(new SemanticSpan(knowledge.Groups[1].Index, knowledge.Groups[1].Length, ChronicleSemantic.KnowledgeName, 95));
+            spans.Add(new SemanticSpan(discoveries.Groups[1].Index, discoveries.Groups[1].Length, ChronicleSemantic.KnowledgeName, 95));
+        }
+
+        Match learned = LearnedRegex.Match(line);
+        if (learned.Success)
+        {
+            spans.Add(new SemanticSpan(learned.Groups[1].Index, learned.Groups[1].Length, ChronicleSemantic.KnowledgeName, 95));
         }
 
         Match food = FoodRegex.Match(line);

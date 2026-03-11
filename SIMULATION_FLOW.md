@@ -53,6 +53,7 @@ Default player mode shows:
 
 - a fixed status panel at the top
 - focal polity species in that panel
+- separate `Discoveries` and `Learned` rows in that panel
 - a chronicle viewport beneath it sized from the available console height
 - newest messages first
 - concise `Major` and `Legendary` history only

@@ -93,6 +93,10 @@ Implemented chains:
 
 `repeated hunting pressure -> overhunting -> local extinction -> ecosystem instability`
 
+Discovery outcomes now persist as explicit cultural knowledge on the polity rather than only as one-off events or scattered runtime flags.
+
+Advancement outcomes remain separate capability gains that later systems can consume through `Capabilities`.
+
 ### Fragmentation Pressure
 
 Internal strain can be made visible before or during a split.

@@ -65,6 +65,7 @@ public sealed class EcologyAndHuntingSystemTests
         Assert.True(preyPopulation.PopulationCount < 90);
         Assert.True(polity.FoodStores > 0);
         Assert.Contains(4, polity.KnownEdibleSpeciesIds);
+        Assert.Contains(polity.Discoveries, discovery => discovery.Key == "species-edible:4");
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.HuntingSuccess);
     }
 

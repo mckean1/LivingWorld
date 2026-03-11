@@ -44,7 +44,7 @@ public sealed class AdvancementSystem
                     continue;
                 }
 
-                if (!polity.DiscoverAdvancement(definition.Id))
+                if (!polity.LearnAdvancement(definition.Id))
                 {
                     continue;
                 }
@@ -52,9 +52,9 @@ public sealed class AdvancementSystem
                 definition.OnDiscovered?.Invoke(world, polity);
                 world.AddEvent(
                     WorldEventType.LearnedAdvancement,
-                    ResolveDiscoverySeverity(definition.Id),
-                    BuildDiscoveryNarrative(polity, definition),
-                    $"{polity.Name} discovered {definition.Name} with annual chance {chance:F3}.",
+                    ResolveLearnedAdvancementSeverity(definition.Id),
+                    BuildLearnedAdvancementNarrative(polity, definition),
+                    $"{polity.Name} learned {definition.Name} with annual chance {chance:F3}.",
                     reason: "discovery_roll_success",
                     scope: WorldEventScope.Polity,
                     polityId: polity.Id,
@@ -114,11 +114,11 @@ public sealed class AdvancementSystem
     private static bool HasPrerequisites(Polity polity, AdvancementDefinition definition)
         => definition.Prerequisites.All(polity.HasAdvancement);
 
-    private static string BuildDiscoveryNarrative(Polity polity, AdvancementDefinition definition)
+    private static string BuildLearnedAdvancementNarrative(Polity polity, AdvancementDefinition definition)
         => definition.DiscoveryNarrative?.Invoke(polity)
             ?? $"{polity.Name} learned {definition.Name}";
 
-    private static WorldEventSeverity ResolveDiscoverySeverity(AdvancementId advancementId)
+    private static WorldEventSeverity ResolveLearnedAdvancementSeverity(AdvancementId advancementId)
         => advancementId switch
         {
             AdvancementId.Fire => WorldEventSeverity.Major,

@@ -13,7 +13,7 @@ This document describes the simulation loop in terms of event capture, propagati
 7. `ChronicleEventFormatter` applies chronicle filtering
 8. `ChronicleWatchRenderer` displays the surviving lines
 
-Watch mode keeps species in the fixed status panel and leaves chronicle lines leaner by omitting repeated polity species suffixes.
+Watch mode keeps species in the fixed status panel, separates discoveries from learned advancements there, and leaves chronicle lines leaner by omitting repeated polity species suffixes.
 
 ## Monthly Systems
 

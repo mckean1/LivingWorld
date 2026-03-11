@@ -113,6 +113,7 @@ Important traits:
 - only `Major+` turning points are shown in normal player mode
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
 - the fixed top panel shows focal polity context such as species
+- the fixed top panel separates discoveries from learned advancements
 - chronicle lines do not append species to every polity name
 
 ## Focus And Continuity

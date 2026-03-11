@@ -102,6 +102,12 @@ public sealed class HuntingSystem
             polity.KnownToxicSpeciesIds.Add(targetSpecies.Id);
             polity.RecordFailedHunt(targetSpecies.Id);
             polity.IncreaseDomesticationInterest(targetSpecies.Id, 0.08);
+            polity.AddDiscovery(new CulturalDiscovery(
+                Key: $"species-toxic:{targetSpecies.Id}",
+                Summary: $"{targetSpecies.Name} Toxic",
+                Category: CulturalDiscoveryCategory.FoodSafety,
+                SpeciesId: targetSpecies.Id,
+                RegionId: region.Id));
 
             world.AddEvent(
                 WorldEventType.ToxicFoodDiscovered,
@@ -158,6 +164,12 @@ public sealed class HuntingSystem
         if (!polity.KnownEdibleSpeciesIds.Contains(targetSpecies.Id))
         {
             polity.KnownEdibleSpeciesIds.Add(targetSpecies.Id);
+            polity.AddDiscovery(new CulturalDiscovery(
+                Key: $"species-edible:{targetSpecies.Id}",
+                Summary: $"{targetSpecies.Name} Edible",
+                Category: CulturalDiscoveryCategory.SpeciesUse,
+                SpeciesId: targetSpecies.Id,
+                RegionId: region.Id));
             world.AddEvent(
                 WorldEventType.EdibleSpeciesDiscovered,
                 WorldEventSeverity.Notable,
@@ -192,6 +204,12 @@ public sealed class HuntingSystem
         {
             ApplyCasualties(polity, casualties);
             polity.KnownDangerousPreySpeciesIds.Add(targetSpecies.Id);
+            polity.AddDiscovery(new CulturalDiscovery(
+                Key: $"species-dangerous-prey:{targetSpecies.Id}",
+                Summary: $"{targetSpecies.Name} Dangerous Prey",
+                Category: CulturalDiscoveryCategory.AnimalBehavior,
+                SpeciesId: targetSpecies.Id,
+                RegionId: region.Id));
 
             world.AddEvent(
                 WorldEventType.DangerousPreyKilledHunters,

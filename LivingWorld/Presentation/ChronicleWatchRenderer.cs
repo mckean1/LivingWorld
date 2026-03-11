@@ -113,7 +113,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
 
         string regionName = world.Regions.FirstOrDefault(region => region.Id == polity.RegionId)?.Name ?? "Unknown Region";
         string speciesName = ChronicleTextFormatter.DescribeSpeciesName(polity, world.Species);
-        string knowledge = ChronicleTextFormatter.DescribeKnowledge(polity);
+        ChronicleTextFormatter.StatusKnowledgeSummary knowledgeSummary = ChronicleTextFormatter.BuildStatusKnowledgeSummary(polity);
         string foodState = ChronicleTextFormatter.DescribeFoodState(polity);
         string foodStores = Math.Round(polity.FoodStores).ToString("F0");
 
@@ -123,7 +123,8 @@ public sealed class ChronicleWatchRenderer : IDisposable
         lines.Add($" Population: {polity.Population}");
         lines.Add($" Settlements: {polity.SettlementCount}");
         lines.Add($" Food Stores: {foodStores} ({foodState})");
-        lines.Add($" Knowledge: {knowledge}");
+        lines.Add($" Discoveries: {knowledgeSummary.Discoveries}");
+        lines.Add($" Learned: {knowledgeSummary.Learned}");
         lines.Add($" Year: {world.Time.Year}");
         lines.Add(border);
 

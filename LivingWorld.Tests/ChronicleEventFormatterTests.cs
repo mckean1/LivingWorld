@@ -269,6 +269,27 @@ public sealed class ChronicleEventFormatterTests
         Assert.Equal("Year 210 - River Clan founded Valley Clan in Red Valley.", chronicleLine);
     }
 
+    [Fact]
+    public void PlayerFacingTerminology_UsesDiscoveredForDiscoveries_AndLearnedForAdvancements()
+    {
+        WorldEvent discoveryEvent = CreateEvent(
+            WorldEventType.KnowledgeDiscovered,
+            WorldEventSeverity.Major,
+            year: 220,
+            narrative: "River Clan discovered that River Elk are edible");
+        WorldEvent learnedEvent = CreateEvent(
+            WorldEventType.LearnedAdvancement,
+            WorldEventSeverity.Major,
+            year: 221,
+            narrative: "River Clan learned Organized Hunting");
+
+        Assert.True(_formatter.TryFormat(discoveryEvent, _focus, out string discoveryLine));
+        Assert.True(_formatter.TryFormat(learnedEvent, _focus, out string learnedLine));
+        Assert.Contains("discovered", discoveryLine, StringComparison.Ordinal);
+        Assert.DoesNotContain("learned", discoveryLine, StringComparison.Ordinal);
+        Assert.Contains("learned", learnedLine, StringComparison.Ordinal);
+    }
+
     private static WorldEvent CreateEvent(
         string type,
         WorldEventSeverity severity,

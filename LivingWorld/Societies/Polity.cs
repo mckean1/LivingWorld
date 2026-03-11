@@ -81,6 +81,7 @@ public sealed class Polity
 
     public HashSet<AdvancementId> Advancements { get; }
     public PolityCapabilities Capabilities { get; private set; }
+    public IReadOnlyCollection<CulturalDiscovery> Discoveries => _discoveries.Values;
     public HashSet<int> KnownEdibleSpeciesIds { get; }
     public HashSet<int> KnownToxicSpeciesIds { get; }
     public HashSet<int> KnownDangerousPreySpeciesIds { get; }
@@ -88,6 +89,7 @@ public sealed class Polity
     public Dictionary<int, int> FailedHuntsBySpecies { get; }
     public Dictionary<int, double> DomesticationInterestBySpecies { get; }
     public bool HasSettlements => SettlementCount > 0;
+    private readonly Dictionary<string, CulturalDiscovery> _discoveries;
 
     public Polity(
         int id,
@@ -173,6 +175,7 @@ public sealed class Polity
         SuccessfulHuntsBySpecies = new Dictionary<int, int>();
         FailedHuntsBySpecies = new Dictionary<int, int>();
         DomesticationInterestBySpecies = new Dictionary<int, double>();
+        _discoveries = new Dictionary<string, CulturalDiscovery>(StringComparer.OrdinalIgnoreCase);
     }
 
     public void ResetAnnualFoodStats()
@@ -204,7 +207,7 @@ public sealed class Polity
     public bool HasAdvancement(AdvancementId advancementId)
         => Advancements.Contains(advancementId);
 
-    public bool DiscoverAdvancement(AdvancementId advancementId)
+    public bool LearnAdvancement(AdvancementId advancementId)
     {
         if (!Advancements.Add(advancementId))
         {
@@ -257,6 +260,20 @@ public sealed class Polity
 
     public void RecordFailedHunt(int speciesId)
         => FailedHuntsBySpecies[speciesId] = GetTrackedValue(FailedHuntsBySpecies, speciesId) + 1;
+
+    public bool AddDiscovery(CulturalDiscovery discovery)
+    {
+        if (_discoveries.ContainsKey(discovery.Key))
+        {
+            return false;
+        }
+
+        _discoveries.Add(discovery.Key, discovery);
+        return true;
+    }
+
+    public bool HasDiscovery(string discoveryKey)
+        => _discoveries.ContainsKey(discoveryKey);
 
     public void IncreaseDomesticationInterest(int speciesId, double amount)
     {

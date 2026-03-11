@@ -10,6 +10,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - seasonal ecosystem processing runs food-web interactions between producers, herbivores, omnivores, predators, and apex species
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting or legendary hunts
 - watch mode shows the focal polity species in the fixed status panel
+- watch mode also separates `Discoveries` from `Learned` advancements in that fixed status panel
 - visible chronicle lines keep polity names short and do not append species by default
 
 ## Core Principles
@@ -64,6 +65,7 @@ Default watch mode still shows:
 - only `Major` and `Legendary` turning points by default
 
 The status panel carries secondary context such as the focal polity species so chronicle lines can stay concise and story-like.
+It also separates cultural discoveries from learned advancements so the player-facing UI matches the simulation terminology.
 
 The main chronicle continues to favor:
 

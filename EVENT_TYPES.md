@@ -150,6 +150,13 @@ The same terminology rule now applies to hunting:
 
 Species references remain in structured event data, but watch-mode chronicle lines do not append species to each polity name. The focal polity species is shown in the fixed top status panel instead.
 
+Watch mode also separates:
+
+- `Discoveries`
+  - world knowledge the polity has discovered
+- `Learned`
+  - capability-granting advancements the polity has learned
+
 ## Chronicle Priority
 
 Usually visible:

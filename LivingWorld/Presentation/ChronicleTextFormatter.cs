@@ -6,6 +6,8 @@ namespace LivingWorld.Presentation;
 
 public static class ChronicleTextFormatter
 {
+    public sealed record StatusKnowledgeSummary(string Discoveries, string Learned);
+
     public static ChronicleFoodCondition ResolveChronicleFoodCondition(Polity polity, int startPopulation)
     {
         double annualFoodRatio = polity.AnnualFoodNeeded <= 0
@@ -96,11 +98,37 @@ public static class ChronicleTextFormatter
         };
     }
 
-    public static string DescribeKnowledge(Polity polity)
+    public static StatusKnowledgeSummary BuildStatusKnowledgeSummary(Polity polity)
+        => new(
+            Discoveries: DescribeDiscoveries(polity),
+            Learned: DescribeLearnedAdvancements(polity));
+
+    public static string DescribeDiscoveries(Polity polity)
+    {
+        if (polity.Discoveries.Count == 0)
+        {
+            return "None yet";
+        }
+
+        List<string> topTwo = polity.Discoveries
+            .OrderBy(discovery => discovery.Category)
+            .ThenBy(discovery => discovery.Summary, StringComparer.Ordinal)
+            .Take(2)
+            .Select(discovery => discovery.Summary)
+            .ToList();
+
+        return polity.Discoveries.Count == 1
+            ? topTwo[0]
+            : polity.Discoveries.Count == 2
+                ? string.Join(", ", topTwo)
+                : $"{string.Join(", ", topTwo)}, +{polity.Discoveries.Count - 2} more";
+    }
+
+    public static string DescribeLearnedAdvancements(Polity polity)
     {
         if (polity.Advancements.Count == 0)
         {
-            return "No major discoveries yet";
+            return "None yet";
         }
 
         if (polity.Advancements.Count == 1)

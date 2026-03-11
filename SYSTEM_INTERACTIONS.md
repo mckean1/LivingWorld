@@ -94,7 +94,16 @@ The new ecology phase is shared state for multiple systems:
 - `Region.SpeciesPopulations` feeds ecosystem predation and prey support
 - hunting reads the same regional populations and writes pressure back into them
 - regional biomass is synchronized from species populations so existing food gathering and migration heuristics still have region-level ecological context
-- polity hunting knowledge and domestication interest are stored on the polity for future systems to consume
+- polity discoveries, hunting knowledge, and domestication interest are stored on the polity for future systems to consume
+
+## Knowledge Split
+
+The polity model now separates:
+
+- cultural discoveries about the world
+- learned advancements that grant capability
+
+The watch-mode panel mirrors that split with separate `Discoveries:` and `Learned:` lines.
 
 ## Chronicle Naming Rule
 

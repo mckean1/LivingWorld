@@ -43,8 +43,9 @@ Selected fields:
 - migration: `MigrationPressure`, `MovedThisYear`, `MovesThisYear`
 - fragmentation: `FragmentationPressure`, `FoodStressYears`, `SplitCooldownYears`
 - settlements: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`
-- knowledge: `Advancements`, derived `Capabilities`
-- hunting knowledge: known edible species, known toxic species, dangerous prey knowledge, hunt success/failure tracking
+- discoveries: explicit cultural/world knowledge records in `Discoveries`
+- learned advancements: `Advancements`, derived `Capabilities`
+- hunting-specific runtime support: known edible species, known toxic species, dangerous prey knowledge, hunt success/failure tracking
 - domestication groundwork: `DomesticationInterestBySpecies`
 - year-boundary food snapshot: `LastResolvedFoodState`, `LastResolvedFoodStateYear`
 
@@ -57,6 +58,19 @@ Propagation support fields:
 - `LastLearnedAgricultureEventId`
 
 These are lightweight runtime fields used so one event can influence later system behavior without creating hidden randomness.
+
+### Polity Knowledge Split
+
+LivingWorld now treats polity knowledge as two separate layers:
+
+- `Discoveries`
+  - cultural knowledge about the world
+  - examples: edible species, toxic species, dangerous prey, resources, geography, environmental understanding
+- `Advancements`
+  - learned capability-granting practices and techniques
+  - examples: Fire, Organized Hunting, Seasonal Planning, Agriculture
+
+Discoveries can exist without any advancement, and advancements do not replace the discovery model.
 
 ## WorldEvent
 

@@ -59,6 +59,7 @@ Examples:
 - `ChronicleWatchRenderer` only renders what survives presentation filtering
 
 Player-facing species context remains available, but it lives in the fixed watch-mode status panel rather than being appended to every chronicle line.
+The same watch-mode panel also separates cultural discoveries from learned advancements instead of collapsing them into one ambiguous knowledge field.
 
 Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
 
