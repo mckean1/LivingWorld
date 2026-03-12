@@ -29,9 +29,11 @@ Those entities are still range-limited and region-grounded before month one begi
 
 Because starting polities now begin with a home settlement anchor, step 4 can produce real local hunting and discovery pressure from the opening season instead of waiting for a later founding roll.
 Animal food no longer enters at step 7. It enters only at step 4 through species-level hunting, while step 7 is now plant-foraging only.
+The same opening pass now relies on stronger wildlife seeding and herbivore growth rather than on any abstract regional animal-food reserve, so region screens should show healthier `AnimalBiomass` because real consumer populations are healthier.
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
+Seasonal species exchange at items 2-6 is also the main long-run recovery path for locally depleted wildlife, because recolonization now rebuilds real populations rather than refilling a separate animal pool.
 
 ## Year-End Flow
 

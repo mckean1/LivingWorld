@@ -2,6 +2,7 @@ using System.Diagnostics;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
+using LivingWorld.Map;
 using System.Threading;
 
 namespace LivingWorld.Core;
@@ -11,6 +12,7 @@ public sealed class Simulation : IDisposable
     private const int IdleLoopSleepMilliseconds = 8;
     private const int MinimumInteractiveStepIntervalMilliseconds = 16;
     private const int PersistentHardshipSummaryIntervalYears = 6;
+    private const int WildlifeDiagnosticsDetailRegionLimit = 36;
     private readonly World _world;
     private readonly FoodSystem _foodSystem;
     private readonly EcosystemSystem _ecosystemSystem;
@@ -551,10 +553,75 @@ public sealed class Simulation : IDisposable
             - _world.Regions.Sum(region => region.SpeciesPopulations.Count(population =>
                 population.PopulationCount > 0
                 && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == Life.TrophicRole.Producer));
+        double averageHerbivorePopulation = _world.Regions.Average(region => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == Life.TrophicRole.Herbivore)
+            .Sum(population => population.PopulationCount));
+        double averageConsumerSpecies = _world.Regions.Average(region => region.SpeciesPopulations.Count(population =>
+            population.PopulationCount > 0
+            && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole != Life.TrophicRole.Producer));
+        List<Region> fertileRegions = _world.Regions
+            .Where(region => region.Fertility >= 0.55 && region.WaterAvailability >= 0.50)
+            .ToList();
+        int fertileRegionsWithEstablishedConsumers = fertileRegions.Count(region => CountConsumerSpecies(region) >= 2);
+        int fertileRegionsWithGrowingHerbivores = fertileRegions.Count(region => ResolveHerbivorePopulation(region) >= 90);
+        int predatorSuppressionHotspots = _world.Regions.Count(region =>
+        {
+            int herbivorePopulation = ResolveHerbivorePopulation(region);
+            int predatorPopulation = ResolvePredatorPopulation(region);
+            return herbivorePopulation > 0
+                && herbivorePopulation < 90
+                && predatorPopulation >= Math.Max(12, herbivorePopulation * 0.55);
+        });
 
         Console.WriteLine(
             $"Ecology: AnimalBiomass={totalAnimalBiomass:F0} RegionsWithAnimals={regionsWithAnimalBiomass}/{_world.Regions.Count} ActiveConsumerPops={activeConsumerPopulations}");
+        Console.WriteLine(
+            $"Wildlife: AvgHerbivores/Region={averageHerbivorePopulation:F0} AvgConsumers/Region={averageConsumerSpecies:F1} Fertile2+Consumers={fertileRegionsWithEstablishedConsumers}/{fertileRegions.Count} FertileHerbivore90+={fertileRegionsWithGrowingHerbivores}/{fertileRegions.Count} PredatorHotspots={predatorSuppressionHotspots}");
+
+        if (_world.Time.Year is 0 or 5 or 20)
+        {
+            PrintDebugWildlifeRegionSnapshots();
+        }
     }
+
+    private void PrintDebugWildlifeRegionSnapshots()
+    {
+        Console.WriteLine($"Wildlife snapshots (year {_world.Time.Year}):");
+
+        foreach (Region region in _world.Regions
+                     .OrderByDescending(ResolveHerbivorePopulation)
+                     .ThenBy(region => region.Id)
+                     .Take(WildlifeDiagnosticsDetailRegionLimit))
+        {
+            int consumerSpecies = CountConsumerSpecies(region);
+            int herbivorePopulation = ResolveHerbivorePopulation(region);
+            int predatorPopulation = ResolvePredatorPopulation(region);
+            double plantRatio = region.MaxPlantBiomass <= 0
+                ? 0.0
+                : region.PlantBiomass / region.MaxPlantBiomass;
+
+            Console.WriteLine(
+                $"  [{region.Id,2}] {region.Name,-18} {region.Biome,-12} Herb={herbivorePopulation,4} Cons={consumerSpecies,2} Pred={predatorPopulation,3} Plant={plantRatio,4:F2} AnimalBio={region.AnimalBiomass,6:F0}");
+        }
+    }
+
+    private int ResolveHerbivorePopulation(Region region)
+        => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == Life.TrophicRole.Herbivore)
+            .Sum(population => population.PopulationCount);
+
+    private int ResolvePredatorPopulation(Region region)
+        => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole is Life.TrophicRole.Predator or Life.TrophicRole.Apex)
+            .Sum(population => population.PopulationCount);
+
+    private int CountConsumerSpecies(Region region)
+        => region.SpeciesPopulations.Count(population =>
+            population.PopulationCount > 0
+            && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole != Life.TrophicRole.Producer);
 
     private static bool ShouldEmitHardshipEvent(HardshipChronicleState previousState, HardshipTier currentTier, int currentYear)
     {

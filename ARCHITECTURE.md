@@ -52,6 +52,7 @@ World seeding is now split into a few explicit pieces so density tuning stays de
 - `WorldGenerationSettings` holds the main numeric knobs for region, species, and polity counts
 - `WorldGenerationCatalog` provides curated biome layout, name pools, and species templates
 - `WorldGenerator` turns those settings and templates into connected regions, seeded species ranges, homeland-support-aware polity placement, and anchored starting polities
+- consumer range seeding is intentionally broader for herbivores and omnivores than for predators, so fertile biomes usually open with a prey base before later predator pressure intensifies
 
 This keeps the fuller starting world explicit rather than burying scale changes in scattered magic numbers.
 
@@ -197,8 +198,9 @@ The food architecture is intentionally asymmetric now:
 
 - `FoodSystem` gathers only plant biomass from regions
 - `HuntingSystem` is the only system that converts wildlife into animal food
-- `EcosystemSystem` owns consumer population recovery, decline, migration, and derived `AnimalBiomass`
+- `EcosystemSystem` owns consumer population seeding, recovery, decline, migration, and derived `AnimalBiomass`
 - `Region.AnimalBiomass` exists for ecology context, watch screens, migration heuristics, and advancement weighting, not as an independent meat store
+- early herbivore establishment now comes from range-limited worldgen plus carrying-capacity-driven initialization and producer-supported growth rather than from any abstract animal stock
 
 The later monthly `MigrationSystem` still handles polity relocation after food resolution. Mutation does not read polity movement directly; it reads seasonal species-exchange state on `RegionSpeciesPopulation`.
 When polity migration does occur, settlement records are relocated with the polity so settlement-grounded systems keep a coherent local model until a later phase introduces true cross-region polity settlement networks.

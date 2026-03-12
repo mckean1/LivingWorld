@@ -447,9 +447,9 @@ public sealed class WorldGenerator
         int desired = species.TrophicRole switch
         {
             TrophicRole.Producer => _random.Next(8, 15),
-            TrophicRole.Herbivore => _random.Next(6, 11),
-            TrophicRole.Omnivore => _random.Next(5, 9),
-            TrophicRole.Predator => _random.Next(4, 7),
+            TrophicRole.Herbivore => _random.Next(8, 14),
+            TrophicRole.Omnivore => _random.Next(6, 11),
+            TrophicRole.Predator => _random.Next(4, 6),
             TrophicRole.Apex => _random.Next(3, 5),
             _ => _random.Next(4, 8)
         };
@@ -466,8 +466,8 @@ public sealed class WorldGenerator
         => species.TrophicRole switch
         {
             TrophicRole.Producer => 0.56,
-            TrophicRole.Herbivore => 0.58,
-            TrophicRole.Omnivore => 0.60,
+            TrophicRole.Herbivore => 0.55,
+            TrophicRole.Omnivore => 0.57,
             TrophicRole.Predator => 0.64,
             TrophicRole.Apex => 0.68,
             _ => 0.60

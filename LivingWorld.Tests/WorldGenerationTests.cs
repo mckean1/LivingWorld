@@ -110,6 +110,63 @@ public sealed class WorldGenerationTests
     }
 
     [Fact]
+    public void EcosystemInitialization_SeedsMeaningfulHerbivoreBaselines_InFertileRegions()
+    {
+        WorldGenerator generator = new(seed: 13);
+        var world = generator.Generate();
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        List<Region> fertileRegions = world.Regions
+            .Where(region => region.Fertility >= 0.55 && region.WaterAvailability >= 0.50)
+            .ToList();
+
+        double averageHerbivoresInFertileRegions = fertileRegions.Average(region => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
+            .Sum(population => population.PopulationCount));
+        int fertileRegionsWithMultipleConsumers = fertileRegions.Count(region => region.SpeciesPopulations.Count(population =>
+            population.PopulationCount > 0
+            && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole != TrophicRole.Producer) >= 2);
+
+        Assert.True(averageHerbivoresInFertileRegions >= 85);
+        Assert.True(fertileRegionsWithMultipleConsumers >= Math.Max(6, fertileRegions.Count / 2));
+    }
+
+    [Fact]
+    public void SeasonalEcosystem_AllowsHerbivoresToExpand_WhenPlantsAreAbundant()
+    {
+        WorldGenerator generator = new(seed: 13);
+        var world = generator.Generate();
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        List<Region> fertileRegions = world.Regions
+            .Where(region => region.Fertility >= 0.55 && region.WaterAvailability >= 0.50)
+            .ToList();
+        double initialAverageHerbivores = fertileRegions.Average(region => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
+            .Sum(population => population.PopulationCount));
+
+        for (int season = 0; season < 20; season++)
+        {
+            ecosystemSystem.UpdateSeason(world);
+            ecosystemSystem.ResolveSeasonalCleanup(world);
+        }
+
+        double laterAverageHerbivores = fertileRegions.Average(region => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
+            .Sum(population => population.PopulationCount));
+
+        Assert.True(laterAverageHerbivores >= initialAverageHerbivores * 0.90);
+        Assert.Contains(fertileRegions, region => region.AnimalBiomass >= 140);
+    }
+
+    [Fact]
     public void StartingPolities_HaveAccessibleSupportSpeciesNearTheirHomelands()
     {
         WorldGenerator generator = new(seed: 17);

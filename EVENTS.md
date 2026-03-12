@@ -127,6 +127,7 @@ Structured-first follow-up types:
 
 Settlement-grounded systems should prefer true settlement references where available so structured history can answer not just which polity acted, but where the local action actually happened.
 The same ecology rule now applies to food sourcing: generic foraging events describe plant gathering pressure, while animal food gains should always be traceable to an actual hunted species population.
+Because richer regions now begin with a sturdier prey layer, hunting and wildlife-recovery events are more likely to reflect meaningful regional abundance shifts instead of one tiny starting population blinking in and out.
 
 Major biology-turn types that may surface when the focused line is meaningfully affected:
 

@@ -9,6 +9,7 @@ Default world generation now starts from a fuller but still grounded baseline:
 - `36` connected regions on one early-continent landmass
 - `28` starting species with biome-aware range seeding
 - `10` starting polities distributed across viable, spaced-apart settlement regions
+- fertile regions now usually open with multiple meaningful consumer populations rather than a single token herbivore pocket
 
 The current simulation phase now treats ecology, hunting, and polity history as one connected layer:
 
@@ -16,6 +17,8 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - seasonal ecosystem processing runs food-web interactions between producers, herbivores, omnivores, predators, and apex species
 - monthly wild gathering now forages plant biomass only, while animal food comes only from species-level hunting
 - `Region.AnimalBiomass` is now a derived ecological summary of current non-producer populations rather than a separate consumable meat pool
+- world generation now seeds broader herbivore and omnivore coverage, while ecosystem initialization scales early wildlife from habitat suitability and ecological capacity instead of tiny flat starts
+- early producer abundance now gives herbivores more room to establish and grow before predator pressure becomes dominant
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting, recolonization pressure, or legendary hunts
 - settlement hunting now executes from actual settlements in their own regions instead of multiplying one polity-region hunt by settlement count
 - settlement farming now allocates real regional arable capacity across actual settlements, so multiple settlements in one region share land instead of double counting it

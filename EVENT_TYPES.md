@@ -107,6 +107,8 @@ When a trade event includes settlement references, they should describe the actu
   - prey danger inflicted notable casualties
 - `overhunting_pressure`
   - repeated hunting drove a local species population toward collapse
+- `prey_collapse` and `species_population_established`
+  - now more often reflect real regional food-web swings because world generation seeds a broader early herbivore base and seasonal migration can rebuild that base over time
 - `ecosystem_collapse`
   - regional food-web instability became severe
 - `legendary_hunt`
@@ -166,6 +168,7 @@ The same sourcing rule now applies to food:
 - plant food can come from ordinary wild gathering
 - animal food must come from species-level hunting
 - `AnimalBiomass` is an ecological summary metric, not a generic gatherable pool
+- early `AnimalBiomass` differences should now mostly read as differences in real seeded consumer populations and their growth, not as missing or hidden food stock logic
 
 ## Player-Facing Formatting Rule
 

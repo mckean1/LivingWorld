@@ -40,6 +40,7 @@ Allow the same stored history to be rendered through different focal filters or 
 
 4. Domestication and ecology follow-through
 Build on hunting pressure, edible discovery, domestication interest, and now-real settlement locality so repeatedly hunted species can become deliberate domestication candidates tied to actual settlement networks.
+Keep tuning early wildlife richness through ecological seeding, herbivore recovery, and recolonization strength rather than by adding new abstract animal resource layers.
 
 6. Discovery/contact visibility refinement
 Replace first-pass generation-era visibility approximations with truer knowledge gating for regions, species, and foreign polities as simulation-side contact systems deepen.

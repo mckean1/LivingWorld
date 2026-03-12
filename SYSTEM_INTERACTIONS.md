@@ -95,9 +95,11 @@ The new ecology phase is shared state for multiple systems:
 - `Region.SpeciesPopulations` feeds ecosystem predation and prey support
 - `FoodSystem` now gathers only plant biomass, so it no longer depletes wildlife outside the hunting layer
 - world generation seeds those populations only inside each species' initial viable range instead of treating the world as globally occupied
+- world generation now seeds herbivores and omnivores more broadly than predators, so fertile regions usually start with `2-4` meaningful consumer populations where biome fit supports them
 - hunting reads the same regional populations and writes pressure back into them
 - mutation reads those same pressure markers plus same-season species-exchange flags, stores accumulated evolutionary pressure on each regional population, and writes trait offsets back into the same records
 - ecosystem growth, migration scoring, and carrying capacity now consume those evolved trait offsets
+- ecosystem initialization and seasonal growth now let healthy producer biomass translate into stronger herbivore establishment and earlier wildlife expansion
 - hunting difficulty, danger, and yield now also consume regional trait divergence instead of using only species baselines
 - neighboring wildlife populations can re-establish empty suitable regions through seasonal species migration, which gives local ecology a non-magical recovery path
 - regional animal biomass is synchronized from species populations so migration heuristics, region screens, and advancement weighting still have region-level ecological context without creating a second animal-food resource
@@ -134,6 +136,7 @@ The fuller starting world is still intentionally constrained at handoff time:
 
 - region biome profiles shape baseline fertility, water, and biomass
 - species start in clustered biome-suitable ranges rather than universal placement
+- fertile biomes now more reliably hand off a real prey base into the first decade instead of abundant producers paired with token herbivores
 - starting polities are seeded into viable, spaced regions rather than random stacking
 - homeland scoring also prefers nearby support species and connected corridors so early settlement-grounded interaction is more likely
 

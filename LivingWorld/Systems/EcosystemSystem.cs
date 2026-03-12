@@ -99,7 +99,8 @@ public sealed class EcosystemSystem
             double reproductionRate = species.BaseReproductionRate
                 * species.GetSeasonalReproductionModifier(season)
                 * population.HabitatSuitability
-                * PopulationTraitResolver.ResolveReproductionModifier(species, population);
+                * PopulationTraitResolver.ResolveReproductionModifier(species, population)
+                * ResolveEcologicalGrowthModifier(region, species, population);
             double declineRate = species.BaseDeclineRate
                 + Math.Max(0.0, carryingRatio - 1.0) * 0.10
                 + (population.RecentFoodStress * 0.08)
@@ -534,10 +535,10 @@ public sealed class EcosystemSystem
         double baseCapacity = species.TrophicRole switch
         {
             TrophicRole.Producer => 180 + (region.MaxPlantBiomass * 0.35),
-            TrophicRole.Herbivore => 45 + (region.MaxPlantBiomass * 0.07),
-            TrophicRole.Omnivore => 28 + (region.TotalBiomassCapacity * 0.035),
-            TrophicRole.Predator => 16 + (region.MaxAnimalBiomass * 0.03),
-            TrophicRole.Apex => 8 + (region.MaxAnimalBiomass * 0.018),
+            TrophicRole.Herbivore => 60 + (region.MaxPlantBiomass * 0.11) + (region.Fertility * 70) + (region.WaterAvailability * 40),
+            TrophicRole.Omnivore => 32 + (region.TotalBiomassCapacity * 0.045),
+            TrophicRole.Predator => 14 + (region.MaxAnimalBiomass * 0.024),
+            TrophicRole.Apex => 7 + (region.MaxAnimalBiomass * 0.014),
             _ => 24
         };
 
@@ -557,15 +558,40 @@ public sealed class EcosystemSystem
 
         double startingShare = species.TrophicRole switch
         {
-            TrophicRole.Producer => 0.70,
-            TrophicRole.Herbivore => 0.52,
-            TrophicRole.Omnivore => 0.38,
-            TrophicRole.Predator => 0.24,
-            TrophicRole.Apex => 0.14,
+            TrophicRole.Producer => 0.72,
+            TrophicRole.Herbivore => 0.62,
+            TrophicRole.Omnivore => 0.44,
+            TrophicRole.Predator => 0.18,
+            TrophicRole.Apex => 0.10,
             _ => 0.30
         };
 
-        return Math.Max(0, (int)Math.Round(carryingCapacity * startingShare * habitatSuitability));
+        double establishmentFactor = 0.55 + (habitatSuitability * 0.45);
+        return Math.Max(0, (int)Math.Round(carryingCapacity * startingShare * establishmentFactor));
+    }
+
+    private static double ResolveEcologicalGrowthModifier(Region region, Species species, RegionSpeciesPopulation population)
+    {
+        double plantRatio = region.MaxPlantBiomass <= 0
+            ? 0.0
+            : Math.Clamp(region.PlantBiomass / region.MaxPlantBiomass, 0.0, 1.25);
+        double animalRatio = region.MaxAnimalBiomass <= 0
+            ? 0.0
+            : Math.Clamp(region.AnimalBiomass / region.MaxAnimalBiomass, 0.0, 1.25);
+        double lowPressureRelief = Math.Max(0.0, 0.45 - population.RecentPredationPressure) * 0.28
+            + Math.Max(0.0, 0.35 - population.RecentHuntingPressure) * 0.20;
+
+        double modifier = species.TrophicRole switch
+        {
+            TrophicRole.Producer => 0.98 + (plantRatio * 0.08),
+            TrophicRole.Herbivore => 0.92 + (plantRatio * 0.32) + lowPressureRelief,
+            TrophicRole.Omnivore => 0.94 + (plantRatio * 0.12) + (animalRatio * 0.10) + (lowPressureRelief * 0.60),
+            TrophicRole.Predator => 0.88 + (animalRatio * 0.10),
+            TrophicRole.Apex => 0.86 + (animalRatio * 0.08),
+            _ => 1.0
+        };
+
+        return Math.Clamp(modifier, 0.75, 1.35);
     }
 
     private bool ShouldEmitPreyCollapse(RegionSpeciesPopulation preyPopulation, int preyBefore)

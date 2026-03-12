@@ -58,9 +58,11 @@ Species are no longer treated as globally present by default.
 - generation scores regions for suitability using fertility, water, biomass, and biome fit
 - each species receives a clustered `InitialRangeRegionIds` set rather than random global scatter
 - target range size varies by trophic role so producers and herbivores seed more broadly than apex predators
+- herbivores and omnivores now also use slightly broader viable-range thresholds than before, which helps fertile regions start with multiple real consumer niches instead of one token prey species
 - ecosystem initialization only seeds starting populations inside that initial range
 
 This keeps the opening world denser without making every region ecologically identical.
+The target outcome is regional variation with a healthier prey baseline: some rich regions, some moderate regions, and some sparse ones, rather than globally thin wildlife.
 
 ## Starting Polity Placement
 
@@ -102,3 +104,5 @@ Those starting regional populations also now have clean divergence state slots, 
 The denser seed world is intentionally still range-limited and biome-shaped so early chronicle output gains context without turning into random clutter.
 Starting-polity homeland scoring also now prefers nearby support species coverage, so focal starts are less likely to open in a dead ecological pocket.
 Initial `AnimalBiomass` values are best read as starting ecological context for species seeding and region summaries; once the simulation begins, animal biomass is derived from real consumer populations rather than harvested as an independent food pool.
+Initial consumer populations are now seeded from carrying capacity and habitat fit strongly enough that fertile producer-rich regions can support substantially larger herbivore starts.
+Predator coverage remains narrower, so early worlds usually establish a herbivore foundation before predator suppression becomes a major constraint.

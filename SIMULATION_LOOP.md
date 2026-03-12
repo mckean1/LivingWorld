@@ -33,6 +33,12 @@ The seed world entering this loop is now larger by default, but scale tuning rem
 - food consumption
 - migration
 
+The seasonal ecosystem pass now also carries more of the "alive world" burden in years `0-20`:
+
+- initial consumer populations are seeded from ecological capacity and habitat fit
+- producer-rich regions give herbivores stronger early recovery and expansion headroom
+- predator starts stay narrower than herbivore coverage so prey foundations usually establish first
+
 `Region.AnimalBiomass` is not consumed during the monthly food-gathering step.
 Instead:
 
@@ -104,6 +110,7 @@ The simulation loop now supports:
 - adaptation milestones grounded in ancestral mismatch, divergence, trait gains, and regional persistence
 - player-facing adaptation lines only on new adaptation milestones, with scoped chronicle cooldown on top of source-side suppression
 - a fuller opening world without globally-uniform species placement or overcrowded starting polity stacks
+- a fuller early wildlife layer without reintroducing abstract animal harvesting
 - anchored starting polities and more viable focal starts without scripting fake drama
 - structured history with causal ancestry
 - concise chronicle output that still reads like history rather than telemetry

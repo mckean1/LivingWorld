@@ -71,6 +71,8 @@ Implemented chains:
 
 `producer abundance -> herbivore support -> predator support`
 
+`broader suitable herbivore ranges + stronger ecological seeding -> richer early prey base`
+
 `prey collapse -> predator food stress -> predator decline or ecosystem collapse`
 
 `regional pressure -> species migration -> new regional population establishment`
@@ -80,6 +82,7 @@ Implemented chains:
 `all local populations gone -> global extinction`
 
 Those ecology chains now begin from biome-shaped initial ranges instead of every species starting everywhere, so migration and collapse have clearer geographic meaning from the opening years.
+Fertile regions also now seed consumer populations from habitat suitability and ecological capacity more aggressively, so early producer-rich biomes usually carry visible herbivore life before predators and hunting begin trimming that abundance.
 
 ### Evolutionary Pressure
 
@@ -131,6 +134,7 @@ Advancement outcomes remain separate capability gains that later systems can con
 
 Generic monthly food gathering no longer consumes `Region.AnimalBiomass`.
 That removed the previous double-pressure bug where abstract animal harvesting and species-level hunting both depleted the same ecological layer.
+The current balance pass keeps that architecture intact and instead raises early wildlife through seeding and growth tuning.
 
 ### Fragmentation Pressure
 
