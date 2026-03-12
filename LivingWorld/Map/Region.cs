@@ -1,3 +1,5 @@
+using LivingWorld.Economy;
+
 namespace LivingWorld.Map;
 
 public sealed class Region
@@ -16,6 +18,13 @@ public sealed class Region
 
     public double MaxPlantBiomass { get; set; }
     public double MaxAnimalBiomass { get; set; }
+    public double WoodAbundance { get; set; }
+    public double StoneAbundance { get; set; }
+    public double ClayAbundance { get; set; }
+    public double FiberAbundance { get; set; }
+    public double SaltAbundance { get; set; }
+    public double CopperOreAbundance { get; set; }
+    public double IronOreAbundance { get; set; }
 
     public List<int> ConnectedRegionIds { get; } = new();
     public List<RegionSpeciesPopulation> SpeciesPopulations { get; } = new();
@@ -71,4 +80,17 @@ public sealed class Region
 
         return SpeciesPopulations.Remove(population);
     }
+
+    public double GetMaterialAbundance(MaterialType materialType)
+        => materialType switch
+        {
+            MaterialType.Wood => WoodAbundance,
+            MaterialType.Stone => StoneAbundance,
+            MaterialType.Clay => ClayAbundance,
+            MaterialType.Fiber => FiberAbundance,
+            MaterialType.Salt => SaltAbundance,
+            MaterialType.CopperOre => CopperOreAbundance,
+            MaterialType.IronOre => IronOreAbundance,
+            _ => 0.0
+        };
 }

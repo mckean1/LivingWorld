@@ -121,7 +121,8 @@ public sealed class HuntingSystem
         double dangerPenalty = effectiveDanger * 0.22;
         double difficultyPenalty = effectiveDifficulty * 0.28;
         double accessibilityPenalty = (1.0 - targetPopulation.HabitatSuitability) * 0.18;
-        double successChance = Math.Clamp(0.48 + knownEdibleBonus + priorSuccessBonus - dangerPenalty - difficultyPenalty - accessibilityPenalty, 0.12, 0.88);
+        double toolBonus = Math.Clamp((settlement.ResolveToolEffectiveness() - 1.0) * 0.22, 0.0, 0.10);
+        double successChance = Math.Clamp(0.48 + knownEdibleBonus + priorSuccessBonus + toolBonus - dangerPenalty - difficultyPenalty - accessibilityPenalty, 0.12, 0.88);
 
         double huntPower = huntersCommitted * successChance;
         int harvestCap = Math.Max(1, (int)Math.Round(targetBefore * 0.16));

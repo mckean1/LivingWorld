@@ -119,6 +119,7 @@ Polity migration still relocates the whole polity network for now, but it now re
 Regional adaptation events now emit on meaningful adaptation milestones rather than on repeated reaffirmation of the same condition, and chronicle presentation applies a dedicated adaptation cooldown key so the same species-region adaptation beat does not spam the live feed.
 Chronicle presentation now also uses semantic state signatures for noisy families such as hardship, recovery, migration, settlement stabilization, and regional ecology turns. The live feed can surface a changed state sooner than a repeated same-state reminder, while identical or near-identical beats remain in structured history only.
 Visible families that do not yet have a custom semantic profile still pass through a fallback chronicle state key built from actor scope plus normalized narrative, so exact repeated lines do not leak into the player feed year after year.
+Visible major-event summaries now apply the same player-facing dedupe identity as the live chronicle, so recent-event panels do not repeat the same settlement recovery or crisis beat multiple times in one year unless the visible state is meaningfully different.
 
 ## Watch Controls
 
@@ -222,3 +223,16 @@ Phase 13/14 adds a managed-food layer between hunting/foraging and mature agricu
 - `Learned` still means gaining organized capability such as `SeasonalPlanning`, `FoodStorage`, or `Agriculture`
 
 Successful domestication creates lightweight settlement-level `ManagedHerd` and `CultivatedCrop` records. These do not simulate individual genetics, but they do improve food reliability, feed into settlement food state resolution, and create high-signal chronicle moments such as herd establishment, crop establishment, domestication spread, and the first transition into an established managed-food economy.
+
+## Phase 17 - Material Economy And Production Chains
+
+Phase 17 adds a first-pass physical economy without introducing money, prices, merchants, or foreign trade.
+
+- settlements now extract raw materials from regional abundance
+- each settlement keeps stockpiles, reserve targets, pressure states, and monthly or yearly production totals
+- short recipes convert raw inputs into useful goods such as pottery, rope, textiles, simple tools, and preserved food
+- tools, pottery, and preserved food now feed back into farming, hunting, spoilage, and seasonal resilience
+- settlements inside the same polity can redistribute critical materials using the same route-priority logic as food aid, with distance loss and major convoy events when relief is meaningful
+- repeated output plus geographic fit now create emergent specialization tags such as timber work, pottery, preservation, or toolmaking
+
+The main chronicle still stays high-signal. Routine extraction, per-material shortage churn, and convoy bookkeeping remain in structured history and inspection views. The visible chronicle now prefers grouped settlement-level material turns such as a broader material crisis beginning, worsening, or easing, alongside major milestones such as preservation established, sustained toolmaking, and settlement craft specialization.

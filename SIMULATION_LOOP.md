@@ -151,3 +151,21 @@ The monthly loop now inserts domestication and cultivation support between raw g
 - annual review can emit `agriculture_stabilized_food_supply` when managed food covers a meaningful yearly share
 
 Domestication is therefore not a random flavor event. It is a local state transition produced by repeated contact, species suitability, settlement continuity, and already learned capability.
+
+## Phase 17 Integration Point
+
+The monthly loop now runs material economy processing after:
+
+- plant gathering
+- domestication familiarity updates
+
+and before:
+
+- farm output
+- managed-animal food
+- trade
+- food consumption
+- settlement food aid redistribution
+
+That ordering matters because tools, pottery, preserved food, and convoy relief are meant to change the same month's later food and hardship outcomes.
+At the presentation layer, the material pass now also emits grouped settlement-level material-crisis beats after per-material pressure transitions are known, so the chronicle sees one historical turn instead of a burst of same-tick shortage lines.

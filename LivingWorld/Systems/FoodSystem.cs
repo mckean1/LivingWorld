@@ -1,6 +1,7 @@
 using LivingWorld.Core;
 using LivingWorld.Map;
 using LivingWorld.Societies;
+using LivingWorld.Economy;
 
 namespace LivingWorld.Systems;
 
@@ -104,16 +105,47 @@ public sealed class FoodSystem
             }
 
             double need = polity.FoodNeededThisMonth;
-            double eaten = Math.Min(polity.FoodStores, need);
+            double eatenFromStores = Math.Min(polity.FoodStores, need);
+            double eaten = eatenFromStores;
             double shortage = Math.Max(0, need - eaten);
+
+            if (shortage > 0 && polity.Settlements.Count > 0)
+            {
+                double preservedFoodNeeded = shortage;
+                foreach (Settlement settlement in polity.Settlements
+                             .OrderByDescending(candidate => candidate.GetMaterialStockpile(MaterialType.PreservedFood)))
+                {
+                    if (preservedFoodNeeded <= 0.05)
+                    {
+                        break;
+                    }
+
+                    double consumed = settlement.ConsumeMaterial(MaterialType.PreservedFood, preservedFoodNeeded);
+                    if (consumed <= 0.05)
+                    {
+                        continue;
+                    }
+
+                    eaten += consumed;
+                    preservedFoodNeeded -= consumed;
+                }
+
+                shortage = Math.Max(0, need - eaten);
+            }
 
             polity.FoodConsumedThisMonth = eaten;
             polity.FoodShortageThisMonth = shortage;
 
-            polity.FoodStores -= eaten;
+            polity.FoodStores -= eatenFromStores;
 
             double spoiled = polity.FoodStores * BaseSpoilageRate;
             spoiled *= polity.Capabilities.FoodSpoilageMultiplier;
+            if (polity.Settlements.Count > 0)
+            {
+                double averageStorageMultiplier = polity.Settlements.Average(settlement => settlement.ResolveStorageMultiplier());
+                spoiled /= Math.Max(1.0, averageStorageMultiplier);
+            }
+
             polity.FoodStores = Math.Max(0, polity.FoodStores - spoiled);
 
             polity.FoodSurplusThisMonth = polity.FoodStores;

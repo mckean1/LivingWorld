@@ -571,6 +571,117 @@ public sealed class ChronicleEventFormatterTests
         Assert.False(_formatter.TryFormat(candidateEvent, _focus, out _));
     }
 
+    [Fact]
+    public void RepeatedMaterialSpecialization_ForSameSettlement_IsSuppressed()
+    {
+        WorldEvent firstEvent = CreateEvent(
+            WorldEventType.SettlementSpecialized,
+            WorldEventSeverity.Major,
+            year: 240,
+            narrative: "Stonefen became known for pottery",
+            settlementId: 7004,
+            settlementName: "Stonefen");
+        firstEvent.Metadata["specializationTag"] = "PotteryTradition";
+        firstEvent.Metadata["materialType"] = "Pottery";
+
+        WorldEvent repeatedEvent = CreateEvent(
+            WorldEventType.SettlementSpecialized,
+            WorldEventSeverity.Major,
+            year: 245,
+            narrative: "Stonefen became known for pottery",
+            settlementId: 7004,
+            settlementName: "Stonefen");
+        repeatedEvent.Metadata["specializationTag"] = "PotteryTradition";
+        repeatedEvent.Metadata["materialType"] = "Pottery";
+
+        Assert.True(_formatter.TryFormat(firstEvent, _focus, out _));
+        Assert.False(_formatter.TryFormat(repeatedEvent, _focus, out _));
+    }
+
+    [Fact]
+    public void LowSignalMaterialEvents_StayOutOfMainChronicle_WhileGroupedCrisisAppearsOnce()
+    {
+        WorldEvent perMaterialFailure = CreateEvent(
+            WorldEventType.MaterialConvoyFailed,
+            WorldEventSeverity.Notable,
+            year: 241,
+            narrative: "No material convoy arrived. Stonefen Hearth fell into salt shortage",
+            reason: "critical_material_shortage_unaided",
+            settlementId: 7003,
+            settlementName: "Stonefen Hearth");
+        perMaterialFailure.Metadata["materialType"] = "Salt";
+        perMaterialFailure.Metadata["shortageBand"] = "2";
+
+        WorldEvent groupedCrisis = CreateEvent(
+            WorldEventType.MaterialCrisisStarted,
+            WorldEventSeverity.Major,
+            year: 241,
+            narrative: "No material convoy arrived. Stonefen Hearth fell into shortages of salt, pottery, and simple tools",
+            reason: "grouped_material_crisis_unaided",
+            settlementId: 7003,
+            settlementName: "Stonefen Hearth");
+        groupedCrisis.Metadata["groupedMaterials"] = "Salt,Pottery,SimpleTools";
+        groupedCrisis.Metadata["groupedCount"] = "3";
+
+        Assert.False(_formatter.TryFormat(perMaterialFailure, _focus, out _));
+        Assert.True(_formatter.TryFormat(groupedCrisis, _focus, out string chronicleLine));
+        Assert.Equal("Year 241 - No material convoy arrived. Stonefen Hearth fell into shortages of salt, pottery, and simple tools.", chronicleLine);
+    }
+
+    [Fact]
+    public void RepeatedGroupedMaterialCrisis_ForSameSettlementState_IsSuppressed()
+    {
+        WorldEvent firstCrisis = CreateEvent(
+            WorldEventType.MaterialCrisisWorsened,
+            WorldEventSeverity.Major,
+            year: 242,
+            narrative: "Stonefen Hearth's material shortages deepened",
+            reason: "grouped_material_crisis_worsened",
+            settlementId: 7003,
+            settlementName: "Stonefen Hearth");
+        firstCrisis.Metadata["groupedMaterials"] = "Pottery,SimpleTools";
+        firstCrisis.Metadata["groupedCount"] = "2";
+
+        WorldEvent repeatedCrisis = CreateEvent(
+            WorldEventType.MaterialCrisisWorsened,
+            WorldEventSeverity.Major,
+            year: 243,
+            narrative: "Stonefen Hearth's material shortages deepened",
+            reason: "grouped_material_crisis_worsened",
+            settlementId: 7003,
+            settlementName: "Stonefen Hearth");
+        repeatedCrisis.Metadata["groupedMaterials"] = "Pottery,SimpleTools";
+        repeatedCrisis.Metadata["groupedCount"] = "2";
+
+        Assert.True(_formatter.TryFormat(firstCrisis, _focus, out _));
+        Assert.False(_formatter.TryFormat(repeatedCrisis, _focus, out _));
+    }
+
+    [Fact]
+    public void ExactDuplicateVisibleRecoveryLine_InSameYear_IsSuppressedBySafetyNet()
+    {
+        WorldEvent firstRecovery = CreateEvent(
+            WorldEventType.FamineRelief,
+            WorldEventSeverity.Major,
+            year: 244,
+            narrative: "Gloam Fen Hearth recovered from starvation",
+            reason: "settlement_starvation_recovered",
+            settlementId: 7005,
+            settlementName: "Gloam Fen Hearth");
+
+        WorldEvent duplicateRecovery = CreateEvent(
+            WorldEventType.FamineRelief,
+            WorldEventSeverity.Major,
+            year: 244,
+            narrative: "Gloam Fen Hearth recovered from starvation",
+            reason: "settlement_starvation_recovered",
+            settlementId: 7005,
+            settlementName: "Gloam Fen Hearth");
+
+        Assert.True(_formatter.TryFormat(firstRecovery, _focus, out _));
+        Assert.False(_formatter.TryFormat(duplicateRecovery, _focus, out _));
+    }
+
     private static WorldEvent CreateEvent(
         string type,
         WorldEventSeverity severity,

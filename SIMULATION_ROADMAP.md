@@ -85,3 +85,24 @@ Natural next steps after this phase:
 - crop failure and blight tied to ecology and climate pressure
 - managed-food diffusion across polities through contact rather than only internal spread
 - deeper settlement specialization once cross-region polity networks arrive
+
+## Phase 17 Status
+
+Material economy and production chains now extend the food-centered survival loop into a first-pass physical economy.
+
+Delivered scope:
+
+- settlement stockpiles for raw materials and processed goods
+- abundance-based extraction tied to settlement labor, capability, and hardship
+- short production chains for tools, pottery, rope, textiles, cut stone, lumber, and preserved food
+- same-polity material redistribution with convoy events and distance friction
+- emergent specialization from repeated output and geographic fit
+- watch-mode visibility for surpluses, shortages, production centers, and strategic resource hotspots
+- grouped settlement-level material crisis beats so the main chronicle stays historical instead of operational
+
+Natural next steps after this phase:
+
+- construction and building prerequisites using lumber and stone blocks
+- deeper metallurgy beyond simple tool tiers
+- contact-driven knowledge diffusion about foreign resource centers
+- infrastructure and transport improvements that reduce convoy loss

@@ -290,6 +290,37 @@ public sealed class SettlementGroundedSystemsTests
     }
 
     [Fact]
+    public void SettlementRedistribution_DoesNotEmitDuplicateRecovery_InSameYear()
+    {
+        World world = CreateWorld();
+        Polity polity = CreateSettledPolity(world, 85, "Gloam Fen Kin", 140, world.Regions[1].Id);
+        Settlement starvingSettlement = polity.Settlements[0];
+        world.Polities.Add(polity);
+
+        polity.FoodNeededThisMonth = 140;
+        polity.FoodFarmedThisMonth = 70;
+        polity.FoodGatheredThisMonth = 0;
+        polity.FoodStores = 0;
+
+        SettlementFoodRedistributionSystem system = new();
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        polity.FoodFarmedThisMonth = 180;
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        polity.FoodFarmedThisMonth = 70;
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        polity.FoodFarmedThisMonth = 180;
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        Assert.Equal(1, world.Events.Count(evt =>
+            evt.Type == WorldEventType.FamineRelief
+            && evt.SettlementId == starvingSettlement.Id
+            && evt.Reason == "settlement_starvation_recovered"));
+    }
+
+    [Fact]
     public void Migration_RelocatesSettlementNetworkWithThePolity()
     {
         World world = CreateWorld();

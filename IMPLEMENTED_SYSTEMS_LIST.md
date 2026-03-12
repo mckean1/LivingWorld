@@ -214,29 +214,24 @@ Implemented:
 ---
 
 ## Phase 17 — Material Economy & Production Chains
-**Status:** Planned
+**Status:** Complete
 
-Design/documentation completed:
-- Phase design spec created in `MATERIALS_ECONOMY_AND_PRODUCTION_CHAINS.md`
-
-Planned implementation:
-- Raw material extraction
-- Settlement material stockpiles
-- Basic production recipes/chains
-- Material effects on existing systems
-- Same-polity material redistribution
-- Emergent settlement specialization
-- UI summaries
-- Structured events/history integration
-- Major material milestones in the chronicle
+Implemented:
+- Settlement material stockpiles and pressure states
+- Regional abundance-driven extraction for wood, stone, clay, fiber, salt, copper ore, and iron ore
+- Lightweight production chains for lumber, stone blocks, pottery, rope, textiles, simple tools, and preserved food
+- Tool tiers and material bonuses feeding back into farming, hunting, spoilage, and seasonal resilience
+- Same-polity material redistribution with distance loss, critical-priority routing, and convoy events
+- Emergent settlement specialization from sustained output and regional fit
+- Structured material event families plus grouped chronicle-safe material crisis milestones
+- Watch/UI summaries for material surpluses, shortages, production centers, and resource hotspots
 
 ---
 
 # Next Feature To Implement
-**Phase 17 — Material Economy & Production Chains**
+**Phase 18 — To Be Decided**
 
 ---
 
 # Not Yet Implemented
-- Material Economy & Production Chains
-- Any later phases after Phase 17 must be decided from this list once Phase 17 is completed and synced
+- Any later phases after Phase 17 must be decided from this list once the next roadmap pass is defined and synced

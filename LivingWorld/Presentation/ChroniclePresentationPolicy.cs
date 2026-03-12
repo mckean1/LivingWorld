@@ -95,6 +95,84 @@ public sealed class ChroniclePresentationPolicy
                 ChangedStateCooldownYears: 0,
                 BuildPrimaryPolityScopeKey,
                 BuildManagedFoodStateKey),
+            [WorldEventType.MaterialDiscovered] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 20,
+                ChangedStateCooldownYears: 6,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.MaterialShortageStarted] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 12,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.MaterialShortageWorsened] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 10,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.MaterialShortageResolved] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 10,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.MaterialCrisisStarted] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 12,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialCrisisScopeKey,
+                BuildMaterialCrisisStateKey),
+            [WorldEventType.MaterialCrisisWorsened] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 10,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialCrisisScopeKey,
+                BuildMaterialCrisisStateKey),
+            [WorldEventType.MaterialCrisisResolved] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 10,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialCrisisScopeKey,
+                BuildMaterialCrisisStateKey),
+            [WorldEventType.MaterialConvoySent] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 8,
+                ChangedStateCooldownYears: 2,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.MaterialConvoyFailed] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 10,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.ProductionMilestone] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 18,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.SettlementSpecialized] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 24,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.PreservationEstablished] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 20,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.ToolmakingEstablished] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 20,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
             [WorldEventType.StageChanged] = new ChronicleEventProfile(
                 BasePriority: 5,
                 SameStateCooldownYears: 30,
@@ -134,6 +212,25 @@ public sealed class ChroniclePresentationPolicy
     {
         ChronicleEventProfile profile = ResolveProfile(worldEvent);
         return profile.StateKeyFactory?.Invoke(worldEvent) ?? BuildNarrativeStateKey(worldEvent);
+    }
+
+    public string? BuildPlayerFacingDedupKey(WorldEvent worldEvent)
+    {
+        if (worldEvent.Severity < MinimumChronicleSeverity || !IsPlayerFacingChronicleEvent(worldEvent))
+        {
+            return null;
+        }
+
+        ChronicleEventProfile profile = ResolveProfile(worldEvent);
+        string? actorScope = profile.ScopeKeyFactory(worldEvent) ?? BuildChronicleScopeKey(worldEvent);
+        string stateKey = ResolveStateKey(worldEvent) ?? BuildNarrativeStateKey(worldEvent) ?? string.Empty;
+        return string.Join(":", new[]
+        {
+            worldEvent.Year.ToString(),
+            worldEvent.Type,
+            actorScope ?? "global",
+            stateKey
+        });
     }
 
     public bool ShouldPresent(
@@ -216,6 +313,19 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.CropEstablished or
             WorldEventType.DomesticationSpread or
             WorldEventType.AgricultureStabilizedFoodSupply or
+            WorldEventType.MaterialDiscovered or
+            WorldEventType.MaterialShortageStarted or
+            WorldEventType.MaterialShortageWorsened or
+            WorldEventType.MaterialShortageResolved or
+            WorldEventType.MaterialCrisisStarted or
+            WorldEventType.MaterialCrisisWorsened or
+            WorldEventType.MaterialCrisisResolved or
+            WorldEventType.MaterialConvoySent or
+            WorldEventType.MaterialConvoyFailed or
+            WorldEventType.ProductionMilestone or
+            WorldEventType.SettlementSpecialized or
+            WorldEventType.PreservationEstablished or
+            WorldEventType.ToolmakingEstablished or
             WorldEventType.Fragmentation or
             WorldEventType.PolityFounded or
             WorldEventType.StageChanged or
@@ -369,6 +479,47 @@ public sealed class ChroniclePresentationPolicy
             ?? string.Empty;
         string targetSpeciesKey = TryGetValue(worldEvent.Metadata, "targetSpeciesId") ?? string.Empty;
         return $"settlement:{settlementKey}:species:{targetSpeciesKey}";
+    }
+
+    private static string? BuildMaterialStateKey(WorldEvent worldEvent)
+        => string.Join(":", new[]
+        {
+            worldEvent.Reason ?? string.Empty,
+            worldEvent.SettlementId?.ToString() ?? string.Empty,
+            TryGetValue(worldEvent.Metadata, "materialType")
+                ?? TryGetValue(worldEvent.After, "materialType")
+                ?? string.Empty,
+            TryGetValue(worldEvent.Metadata, "specializationTag")
+                ?? TryGetValue(worldEvent.Metadata, "shortageBand")
+                ?? TryGetValue(worldEvent.Metadata, "toolTier")
+                ?? string.Empty
+        });
+
+    private static string? BuildMaterialScopeKey(WorldEvent worldEvent)
+    {
+        string settlementKey = worldEvent.SettlementId?.ToString()
+            ?? worldEvent.RegionId?.ToString()
+            ?? string.Empty;
+        string materialKey = TryGetValue(worldEvent.Metadata, "materialType")
+            ?? TryGetValue(worldEvent.After, "materialType")
+            ?? string.Empty;
+        return $"settlement:{settlementKey}:material:{materialKey}";
+    }
+
+    private static string? BuildMaterialCrisisStateKey(WorldEvent worldEvent)
+        => string.Join(":", new[]
+        {
+            worldEvent.Reason ?? string.Empty,
+            TryGetValue(worldEvent.Metadata, "groupedMaterials") ?? string.Empty,
+            TryGetValue(worldEvent.Metadata, "groupedCount") ?? string.Empty
+        });
+
+    private static string? BuildMaterialCrisisScopeKey(WorldEvent worldEvent)
+    {
+        string settlementKey = worldEvent.SettlementId?.ToString()
+            ?? worldEvent.RegionId?.ToString()
+            ?? string.Empty;
+        return $"settlement:{settlementKey}:material-crisis";
     }
 
     private static string? BuildStageStateKey(WorldEvent worldEvent)

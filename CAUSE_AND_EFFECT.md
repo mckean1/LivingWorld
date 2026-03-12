@@ -243,3 +243,22 @@ This preserves the terminology split:
 
 - discovering a useful species is `Discovery`
 - organizing herding or agriculture is `Learned` capability plus local implementation
+
+## Phase 17 Cause and Effect
+
+Material economy now follows the same grounded chain:
+
+1. a region provides abundance for specific physical materials
+2. a settlement with enough labor and learned capability extracts those materials
+3. local stockpiles are converted into useful goods through simple recipes
+4. tools, pottery, and preserved food change later farming, hunting, spoilage, and hardship outcomes
+5. only true surplus moves through same-polity convoys, with distance reducing what arrives
+6. detailed per-material shortages and convoy failures are still recorded as operational history
+7. the main chronicle sees grouped settlement-level crisis turns only when the broader material state actually changes
+
+This keeps the simulation concrete:
+
+- no prices decide outcomes
+- no merchant actor is invented to explain movement
+- convoy relief, craft emergence, and shortage pressure all come from stockpiles, capability, geography, and distance
+- player-facing major-event views may collapse equivalent same-year outcomes into one visible beat, but the underlying structured event chain remains intact for debugging and history tools

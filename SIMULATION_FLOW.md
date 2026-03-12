@@ -131,3 +131,23 @@ The monthly food layer now includes an earlier domestication and cultivation ste
 6. trade, aid, consumption, and migration react to that updated food position
 
 This creates a historical transition path instead of a single jump: foraging and hunting -> managed local species -> early agriculture -> more stable settlement life.
+
+## Phase 17 Monthly Material Flow
+
+The monthly material layer now follows this order inside a polity:
+
+1. discover region-linked useful materials when local abundance is high enough
+2. extract raw materials from settlement regions using labor, capability, hardship, and tool modifiers
+3. convert stockpiles through short production recipes
+4. preserve part of food surplus when salt and storage capability exist
+5. apply monthly wear to durable goods
+6. classify each material into deficit, stable, or surplus states
+7. redistribute critical material surplus within the polity using same-region, adjacent-region, then closest routing
+8. record detailed per-material shortages and convoy failures in structured history
+9. emit grouped settlement-level crisis turns when multiple related material shifts happen together
+10. surface only major material transitions such as a broader crisis beginning, worsening, easing, or a settlement becoming known for a craft
+11. apply a final player-facing dedupe identity when recent visible major-event summaries are collected, so repeated same-year lines do not reappear through a different view path
+
+This keeps the physical economy legible:
+
+`Regional Abundance -> Extraction -> Local Stockpile -> Production -> Consumption / Bonuses -> Pressure Classification -> Redistribution`

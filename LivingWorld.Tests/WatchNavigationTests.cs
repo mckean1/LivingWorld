@@ -4,6 +4,7 @@ using LivingWorld.Map;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Advancement;
+using LivingWorld.Economy;
 using Xunit;
 
 namespace LivingWorld.Tests;
@@ -225,6 +226,51 @@ public sealed class WatchNavigationTests
     }
 
     [Fact]
+    public void MyPolity_ShowsMaterialEconomySummary()
+    {
+        World world = CreateWorld();
+        Polity polity = world.Polities.First(candidate => candidate.Id == 7);
+        Settlement settlement = polity.Settlements[0];
+        settlement.MaterialPressureStates[MaterialType.Wood] = MaterialPressureState.Surplus;
+        settlement.MaterialPressureStates[MaterialType.SimpleTools] = MaterialPressureState.Deficit;
+        settlement.MaterialProducedThisYear[MaterialType.Pottery] = 12;
+        settlement.AddMaterial(MaterialType.PreservedFood, 7);
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.MyPolity);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(lines, line => line.StartsWith(" Material Surpluses: ", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.StartsWith(" Critical Shortages: ", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.StartsWith(" Leading Production: ", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.StartsWith(" Tool / Storage / Preservation: ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void RegionDetail_ShowsExtractableResources_AndLocalProduction()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions.First(candidate => candidate.Id == 0);
+        region.WoodAbundance = 0.90;
+        region.ClayAbundance = 0.82;
+        Polity polity = world.Polities.First(candidate => candidate.Id == 7);
+        polity.Settlements[0].SpecializationTags.Add(SettlementSpecializationTag.PotteryTradition);
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.PushDetailView(WatchViewType.RegionDetail, entityId: 0);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(lines, line => line.StartsWith(" Extractable Resources: ", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.StartsWith(" Local Production: ", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void SpeciesDetail_ShowsCultivationAndManagementStatus()
     {
         World world = CreateWorld();
@@ -258,6 +304,96 @@ public sealed class WatchNavigationTests
         Assert.Contains(" Known Species: 2", lines);
         Assert.Contains(" Known Polities: 1", lines);
         Assert.DoesNotContain(lines, line => line.Contains("Total Regions: 4", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void VisibleMajorEvents_DedupesDuplicateSettlementRecoveryLines()
+    {
+        World world = CreateWorld();
+        world.AddEvent(
+            WorldEventType.FamineRelief,
+            WorldEventSeverity.Major,
+            "Gloam Fen Hearth recovered from starvation",
+            reason: "settlement_starvation_recovered",
+            scope: WorldEventScope.Local,
+            polityId: 7,
+            polityName: "Deepfield Tribe",
+            speciesId: 1,
+            speciesName: "Humans",
+            regionId: 0,
+            regionName: "Green Barrow",
+            settlementId: 7001,
+            settlementName: "Gloam Fen Hearth");
+        world.AddEvent(
+            WorldEventType.FamineRelief,
+            WorldEventSeverity.Major,
+            "Gloam Fen Hearth recovered from starvation",
+            reason: "settlement_starvation_recovered",
+            scope: WorldEventScope.Local,
+            polityId: 7,
+            polityName: "Deepfield Tribe",
+            speciesId: 1,
+            speciesName: "Humans",
+            regionId: 0,
+            regionName: "Green Barrow",
+            settlementId: 7001,
+            settlementName: "Gloam Fen Hearth");
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchKnowledgeSnapshot snapshot = WatchInspectionData.CreateSnapshot(world, focus);
+
+        IReadOnlyList<WorldEvent> visibleEvents = snapshot.GetVisibleMajorEvents(world, limit: 10);
+
+        Assert.Equal(1, visibleEvents.Count(evt => evt.Narrative.Contains("Gloam Fen Hearth recovered from starvation", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void VisibleMajorEvents_KeepDistinctSameYearEvents()
+    {
+        World world = CreateWorld();
+        world.AddEvent(
+            WorldEventType.FamineRelief,
+            WorldEventSeverity.Major,
+            "Gloam Fen Hearth recovered from starvation",
+            reason: "settlement_starvation_recovered",
+            scope: WorldEventScope.Local,
+            polityId: 7,
+            polityName: "Deepfield Tribe",
+            speciesId: 1,
+            speciesName: "Humans",
+            regionId: 0,
+            regionName: "Green Barrow",
+            settlementId: 7001,
+            settlementName: "Gloam Fen Hearth");
+        world.AddEvent(
+            WorldEventType.MaterialCrisisResolved,
+            WorldEventSeverity.Major,
+            "Gloam Fen Hearth recovered from a broader material crisis",
+            reason: "grouped_material_crisis_resolved",
+            scope: WorldEventScope.Local,
+            polityId: 7,
+            polityName: "Deepfield Tribe",
+            speciesId: 1,
+            speciesName: "Humans",
+            regionId: 0,
+            regionName: "Green Barrow",
+            settlementId: 7001,
+            settlementName: "Gloam Fen Hearth",
+            metadata: new Dictionary<string, string>
+            {
+                ["groupedMaterials"] = "Pottery,SimpleTools",
+                ["groupedCount"] = "2"
+            });
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchKnowledgeSnapshot snapshot = WatchInspectionData.CreateSnapshot(world, focus);
+
+        IReadOnlyList<WorldEvent> visibleEvents = snapshot.GetVisibleMajorEvents(world, limit: 10);
+
+        Assert.Contains(visibleEvents, evt => evt.Narrative.Contains("Gloam Fen Hearth recovered from starvation", StringComparison.Ordinal));
+        Assert.Contains(visibleEvents, evt => evt.Narrative.Contains("Gloam Fen Hearth recovered from a broader material crisis", StringComparison.Ordinal));
     }
 
     private static World CreateWorld()

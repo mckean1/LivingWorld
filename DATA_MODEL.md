@@ -292,3 +292,43 @@ New lightweight records:
   - seasonal resilience
 
 `Species` also now includes `CultivationAffinity` alongside existing domestication suitability support.
+
+## Phase 17 Additions
+
+`Region` now also carries abundance values for:
+
+- `WoodAbundance`
+- `StoneAbundance`
+- `ClayAbundance`
+- `FiberAbundance`
+- `SaltAbundance`
+- `CopperOreAbundance`
+- `IronOreAbundance`
+
+`Settlement` now also carries:
+
+- `ToolProductionTier`
+- `MaterialStockpiles`
+- `MaterialProducedThisMonth`
+- `MaterialConsumedThisMonth`
+- `MaterialProducedThisYear`
+- `MaterialConsumedThisYear`
+- `MaterialTargetReserves`
+- `MaterialPressureStates`
+- `LastRecordedMaterialShortageBands`
+- `SpecializationScores`
+- `SpecializationTags`
+- `MaterialMilestonesRecorded`
+
+`Polity` now also tracks:
+
+- `MaterialMovedThisYear`
+
+New economy types:
+
+- `MaterialType`
+- `MaterialPressureState`
+- `ProductionRecipe`
+- `SettlementSpecializationTag`
+
+These remain lightweight settlement-level records rather than a full market model. Regions provide abundance, settlements convert that capacity into stockpiled materials, and the event stream records major material transitions.

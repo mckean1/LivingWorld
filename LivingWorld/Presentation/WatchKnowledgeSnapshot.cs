@@ -7,6 +7,7 @@ namespace LivingWorld.Presentation;
 
 public sealed class WatchKnowledgeSnapshot
 {
+    private static readonly ChroniclePresentationPolicy VisibleEventPresentationPolicy = new();
     private readonly Dictionary<int, Region> _knownRegionsById;
     private readonly Dictionary<int, Species> _knownSpeciesById;
     private readonly Dictionary<int, Polity> _knownPolitiesById;
@@ -194,6 +195,7 @@ public sealed class WatchKnowledgeSnapshot
         HashSet<int> knownRegionIds = KnownRegions.Select(region => region.Id).ToHashSet();
         HashSet<int> knownPolityIds = KnownPolities.Select(polity => polity.Id).ToHashSet();
         HashSet<int> knownSpeciesIds = KnownSpecies.Select(species => species.Id).ToHashSet();
+        HashSet<string> seenDedupKeys = new(StringComparer.Ordinal);
 
         return world.Events
             .Where(worldEvent => worldEvent.Severity is WorldEventSeverity.Major or WorldEventSeverity.Legendary)
@@ -203,6 +205,12 @@ public sealed class WatchKnowledgeSnapshot
                 || (worldEvent.RegionId.HasValue && knownRegionIds.Contains(worldEvent.RegionId.Value))
                 || (worldEvent.SpeciesId.HasValue && knownSpeciesIds.Contains(worldEvent.SpeciesId.Value)))
             .OrderByDescending(worldEvent => worldEvent.EventId)
+            .Where(worldEvent =>
+            {
+                string dedupKey = VisibleEventPresentationPolicy.BuildPlayerFacingDedupKey(worldEvent)
+                    ?? $"{worldEvent.Year}:{WorldEvent.NormalizeNarrative(worldEvent.Narrative)}";
+                return seenDedupKeys.Add(dedupKey);
+            })
             .Take(limit)
             .ToList();
     }

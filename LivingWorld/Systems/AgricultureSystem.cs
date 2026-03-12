@@ -312,12 +312,14 @@ public sealed class AgricultureSystem
         };
 
         double knowledgeEfficiency = 1.0 + (polity.Capabilities.FarmingYieldPerPerson * 1.4);
+        double toolEfficiency = 0.92 + (settlement.ResolveToolEffectiveness() * 0.16);
 
         return cultivatedLand
             * BaseYieldPerCultivatedLand
             * soilWaterQuality
             * seasonalFactor
             * settlementEfficiency
-            * knowledgeEfficiency;
+            * knowledgeEfficiency
+            * toolEfficiency;
     }
 }

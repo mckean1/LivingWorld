@@ -1,4 +1,5 @@
 using LivingWorld.Advancement;
+using LivingWorld.Economy;
 
 namespace LivingWorld.Societies;
 
@@ -97,6 +98,7 @@ public sealed class Polity
     public Dictionary<int, int> FailedHuntsBySpecies { get; }
     public Dictionary<int, double> DomesticationInterestBySpecies { get; }
     public Dictionary<int, double> CultivationFamiliarityBySpecies { get; }
+    public Dictionary<MaterialType, double> MaterialMovedThisYear { get; }
     public bool HasSettlements => _settlements.Count > 0;
     public IReadOnlyList<Settlement> Settlements => _settlements;
 
@@ -191,6 +193,7 @@ public sealed class Polity
         FailedHuntsBySpecies = new Dictionary<int, int>();
         DomesticationInterestBySpecies = new Dictionary<int, double>();
         CultivationFamiliarityBySpecies = new Dictionary<int, double>();
+        MaterialMovedThisYear = new Dictionary<MaterialType, double>();
         _discoveries = new Dictionary<string, CulturalDiscovery>(StringComparer.OrdinalIgnoreCase);
     }
 
@@ -230,7 +233,10 @@ public sealed class Polity
             settlement.ManagedAnimalFoodThisMonth = 0;
             settlement.ManagedCropFoodThisMonth = 0;
             settlement.ManagedFoodThisYear = 0;
+            settlement.ResetAnnualMaterialStats();
         }
+
+        MaterialMovedThisYear.Clear();
     }
 
     public bool HasAdvancement(AdvancementId advancementId)

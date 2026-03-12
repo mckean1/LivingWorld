@@ -21,6 +21,7 @@ public sealed class Simulation : IDisposable
     private readonly MutationSystem _mutationSystem;
     private readonly DomesticationSystem _domesticationSystem;
     private readonly AgricultureSystem _agricultureSystem;
+    private readonly MaterialEconomySystem _materialEconomySystem;
     private readonly TradeSystem _tradeSystem;
     private readonly SettlementFoodRedistributionSystem _settlementFoodRedistributionSystem;
     private readonly PopulationSystem _populationSystem;
@@ -56,6 +57,7 @@ public sealed class Simulation : IDisposable
         _mutationSystem = new MutationSystem();
         _domesticationSystem = new DomesticationSystem();
         _agricultureSystem = new AgricultureSystem(_domesticationSystem);
+        _materialEconomySystem = new MaterialEconomySystem();
         _tradeSystem = new TradeSystem();
         _settlementFoodRedistributionSystem = new SettlementFoodRedistributionSystem();
         _populationSystem = new PopulationSystem();
@@ -88,6 +90,7 @@ public sealed class Simulation : IDisposable
             new FoodStressPropagationHandler(),
             new AgriculturePropagationHandler(),
             new DomesticationPropagationHandler(),
+            new MaterialEconomyPropagationHandler(),
             new MigrationPropagationHandler(),
             new FragmentationPropagationHandler()
         ]));
@@ -193,6 +196,7 @@ public sealed class Simulation : IDisposable
         RunSeasonalBiologyIfNeeded();
         _foodSystem.GatherFood(_world);
         _domesticationSystem.UpdateMonthlyKnowledgeAndSources(_world);
+        _materialEconomySystem.UpdateMonthlyMaterials(_world);
         _agricultureSystem.ProduceFarmFood(_world);
         _domesticationSystem.ProduceManagedAnimalFood(_world);
         _tradeSystem.UpdateTrade(_world);

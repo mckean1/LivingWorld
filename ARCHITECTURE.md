@@ -273,3 +273,22 @@ The new managed-food entities stay population-level:
 - `CultivatedCrop` tracks a cultivated plant variant, yield multiplier, resilience, and stability effect for one settlement
 
 This keeps the model cheap, explicit, and extensible for later pack animals, labor animals, milk/fiber outputs, and selective breeding without replacing the current architecture.
+
+## Phase 17 - Material Economy Architecture
+
+The new material layer extends the same settlement-grounded model instead of creating a parallel economy simulator.
+
+- `Region` remains a capacity provider through per-material abundance values rather than a finite inventory
+- `Settlement` is the core material actor and now owns stockpiles, reserve targets, pressure states, annual production history, tool tier, and specialization tags
+- `MaterialEconomySystem` runs monthly after gathering and domestication familiarity, then before farm output and later hardship resolution
+- extraction, production, pressure classification, redistribution, and specialization all operate on the same settlement records
+- `MaterialEconomyPropagationHandler` turns meaningful preservation, toolmaking, and convoy success into downstream stability effects through the normal event pipeline
+- grouped material-crisis events are emitted in addition to lower-level per-material shortage events so player-facing history stays settlement-scale and readable while structured history keeps the exact material breakdown
+
+This preserves LivingWorld's existing architecture rules:
+
+- cause-and-effect remains explicit
+- structured events stay canonical
+- routine operational state remains inspectable without spamming the chronicle
+- later construction, infrastructure, and inter-polity trade can build on the same stockpile model
+- player-facing major-event views now share a common dedupe identity so the live chronicle and visible-major-event summaries do not diverge on duplicate suppression

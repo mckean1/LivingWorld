@@ -124,6 +124,44 @@ public sealed class EventPropagationTests
         Assert.True(polity.EventDrivenMigrationPressureBonus < 0.24);
     }
 
+    [Fact]
+    public void MaterialPropagation_CanFollowPreservationWithFoodStability()
+    {
+        World world = CreateWorld();
+        Polity polity = new(7, "River Clan", 1, 0, 80)
+        {
+            EventDrivenMigrationPressureBonus = 0.18
+        };
+        polity.EstablishFirstSettlement(0, "Coast Hearth");
+        world.Polities.Add(polity);
+        world.ConfigureEventPropagation(new EventPropagationCoordinator(
+            [new MaterialEconomyPropagationHandler()],
+            maxDepth: 4,
+            maxEventsPerStep: 20));
+
+        world.AddEvent(
+            WorldEventType.PreservationEstablished,
+            WorldEventSeverity.Major,
+            "Coast Hearth established food preservation in Coast",
+            reason: "preservation_established",
+            scope: WorldEventScope.Local,
+            polityId: polity.Id,
+            polityName: polity.Name,
+            speciesId: polity.SpeciesId,
+            speciesName: "People",
+            regionId: 0,
+            regionName: "Coast",
+            settlementId: polity.Settlements[0].Id,
+            settlementName: polity.Settlements[0].Name,
+            metadata: new Dictionary<string, string>
+            {
+                ["materialType"] = "PreservedFood"
+            });
+
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.FoodStabilized && evt.Reason == "preserved_food_buffered_supply");
+        Assert.True(polity.EventDrivenMigrationPressureBonus < 0.18);
+    }
+
     private static World CreateWorld()
     {
         World world = new(new WorldTime(12, 1));

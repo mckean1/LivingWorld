@@ -8,6 +8,7 @@ namespace LivingWorld.Generation;
 public sealed class WorldGenerator
 {
     private readonly Random _random;
+    private readonly int _seed;
     private readonly Queue<string> _regionNames;
     private readonly Queue<string> _polityNames;
     private readonly List<SpeciesTemplate> _speciesTemplates;
@@ -17,6 +18,7 @@ public sealed class WorldGenerator
 
     public WorldGenerator(int seed, WorldGenerationSettings? settings = null)
     {
+        _seed = seed;
         _random = new Random(seed);
         _settings = settings ?? new WorldGenerationSettings();
         _regionNames = new Queue<string>(BuildShuffledNames(WorldGenerationCatalog.CreateRegionNames()));
@@ -497,6 +499,29 @@ public sealed class WorldGenerator
         region.MaxAnimalBiomass = _random.Next(animalMin, animalMax + 1);
         region.PlantBiomass = region.MaxPlantBiomass * Roll(0.52, 0.72);
         region.AnimalBiomass = region.MaxAnimalBiomass * Roll(0.48, 0.68);
+        AssignMaterialAbundance(region, biome);
+    }
+
+    private void AssignMaterialAbundance(Region region, RegionBiome biome)
+    {
+        double RollMaterial(double min, double max, int salt)
+        {
+            Random localRandom = new(HashCode.Combine(_seed, region.Id, (int)biome, salt));
+            return min + (localRandom.NextDouble() * (max - min));
+        }
+
+        (region.WoodAbundance, region.StoneAbundance, region.ClayAbundance, region.FiberAbundance, region.SaltAbundance, region.CopperOreAbundance, region.IronOreAbundance) = biome switch
+        {
+            RegionBiome.Coast => (RollMaterial(0.40, 0.68, 11), RollMaterial(0.34, 0.56, 12), RollMaterial(0.42, 0.68, 13), RollMaterial(0.38, 0.58, 14), RollMaterial(0.58, 0.92, 15), RollMaterial(0.10, 0.28, 16), RollMaterial(0.06, 0.18, 17)),
+            RegionBiome.RiverValley => (RollMaterial(0.54, 0.80, 21), RollMaterial(0.26, 0.46, 22), RollMaterial(0.60, 0.88, 23), RollMaterial(0.58, 0.82, 24), RollMaterial(0.16, 0.34, 25), RollMaterial(0.08, 0.22, 26), RollMaterial(0.06, 0.16, 27)),
+            RegionBiome.Plains => (RollMaterial(0.42, 0.64, 31), RollMaterial(0.28, 0.50, 32), RollMaterial(0.36, 0.58, 33), RollMaterial(0.44, 0.66, 34), RollMaterial(0.12, 0.26, 35), RollMaterial(0.10, 0.24, 36), RollMaterial(0.06, 0.18, 37)),
+            RegionBiome.Forest => (RollMaterial(0.72, 0.96, 41), RollMaterial(0.24, 0.42, 42), RollMaterial(0.20, 0.40, 43), RollMaterial(0.52, 0.76, 44), RollMaterial(0.06, 0.18, 45), RollMaterial(0.08, 0.18, 46), RollMaterial(0.06, 0.16, 47)),
+            RegionBiome.Highlands => (RollMaterial(0.30, 0.54, 51), RollMaterial(0.56, 0.82, 52), RollMaterial(0.30, 0.48, 53), RollMaterial(0.20, 0.38, 54), RollMaterial(0.10, 0.24, 55), RollMaterial(0.30, 0.54, 56), RollMaterial(0.22, 0.44, 57)),
+            RegionBiome.Mountains => (RollMaterial(0.18, 0.34, 61), RollMaterial(0.74, 0.98, 62), RollMaterial(0.12, 0.24, 63), RollMaterial(0.10, 0.22, 64), RollMaterial(0.08, 0.20, 65), RollMaterial(0.42, 0.74, 66), RollMaterial(0.36, 0.70, 67)),
+            RegionBiome.Wetlands => (RollMaterial(0.46, 0.70, 71), RollMaterial(0.18, 0.34, 72), RollMaterial(0.56, 0.82, 73), RollMaterial(0.64, 0.90, 74), RollMaterial(0.20, 0.38, 75), RollMaterial(0.06, 0.16, 76), RollMaterial(0.04, 0.12, 77)),
+            RegionBiome.Drylands => (RollMaterial(0.14, 0.28, 81), RollMaterial(0.42, 0.68, 82), RollMaterial(0.18, 0.32, 83), RollMaterial(0.14, 0.26, 84), RollMaterial(0.44, 0.78, 85), RollMaterial(0.18, 0.34, 86), RollMaterial(0.14, 0.30, 87)),
+            _ => (RollMaterial(0.36, 0.62, 91), RollMaterial(0.32, 0.54, 92), RollMaterial(0.28, 0.50, 93), RollMaterial(0.28, 0.52, 94), RollMaterial(0.12, 0.24, 95), RollMaterial(0.10, 0.20, 96), RollMaterial(0.08, 0.16, 97))
+        };
     }
 
     private double ScoreStartingPolityRegion(Species species, Region region)

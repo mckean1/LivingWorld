@@ -405,6 +405,11 @@ public sealed class SettlementFoodRedistributionSystem
         Settlement settlement,
         SettlementStarvationStage previousStage)
     {
+        if (settlement.LastStarvationRecoveryYear == world.Time.Year)
+        {
+            return;
+        }
+
         Region region = lookup.GetRequiredRegion(settlement.RegionId, "Settlement starvation recovery");
         world.AddEvent(
             WorldEventType.FamineRelief,
@@ -443,6 +448,7 @@ public sealed class SettlementFoodRedistributionSystem
                     ? WorldEventSeverity.Legendary.ToString()
                     : WorldEventSeverity.Major.ToString()
             });
+        settlement.LastStarvationRecoveryYear = world.Time.Year;
     }
 
     private static double ResolveNeedWeight(Settlement settlement)

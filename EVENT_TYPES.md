@@ -270,3 +270,43 @@ Default visibility intent:
 
 - discovery beats may stay structured-first unless they reach `Major`
 - herd establishment, crop establishment, spread, and first-time food stabilization are the main chronicle-facing turning points
+
+## Phase 17 Material Economy Events
+
+New structured event types:
+
+- `material_discovered`
+  - a polity recognized useful local wood, stone, clay, salt, or ore
+- `material_extraction_started`
+  - a settlement entered sustained local extraction
+- `material_shortage_started`
+  - a settlement dropped below working reserve in a tracked material
+- `material_shortage_worsened`
+  - a tracked material shortage deepened into a more severe band
+- `material_shortage_resolved`
+  - a settlement recovered out of a tracked shortage band
+- `material_crisis_started`
+  - grouped player-facing settlement crisis beat for multiple related shortages beginning together
+- `material_crisis_worsened`
+  - grouped player-facing settlement crisis beat for a broader material downturn deepening
+- `material_crisis_resolved`
+  - grouped player-facing settlement crisis beat for a broader material recovery
+- `production_started`
+  - a settlement began regular production of a specific processed good
+- `production_milestone`
+  - a chronicle-worthy craft milestone such as pottery tradition or cut-stone work
+- `material_convoy_sent`
+  - a same-polity material convoy moved meaningful relief
+- `material_convoy_failed`
+  - a critical material shortage remained unaided at a meaningful transition
+- `settlement_specialized`
+  - a settlement became known for a sustained craft or extraction role
+- `preservation_established`
+  - a settlement began preserving food through salt-backed storage
+- `toolmaking_established`
+  - a settlement reached sustained higher-quality tool production
+
+Default visibility intent:
+
+- routine discovery, extraction, production, and per-material shortage bookkeeping remain mostly structured-first
+- grouped `material_crisis_*` events, preservation, sustained toolmaking, and specialization turns are the main chronicle-facing material beats

@@ -233,3 +233,26 @@ The result is intentionally asymmetric:
 - managed herds supplement hunting rather than replacing it immediately
 - cultivated crops strengthen farming where agriculture already exists
 - both systems remain local to settlements and regions, so remote collapse or regional breadbaskets still emerge from the same underlying food logic
+
+## Phase 17 - Material Economy Interactions
+
+`MaterialEconomySystem` now connects:
+
+- regional abundance on `Region`
+- settlement labor, hardship state, and reserve targets
+- learned capability gates such as `StoneTools`, `FoodStorage`, `BasicConstruction`, and `CraftSpecialization`
+- `AgricultureSystem` through tool effectiveness
+- `HuntingSystem` through better hunting reliability
+- `FoodSystem` through pottery-backed storage and preserved-food buffering
+- same-polity logistics through route-prioritized material convoys
+- watch-mode inspection through settlement, region, polity, and world-overview summaries
+
+The result is still concrete and local:
+
+- geography creates raw-material advantages
+- settlements convert those advantages into visible craft roles
+- convoys move physical surplus rather than abstract trade value
+- lower-level shortage and convoy detail remains available in structured history
+- major visible events only appear when the material state changes meaningfully, usually as one grouped settlement crisis beat rather than several same-tick per-material lines
+
+More broadly, player-facing major-event summaries now reuse the same visible dedupe identity as the live chronicle. That means a settlement recovery, famine turn, or grouped material crisis that already represents one visible historical outcome will not be repeated in summary views just because equivalent events exist underneath in canonical history.

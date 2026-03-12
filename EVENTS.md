@@ -180,6 +180,7 @@ The chronicle formatter now also treats some event families as semantic transiti
 - visible families without an explicit semantic key still use a fallback normalized-narrative state key by actor scope, which suppresses exact repeated chronicle lines without hiding distinct turning points
 - source systems may also suppress repeat emissions before they ever reach chronicle presentation when no new milestone has been crossed
 - settlement aid failure follows the same rule: `aid_failed` and starvation recovery only emit when a settlement enters starvation, worsens to a deeper starvation stage, or exits starvation
+- player-facing major-event summaries now also apply a final dedupe pass using the same visible event identity as chronicle presentation, so exact or equivalent same-year lines do not reappear in recent-event lists
 - history writing is still append-only, but flushes are now batched so heavy biology years do not force a synchronous disk flush per event
 
 ## Example JSONL Record
@@ -197,3 +198,15 @@ Domestication and cultivation events follow the same rules:
 - they remain eligible for propagation through the normal coordinator
 
 New high-signal beats include discovery of manageable animals, discovery of cultivable plants, herd establishment, crop establishment, domestication spread, and the first annual transition into established managed-food stability. That stabilization beat should not repeat while the polity remains in the same established state.
+
+## Phase 17 Event Notes
+
+Material events follow the same transition-first rules:
+
+- extraction and routine production can remain structured-first
+- shortages only emit when a material crisis begins, worsens, or resolves
+- convoy failure is keyed to the shortage transition, not repeated every cycle of the same unresolved deficit
+- preservation, toolmaking, specialization, and critical convoy relief are the main chronicle-facing material milestones
+- when several material shortages shift together for one settlement in the same tick, the player-facing chronicle now prefers one grouped `material_crisis_*` beat while the underlying per-material events remain in structured history
+
+Material follow-up events can still propagate through the canonical coordinator. Preservation and critical material relief can support later food stabilization, while toolmaking and specialization can strengthen settlement stability without bypassing the event pipeline.

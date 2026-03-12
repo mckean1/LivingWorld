@@ -1,5 +1,19 @@
 # Phase 15 — Material Economy & Production Chains
 
+## Implementation Status
+
+Implemented in the current codebase as the first-pass material survival economy:
+
+- settlement stockpiles and pressure states
+- regional abundance-based extraction
+- short production chains for early goods
+- tool, storage, and preserved-food feedback into survival systems
+- same-polity material convoys with distance loss
+- emergent settlement specialization
+- structured material events plus chronicle-safe major milestones
+- watch-mode material summaries and hotspots
+- grouped player-facing material-crisis chronicle behavior layered over detailed structured events
+
 ## Purpose
 Phase 15 expands LivingWorld from a mostly food-centered survival simulation into a physical material economy. Settlements should extract raw materials from their regions, convert them into useful goods, store them locally, and redistribute them across the polity when needed.
 
@@ -31,6 +45,7 @@ Phase 15 should make the following true:
 - UI summaries for material state
 - Structured event/history integration
 - Major material turning points in the player-facing chronicle
+- Grouped settlement-level material crisis chronicle behavior
 
 ### Excluded
 - Currency

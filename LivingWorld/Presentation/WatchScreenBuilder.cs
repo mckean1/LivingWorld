@@ -1,8 +1,10 @@
 using LivingWorld.Advancement;
 using LivingWorld.Core;
+using LivingWorld.Economy;
 using LivingWorld.Life;
 using LivingWorld.Map;
 using LivingWorld.Societies;
+using LivingWorld.Systems;
 
 namespace LivingWorld.Presentation;
 
@@ -82,6 +84,10 @@ public static class WatchScreenBuilder
         double annualFoodRatio = polity.AnnualFoodNeeded <= 0 ? 1.0 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
         int managedHerdCount = polity.Settlements.Sum(settlement => settlement.ManagedHerds.Count);
         int cultivatedCropCount = polity.Settlements.Sum(settlement => settlement.CultivatedCrops.Count);
+        string materialSurpluses = DescribeTopMaterialStates(polity.Settlements, MaterialPressureState.Surplus);
+        string materialShortages = DescribeTopMaterialStates(polity.Settlements, MaterialPressureState.Deficit);
+        string leadingProduction = DescribeLeadingProductionSettlements(polity.Settlements);
+        string materialStatus = DescribeMaterialCapabilityStatus(polity.Settlements);
 
         List<string> lines =
         [
@@ -99,6 +105,10 @@ public static class WatchScreenBuilder
             $" Food Sources: Wild {polity.AnnualFoodGathered:F0} | Hunt {polity.FoodHuntedThisYear:F0} | Farm {polity.AnnualFoodFarmed:F0} | Trade {polity.AnnualFoodImported:F0}",
             $" Managed Food This Year: {polity.AnnualFoodManaged:F0}",
             $" Managed Sources: Herds {managedHerdCount} | Crops {cultivatedCropCount}",
+            $" Material Surpluses: {materialSurpluses}",
+            $" Critical Shortages: {materialShortages}",
+            $" Leading Production: {leadingProduction}",
+            $" Tool / Storage / Preservation: {materialStatus}",
             $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2} | Starvation Months {polity.StarvationMonthsThisYear}",
             $" Trade Links This Year: {polity.TradePartnerCountThisYear}",
             $" Hunting Losses This Year: {polity.HuntingCasualtiesThisYear}",
@@ -138,8 +148,9 @@ public static class WatchScreenBuilder
             Region region = knowledge.KnownRegions[index];
             string marker = index == selectedIndex ? ">" : " ";
             string resourceSummary = DescribeRegionResourceSummary(knowledge, region.Id);
+            string specializationSummary = DescribeVisibleRegionSpecialization(lookup.GetSettlementsInRegion(region.Id));
             lines.Add(
-                $"{marker} {region.Name,-18} {region.Biome,-12} Fert {region.Fertility:F2} Sett {lookup.GetSettlementsInRegion(region.Id).Count} {resourceSummary}");
+                $"{marker} {region.Name,-18} {region.Biome,-12} Fert {region.Fertility:F2} Sett {lookup.GetSettlementsInRegion(region.Id).Count} {resourceSummary} | {specializationSummary}");
         }
 
         return lines;
@@ -242,6 +253,23 @@ public static class WatchScreenBuilder
             lines.Add("  None");
         }
 
+        lines.Add(string.Empty);
+        lines.Add(" Strategic Material Hotspots:");
+        foreach ((Region region, string hotspot) in knowledge.KnownRegions
+                     .Select(region => (region, hotspot: DescribeStrategicHotspot(region)))
+                     .Where(entry => !string.Equals(entry.hotspot, "none", StringComparison.Ordinal))
+                     .OrderByDescending(entry => entry.region.Fertility + entry.region.WaterAvailability)
+                     .ThenBy(entry => entry.region.Name, StringComparer.Ordinal)
+                     .Take(5))
+        {
+            lines.Add($"  {region.Name} - {hotspot}");
+        }
+
+        if (lines[^1] == " Strategic Material Hotspots:")
+        {
+            lines.Add("  None known.");
+        }
+
         return lines;
     }
 
@@ -262,8 +290,10 @@ public static class WatchScreenBuilder
             $" Water Availability: {region.WaterAvailability:F2}",
             $" Environment: {DescribeEnvironment(region)}",
             $" Ecology: Plant {region.PlantBiomass:F0}/{region.MaxPlantBiomass:F0} | Animal {region.AnimalBiomass:F0}/{region.MaxAnimalBiomass:F0}",
+            $" Extractable Resources: {DescribeExtractableResources(region)}",
             $" Connected Known Regions: {region.ConnectedRegionIds.Count(knowledge.IsRegionKnown)}",
             $" Managed Food Sources: {DescribeManagedRegionSources(lookup.GetSettlementsInRegion(region.Id), knowledge, world)}",
+            $" Local Production: {DescribeRegionProduction(lookup.GetSettlementsInRegion(region.Id))}",
             string.Empty,
             " Discovered Resources:"
         ];
@@ -424,6 +454,7 @@ public static class WatchScreenBuilder
         double annualFoodRatio = polity.AnnualFoodNeeded <= 0 ? 1.0 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
         int managedHerdCount = polity.Settlements.Sum(settlement => settlement.ManagedHerds.Count);
         int cultivatedCropCount = polity.Settlements.Sum(settlement => settlement.CultivatedCrops.Count);
+        string visibleSpecialization = DescribeLeadingProductionSettlements(knowledge.GetVisibleSettlementsForPolity(polity));
 
         List<string> lines =
         [
@@ -439,6 +470,7 @@ public static class WatchScreenBuilder
             $" Food Situation: {ChronicleTextFormatter.DescribeFoodState(polity)} | stores {polity.FoodStores:F0} | annual ratio {annualFoodRatio:F2}",
             $" Managed Food This Year: {polity.AnnualFoodManaged:F0}",
             $" Managed Sources: Herds {managedHerdCount} | Crops {cultivatedCropCount}",
+            $" Visible Material Strength: {visibleSpecialization}",
             $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2}",
             string.Empty,
             " Visible Settlements:"
@@ -488,7 +520,7 @@ public static class WatchScreenBuilder
                 ? polity.Name
                 : $"Polity {settlement.PolityId}";
             lines.Add(
-                $"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1} - herds {settlement.ManagedHerds.Count} - crops {settlement.CultivatedCrops.Count} - food {settlement.FoodState} ({settlement.FoodBalance:F1}) - aid ytd {settlement.AidReceivedThisYear:F1}");
+                $"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1} - herds {settlement.ManagedHerds.Count} - crops {settlement.CultivatedCrops.Count} - food {settlement.FoodState} ({settlement.FoodBalance:F1}) - aid ytd {settlement.AidReceivedThisYear:F1} - mats {DescribeSettlementMaterialFocus(settlement)}");
         }
     }
 
@@ -500,6 +532,133 @@ public static class WatchScreenBuilder
         return discoveries.Count == 0
             ? "resources unknown"
             : $"resources {string.Join(", ", discoveries.Select(discovery => discovery.Summary).Take(2))}";
+    }
+
+    private static string DescribeExtractableResources(Region region)
+    {
+        List<string> resources = [];
+        foreach ((MaterialType materialType, double abundance) in new[]
+                 {
+                     (MaterialType.Wood, region.WoodAbundance),
+                     (MaterialType.Stone, region.StoneAbundance),
+                     (MaterialType.Clay, region.ClayAbundance),
+                     (MaterialType.Fiber, region.FiberAbundance),
+                     (MaterialType.Salt, region.SaltAbundance),
+                     (MaterialType.CopperOre, region.CopperOreAbundance),
+                     (MaterialType.IronOre, region.IronOreAbundance)
+                 })
+        {
+            if (abundance < 0.45)
+            {
+                continue;
+            }
+
+            resources.Add(MaterialEconomySystem.GetMaterialLabel(materialType));
+        }
+
+        return resources.Count == 0 ? "no strong material edge" : string.Join(", ", resources);
+    }
+
+    private static string DescribeRegionProduction(IEnumerable<Settlement> settlements)
+    {
+        List<string> production = settlements
+            .SelectMany(settlement => settlement.SpecializationTags)
+            .GroupBy(tag => tag)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key.ToString(), StringComparer.Ordinal)
+            .Select(group => MaterialEconomySystem.DescribeSpecialization(group.Key))
+            .Take(3)
+            .ToList();
+
+        return production.Count == 0 ? "none established" : string.Join(", ", production);
+    }
+
+    private static string DescribeTopMaterialStates(IEnumerable<Settlement> settlements, MaterialPressureState targetState)
+    {
+        List<string> materialStates = Enum.GetValues<MaterialType>()
+            .Select(materialType => new
+            {
+                Material = materialType,
+                Count = settlements.Count(settlement => settlement.MaterialPressureStates[materialType] == targetState)
+            })
+            .Where(entry => entry.Count > 0)
+            .OrderByDescending(entry => entry.Count)
+            .ThenBy(entry => entry.Material.ToString(), StringComparer.Ordinal)
+            .Select(entry => $"{MaterialEconomySystem.GetMaterialLabel(entry.Material)} {entry.Count}")
+            .Take(3)
+            .ToList();
+
+        return materialStates.Count == 0 ? "none" : string.Join(", ", materialStates);
+    }
+
+    private static string DescribeLeadingProductionSettlements(IEnumerable<Settlement> settlements)
+    {
+        List<string> leaders = settlements
+            .Select(settlement => new
+            {
+                Settlement = settlement,
+                Output = settlement.MaterialProducedThisYear.OrderByDescending(entry => entry.Value).FirstOrDefault()
+            })
+            .Where(entry => entry.Output.Value > 0.5)
+            .OrderByDescending(entry => entry.Output.Value)
+            .ThenBy(entry => entry.Settlement.Name, StringComparer.Ordinal)
+            .Select(entry => $"{entry.Settlement.Name} ({MaterialEconomySystem.GetMaterialLabel(entry.Output.Key)})")
+            .Take(3)
+            .ToList();
+
+        return leaders.Count == 0 ? "none yet" : string.Join(", ", leaders);
+    }
+
+    private static string DescribeMaterialCapabilityStatus(IEnumerable<Settlement> settlements)
+    {
+        List<Settlement> settlementList = settlements.ToList();
+        if (settlementList.Count == 0)
+        {
+            return "unknown";
+        }
+
+        double averageTools = settlementList.Average(settlement => settlement.ResolveToolEffectiveness());
+        double averageStorage = settlementList.Average(settlement => settlement.ResolveStorageMultiplier());
+        double preservedFood = settlementList.Sum(settlement => settlement.GetMaterialStockpile(MaterialType.PreservedFood));
+        return $"tools {averageTools:F2} | storage {averageStorage:F2} | preserved {preservedFood:F0}";
+    }
+
+    private static string DescribeVisibleRegionSpecialization(IEnumerable<Settlement> settlements)
+    {
+        List<string> tags = settlements
+            .SelectMany(settlement => settlement.SpecializationTags)
+            .Distinct()
+            .Select(MaterialEconomySystem.DescribeSpecialization)
+            .Take(2)
+            .ToList();
+
+        return tags.Count == 0 ? "no known craft center" : $"known for {string.Join(", ", tags)}";
+    }
+
+    private static string DescribeStrategicHotspot(Region region)
+    {
+        List<string> hotspotMaterials = [];
+        if (region.WoodAbundance >= 0.75) hotspotMaterials.Add("timber");
+        if (region.ClayAbundance >= 0.72) hotspotMaterials.Add("clay");
+        if (region.SaltAbundance >= 0.68) hotspotMaterials.Add("salt");
+        if (Math.Max(region.CopperOreAbundance, region.IronOreAbundance) >= 0.58) hotspotMaterials.Add("ore");
+
+        return hotspotMaterials.Count == 0 ? "none" : string.Join(", ", hotspotMaterials);
+    }
+
+    private static string DescribeSettlementMaterialFocus(Settlement settlement)
+    {
+        KeyValuePair<MaterialType, double> dominantOutput = settlement.MaterialProducedThisYear
+            .OrderByDescending(entry => entry.Value)
+            .FirstOrDefault();
+        if (dominantOutput.Value <= 0.5)
+        {
+            return settlement.SpecializationTags.Count == 0
+                ? "balanced"
+                : string.Join(", ", settlement.SpecializationTags.Select(MaterialEconomySystem.DescribeSpecialization).Take(2));
+        }
+
+        return MaterialEconomySystem.GetMaterialLabel(dominantOutput.Key);
     }
 
     private static string DescribeEnvironment(Region region)
