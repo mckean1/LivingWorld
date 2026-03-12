@@ -112,6 +112,7 @@ Selected fields:
 - `RegionId`
 - `PopulationCount`
 - `CarryingCapacity`
+- `BaseHabitatSuitability`
 - `HabitatSuitability`
 - `MigrationPressure`
 - recent predation, hunting, and food-stress markers
@@ -120,6 +121,7 @@ Selected fields:
 - accumulated mutation pressure by cause: food stress, predation, hunting, habitat mismatch, isolation, crowding, and low-pressure drift
 - divergence tracking: `DivergenceScore`, `IsolationSeasons`, mutation counts, and milestone markers
 - seasonal exchange markers so isolation and migration shock can be resolved cleanly
+- ancestral-fit versus adapted-fit tracking so regional adaptation can compare baseline species suitability against evolved local suitability
 
 These entries are population-level only. LivingWorld still does not simulate individual animals or genetics.
 The global `Species` definition remains the ancestral baseline. Mutation and divergence now happen on `RegionSpeciesPopulation` so one regional lineage can adapt without rewriting the parent species everywhere else.

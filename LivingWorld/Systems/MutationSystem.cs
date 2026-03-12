@@ -16,6 +16,9 @@ public sealed class MutationSystem
 
     public void UpdateSeason(World world)
     {
+        // Mutation reacts to the current seasonal ecology pass, including same-season
+        // regional species exchange recorded by EcosystemSystem. Later monthly polity
+        // migration is a social movement step and does not backfill these flags.
         foreach (Region region in world.Regions)
         {
             foreach (RegionSpeciesPopulation population in region.SpeciesPopulations.Where(candidate => candidate.PopulationCount > 0))
@@ -63,8 +66,9 @@ public sealed class MutationSystem
             ? 1.0
             : (double)population.PopulationCount / population.CarryingCapacity;
         double habitatMismatch = Math.Max(0.0, 0.82 - population.HabitatSuitability);
+        double ancestralMismatch = Math.Max(0.0, 0.82 - population.BaseHabitatSuitability);
         double migrationShock = population.ReceivedMigrantsThisSeason
-            ? 0.10 + (habitatMismatch * 0.25)
+            ? 0.10 + (ancestralMismatch * 0.25)
             : 0.0;
         double isolationGain = population.IsolationSeasons >= 4
             ? Math.Min(0.30, population.IsolationSeasons / 24.0)
@@ -76,7 +80,7 @@ public sealed class MutationSystem
         population.FoodStressMutationPressure = DecayAndAdd(population.FoodStressMutationPressure, population.RecentFoodStress * 0.52, 0.84);
         population.PredationMutationPressure = DecayAndAdd(population.PredationMutationPressure, population.RecentPredationPressure * 0.48, 0.86);
         population.HuntingMutationPressure = DecayAndAdd(population.HuntingMutationPressure, population.RecentHuntingPressure * 0.52, 0.86);
-        population.HabitatMismatchMutationPressure = DecayAndAdd(population.HabitatMismatchMutationPressure, (habitatMismatch * 0.44) + migrationShock, 0.88);
+        population.HabitatMismatchMutationPressure = DecayAndAdd(population.HabitatMismatchMutationPressure, (ancestralMismatch * 0.44) + migrationShock, 0.88);
         population.IsolationMutationPressure = DecayAndAdd(population.IsolationMutationPressure, isolationGain, 0.92);
         population.CrowdingMutationPressure = DecayAndAdd(population.CrowdingMutationPressure, Math.Max(0.0, carryingRatio - 0.85) * 0.55, 0.86);
         population.DriftMutationPressure = DecayAndAdd(population.DriftMutationPressure, driftGain, 0.92);
@@ -291,9 +295,22 @@ public sealed class MutationSystem
             return;
         }
 
+        double baseSuitability = population.BaseHabitatSuitability;
+        double suitabilityGain = population.HabitatSuitability - baseSuitability;
         double climateTolerance = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.ClimateTolerance);
         double dietFlexibility = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.DietFlexibility);
-        if (population.HabitatMismatchMutationPressure < 0.70 || population.HabitatSuitability < 0.90 || climateTolerance < 0.62)
+        double baselineClimateTolerance = PopulationTraitResolver.GetBaselineTrait(species, SpeciesTrait.ClimateTolerance);
+        double baselineDietFlexibility = PopulationTraitResolver.GetBaselineTrait(species, SpeciesTrait.DietFlexibility);
+        double climateGain = climateTolerance - baselineClimateTolerance;
+        double dietGain = dietFlexibility - baselineDietFlexibility;
+        bool ancestralMismatch = baseSuitability <= 0.72;
+        bool sustainedPressure = population.HabitatMismatchMutationPressure >= 0.58;
+        bool meaningfulTraitAdaptation = climateGain >= 0.08 || dietGain >= 0.10;
+        bool improvedRegionalFit = suitabilityGain >= 0.10 && population.HabitatSuitability >= 0.78;
+        bool divergenceEstablished = population.DivergenceScore >= 0.85;
+        bool persistentPopulation = population.PopulationCount >= Math.Max(6, population.CarryingCapacity / 10);
+
+        if (!ancestralMismatch || !sustainedPressure || !meaningfulTraitAdaptation || !improvedRegionalFit || !divergenceEstablished || !persistentPopulation)
         {
             return;
         }
@@ -310,11 +327,26 @@ public sealed class MutationSystem
             speciesName: species.Name,
             regionId: region.Id,
             regionName: region.Name,
+            before: new Dictionary<string, string>
+            {
+                ["baseHabitatSuitability"] = baseSuitability.ToString("F2"),
+                ["baselineClimateTolerance"] = baselineClimateTolerance.ToString("F2"),
+                ["baselineDietFlexibility"] = baselineDietFlexibility.ToString("F2")
+            },
             after: new Dictionary<string, string>
             {
+                ["baseHabitatSuitability"] = baseSuitability.ToString("F2"),
                 ["habitatSuitability"] = population.HabitatSuitability.ToString("F2"),
                 ["climateTolerance"] = climateTolerance.ToString("F2"),
-                ["dietFlexibility"] = dietFlexibility.ToString("F2")
+                ["dietFlexibility"] = dietFlexibility.ToString("F2"),
+                ["suitabilityGain"] = suitabilityGain.ToString("F2"),
+                ["divergenceScore"] = population.DivergenceScore.ToString("F2")
+            },
+            metadata: new Dictionary<string, string>
+            {
+                ["adaptationSignals"] = $"baseMismatch={baseSuitability:F2}, fitGain={suitabilityGain:F2}, climateGain={climateGain:F2}, dietGain={dietGain:F2}",
+                ["habitatMismatchPressure"] = population.HabitatMismatchMutationPressure.ToString("F2"),
+                ["population"] = population.PopulationCount.ToString()
             });
     }
 

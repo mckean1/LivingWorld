@@ -134,14 +134,16 @@ Monthly:
 
 - region biomass refresh
 - seasonal regional species population update on season boundaries
-- seasonal ecosystem food-web processing on season boundaries
+- seasonal ecosystem food-web processing and species exchange on season boundaries
 - seasonal settlement hunting on season boundaries
-- seasonal mutation and divergence processing on season boundaries
+- seasonal mutation and divergence processing after same-season species exchange
 - seasonal extinction cleanup and biomass sync after mutation processing
 - gathering, farming, trade redistribution, consumption, migration
 - propagation state bonuses tick down
 - systems emit canonical events on meaningful transitions
 - follow-up events are processed immediately through the same event pipeline
+
+The later monthly `MigrationSystem` still handles polity relocation after food resolution. Mutation does not read polity movement directly; it reads seasonal species-exchange state on `RegionSpeciesPopulation`.
 
 Year-end:
 

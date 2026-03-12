@@ -10,6 +10,54 @@ namespace LivingWorld.Tests;
 public sealed class MutationSystemTests
 {
     [Fact]
+    public void SeasonalSimulation_UsesSameSeasonSpeciesExchange_ForMutationInputs()
+    {
+        World world = CreateWorld();
+        using Simulation simulation = new(world, new Presentation.SimulationOptions
+        {
+            OutputMode = Presentation.OutputMode.Debug
+        });
+
+        Region targetRegion = world.Regions[1];
+        RegionSpeciesPopulation sourcePopulation = GetElkPopulation(world);
+        RegionSpeciesPopulation targetPopulation = targetRegion.GetSpeciesPopulation(4)!;
+
+        sourcePopulation.PopulationCount = 150;
+        sourcePopulation.RecentFoodStress = 1.0;
+        targetPopulation.PopulationCount = 0;
+        targetPopulation.CarryingCapacity = 80;
+
+        simulation.RunMonths(1);
+
+        Assert.True(targetPopulation.PopulationCount > 0);
+        Assert.True(targetPopulation.ReceivedMigrantsThisSeason);
+        Assert.True(targetPopulation.HabitatMismatchMutationPressure >= 0.10);
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationEstablished && evt.RegionId == targetRegion.Id);
+    }
+
+    [Fact]
+    public void EcosystemSeason_ResetPreventsStaleMigrationFlags_FromDrivingLaterMutation()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        RegionSpeciesPopulation population = world.Regions[1].GetOrCreateSpeciesPopulation(4);
+        MutationSystem mutationSystem = new(seed: 9);
+        EcosystemSystem ecosystemSystem = new();
+
+        population.PopulationCount = 18;
+        population.ReceivedMigrantsThisSeason = true;
+        population.SentMigrantsThisSeason = true;
+        population.EstablishedThisSeason = true;
+
+        ecosystemSystem.UpdateSeason(world);
+        mutationSystem.UpdateSeason(world);
+
+        Assert.False(population.ReceivedMigrantsThisSeason);
+        Assert.False(population.SentMigrantsThisSeason);
+        Assert.False(population.EstablishedThisSeason);
+        Assert.True(population.HabitatMismatchMutationPressure < 0.05);
+    }
+
+    [Fact]
     public void SingleSeasonPressureSpike_AccumulatesPressureWithoutImmediateMutation()
     {
         World world = CreateWorld();
@@ -88,6 +136,125 @@ public sealed class MutationSystemTests
         Assert.True(population.MajorMutationCount > 0);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationMajorMutation);
         Assert.True(population.DivergenceScore >= 2.4);
+    }
+
+    [Fact]
+    public void MigrationShock_IncreasesHabitatMismatchPressure_InSameSeason()
+    {
+        World withExchangeWorld = CreateWorld();
+        World noExchangeWorld = CreateWorld();
+        MutationSystem mutationSystem = new(seed: 14);
+        EcosystemSystem ecosystemSystem = new();
+
+        RegionSpeciesPopulation exchangeSource = GetElkPopulation(withExchangeWorld);
+        RegionSpeciesPopulation exchangeTarget = withExchangeWorld.Regions[1].GetSpeciesPopulation(4)!;
+        exchangeSource.PopulationCount = 150;
+        exchangeSource.RecentFoodStress = 1.0;
+        exchangeTarget.PopulationCount = 0;
+        exchangeTarget.BaseHabitatSuitability = 0.56;
+        exchangeTarget.HabitatSuitability = 0.58;
+
+        RegionSpeciesPopulation noExchangeTarget = noExchangeWorld.Regions[1].GetSpeciesPopulation(4)!;
+        noExchangeTarget.PopulationCount = 18;
+        noExchangeTarget.BaseHabitatSuitability = 0.56;
+        noExchangeTarget.HabitatSuitability = 0.58;
+
+        ecosystemSystem.UpdateSeason(withExchangeWorld);
+        mutationSystem.UpdateSeason(withExchangeWorld);
+
+        mutationSystem.UpdateSeason(noExchangeWorld);
+
+        Assert.True(exchangeTarget.ReceivedMigrantsThisSeason);
+        Assert.True(exchangeTarget.HabitatMismatchMutationPressure > noExchangeTarget.HabitatMismatchMutationPressure);
+        Assert.True(exchangeTarget.HabitatMismatchMutationPressure >= 0.10);
+    }
+
+    [Fact]
+    public void ExchangeReducesIsolation_WhenPopulationRejoinsRegionalFlow()
+    {
+        World world = CreateWorld();
+        MutationSystem mutationSystem = new(seed: 19);
+        EcosystemSystem ecosystemSystem = new();
+        RegionSpeciesPopulation sourcePopulation = GetElkPopulation(world);
+        RegionSpeciesPopulation targetPopulation = world.Regions[1].GetSpeciesPopulation(4)!;
+
+        sourcePopulation.PopulationCount = 150;
+        sourcePopulation.IsolationSeasons = 10;
+        targetPopulation.PopulationCount = 0;
+        targetPopulation.IsolationSeasons = 10;
+
+        ecosystemSystem.UpdateSeason(world);
+        mutationSystem.UpdateSeason(world);
+
+        Assert.True(sourcePopulation.SentMigrantsThisSeason || targetPopulation.ReceivedMigrantsThisSeason);
+        Assert.Equal(7, targetPopulation.IsolationSeasons);
+    }
+
+    [Fact]
+    public void AdaptationMilestone_IsReachable_ForLongRunMismatchRecovery()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+        MutationSystem mutationSystem = new(seed: 31);
+
+        population.BaseHabitatSuitability = 0.61;
+        population.HabitatSuitability = 0.80;
+        population.HabitatMismatchMutationPressure = 0.72;
+        population.DivergenceScore = 1.20;
+        population.ClimateToleranceOffset = 0.14;
+        population.DietFlexibilityOffset = 0.12;
+        population.PopulationCount = 28;
+        population.CarryingCapacity = 80;
+
+        mutationSystem.UpdateSeason(world);
+
+        Assert.True(population.RegionAdaptationRecorded);
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationAdaptedToRegion);
+    }
+
+    [Fact]
+    public void AdaptationMilestone_DoesNotSpam_AfterBeingRecorded()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+        MutationSystem mutationSystem = new(seed: 37);
+
+        population.BaseHabitatSuitability = 0.61;
+        population.HabitatSuitability = 0.80;
+        population.HabitatMismatchMutationPressure = 0.72;
+        population.DivergenceScore = 1.10;
+        population.ClimateToleranceOffset = 0.14;
+        population.DietFlexibilityOffset = 0.12;
+        population.PopulationCount = 28;
+        population.CarryingCapacity = 80;
+
+        mutationSystem.UpdateSeason(world);
+        mutationSystem.UpdateSeason(world);
+        mutationSystem.UpdateSeason(world);
+
+        Assert.Equal(1, world.Events.Count(evt => evt.Type == WorldEventType.SpeciesPopulationAdaptedToRegion));
+    }
+
+    [Fact]
+    public void AdaptationMilestone_RequiresRealAncestralMismatch_AndTraitDrivenRecovery()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+        MutationSystem mutationSystem = new(seed: 41);
+
+        population.BaseHabitatSuitability = 0.86;
+        population.HabitatSuitability = 0.93;
+        population.HabitatMismatchMutationPressure = 0.85;
+        population.DivergenceScore = 1.30;
+        population.ClimateToleranceOffset = 0.02;
+        population.DietFlexibilityOffset = 0.02;
+        population.PopulationCount = 35;
+        population.CarryingCapacity = 80;
+
+        mutationSystem.UpdateSeason(world);
+
+        Assert.False(population.RegionAdaptationRecorded);
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationAdaptedToRegion);
     }
 
     [Fact]

@@ -105,56 +105,75 @@ public sealed class Simulation : IDisposable
             polity.TickPropagationState();
         }
 
-        // Monthly systems
-        _foodSystem.UpdateRegionEcology(_world);
-        if (_world.Time.Month % 3 == 0)
+        RunMonthlySystems();
+
+        // Year-end systems
+        if (_world.Time.Month == 12)
         {
-            _ecosystemSystem.UpdateSeason(_world);
-            _huntingSystem.UpdateSeason(_world);
-            _mutationSystem.UpdateSeason(_world);
-            _ecosystemSystem.ResolveSeasonalCleanup(_world);
+            RunYearEndSystems();
         }
+
+        _world.Time.AdvanceOneMonth();
+    }
+
+    private void RunMonthlySystems()
+    {
+        _foodSystem.UpdateRegionEcology(_world);
+        RunSeasonalBiologyIfNeeded();
         _foodSystem.GatherFood(_world);
         _agricultureSystem.ProduceFarmFood(_world);
         _tradeSystem.UpdateTrade(_world);
         _foodSystem.ConsumeFood(_world);
         _migrationSystem.UpdateMigration(_world);
+    }
 
-        // Year-end systems
-        if (_world.Time.Month == 12)
+    private void RunSeasonalBiologyIfNeeded()
+    {
+        if (_world.Time.Month % 3 != 0)
         {
-            foreach (Polity polity in _world.Polities)
+            return;
+        }
+
+        // Biology uses the current season's regional species exchange from the
+        // ecosystem pass. Monthly polity migration still happens later because it
+        // is driven by food resolution and social pressure rather than wildlife flow.
+        _ecosystemSystem.UpdateSeason(_world);
+        _huntingSystem.UpdateSeason(_world);
+        _mutationSystem.UpdateSeason(_world);
+        _ecosystemSystem.ResolveSeasonalCleanup(_world);
+    }
+
+    private void RunYearEndSystems()
+    {
+        foreach (Polity polity in _world.Polities)
+        {
+            if (polity.Population > 0)
             {
-                if (polity.Population > 0)
-                {
-                    polity.YearsSinceFounded++;
-                }
-            }
-
-            _populationSystem.UpdatePopulation(_world);
-            _advancementSystem.UpdateAdvancements(_world);
-            _settlementSystem.UpdateSettlements(_world);
-            _fragmentationSystem.UpdateFragmentation(_world);
-            _polityStageSystem.UpdatePolityStages(_world);
-            _agricultureSystem.UpdateAnnualAgriculture(_world);
-            _tradeSystem.UpdateAnnualTrade(_world);
-
-            AddYearlyFoodStressEvents();
-
-            _world.Polities.RemoveAll(p => p.Population <= 0);
-            ResolveChronicleFocusForYear();
-            PersistYearEndFoodStateSnapshots();
-
-            RenderYearBoundaryOutput();
-            ResetAnnualStats();
-
-            if (_options.PauseAfterEachYear)
-            {
-                Console.ReadKey();
+                polity.YearsSinceFounded++;
             }
         }
 
-        _world.Time.AdvanceOneMonth();
+        _populationSystem.UpdatePopulation(_world);
+        _advancementSystem.UpdateAdvancements(_world);
+        _settlementSystem.UpdateSettlements(_world);
+        _fragmentationSystem.UpdateFragmentation(_world);
+        _polityStageSystem.UpdatePolityStages(_world);
+        _agricultureSystem.UpdateAnnualAgriculture(_world);
+        _tradeSystem.UpdateAnnualTrade(_world);
+
+        AddYearlyFoodStressEvents();
+
+        _world.Polities.RemoveAll(p => p.Population <= 0);
+        ResolveChronicleFocusForYear();
+        PersistYearEndFoodStateSnapshots();
+
+        RenderYearBoundaryOutput();
+        ResetAnnualStats();
+
+        if (_options.PauseAfterEachYear)
+        {
+            Console.ReadKey();
+        }
     }
 
     private void OnWorldEventRecorded(WorldEvent worldEvent)

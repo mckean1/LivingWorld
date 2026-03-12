@@ -36,7 +36,7 @@ Allow the same stored history to be rendered through different focal filters or 
 Build on hunting pressure, edible discovery, and domestication interest so repeatedly hunted species can become deliberate domestication candidates.
 
 5. Speciation follow-through
-Build on regional divergence, isolation, and mutation history so strongly diverged populations can split into named descendant lineages without replacing the current population-level foundation.
+Build on regional divergence, isolation, mutation history, ancestral-fit tracking, and regional adaptation milestones so strongly diverged populations can split into named descendant lineages without replacing the current population-level foundation.
 
 ## Mid-Term Systems
 

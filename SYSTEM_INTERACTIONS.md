@@ -94,11 +94,17 @@ The new ecology phase is shared state for multiple systems:
 
 - `Region.SpeciesPopulations` feeds ecosystem predation and prey support
 - hunting reads the same regional populations and writes pressure back into them
-- mutation reads those same pressure markers, stores accumulated evolutionary pressure on each regional population, and writes trait offsets back into the same records
+- mutation reads those same pressure markers plus same-season species-exchange flags, stores accumulated evolutionary pressure on each regional population, and writes trait offsets back into the same records
 - ecosystem growth, migration scoring, and carrying capacity now consume those evolved trait offsets
 - hunting difficulty, danger, and yield now also consume regional trait divergence instead of using only species baselines
 - regional biomass is synchronized from species populations so existing food gathering and migration heuristics still have region-level ecological context
 - polity discoveries, hunting knowledge, and domestication interest are stored on the polity for future systems to consume
+
+Important timing boundary:
+
+- seasonal species exchange happens inside `EcosystemSystem` before mutation runs
+- later monthly polity migration happens in `MigrationSystem` after food resolution
+- mutation inputs such as `EstablishedThisSeason`, `ReceivedMigrantsThisSeason`, and `SentMigrantsThisSeason` refer only to the first category
 
 ## Knowledge Split
 

@@ -11,6 +11,7 @@ World generation creates the starting simulation state: regions, species, and in
 5. generate starting polities from sapient species only
 
 World generation still creates only baseline species definitions. Mutation, divergence, and regional adaptation now begin from those starting populations during simulation rather than being pre-baked into world generation.
+That means regional adaptation later measures how far a local population has moved away from its ancestral fit in that region, not whether the generated species started there fully adapted.
 
 ## Starting Chronicle Focus
 

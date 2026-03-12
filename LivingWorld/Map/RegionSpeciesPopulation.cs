@@ -8,6 +8,7 @@ public sealed class RegionSpeciesPopulation
     public int RegionId { get; }
     public int PopulationCount { get; set; }
     public int CarryingCapacity { get; set; }
+    public double BaseHabitatSuitability { get; set; }
     public double HabitatSuitability { get; set; }
     public double MigrationPressure { get; set; }
     public double RecentPredationPressure { get; set; }

@@ -114,7 +114,7 @@ Trade events are often structured-first, while their consequences may surface la
 - `species_population_isolated`
   - prolonged separation without meaningful exchange
 - `species_population_adapted_to_region`
-  - regional lineage overcame sustained habitat mismatch
+  - regional lineage overcame ancestral habitat mismatch through sustained pressure, divergence, and improved effective fit
 - `species_population_evolutionary_turning_point`
   - divergence milestone that may become chronicle-worthy
 
@@ -196,3 +196,5 @@ Usually structured-only unless escalated:
 - `species_population_mutated`
 - `species_population_isolated`
 - most `species_population_adapted_to_region`
+
+Adaptation events are one-time milestones per regional population, not recurring telemetry.

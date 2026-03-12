@@ -123,6 +123,8 @@ Major biology-turn types that may surface when the focused line is meaningfully 
 - `species_population_major_mutation`
 - `species_population_evolutionary_turning_point`
 
+`species_population_adapted_to_region` remains structured-first by default even though it is historically meaningful. It becomes chronicle-worthy only when severity and focal-line relevance justify it.
+
 ## Chronicle Filtering Rules
 
 Normal player-facing watch mode:

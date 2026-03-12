@@ -89,13 +89,15 @@ Implemented chain:
 
 `repeated hunting pressure -> mutation pressure toward harder, more dangerous, or leaner prey populations`
 
-`migration shock + habitat mismatch -> mutation pressure toward climate tolerance and broader diet`
+`same-season species exchange into harsher terrain + ancestral habitat mismatch -> mutation pressure toward climate tolerance and broader diet`
 
 `prolonged isolation -> higher divergence pressure and rare low-pressure drift`
 
 `crowding near carrying capacity -> mutation pressure toward smaller size, lower fertility, or broader resource use`
 
 `accumulated divergence -> mutation event -> ecological and hunting effects -> possible evolutionary turning point`
+
+`ancestral mismatch + sustained mismatch pressure + trait-driven fit improvement + persistence -> regional adaptation milestone`
 
 ### Hunting Pressure
 

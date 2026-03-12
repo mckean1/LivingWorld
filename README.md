@@ -10,7 +10,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - seasonal ecosystem processing runs food-web interactions between producers, herbivores, omnivores, predators, and apex species
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting or legendary hunts
 - regional populations now also accumulate mutation pressure, isolation, divergence, and local trait offsets rather than mutating the global species baseline directly
-- mutation pressure comes from repeated food stress, predation, hunting, habitat mismatch, crowding near carrying capacity, migration shock, and prolonged isolation
+- mutation pressure comes from repeated food stress, predation, hunting, ancestral habitat mismatch, seasonal species-exchange shock, crowding near carrying capacity, and prolonged isolation
 - evolved regional traits now feed back into hunting danger and difficulty, predator-prey outcomes, habitat fit, migration capability, and reproduction/survival rates
 - watch mode shows the focal polity species in the fixed status panel
 - watch mode also separates `Discoveries` from `Learned` advancements in that fixed status panel
@@ -81,6 +81,7 @@ The main chronicle continues to favor:
 - fragmentation, collapse, and focus handoff events
 
 Internal follow-up events such as migration pressure, starvation risk, cultivation growth, local tension, minor mutation drift, and isolation milestones remain structured-first unless they rise to the level of a true historical turning point.
+Mutation reacts to same-season regional species exchange from the ecology pipeline, not to the later monthly polity migration step.
 
 ## Propagation Safeguards
 

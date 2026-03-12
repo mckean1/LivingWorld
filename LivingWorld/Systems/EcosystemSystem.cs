@@ -17,7 +17,8 @@ public sealed class EcosystemSystem
             foreach (Species species in world.Species)
             {
                 RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
-                population.HabitatSuitability = CalculateHabitatSuitability(species, population, region);
+                population.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, region);
+                population.HabitatSuitability = CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
                 population.CarryingCapacity = CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
 
                 if (population.PopulationCount > 0 || population.CarryingCapacity <= 0)
@@ -55,7 +56,8 @@ public sealed class EcosystemSystem
         foreach (Species species in world.Species)
         {
             RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
-            population.HabitatSuitability = CalculateHabitatSuitability(species, population, region);
+            population.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, region);
+            population.HabitatSuitability = CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
             population.CarryingCapacity = CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
             population.EstablishedThisSeason = false;
             population.ReceivedMigrantsThisSeason = false;
@@ -228,7 +230,8 @@ public sealed class EcosystemSystem
                 targetPopulation.PopulationCount += transfer;
                 sourcePopulation.SentMigrantsThisSeason = true;
                 targetPopulation.ReceivedMigrantsThisSeason = true;
-                targetPopulation.HabitatSuitability = CalculateHabitatSuitability(species, targetPopulation, target);
+                targetPopulation.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, target);
+                targetPopulation.HabitatSuitability = CalculateHabitatSuitability(species, targetPopulation, targetPopulation.BaseHabitatSuitability);
                 targetPopulation.CarryingCapacity = CalculateCarryingCapacity(species, targetPopulation, target, targetPopulation.HabitatSuitability);
                 targetPopulation.EstablishedThisSeason = newlyEstablished;
 
@@ -382,7 +385,8 @@ public sealed class EcosystemSystem
             ClimateToleranceOffset = sourcePopulation.ClimateToleranceOffset,
             SizeOffset = sourcePopulation.SizeOffset
         };
-        double suitability = CalculateHabitatSuitability(species, candidatePopulation, target);
+        double baseSuitability = CalculateBaseHabitatSuitability(species, target);
+        double suitability = CalculateHabitatSuitability(species, candidatePopulation, baseSuitability);
         int localPopulation = existing?.PopulationCount ?? 0;
         int carryingCapacity = CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
         double openness = carryingCapacity <= 0
@@ -413,7 +417,7 @@ public sealed class EcosystemSystem
         return Math.Clamp(predatorPopulation / 250.0, 0.0, 1.0);
     }
 
-    private static double CalculateHabitatSuitability(Species species, RegionSpeciesPopulation population, Region region)
+    private static double CalculateBaseHabitatSuitability(Species species, Region region)
     {
         double fertilityFit = 1.0 - Math.Abs(region.Fertility - species.FertilityPreference);
         double waterFit = 1.0 - Math.Abs(region.WaterAvailability - species.WaterPreference);
@@ -423,7 +427,11 @@ public sealed class EcosystemSystem
             0.0,
             1.4);
 
-        double baseSuitability = Math.Clamp((fertilityFit * 0.35) + (waterFit * 0.25) + (biomassFit * 0.40), 0.05, 1.25);
+        return Math.Clamp((fertilityFit * 0.35) + (waterFit * 0.25) + (biomassFit * 0.40), 0.05, 1.25);
+    }
+
+    private static double CalculateHabitatSuitability(Species species, RegionSpeciesPopulation population, double baseSuitability)
+    {
         return PopulationTraitResolver.AdjustHabitatSuitability(species, population, baseSuitability);
     }
 

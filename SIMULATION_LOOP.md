@@ -19,9 +19,9 @@ Watch mode keeps species in the fixed status panel, separates discoveries from l
 
 - region biomass refresh
 - seasonal regional species population maintenance every third month
-- seasonal ecosystem interactions every third month
+- seasonal ecosystem interactions and species exchange every third month
 - seasonal settlement hunting every third month
-- seasonal mutation and divergence pass every third month
+- seasonal mutation and divergence pass every third month using the same season's species exchange flags
 - seasonal extinction cleanup and biomass sync every third month
 - food gathering and farming
 - trade redistribution
@@ -75,5 +75,6 @@ The simulation loop now supports:
 - stronger cause-and-effect chains
 - ecology, hunting, and polity history sharing one data model
 - population-level evolutionary drift driven by shared ecological pressures
+- adaptation milestones grounded in ancestral mismatch, divergence, trait gains, and regional persistence
 - structured history with causal ancestry
 - concise chronicle output that still reads like history rather than telemetry
