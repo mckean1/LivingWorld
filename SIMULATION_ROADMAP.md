@@ -8,6 +8,7 @@ Implemented core includes:
 
 - world generation
 - fuller default seed-world scale with centralized generation settings
+- anchored starting polities and focal-start viability safeguards
 - ecology and food systems
 - regional species populations and seasonal ecosystem interactions
 - settlement hunting tied to regional wildlife
@@ -27,6 +28,7 @@ Implemented core includes:
 1. Chronicle quality tuning
 Keep improving event weighting, transition detection, and suppression so the live chronicle stays readable during busy simulation periods.
 The denser default world makes that especially important because more simultaneous societies and ecosystems now exist from year zero.
+The current opening pass is meant to create more real early turning points, not more filler.
 
 2. History views
 Build richer lineage and event-history views over the stored event stream without changing simulation systems.

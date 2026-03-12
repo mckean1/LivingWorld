@@ -25,6 +25,38 @@ public sealed class LineagePolityFocusSelectorTests
     }
 
     [Fact]
+    public void SelectInitialFocus_PrefersALiveAnchoredPolity_WhenNoExplicitFocusIsProvided()
+    {
+        World world = BuildWorld(month: 3);
+        world.Species.Clear();
+        world.Species.Add(new LivingWorld.Life.Species(1, "People", 0.6, 0.6)
+        {
+            IsSapient = true,
+            TrophicRole = LivingWorld.Life.TrophicRole.Omnivore
+        });
+        world.Species.Add(new LivingWorld.Life.Species(2, "Elk", 0.5, 0.5)
+        {
+            TrophicRole = LivingWorld.Life.TrophicRole.Herbivore,
+            MeatYield = 18
+        });
+
+        Polity inert = AddPolity(world, 1, "Inert Clan", 1, 2, 45, settlements: 0);
+        inert.FoodStores = 4;
+
+        Polity active = AddPolity(world, 2, "Active Clan", 1, 0, 70, settlements: 1);
+        active.FoodStores = 80;
+
+        world.Regions[0].GetOrCreateSpeciesPopulation(2).PopulationCount = 50;
+        world.Regions[1].GetOrCreateSpeciesPopulation(2).PopulationCount = 30;
+
+        LineagePolityFocusSelector selector = new();
+
+        ChronicleFocusSelection selection = selector.SelectInitialFocus(world, new SimulationOptions());
+
+        Assert.Equal(active.Id, selection.PolityId);
+    }
+
+    [Fact]
     public void ResolveYearEndFocus_SelectsStrongestDirectChild_WhenFocusedPolityFragments()
     {
         World world = BuildWorld(month: 12);

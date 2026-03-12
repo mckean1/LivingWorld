@@ -26,11 +26,11 @@ public sealed class MigrationSystem
             Region currentRegion = lookup.GetRequiredRegion(polity.RegionId, "Migration update");
             Species species = lookup.GetRequiredSpecies(polity.SpeciesId, "Migration update");
 
-            polity.MigrationPressure = CalculateMigrationPressure(world, polity, currentRegion);
+            polity.MigrationPressure = CalculateMigrationPressure(lookup, polity, currentRegion);
 
             if (polity.MigrationPressure >= 0.65)
             {
-                Region? target = FindBestConnectedRegion(world, polity, currentRegion);
+                Region? target = FindBestConnectedRegion(lookup, polity, currentRegion);
 
                 if (target is not null && target.Id != currentRegion.Id)
                 {
@@ -82,7 +82,7 @@ public sealed class MigrationSystem
         }
     }
 
-    private double CalculateMigrationPressure(World world, Polity polity, Region region)
+    private double CalculateMigrationPressure(WorldLookup lookup, Polity polity, Region region)
     {
         double monthlyFoodNeed = Math.Max(1, polity.Population);
         double foodSafety = Math.Min(1.0, polity.FoodStores / monthlyFoodNeed);
@@ -91,9 +91,7 @@ public sealed class MigrationSystem
             ? 0
             : region.TotalBiomass / region.TotalBiomassCapacity;
 
-        int localPopulation = world.Polities
-            .Where(p => p.RegionId == region.Id && p.Population > 0)
-            .Sum(p => p.Population);
+        int localPopulation = lookup.GetActivePopulationInRegion(region.Id);
 
         double crowdingRatio = region.CarryingCapacity <= 0
             ? 1.0
@@ -122,26 +120,22 @@ public sealed class MigrationSystem
         return Math.Clamp(pressure, 0.0, 1.0);
     }
 
-    private Region? FindBestConnectedRegion(World world, Polity polity, Region currentRegion)
+    private Region? FindBestConnectedRegion(WorldLookup lookup, Polity polity, Region currentRegion)
     {
         if (currentRegion.ConnectedRegionIds.Count == 0)
-            return null;
-
-        List<Region> candidates = world.Regions
-            .Where(r => currentRegion.ConnectedRegionIds.Contains(r.Id))
-            .ToList();
-
-        if (candidates.Count == 0)
             return null;
 
         Region? bestRegion = null;
         double bestScore = double.MinValue;
 
-        foreach (Region region in candidates)
+        foreach (int regionId in currentRegion.ConnectedRegionIds)
         {
-            int localPopulation = world.Polities
-                .Where(p => p.RegionId == region.Id && p.Population > 0)
-                .Sum(p => p.Population);
+            if (!lookup.TryGetRegion(regionId, out Region? region) || region is null)
+            {
+                continue;
+            }
+
+            int localPopulation = lookup.GetActivePopulationInRegion(region.Id);
 
             double crowdingPenalty = localPopulation * 0.7;
 

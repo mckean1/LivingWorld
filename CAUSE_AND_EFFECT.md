@@ -107,6 +107,7 @@ Implemented chain:
 
 Settlement hunting is now driven by regional species populations rather than abstract animal biomass.
 It is also settlement-local rather than polity-region-multiplied.
+Starting polities now begin with a real home settlement anchor, so this hunting chain can operate from the opening months of the simulation.
 
 Implemented chains:
 
@@ -162,6 +163,7 @@ Instead it favors:
 - adaptation milestone transitions rather than repeated reaffirmation of the same adaptation state
 
 This is why yearly hardship transitions remain important: they summarize meaningful changes without narrating every month of unchanged suffering.
+The fuller-world opening is therefore tuned by improving real local anchors, homeland support, and viability, not by inventing disconnected drama.
 
 ## Safeguards
 

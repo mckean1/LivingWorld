@@ -1,4 +1,6 @@
 using LivingWorld.Core;
+using LivingWorld.Life;
+using LivingWorld.Map;
 using LivingWorld.Societies;
 
 namespace LivingWorld.Presentation;
@@ -9,7 +11,11 @@ public sealed class LineagePolityFocusSelector : IPolityFocusSelector
     {
         Polity? selected = options.FocusedPolityId.HasValue
             ? world.Polities.FirstOrDefault(polity => polity.Id == options.FocusedPolityId.Value)
-            : world.Polities.OrderBy(polity => polity.Id).FirstOrDefault();
+            : world.Polities
+                .OrderByDescending(polity => ScoreInitialFocusCandidate(world, polity))
+                .ThenByDescending(polity => polity.Population)
+                .ThenBy(polity => polity.Id)
+                .FirstOrDefault();
 
         return ChronicleFocusSelection.FromPolity(selected);
     }
@@ -287,6 +293,63 @@ public sealed class LineagePolityFocusSelector : IPolityFocusSelector
 
         return int.MaxValue;
     }
+
+    private static double ScoreInitialFocusCandidate(World world, Polity polity)
+    {
+        Region? homeRegion = world.Regions.FirstOrDefault(region => region.Id == polity.RegionId);
+        if (homeRegion is null)
+        {
+            return double.MinValue;
+        }
+
+        double score = polity.Population * 2.0;
+        score += polity.HasSettlements ? 240.0 : 0.0;
+        score += homeRegion.Fertility * 160.0;
+        score += homeRegion.WaterAvailability * 140.0;
+        score += Math.Min(4, homeRegion.ConnectedRegionIds.Count) * 40.0;
+        score += CountAccessibleFoodSpecies(world, polity, homeRegion) * 55.0;
+        score += CountAccessibleNeighborPolities(world, polity, homeRegion) * 18.0;
+        score += polity.FoodStores;
+
+        return score;
+    }
+
+    private static int CountAccessibleFoodSpecies(World world, Polity polity, Region homeRegion)
+    {
+        HashSet<int> accessibleRegionIds = [homeRegion.Id];
+        foreach (int neighborId in homeRegion.ConnectedRegionIds)
+        {
+            accessibleRegionIds.Add(neighborId);
+        }
+
+        int supportSpecies = 0;
+        foreach (Species species in world.Species)
+        {
+            if (species.IsSapient || !accessibleRegionIds.Any(regionId => world.Regions[regionId].GetSpeciesPopulation(species.Id)?.PopulationCount > 0))
+            {
+                continue;
+            }
+
+            if (species.TrophicRole == TrophicRole.Producer)
+            {
+                supportSpecies++;
+                continue;
+            }
+
+            if (species.MeatYield > 0)
+            {
+                supportSpecies++;
+            }
+        }
+
+        return supportSpecies;
+    }
+
+    private static int CountAccessibleNeighborPolities(World world, Polity polity, Region homeRegion)
+        => world.Polities.Count(candidate =>
+            candidate.Id != polity.Id
+            && candidate.Population > 0
+            && (candidate.RegionId == homeRegion.Id || homeRegion.ConnectedRegionIds.Contains(candidate.RegionId)));
 
     private sealed record RankedCandidate(Polity Polity, int? DescentDistance, int RegionDistance, double Score);
 

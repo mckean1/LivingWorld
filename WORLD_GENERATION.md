@@ -11,7 +11,10 @@ The current fuller-world targets live in `LivingWorld/Generation/WorldGeneration
 - `InitialPolityCount = 10`
 - `ContinentWidth = 6`
 - `ContinentHeight = 6`
-- `MinimumStartingPolityRegionSpacing = 2`
+- `MinimumStartingPolityRegionSpacing = 1`
+- `HomelandSupportRadius = 1`
+- `MinimumAccessibleHomelandSupportSpecies = 2`
+- `StartPolitiesWithHomeSettlements = true`
 
 These values are intentionally centralized so density tuning can happen without rewriting generation logic.
 
@@ -26,7 +29,8 @@ These values are intentionally centralized so density tuning can happen without 
 
 World generation still creates only baseline species definitions. Mutation, divergence, and regional adaptation now begin from those starting populations during simulation rather than being pre-baked into world generation.
 That means regional adaptation later measures how far a local population has moved away from its ancestral fit in that region, not whether the generated species started there fully adapted.
-World generation still starts polities without durable settlement records. The settlement layer is created by simulation when settlement formation actually occurs, which keeps early locality history causal rather than pre-assumed.
+World generation now gives each starting polity one grounded home settlement anchor in its starting region.
+That anchor is intentionally lightweight: it enables settlement-grounded hunting, trade endpoints, migration locality, and focal inspection from year zero without fabricating extra setup events.
 
 ## Region Model
 
@@ -64,10 +68,13 @@ Starting polities are seeded from sapient species only and now prefer viable, re
 
 - candidate regions come from that sapient species' initial range
 - settlement suitability favors fertile land, water, biomass support, and biome-specific settlement bonuses
+- settlement suitability also favors homeland regions with accessible support species in the local corridor
 - starting regions must respect `MinimumStartingPolityRegionSpacing` when practical
+- starting regions now mildly prefer connected corridor regions over isolated dead ends
 - the generator therefore leaves meaningful empty space for later migration, expansion, and fragmentation
 
 The current default density is roughly one polity per three to four regions, which keeps the early world active without stacking most polities into the same small cluster.
+Starting polities also begin with a single home settlement record in that region, usually in a `SemiSettled` state, so early settlement-grounded systems have a real execution point immediately.
 
 ## Starting Chronicle Focus
 
@@ -93,3 +100,4 @@ World generation does not produce a separate player-facing yearly report path.
 Regional species populations now exist before the first polity season resolves, so the first hunting and ecology phase has concrete prey, predators, and producers to work with.
 Those starting regional populations also now have clean divergence state slots, so future mutation, speciation, and domestication phases can build historical lineage change forward from generation year zero.
 The denser seed world is intentionally still range-limited and biome-shaped so early chronicle output gains context without turning into random clutter.
+Starting-polity homeland scoring also now prefers nearby support species coverage, so focal starts are less likely to open in a dead ecological pocket.

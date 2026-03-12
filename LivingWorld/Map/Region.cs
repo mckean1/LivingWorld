@@ -2,6 +2,8 @@ namespace LivingWorld.Map;
 
 public sealed class Region
 {
+    private readonly Dictionary<int, RegionSpeciesPopulation> _speciesPopulationsBySpeciesId = [];
+
     public int Id { get; }
     public string Name { get; }
     public RegionBiome Biome { get; set; }
@@ -43,18 +45,20 @@ public sealed class Region
     }
 
     public RegionSpeciesPopulation? GetSpeciesPopulation(int speciesId)
-        => SpeciesPopulations.FirstOrDefault(population => population.SpeciesId == speciesId);
+        => _speciesPopulationsBySpeciesId.TryGetValue(speciesId, out RegionSpeciesPopulation? population)
+            ? population
+            : null;
 
     public RegionSpeciesPopulation GetOrCreateSpeciesPopulation(int speciesId)
     {
-        RegionSpeciesPopulation? existing = GetSpeciesPopulation(speciesId);
-        if (existing is not null)
+        if (_speciesPopulationsBySpeciesId.TryGetValue(speciesId, out RegionSpeciesPopulation? existing))
         {
             return existing;
         }
 
         RegionSpeciesPopulation created = new(speciesId, Id, 0);
         SpeciesPopulations.Add(created);
+        _speciesPopulationsBySpeciesId[speciesId] = created;
         return created;
     }
 }

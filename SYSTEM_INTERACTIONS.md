@@ -117,6 +117,7 @@ Hunting, farming, and settlement-aware trade now share the same locality layer:
 - hunting reads wildlife from each settlement's region
 - agriculture allocates each region's arable capacity across all settlements in that region
 - trade prefers real settlement endpoints when settlements exist and falls back to camps/hearth labels only when necessary
+- starting polities now usually enter the world with one home settlement anchor so those systems can act immediately
 
 This keeps cause-and-effect local:
 
@@ -131,6 +132,7 @@ The fuller starting world is still intentionally constrained at handoff time:
 - region biome profiles shape baseline fertility, water, and biomass
 - species start in clustered biome-suitable ranges rather than universal placement
 - starting polities are seeded into viable, spaced regions rather than random stacking
+- homeland scoring also prefers nearby support species and connected corridors so early settlement-grounded interaction is more likely
 
 That means early hunting, food stress, migration, and contact pressures begin from a richer world, but they still emerge from regional conditions instead of arbitrary clutter.
 

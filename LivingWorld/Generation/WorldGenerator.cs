@@ -12,6 +12,8 @@ public sealed class WorldGenerator
     private readonly Queue<string> _polityNames;
     private readonly List<SpeciesTemplate> _speciesTemplates;
     private readonly WorldGenerationSettings _settings;
+    private Dictionary<int, Species>? _speciesById;
+    private Dictionary<int, Region>? _regionsById;
 
     public WorldGenerator(int seed, WorldGenerationSettings? settings = null)
     {
@@ -29,7 +31,9 @@ public sealed class WorldGenerator
         World world = new(new WorldTime());
         GenerateRegions(world);
         ConnectRegions(world);
+        _regionsById = world.Regions.ToDictionary(region => region.Id);
         GenerateSpecies(world);
+        _speciesById = world.Species.ToDictionary(species => species.Id);
         AssignInitialSpeciesRanges(world);
         GeneratePolities(world);
 
@@ -187,6 +191,13 @@ public sealed class WorldGenerator
                 YearsInCurrentRegion = _random.Next(1, 6)
             };
 
+            if (_settings.StartPolitiesWithHomeSettlements)
+            {
+                Settlement settlement = polity.EstablishFirstSettlement(region.Id, $"{region.Name} Hearth");
+                settlement.YearsEstablished = _settings.StartingSettlementAgeYears;
+                polity.YearsSinceFirstSettlement = _settings.StartingSettlementAgeYears;
+            }
+
             world.Polities.Add(polity);
         }
     }
@@ -319,11 +330,87 @@ public sealed class WorldGenerator
     }
 
     private double ScoreStartingPolityRegion(Species species, Region region)
-        => ScoreRegionForSpecies(species, region)
+    {
+        int accessibleSupportSpecies = CountAccessibleHomelandSupportSpecies(species, region);
+
+        return ScoreRegionForSpecies(species, region)
             + (region.Fertility * 0.45)
             + (region.WaterAvailability * 0.40)
             + (region.CarryingCapacity / 180.0)
+            + (Math.Min(4, region.ConnectedRegionIds.Count) * 0.05)
+            + (accessibleSupportSpecies * 0.22)
+            + (accessibleSupportSpecies >= _settings.MinimumAccessibleHomelandSupportSpecies ? 0.18 : 0.0)
             + ResolveBiomeSettlementBonus(region.Biome);
+    }
+
+    private int CountAccessibleHomelandSupportSpecies(Species sapientSpecies, Region region)
+    {
+        if (_speciesById is null || sapientSpecies.DietSpeciesIds.Count == 0)
+        {
+            return 0;
+        }
+
+        HashSet<int> accessibleRegionIds = CollectRegionsWithinRadius(region, _settings.HomelandSupportRadius);
+        int supportSpeciesCount = 0;
+
+        foreach (int supportSpeciesId in sapientSpecies.DietSpeciesIds)
+        {
+            if (!_speciesById.TryGetValue(supportSpeciesId, out Species? supportCandidate) || supportCandidate.IsSapient)
+            {
+                continue;
+            }
+
+            if (supportCandidate.InitialRangeRegionIds.Any(accessibleRegionIds.Contains))
+            {
+                supportSpeciesCount++;
+            }
+        }
+
+        return supportSpeciesCount;
+    }
+
+    private HashSet<int> CollectRegionsWithinRadius(Region seedRegion, int radius)
+    {
+        if (_regionsById is null)
+        {
+            return [seedRegion.Id];
+        }
+
+        HashSet<int> visited = [seedRegion.Id];
+        if (radius <= 0)
+        {
+            return visited;
+        }
+
+        Queue<(int RegionId, int Distance)> frontier = new();
+        frontier.Enqueue((seedRegion.Id, 0));
+
+        while (frontier.Count > 0)
+        {
+            (int regionId, int distance) = frontier.Dequeue();
+            if (distance >= radius)
+            {
+                continue;
+            }
+
+            if (!_regionsById.TryGetValue(regionId, out Region? currentRegion))
+            {
+                continue;
+            }
+
+            foreach (int neighborId in currentRegion.ConnectedRegionIds)
+            {
+                if (!visited.Add(neighborId))
+                {
+                    continue;
+                }
+
+                frontier.Enqueue((neighborId, distance + 1));
+            }
+        }
+
+        return visited;
+    }
 
     private static double ScoreRegionForSpecies(Species species, Region region)
     {

@@ -63,9 +63,9 @@ public sealed class Simulation : IDisposable
         _watchUiState = new WatchUiState();
         _watchInputController = new WatchInputController(_watchUiState);
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
+        _ecosystemSystem.InitializeRegionalPopulations(_world);
         ChronicleFocusSelection initialFocus = _focusSelector.SelectInitialFocus(_world, _options);
         _chronicleFocus.SetFocus(initialFocus.PolityId, initialFocus.LineageId);
-        _ecosystemSystem.InitializeRegionalPopulations(_world);
         _world.ConfigureEventPropagation(new EventPropagationCoordinator(
         [
             new FoodStressPropagationHandler(),

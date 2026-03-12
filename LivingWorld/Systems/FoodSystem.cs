@@ -43,6 +43,8 @@ public sealed class FoodSystem
 
     public void GatherFood(World world)
     {
+        WorldLookup lookup = new(world);
+
         foreach (Polity polity in world.Polities)
         {
             if (polity.Population <= 0)
@@ -67,9 +69,7 @@ public sealed class FoodSystem
 
         foreach (Region region in world.Regions)
         {
-            List<Polity> localPolities = world.Polities
-                .Where(p => p.RegionId == region.Id && p.Population > 0)
-                .ToList();
+            IReadOnlyList<Polity> localPolities = lookup.GetActivePolitiesInRegion(region.Id);
 
             if (localPolities.Count == 0)
             {

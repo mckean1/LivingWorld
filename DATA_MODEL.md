@@ -82,6 +82,7 @@ Current design notes:
 - farming allocates regional capacity across settlements, not across abstract polity-region buckets
 - trade endpoints prefer real settlement references when available
 - polity migration currently relocates the polity's settlement records together
+- starting polities can now begin with one home settlement anchor already present
 
 ### Polity Knowledge Split
 
@@ -205,4 +206,4 @@ That biome is used by:
 - lower-severity and chronicle-suppressed events remain structured even when hidden from the live chronicle
 - divergence state is intentionally lightweight so future speciation or domesticated variants can promote an existing regional population instead of replacing the architecture
 - settlement-local execution is intentionally lightweight so later settlement-specialization and cross-region trade can reuse the same records instead of reintroducing polity-level shortcuts
-- cached lookup snapshots are intentional infrastructure for both safety and performance in hot paths
+- cached lookup snapshots plus direct region species-population indexing are intentional infrastructure for both safety and performance in hot paths

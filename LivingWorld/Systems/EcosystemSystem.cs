@@ -12,9 +12,11 @@ public sealed class EcosystemSystem
 
     public void InitializeRegionalPopulations(World world)
     {
+        Dictionary<int, Species> speciesById = world.Species.ToDictionary(species => species.Id);
+
         foreach (Region region in world.Regions)
         {
-            foreach (Species species in world.Species)
+            foreach (Species species in speciesById.Values)
             {
                 RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
                 population.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, region);
@@ -35,30 +37,33 @@ public sealed class EcosystemSystem
             }
         }
 
-        SyncBiomeBiomass(world);
+        SyncBiomeBiomass(world, speciesById);
     }
 
     public void UpdateSeason(World world)
     {
+        Dictionary<int, Species> speciesById = world.Species.ToDictionary(species => species.Id);
+
         foreach (Region region in world.Regions)
         {
-            EnsureRegionEntries(world, region);
-            ProcessRegionalGrowth(world, region);
-            ProcessRegionalFoodWeb(world, region);
+            EnsureRegionEntries(region, speciesById);
+            ProcessRegionalGrowth(region, speciesById, world.Time.Season);
+            ProcessRegionalFoodWeb(world, region, speciesById);
         }
 
-        ProcessMigration(world);
+        ProcessMigration(world, speciesById);
     }
 
     public void ResolveSeasonalCleanup(World world)
     {
-        ResolveExtinctions(world);
-        SyncBiomeBiomass(world);
+        Dictionary<int, Species> speciesById = world.Species.ToDictionary(species => species.Id);
+        ResolveExtinctions(world, speciesById);
+        SyncBiomeBiomass(world, speciesById);
     }
 
-    private void EnsureRegionEntries(World world, Region region)
+    private void EnsureRegionEntries(Region region, IReadOnlyDictionary<int, Species> speciesById)
     {
-        foreach (Species species in world.Species)
+        foreach (Species species in speciesById.Values)
         {
             RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
             population.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, region);
@@ -70,11 +75,11 @@ public sealed class EcosystemSystem
         }
     }
 
-    private void ProcessRegionalGrowth(World world, Region region)
+    private void ProcessRegionalGrowth(Region region, IReadOnlyDictionary<int, Species> speciesById, Season season)
     {
         foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
         {
-            Species species = world.Species.First(candidate => candidate.Id == population.SpeciesId);
+            Species species = speciesById[population.SpeciesId];
             int previousPopulation = population.PopulationCount;
 
             if (previousPopulation <= 0)
@@ -90,7 +95,7 @@ public sealed class EcosystemSystem
                 ? 1.0
                 : (double)previousPopulation / population.CarryingCapacity;
             double reproductionRate = species.BaseReproductionRate
-                * species.GetSeasonalReproductionModifier(world.Time.Season)
+                * species.GetSeasonalReproductionModifier(season)
                 * population.HabitatSuitability
                 * PopulationTraitResolver.ResolveReproductionModifier(species, population);
             double declineRate = species.BaseDeclineRate
@@ -127,24 +132,39 @@ public sealed class EcosystemSystem
         }
     }
 
-    private void ProcessRegionalFoodWeb(World world, Region region)
+    private void ProcessRegionalFoodWeb(World world, Region region, IReadOnlyDictionary<int, Species> speciesById)
     {
-        int producerCount = region.SpeciesPopulations
-            .Where(population => world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Producer)
-            .Sum(population => population.PopulationCount);
-
-        foreach (RegionSpeciesPopulation predatorPopulation in region.SpeciesPopulations.Where(population => population.PopulationCount > 0))
+        int producerCount = 0;
+        foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
         {
-            Species predatorSpecies = world.Species.First(species => species.Id == predatorPopulation.SpeciesId);
+            if (speciesById[population.SpeciesId].TrophicRole == TrophicRole.Producer)
+            {
+                producerCount += population.PopulationCount;
+            }
+        }
+
+        foreach (RegionSpeciesPopulation predatorPopulation in region.SpeciesPopulations)
+        {
+            if (predatorPopulation.PopulationCount <= 0)
+            {
+                continue;
+            }
+
+            Species predatorSpecies = speciesById[predatorPopulation.SpeciesId];
 
             if (predatorSpecies.TrophicRole == TrophicRole.Producer)
             {
                 continue;
             }
 
-            IReadOnlyList<RegionSpeciesPopulation> preyOptions = region.SpeciesPopulations
-                .Where(population => population.PopulationCount > 0 && predatorSpecies.DietSpeciesIds.Contains(population.SpeciesId))
-                .ToList();
+            List<RegionSpeciesPopulation> preyOptions = [];
+            foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
+            {
+                if (population.PopulationCount > 0 && predatorSpecies.DietSpeciesIds.Contains(population.SpeciesId))
+                {
+                    preyOptions.Add(population);
+                }
+            }
 
             if (preyOptions.Count == 0)
             {
@@ -170,7 +190,7 @@ public sealed class EcosystemSystem
 
             foreach (RegionSpeciesPopulation preyPopulation in preyOptions)
             {
-                Species preySpecies = world.Species.First(species => species.Id == preyPopulation.SpeciesId);
+                Species preySpecies = speciesById[preyPopulation.SpeciesId];
                 int preyBefore = preyPopulation.PopulationCount;
                 double demandShare = availableFood <= 0 ? 0.0 : preyBefore / availableFood;
                 double offense = ResolvePredationFactor(predatorSpecies) * PopulationTraitResolver.ResolvePredationOffense(predatorSpecies, predatorPopulation);
@@ -198,22 +218,42 @@ public sealed class EcosystemSystem
         }
     }
 
-    private void ProcessMigration(World world)
+    private void ProcessMigration(World world, IReadOnlyDictionary<int, Species> speciesById)
     {
         foreach (Region region in world.Regions)
         {
-            foreach (RegionSpeciesPopulation sourcePopulation in region.SpeciesPopulations.Where(population => population.PopulationCount > 0).ToList())
+            List<RegionSpeciesPopulation> activePopulations = [];
+            foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
             {
-                Species species = world.Species.First(candidate => candidate.Id == sourcePopulation.SpeciesId);
+                if (population.PopulationCount > 0)
+                {
+                    activePopulations.Add(population);
+                }
+            }
+
+            foreach (RegionSpeciesPopulation sourcePopulation in activePopulations)
+            {
+                Species species = speciesById[sourcePopulation.SpeciesId];
                 if (sourcePopulation.MigrationPressure < 0.45 || region.ConnectedRegionIds.Count == 0 || species.MigrationCapability <= 0)
                 {
                     continue;
                 }
 
-                Region? target = world.Regions
-                    .Where(candidate => region.ConnectedRegionIds.Contains(candidate.Id))
-                    .OrderByDescending(candidate => ScoreMigrationTarget(world, species, sourcePopulation, candidate))
-                    .FirstOrDefault();
+                Region? target = null;
+                double bestTargetScore = double.MinValue;
+
+                foreach (int candidateRegionId in region.ConnectedRegionIds)
+                {
+                    Region candidate = world.Regions[candidateRegionId];
+                    double score = ScoreMigrationTarget(world, speciesById, species, sourcePopulation, candidate);
+                    if (score <= bestTargetScore)
+                    {
+                        continue;
+                    }
+
+                    bestTargetScore = score;
+                    target = candidate;
+                }
 
                 if (target is null)
                 {
@@ -271,7 +311,7 @@ public sealed class EcosystemSystem
         }
     }
 
-    private void ResolveExtinctions(World world)
+    private void ResolveExtinctions(World world, IReadOnlyDictionary<int, Species> speciesById)
     {
         foreach (Region region in world.Regions)
         {
@@ -282,7 +322,7 @@ public sealed class EcosystemSystem
                     continue;
                 }
 
-                Species species = world.Species.First(candidate => candidate.Id == population.SpeciesId);
+                Species species = speciesById[population.SpeciesId];
                 bool wasPresentBefore = population.RecentPredationPressure > 0 || population.RecentHuntingPressure > 0 || population.SeasonsUnderPressure > 0;
                 if (wasPresentBefore)
                 {
@@ -305,11 +345,17 @@ public sealed class EcosystemSystem
             }
         }
 
-        foreach (Species species in world.Species)
+        foreach (Species species in speciesById.Values)
         {
-            bool anySurvivors = world.Regions
-                .Select(region => region.GetSpeciesPopulation(species.Id))
-                .Any(population => population is not null && population.PopulationCount > 0);
+            bool anySurvivors = false;
+            foreach (Region region in world.Regions)
+            {
+                if (region.GetSpeciesPopulation(species.Id)?.PopulationCount > 0)
+                {
+                    anySurvivors = true;
+                    break;
+                }
+            }
 
             if (!anySurvivors)
             {
@@ -332,7 +378,7 @@ public sealed class EcosystemSystem
         }
     }
 
-    private void SyncBiomeBiomass(World world)
+    private void SyncBiomeBiomass(World world, IReadOnlyDictionary<int, Species> speciesById)
     {
         foreach (Region region in world.Regions)
         {
@@ -341,7 +387,7 @@ public sealed class EcosystemSystem
 
             foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
             {
-                Species species = world.Species.First(candidate => candidate.Id == population.SpeciesId);
+                Species species = speciesById[population.SpeciesId];
                 if (species.TrophicRole == TrophicRole.Producer)
                 {
                     producerPopulation += population.PopulationCount;
@@ -376,7 +422,7 @@ public sealed class EcosystemSystem
             _ => 0.10
         };
 
-    private static double ScoreMigrationTarget(World world, Species species, RegionSpeciesPopulation sourcePopulation, Region target)
+    private static double ScoreMigrationTarget(World world, IReadOnlyDictionary<int, Species> speciesById, Species species, RegionSpeciesPopulation sourcePopulation, Region target)
     {
         RegionSpeciesPopulation? existing = target.GetSpeciesPopulation(species.Id);
         RegionSpeciesPopulation candidatePopulation = existing ?? new RegionSpeciesPopulation(species.Id, target.Id, 0)
@@ -401,23 +447,29 @@ public sealed class EcosystemSystem
         double predatorSafety = species.TrophicRole switch
         {
             TrophicRole.Producer => 1.0,
-            TrophicRole.Herbivore => 1.0 - CountPredatorPressure(world, target),
+            TrophicRole.Herbivore => 1.0 - CountPredatorPressure(target, speciesById),
             _ => 0.7 + (openness * 0.3)
         };
 
         return (suitability * 0.55) + (openness * 0.30) + (predatorSafety * 0.15);
     }
 
-    private static double CountPredatorPressure(World world, Region region)
+    private static double CountPredatorPressure(Region region, IReadOnlyDictionary<int, Species> speciesById)
     {
-        int predatorPopulation = region.SpeciesPopulations
-            .Where(population => population.PopulationCount > 0)
-            .Where(population =>
+        int predatorPopulation = 0;
+        foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
+        {
+            if (population.PopulationCount <= 0)
             {
-                TrophicRole role = world.Species.First(species => species.Id == population.SpeciesId).TrophicRole;
-                return role is TrophicRole.Predator or TrophicRole.Apex;
-            })
-            .Sum(population => population.PopulationCount);
+                continue;
+            }
+
+            TrophicRole role = speciesById[population.SpeciesId].TrophicRole;
+            if (role is TrophicRole.Predator or TrophicRole.Apex)
+            {
+                predatorPopulation += population.PopulationCount;
+            }
+        }
 
         return Math.Clamp(predatorPopulation / 250.0, 0.0, 1.0);
     }

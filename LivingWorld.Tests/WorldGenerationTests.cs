@@ -1,6 +1,7 @@
 using LivingWorld.Generation;
 using LivingWorld.Life;
 using LivingWorld.Map;
+using LivingWorld.Societies;
 using LivingWorld.Systems;
 using Xunit;
 
@@ -33,6 +34,21 @@ public sealed class WorldGenerationTests
         {
             Region home = world.Regions.First(region => region.Id == polity.RegionId);
             Assert.True(home.Fertility >= 0.30 || home.WaterAvailability >= 0.45);
+        });
+    }
+
+    [Fact]
+    public void WorldGenerator_GivesEachStartingPolity_AHomeSettlementAnchor()
+    {
+        WorldGenerator generator = new(seed: 10);
+
+        var world = generator.Generate();
+
+        Assert.All(world.Polities, polity =>
+        {
+            Assert.True(polity.HasSettlements);
+            Assert.Equal(SettlementStatus.SemiSettled, polity.SettlementStatus);
+            Assert.Equal(polity.RegionId, polity.Settlements[0].RegionId);
         });
     }
 
@@ -91,6 +107,33 @@ public sealed class WorldGenerationTests
         Assert.True(regionsWithProducer >= 24);
         Assert.True(regionsWithHerbivore >= 18);
         Assert.True(regionsWithPredator >= 10);
+    }
+
+    [Fact]
+    public void StartingPolities_HaveAccessibleSupportSpeciesNearTheirHomelands()
+    {
+        WorldGenerator generator = new(seed: 17);
+        var world = generator.Generate();
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        Assert.All(world.Polities, polity =>
+        {
+            HashSet<int> accessibleRegionIds = [polity.RegionId];
+            Region home = world.Regions.First(region => region.Id == polity.RegionId);
+            foreach (int neighborId in home.ConnectedRegionIds)
+            {
+                accessibleRegionIds.Add(neighborId);
+            }
+
+            int supportSpecies = world.Species.Count(species =>
+                !species.IsSapient
+                && (species.TrophicRole == TrophicRole.Producer || species.MeatYield > 0)
+                && accessibleRegionIds.Any(regionId => world.Regions[regionId].GetSpeciesPopulation(species.Id)?.PopulationCount > 0));
+
+            Assert.True(supportSpecies >= 3);
+        });
     }
 
     private static bool HasRole(Region region, IReadOnlyCollection<Species> speciesCatalog, TrophicRole role)

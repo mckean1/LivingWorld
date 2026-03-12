@@ -27,6 +27,8 @@ Those entities are still range-limited and region-grounded before month one begi
 15. watch mode advances the next month only when its timed step cadence is due
 16. rendering occurs on invalidation rather than after every loop pass; when paused, input continues while monthly advancement is held
 
+Because starting polities now begin with a home settlement anchor, step 4 can produce real local hunting and discovery pressure from the opening season instead of waiting for a later founding roll.
+
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
 
@@ -77,6 +79,7 @@ Default player mode shows:
 - key-driven inspection screens for polity, region, species, polity lists, and world overview
 
 Chronicle lines themselves remain short and do not append species after every polity name.
+The intended fuller-world opening is now more active in years `0-20`: home-anchor hunting, early food relief or hardship, migration under real pressure, and faster first consolidations for viable lineages.
 
 It does not show:
 

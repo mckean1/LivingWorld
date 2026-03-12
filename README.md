@@ -17,6 +17,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting or legendary hunts
 - settlement hunting now executes from actual settlements in their own regions instead of multiplying one polity-region hunt by settlement count
 - settlement farming now allocates real regional arable capacity across actual settlements, so multiple settlements in one region share land instead of double counting it
+- starting polities now begin with a real home settlement anchor, so settlement-grounded hunting and early locality pressure exist from year zero
 - regional populations now also accumulate mutation pressure, isolation, divergence, and local trait offsets rather than mutating the global species baseline directly
 - mutation pressure comes from repeated food stress, predation, hunting, ancestral habitat mismatch, seasonal species-exchange shock, crowding near carrying capacity, and prolonged isolation
 - evolved regional traits now feed back into hunting danger and difficulty, predator-prey outcomes, habitat fit, migration capability, and reproduction/survival rates
@@ -25,6 +26,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - visible chronicle lines keep polity names short and do not append species by default
 - hot-path systems now prefer cached id lookups and explicit invariant errors over raw LINQ `First(...)` crashes
 - generation defaults are centralized in `WorldGenerationSettings`, while curated biome/name/species templates live in `WorldGenerationCatalog`
+- early-world liveliness is now tuned through centralized homeland-support, polity-spacing, focal-viability, and starting-anchor settings rather than scattered magic numbers
 
 ## Core Principles
 

@@ -97,6 +97,7 @@ The simulation loop now supports:
 - adaptation milestones grounded in ancestral mismatch, divergence, trait gains, and regional persistence
 - player-facing adaptation lines only on new adaptation milestones, with scoped chronicle cooldown on top of source-side suppression
 - a fuller opening world without globally-uniform species placement or overcrowded starting polity stacks
+- anchored starting polities and more viable focal starts without scripting fake drama
 - structured history with causal ancestry
 - concise chronicle output that still reads like history rather than telemetry
 - safer hot-path lookup behavior through cached lookup snapshots and clearer invariant failures

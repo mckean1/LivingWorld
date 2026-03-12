@@ -64,6 +64,7 @@ Settlement references are now more often real execution sites rather than fabric
 Watch navigation and pause controls are presentation-only concerns. Switching views or pausing the watch UI does not emit canonical `WorldEvent` records.
 Chronicle pacing is also presentation-only now: delaying visible playback no longer blocks the canonical event path or input polling.
 Likewise, the denser default seed world does not emit synthetic setup events just to announce extra regions, species, or polities; the chronicle remains focused on consequential transitions after simulation begins.
+The same rule applies to starting home settlements: they exist as initial world state so early locality systems can function, but they do not backfill fake founding events.
 
 Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
 

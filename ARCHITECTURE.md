@@ -43,13 +43,15 @@ It builds cached dictionaries for regions, species, polities, active populations
 - recover gracefully where a missing reference can be ignored
 - throw clearer invariant errors where corruption would otherwise surface as an opaque LINQ exception
 
+`Region` also now keeps direct indexing for species-population entries, which removes another repeated lookup hotspot from seasonal ecology and hunting code.
+
 ## Generation Architecture
 
 World seeding is now split into a few explicit pieces so density tuning stays debuggable:
 
 - `WorldGenerationSettings` holds the main numeric knobs for region, species, and polity counts
 - `WorldGenerationCatalog` provides curated biome layout, name pools, and species templates
-- `WorldGenerator` turns those settings and templates into connected regions, seeded species ranges, and spaced starting polities
+- `WorldGenerator` turns those settings and templates into connected regions, seeded species ranges, homeland-support-aware polity placement, and anchored starting polities
 
 This keeps the fuller starting world explicit rather than burying scale changes in scattered magic numbers.
 
@@ -159,6 +161,7 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 - `WatchScreenBuilder` renders top-level and detail inspection screens from current world state
 - `ChronicleWatchRenderer` remains responsible for low-flicker console drawing, the fixed top panel, chronicle retention, and viewport slicing
 - `Simulation` now acts as the watch-loop coordinator: it polls input every iteration, advances months only when the next step time has arrived, and renders only when invalidated
+- initial focus selection now runs after regional populations are initialized, so the selector can prefer a live starting polity rather than blindly taking the first id
 
 Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
 

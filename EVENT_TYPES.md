@@ -166,6 +166,7 @@ Watch-mode coloring is also conservative: actor names, place names, known knowle
 The watch inspection controls are UI-only and do not introduce new event types.
 The same is true for watch-loop pacing changes: responsive input and timed stepping change presentation behavior, not event semantics.
 The fuller seed world also does not introduce generation-only spam event types; denser starting state should surface through ordinary ecology, migration, settlement, and polity history.
+Anchored starting settlements are also generation state, not synthetic `settlement_founded` events. Chronicle-visible settlement beats still come from later real transitions such as consolidation.
 
 Watch mode also separates:
 
