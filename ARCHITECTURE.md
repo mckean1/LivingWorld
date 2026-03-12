@@ -171,6 +171,7 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 
 Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
 Left/Right paging is view-agnostic now: list screens page selection, while chronicle and detail screens page scroll offsets.
+`My Polity` is also a special focal-polity view rather than just a shortcut into generic polity detail. `Enter` intentionally leaves the player there so focal-only information cannot be downgraded by a foreign-polity-safe renderer path.
 
 ## Focus And Continuity
 

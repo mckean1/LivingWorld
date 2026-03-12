@@ -84,6 +84,7 @@ In watch mode:
 - `Space` pauses monthly advancement but leaves the watch UI responsive
 - while paused, the renderer can still redraw list/detail screens and scroll chronicle history
 - `Left` / `Right` now page chronicle or detail scroll state and jump faster through list selection
+- `Enter` on `My Polity` is intentionally non-drilling so the focal polity never loses visibility by entering a more filtered detail screen
 - unpausing resets the next step deadline instead of trying to catch up missed paused time
 - chronicle pacing no longer sleeps inside event recording, so view changes stay immediate during live simulation
 

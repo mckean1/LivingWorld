@@ -127,7 +127,8 @@ Watch mode now supports lightweight inspection without leaving the live simulati
 - `Tab` cycles the main top-level views
 - `Up` / `Down` move list selection or scroll the active screen where relevant
 - `Left` / `Right` page through chronicle/detail scrollback or jump faster through list screens
-- `Enter` inspects the selected list item or the current focal polity / region when supported
+- `Enter` inspects the selected list item or the current focal region when supported
+- `Enter` on `My Polity` intentionally keeps the current screen, because `My Polity` is already the focal polity's expanded player-facing view and should never drill into a less detailed generic polity screen
 - `Esc` returns from a detail screen to the previous list
 
 Phase 1 visibility rules are intentionally conservative and grounded:
@@ -138,6 +139,7 @@ Phase 1 visibility rules are intentionally conservative and grounded:
 
 These views are observational only. They do not create simulation events or allow direct control over the world.
 Foreign polity detail intentionally hides that polity's private discoveries and learned capabilities unless it is the focal polity.
+The focal polity never loses visibility by drilling into detail: `My Polity` retains full player-facing access to discoveries, learned advancements, food, pressure, and settlement information.
 World Overview now summarizes only known regions, known species, known polities, and visible major events inside the focal polity's current horizon.
 
 Watch-loop responsiveness notes:

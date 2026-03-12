@@ -191,3 +191,4 @@ The new inspection UI is a read-only observer layer on top of those systems:
 - pausing stops monthly advancement but does not mutate domain state or generate events
 - the simulation loop now schedules month advancement on a timed cadence and uses render invalidation so input polling stays responsive during live play
 - foreign-polity detail intentionally hides that polity's private discoveries and learned capabilities unless it is the current focal polity
+- focal-polity inspection is intentionally separate: `My Polity` is treated as the already-expanded self-view, so `Enter` there does not fall through to the generic polity-detail renderer

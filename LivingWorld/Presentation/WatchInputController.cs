@@ -82,13 +82,11 @@ public sealed class WatchInputController
         switch (_state.ActiveView)
         {
             case WatchViewType.MyPolity:
-                if (snapshot.FocalPolity is { } focalPolity)
-                {
-                    _state.PushDetailView(WatchViewType.PolityDetail, focalPolity.Id);
-                    return true;
-                }
-
-                return false;
+                // My Polity is already the focal polity's expanded player-facing
+                // view. Drilling into the generic polity detail screen would
+                // risk losing focal-only fields that are intentionally hidden
+                // for foreign polities.
+                return snapshot.FocalPolity is not null;
             case WatchViewType.CurrentRegion:
                 if (snapshot.CurrentRegion is { } currentRegion)
                 {

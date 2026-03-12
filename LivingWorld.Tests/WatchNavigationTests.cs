@@ -74,6 +74,50 @@ public sealed class WatchNavigationTests
     }
 
     [Fact]
+    public void MyPolity_Enter_KeepsViewAndDoesNotReduceVisibleSummaryData()
+    {
+        World world = CreateWorld();
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.MyPolity);
+        WatchInputController controller = new(uiState);
+
+        IReadOnlyList<string> beforeLines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        bool handled = controller.HandleKey(new ConsoleKeyInfo('\r', ConsoleKey.Enter, false, false, false), world, focus);
+
+        IReadOnlyList<string> afterLines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.True(handled);
+        Assert.Equal(WatchViewType.MyPolity, uiState.ActiveView);
+        Assert.Contains(" Name: Deepfield Tribe", beforeLines);
+        Assert.Contains(" Name: Deepfield Tribe", afterLines);
+        Assert.Contains(afterLines, line => line.StartsWith(" Discoveries: ", StringComparison.Ordinal));
+        Assert.Contains(afterLines, line => line.StartsWith(" Learned: ", StringComparison.Ordinal));
+        Assert.Contains(afterLines, line => line.StartsWith(" Food Stores: ", StringComparison.Ordinal));
+        Assert.Contains(afterLines, line => line.StartsWith(" Major Pressures: ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void MyPolity_Enter_DoesNotLoseDiscoveriesOrLearned()
+    {
+        World world = CreateWorld();
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.MyPolity);
+        WatchInputController controller = new(uiState);
+
+        bool handled = controller.HandleKey(new ConsoleKeyInfo('\r', ConsoleKey.Enter, false, false, false), world, focus);
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.True(handled);
+        Assert.Contains(" Discoveries: Green Barrow Copper", lines);
+        Assert.Contains(" Learned: Agriculture, Fire", lines);
+    }
+
+    [Fact]
     public void LeftRight_PagesThroughChronicleScrollback()
     {
         World world = CreateWorld();
@@ -181,6 +225,8 @@ public sealed class WatchNavigationTests
         Polity focalPolity = new(7, "Deepfield Tribe", 1, 0, 84);
         focalPolity.EstablishFirstSettlement(0, "Green Hearth");
         focalPolity.AddDiscovery(new CulturalDiscovery("region-copper:0", "Green Barrow Copper", CulturalDiscoveryCategory.Resource, null, 0));
+        focalPolity.LearnAdvancement(AdvancementId.Fire);
+        focalPolity.LearnAdvancement(AdvancementId.Agriculture);
         world.Polities.Add(focalPolity);
 
         Polity neighborPolity = new(8, "Valley Clan", 1, 1, 55);
