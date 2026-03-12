@@ -61,6 +61,7 @@ Examples:
 Player-facing species context remains available, but it lives in the fixed watch-mode status panel rather than being appended to every chronicle line.
 The same watch-mode panel also separates cultural discoveries from learned advancements instead of collapsing them into one ambiguous knowledge field.
 Settlement references are now more often real execution sites rather than fabricated polity-region placeholders, especially for hunting, farming follow-through, and trade endpoints.
+Watch navigation and pause controls are presentation-only concerns. Switching views or pausing the watch UI does not emit canonical `WorldEvent` records.
 
 Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
 

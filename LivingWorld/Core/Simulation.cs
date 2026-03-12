@@ -1,6 +1,7 @@
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
+using System.Threading;
 
 namespace LivingWorld.Core;
 
@@ -25,6 +26,8 @@ public sealed class Simulation : IDisposable
     private readonly ChronicleEventFormatter _chronicleEventFormatter;
     private readonly ChronicleWatchRenderer _chronicleWatchRenderer;
     private readonly ChronicleFocus _chronicleFocus;
+    private readonly WatchUiState _watchUiState;
+    private readonly WatchInputController _watchInputController;
     private readonly IPolityFocusSelector _focusSelector;
     private readonly HistoryJsonlWriter? _historyWriter;
     private readonly Dictionary<int, HardshipChronicleState> _hardshipStates = [];
@@ -50,6 +53,8 @@ public sealed class Simulation : IDisposable
         _chronicleWatchRenderer = new ChronicleWatchRenderer(_options, _chronicleColorWriter, _chronicleEventFormatter);
 
         _chronicleFocus = new ChronicleFocus();
+        _watchUiState = new WatchUiState();
+        _watchInputController = new WatchInputController(_watchUiState);
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
         ChronicleFocusSelection initialFocus = _focusSelector.SelectInitialFocus(_world, _options);
         _chronicleFocus.SetFocus(initialFocus.PolityId, initialFocus.LineageId);
@@ -72,14 +77,28 @@ public sealed class Simulation : IDisposable
             _world.EventRecorded += OnWorldEventRecorded;
         }
 
-        _chronicleWatchRenderer.Render(_world, _chronicleFocus);
+        _chronicleWatchRenderer.Render(_world, _chronicleFocus, _watchUiState);
     }
 
     public void RunMonths(int months)
     {
-        for (int i = 0; i < months; i++)
+        int completedMonths = 0;
+        while (completedMonths < months)
         {
+            bool uiChanged = PumpWatchInput();
+            if (_options.OutputMode == OutputMode.Watch && _watchUiState.IsPaused)
+            {
+                if (!uiChanged)
+                {
+                    Thread.Sleep(40);
+                }
+
+                continue;
+            }
+
             RunTick();
+            completedMonths++;
+            PumpWatchInput();
         }
     }
 
@@ -185,7 +204,7 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        _chronicleWatchRenderer.Record(_world, _chronicleFocus, worldEvent);
+        _chronicleWatchRenderer.Record(_world, _chronicleFocus, _watchUiState, worldEvent);
     }
 
     private void AddYearlyFoodStressEvents()
@@ -381,7 +400,29 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        _chronicleWatchRenderer.Render(_world, _chronicleFocus);
+        _chronicleWatchRenderer.Render(_world, _chronicleFocus, _watchUiState);
+    }
+
+    private bool PumpWatchInput()
+    {
+        if (_options.OutputMode != OutputMode.Watch || Console.IsInputRedirected)
+        {
+            return false;
+        }
+
+        bool handledAny = false;
+        while (Console.KeyAvailable)
+        {
+            ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
+            handledAny |= _watchInputController.HandleKey(keyInfo, _world, _chronicleFocus);
+        }
+
+        if (handledAny)
+        {
+            _chronicleWatchRenderer.Render(_world, _chronicleFocus, _watchUiState);
+        }
+
+        return handledAny;
     }
 
     private void PrintDebugYearEvents()

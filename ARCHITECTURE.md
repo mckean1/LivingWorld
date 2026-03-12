@@ -121,6 +121,10 @@ Watch mode is built from:
 - `ChronicleEventFormatter`
 - `ChronicleWatchRenderer`
 - `ChronicleColorWriter`
+- `WatchUiState`
+- `WatchInputController`
+- `WatchInspectionData`
+- `WatchScreenBuilder`
 
 Important traits:
 
@@ -129,9 +133,22 @@ Important traits:
 - only `Major+` turning points are shown in normal player mode
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
 - the fixed top panel shows focal polity context such as species
+- the fixed top panel now also shows `RUNNING` / `PAUSED` and the active watch view
 - the fixed top panel separates discoveries from learned advancements
 - chronicle lines do not append species to every polity name
 - syntax coloring is applied after formatting, with structured status-line parsing first and boundary-aware semantic matching for narrative lines
+
+## Watch UI Architecture
+
+The watch UI is now a thin observation layer over the simulation rather than a chronicle-only screen.
+
+- `WatchUiState` stores active view, pause state, per-view selection, per-view scroll offsets, and the detail back stack
+- `WatchInputController` translates key presses into UI navigation and pause behavior
+- `WatchInspectionData` computes grounded first-pass visibility sets for known regions, species, and polities
+- `WatchScreenBuilder` renders top-level and detail inspection screens from current world state
+- `ChronicleWatchRenderer` remains responsible for low-flicker console drawing, the fixed top panel, chronicle retention, and viewport slicing
+
+Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
 
 ## Focus And Continuity
 

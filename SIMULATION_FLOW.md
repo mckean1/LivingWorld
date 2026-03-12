@@ -1,6 +1,7 @@
 # LivingWorld Simulation Flow
 
 LivingWorld runs the full world in monthly ticks. Player-facing output is live chronicle playback, not a yearly report.
+The watch UI can now swap between chronicle and inspection screens without changing the simulation state it observes.
 
 ## Monthly Flow
 
@@ -19,6 +20,7 @@ LivingWorld runs the full world in monthly ticks. Player-facing output is live c
 11. migration evaluation and relocation
 12. structured events emitted immediately into the canonical event pipeline
 13. watch mode formats and displays qualifying focal-polity chronicle entries
+14. watch input can change views at any time; if paused, input continues while monthly advancement is held
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
@@ -59,11 +61,14 @@ Simulation emits and records events before chronicle presentation. The chronicle
 Default player mode shows:
 
 - a fixed status panel at the top
+- explicit `RUNNING` / `PAUSED` state in that panel
 - focal polity species in that panel
+- the currently active watch view in that panel
 - separate `Discoveries` and `Learned` rows in that panel
 - a chronicle viewport beneath it sized from the available console height
 - newest messages first
 - concise `Major` and `Legendary` history only
+- key-driven inspection screens for polity, region, species, polity lists, and world overview
 
 Chronicle lines themselves remain short and do not append species after every polity name.
 

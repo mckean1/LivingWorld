@@ -153,3 +153,12 @@ That separation keeps the architecture clean:
 - structured history preserves the full chain
 - chronicle presentation stays readable
 - watch-mode coloring remains token-aware so semantic highlights do not bleed into unrelated prose
+
+## Watch Inspection Layer
+
+The new inspection UI is a read-only observer layer on top of those systems:
+
+- `WatchInspectionData` derives what the focal polity currently knows from existing simulation state
+- `WatchScreenBuilder` formats that state into chronicle-adjacent inspection screens
+- `WatchInputController` changes UI state only; it does not call simulation systems
+- pausing stops monthly advancement but does not mutate domain state or generate events

@@ -69,6 +69,8 @@ Default watch mode still shows:
 - a fixed polity status panel docked at the top
 - a reverse-chronological chronicle beneath it
 - only `Major` and `Legendary` turning points by default
+- key-driven inspection views layered over the same watch console
+- an explicit paused/running state in the status panel
 
 The status panel carries secondary context such as the focal polity species so chronicle lines can stay concise and story-like.
 It also separates cultural discoveries from learned advancements so the player-facing UI matches the simulation terminology.
@@ -88,6 +90,31 @@ Internal follow-up events such as migration pressure, starvation risk, cultivati
 Mutation reacts to same-season regional species exchange from the ecology pipeline, not to the later monthly polity migration step.
 Polity migration still relocates the whole polity network for now, but it now relocates the polity's actual settlement records too so settlement-grounded systems stay coherent.
 Regional adaptation events now emit on meaningful adaptation milestones rather than on repeated reaffirmation of the same condition, and chronicle presentation applies a dedicated adaptation cooldown key so the same species-region adaptation beat does not spam the live feed.
+
+## Watch Controls
+
+Watch mode now supports lightweight inspection without leaving the live simulation view:
+
+- `Space` toggles `RUNNING` / `PAUSED`
+- `1` Chronicle
+- `2` My Polity
+- `3` Current Region
+- `4` Known Regions
+- `5` Known Species
+- `6` Known Polities
+- `7` World Overview
+- `Tab` cycles the main top-level views
+- `Up` / `Down` move list selection or scroll the active screen where relevant
+- `Enter` inspects the selected list item or the current focal polity / region when supported
+- `Esc` returns from a detail screen to the previous list
+
+Phase 1 visibility rules are intentionally conservative and grounded:
+
+- `Known Regions` uses the focal polity's settlement regions, its current center region, and directly connected neighboring regions
+- `Known Species` uses species currently present in those known regions
+- `Known Polities` uses active polities occupying those known regions
+
+These views are observational only. They do not create simulation events or allow direct control over the world.
 
 ## Propagation Safeguards
 
@@ -121,6 +148,8 @@ Default mode is watch mode. Useful flags:
 - `--buffer-size <n>` to raise the retained chronicle history floor
 - `--focus-polity <id>` to watch a specific polity
 - `--debug` to restore developer-oriented yearly summaries and raw yearly event listings
+
+Manual pause via `Space` is available during normal watch mode. It pauses simulation advancement while still allowing navigation across watch views.
 
 Example:
 

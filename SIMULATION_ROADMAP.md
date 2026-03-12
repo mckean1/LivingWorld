@@ -27,7 +27,8 @@ Implemented core includes:
 Keep improving event weighting, transition detection, and suppression so the live chronicle stays readable during busy simulation periods.
 
 2. History views
-Build a Civilization History view over the stored event stream without changing simulation systems.
+Build richer lineage and event-history views over the stored event stream without changing simulation systems.
+The first lightweight inspection layer is now in place through watch-mode polity, region, species, polity-list, and world-overview screens.
 
 3. Multiple perspectives
 Allow the same stored history to be rendered through different focal filters or narrative lenses.

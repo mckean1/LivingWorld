@@ -158,6 +158,7 @@ internal sealed class ChronicleLineColorizer
     private static readonly Regex RegionRegex = new(@"^Region:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex DiscoveryRegex = new(@"^Discoveries:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex LearnedRegex = new(@"^Learned:\s+(.+)$", RegexOptions.Compiled);
+    private static readonly Regex StatusRegex = new(@"^Status:\s+([A-Z]+)(?:\s+\|\s+View:\s+(.+))?$", RegexOptions.Compiled);
     private static readonly Regex FoodRegex = new(@"^Food:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex FoodStoresRegex = new(@"^Food Stores:\s+\d+\s+\(([^)]+)\)", RegexOptions.Compiled);
     private static readonly Regex SectionHeaderRegex = new(@"^(This Year|Notable Changes)$", RegexOptions.Compiled);
@@ -278,6 +279,30 @@ internal sealed class ChronicleLineColorizer
         {
             int offset = line.Length - line.TrimStart().Length;
             spans.Add(new SemanticSpan(offset + learned.Groups[1].Index, learned.Groups[1].Length, ChronicleSemantic.KnowledgeName, 95));
+            structuredLine = true;
+        }
+
+        Match status = StatusRegex.Match(line.TrimStart());
+        if (status.Success)
+        {
+            int offset = line.Length - line.TrimStart().Length;
+            ChronicleSemantic statusSemantic = status.Groups[1].Value switch
+            {
+                "RUNNING" => ChronicleSemantic.Positive,
+                "PAUSED" => ChronicleSemantic.Warning,
+                _ => ChronicleSemantic.Text
+            };
+
+            if (statusSemantic != ChronicleSemantic.Text)
+            {
+                spans.Add(new SemanticSpan(offset + status.Groups[1].Index, status.Groups[1].Length, statusSemantic, 95));
+            }
+
+            if (status.Groups[2].Success)
+            {
+                spans.Add(new SemanticSpan(offset + status.Groups[2].Index, status.Groups[2].Length, ChronicleSemantic.Subtle, 90));
+            }
+
             structuredLine = true;
         }
 

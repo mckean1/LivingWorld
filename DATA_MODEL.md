@@ -13,6 +13,8 @@ LivingWorld uses aggregated entities rather than individual agents so long histo
 - `PolityStage`
 - `WorldEvent`
 - `ChronicleFocus`
+- `WatchUiState`
+- `WatchViewType`
 
 ## World
 
@@ -158,7 +160,21 @@ The global `Species` definition remains the ancestral baseline. Mutation and div
 - `ChroniclePresentationPolicy`
 - `ChronicleEventFormatter`
 - `ChronicleWatchRenderer`
+- `WatchUiState`
+- `WatchViewType`
+- `WatchInputController`
+- `WatchInspectionData`
+- `WatchScreenBuilder`
 - `HistoryJsonlWriter`
+
+`WatchUiState` is UI-only state. It tracks:
+
+- active watch view
+- paused/running state
+- remembered selected index per list view
+- remembered scroll offset per scrollable view
+- current inspected region/species/polity ids for detail pages
+- a lightweight back stack for `Esc` navigation
 
 ## Propagation Types
 

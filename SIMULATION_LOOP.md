@@ -15,6 +15,7 @@ This document describes the simulation loop in terms of event capture, propagati
 
 Watch mode keeps species in the fixed status panel, separates discoveries from learned advancements there, and leaves chronicle lines leaner by omitting repeated polity species suffixes.
 The same watch renderer applies conservative syntax coloring after formatting: structured status lines color only their value segments, while narrative chronicle lines color only boundary-safe semantic units.
+The watch loop now also maintains a small UI state machine for top-level views, detail screens, pause state, and selection memory.
 
 ## Monthly Systems
 
@@ -54,6 +55,15 @@ Propagation is immediate. When a system calls `World.AddEvent(...)`:
 - any follow-up events go through the same canonical path
 
 This keeps causal chains deterministic and local to the state transition that created them.
+
+## Watch Input Timing
+
+In watch mode:
+
+- key input is polled independently of monthly simulation advancement
+- changing views does not affect world logic
+- `Space` pauses monthly advancement but leaves the watch UI responsive
+- while paused, the renderer can still redraw list/detail screens and scroll chronicle history
 
 ## Anti-Spam Rules
 

@@ -105,4 +105,26 @@ public sealed class ChronicleWatchRendererTests
         Assert.Contains(statusLines, line => line.StartsWith(" Discoveries: ", StringComparison.Ordinal) && line.Contains("+1 more", StringComparison.Ordinal));
         Assert.Contains(statusLines, line => line.StartsWith(" Learned: ", StringComparison.Ordinal) && line.Contains("+1 more", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void StatusPanel_ShowsPauseStateAndActiveView()
+    {
+        World world = new(new WorldTime(12, 1));
+        world.Regions.Add(new Region(0, "Green Barrow"));
+        world.Species.Add(new Species(1, "Humans", 0.8, 0.7));
+        Polity polity = new(7, "Deepfield Tribe", 1, 0, 84);
+
+        WatchUiState uiState = new();
+        uiState.TogglePaused();
+        uiState.SetActiveMainView(WatchViewType.KnownSpecies);
+
+        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(
+            world,
+            polity,
+            uiState,
+            width: 80,
+            stageNameFormatter: stage => stage.ToString());
+
+        Assert.Contains(" Status: PAUSED | View: Known Species", statusLines);
+    }
 }

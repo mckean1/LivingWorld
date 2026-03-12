@@ -6,14 +6,15 @@ namespace LivingWorld.Presentation;
 
 public sealed class ChronicleWatchRenderer : IDisposable
 {
-    private const int MinimumChronicleViewportHeight = 6;
+    private const int MinimumViewportHeight = 6;
     private readonly SimulationOptions _options;
     private readonly ChronicleColorWriter _colorWriter;
     private readonly ChronicleEventFormatter _formatter;
     private readonly List<string> _chronicleEntries = [];
 
     private IReadOnlyList<string> _lastStatusLines = [];
-    private IReadOnlyList<string> _lastChronicleLines = [];
+    private IReadOnlyList<string> _lastBodyLines = [];
+    private IReadOnlyList<string> _lastFooterLines = [];
     private int _lastWidth = -1;
     private int _lastHeight = -1;
     private bool _cursorWasVisible = true;
@@ -29,18 +30,18 @@ public sealed class ChronicleWatchRenderer : IDisposable
         _formatter = formatter;
     }
 
-    public void Render(World world, ChronicleFocus focus)
+    public void Render(World world, ChronicleFocus focus, WatchUiState uiState)
     {
         if (_options.OutputMode != OutputMode.Watch)
         {
             return;
         }
 
-        ChronicleLayout layout = BuildLayout(world, focus);
+        ChronicleLayout layout = BuildLayout(world, focus, uiState);
         Draw(layout, world);
     }
 
-    public void Record(World world, ChronicleFocus focus, WorldEvent worldEvent)
+    public void Record(World world, ChronicleFocus focus, WatchUiState uiState, WorldEvent worldEvent)
     {
         if (_options.OutputMode != OutputMode.Watch)
         {
@@ -53,8 +54,9 @@ public sealed class ChronicleWatchRenderer : IDisposable
         }
 
         _chronicleEntries.Insert(0, chronicleLine);
+        uiState.OnChronicleEntryAdded();
         TrimRetainedEntries();
-        Render(world, focus);
+        Render(world, focus, uiState);
 
         if (_options.ChroniclePlaybackDelayMilliseconds > 0)
         {
@@ -79,32 +81,54 @@ public sealed class ChronicleWatchRenderer : IDisposable
         }
     }
 
-    private ChronicleLayout BuildLayout(World world, ChronicleFocus focus)
+    private ChronicleLayout BuildLayout(World world, ChronicleFocus focus, WatchUiState uiState)
     {
         Polity? polity = focus.ResolvePolity(world);
         int width = ResolveWindowWidth();
-        List<string> statusLines = BuildStatusLines(world, polity, width);
-        int viewportHeight = ResolveChronicleViewportHeight(statusLines.Count);
-        List<string> chronicleLines = BuildChronicleViewport(viewportHeight);
+        List<string> statusLines = BuildStatusLines(world, polity, uiState, width);
+        List<string> footerLines = WatchScreenBuilder.BuildFooterLines(uiState, width);
+        int viewportHeight = ResolveViewportHeight(statusLines.Count, footerLines.Count);
+        IReadOnlyList<string> rawBodyLines = uiState.ActiveView == WatchViewType.Chronicle
+            ? BuildChronicleViewportEntries(uiState)
+            : WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+        List<string> bodyLines = BuildVisibleViewport(rawBodyLines, uiState, viewportHeight);
 
-        return new ChronicleLayout(width, ResolveWindowHeight(), statusLines, chronicleLines, SeparatorTop: statusLines.Count);
+        return new ChronicleLayout(
+            width,
+            ResolveWindowHeight(),
+            statusLines,
+            bodyLines,
+            footerLines,
+            SeparatorTop: statusLines.Count,
+            FooterTop: statusLines.Count + 1 + bodyLines.Count + 1);
     }
 
-    private List<string> BuildStatusLines(World world, Polity? polity, int width)
-        => BuildStatusLines(world, polity, width, RenderStageName);
+    private List<string> BuildStatusLines(World world, Polity? polity, WatchUiState uiState, int width)
+        => BuildStatusLines(world, polity, uiState, width, WatchInspectionData.DescribeStage);
 
     public static List<string> BuildStatusLines(
         World world,
         Polity? polity,
         int width,
         Func<PolityStage, string> stageNameFormatter)
+        => BuildStatusLines(world, polity, new WatchUiState(), width, stageNameFormatter);
+
+    public static List<string> BuildStatusLines(
+        World world,
+        Polity? polity,
+        WatchUiState uiState,
+        int width,
+        Func<PolityStage, string> stageNameFormatter)
     {
         string border = new('=', width);
         List<string> lines = [border];
+        string status = uiState.IsPaused ? "PAUSED" : "RUNNING";
+        string view = WatchScreenBuilder.DescribeView(uiState.ActiveView);
 
         if (polity is null)
         {
             lines.Add(" Chronicle Watch");
+            lines.Add($" Status: {status} | View: {view}");
             lines.Add($" Year: {world.Time.Year}");
             lines.Add(" Focus: No surviving focal polity");
             lines.Add(border);
@@ -118,6 +142,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
         string foodStores = Math.Round(polity.FoodStores).ToString("F0");
 
         lines.Add($" {polity.Name} - {stageNameFormatter(polity.Stage)}");
+        lines.Add($" Status: {status} | View: {view}");
         lines.Add($" Species: {speciesName}");
         lines.Add($" Region: {regionName}");
         lines.Add($" Population: {polity.Population}");
@@ -131,15 +156,26 @@ public sealed class ChronicleWatchRenderer : IDisposable
         return lines;
     }
 
-    private List<string> BuildChronicleViewport(int viewportHeight)
+    private List<string> BuildChronicleViewportEntries(WatchUiState uiState)
     {
-        List<string> visible = _chronicleEntries
-            .Take(viewportHeight)
-            .ToList();
+        if (_chronicleEntries.Count == 0)
+        {
+            return ["The chronicle is quiet."];
+        }
+
+        int scrollOffset = Math.Clamp(uiState.GetScrollOffset(WatchViewType.Chronicle), 0, Math.Max(0, _chronicleEntries.Count - 1));
+        return _chronicleEntries.Skip(scrollOffset).ToList();
+    }
+
+    private static List<string> BuildVisibleViewport(IReadOnlyList<string> rawLines, WatchUiState uiState, int viewportHeight)
+    {
+        int maxOffset = Math.Max(0, rawLines.Count - viewportHeight);
+        int offset = WatchScreenBuilder.ResolveViewportOffset(rawLines.Count, viewportHeight, uiState, maxOffset);
+        List<string> visible = rawLines.Skip(offset).Take(viewportHeight).ToList();
 
         if (visible.Count == 0)
         {
-            visible.Add("The chronicle is quiet.");
+            visible.Add("Nothing to inspect yet.");
         }
 
         while (visible.Count < viewportHeight)
@@ -161,7 +197,14 @@ public sealed class ChronicleWatchRenderer : IDisposable
 
             Console.WriteLine();
 
-            foreach (string line in layout.ChronicleLines)
+            foreach (string line in layout.BodyLines)
+            {
+                _colorWriter.WriteLine(line, world);
+            }
+
+            Console.WriteLine();
+
+            foreach (string line in layout.FooterLines)
             {
                 _colorWriter.WriteLine(line, world);
             }
@@ -180,15 +223,18 @@ public sealed class ChronicleWatchRenderer : IDisposable
 
         WriteRegion(0, layout.StatusLines, _lastStatusLines, layout.Width, context, forceAll: dimensionsChanged);
         WriteRegion(layout.SeparatorTop, [string.Empty], [], layout.Width, context, forceAll: true);
-        int chronicleTop = layout.SeparatorTop + 1;
-        WriteRegion(chronicleTop, layout.ChronicleLines, _lastChronicleLines, layout.Width, context, forceAll: dimensionsChanged);
+        int bodyTop = layout.SeparatorTop + 1;
+        WriteRegion(bodyTop, layout.BodyLines, _lastBodyLines, layout.Width, context, forceAll: dimensionsChanged);
+        WriteRegion(layout.FooterTop - 1, [string.Empty], [], layout.Width, context, forceAll: true);
+        WriteRegion(layout.FooterTop, layout.FooterLines, _lastFooterLines, layout.Width, context, forceAll: dimensionsChanged);
 
         _lastStatusLines = layout.StatusLines.ToList();
-        _lastChronicleLines = layout.ChronicleLines.ToList();
+        _lastBodyLines = layout.BodyLines.ToList();
+        _lastFooterLines = layout.FooterLines.ToList();
         _lastWidth = layout.Width;
         _lastHeight = layout.Height;
 
-        int safeCursorTop = Math.Min(layout.Height - 1, chronicleTop + layout.ChronicleLines.Count);
+        int safeCursorTop = Math.Min(layout.Height - 1, layout.FooterTop + layout.FooterLines.Count);
         Console.SetCursorPosition(0, Math.Max(0, safeCursorTop));
     }
 
@@ -252,7 +298,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
     {
         int retentionLimit = Math.Max(
             ResolveWindowHeight() * 4,
-            Math.Max(MinimumChronicleViewportHeight * 4, _options.ChronicleVisibleEntryLimit));
+            Math.Max(MinimumViewportHeight * 4, _options.ChronicleVisibleEntryLimit));
         while (_chronicleEntries.Count > retentionLimit)
         {
             _chronicleEntries.RemoveAt(_chronicleEntries.Count - 1);
@@ -272,31 +318,25 @@ public sealed class ChronicleWatchRenderer : IDisposable
     {
         if (Console.IsOutputRedirected)
         {
-            return 20;
+            return 26;
         }
 
-        return Math.Max(12, Console.WindowHeight > 0 ? Console.WindowHeight : 20);
+        return Math.Max(16, Console.WindowHeight > 0 ? Console.WindowHeight : 26);
     }
 
-    private int ResolveChronicleViewportHeight(int statusLineCount)
+    private int ResolveViewportHeight(int statusLineCount, int footerLineCount)
     {
         int totalHeight = ResolveWindowHeight();
-        int reserved = statusLineCount + 1;
-        int availableHeight = Math.Max(1, totalHeight - reserved);
-        return availableHeight;
+        int reserved = statusLineCount + footerLineCount + 2;
+        return Math.Max(1, totalHeight - reserved);
     }
-
-    private static string RenderStageName(PolityStage stage)
-        => stage switch
-        {
-            PolityStage.SettledSociety => "Settled Society",
-            _ => stage.ToString()
-        };
 
     private sealed record ChronicleLayout(
         int Width,
         int Height,
         IReadOnlyList<string> StatusLines,
-        IReadOnlyList<string> ChronicleLines,
-        int SeparatorTop);
+        IReadOnlyList<string> BodyLines,
+        IReadOnlyList<string> FooterLines,
+        int SeparatorTop,
+        int FooterTop);
 }
