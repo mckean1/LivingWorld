@@ -63,6 +63,7 @@ The same watch-mode panel also separates cultural discoveries from learned advan
 Settlement references are now more often real execution sites rather than fabricated polity-region placeholders, especially for hunting, farming follow-through, and trade endpoints.
 Watch navigation and pause controls are presentation-only concerns. Switching views or pausing the watch UI does not emit canonical `WorldEvent` records.
 Chronicle pacing is also presentation-only now: delaying visible playback no longer blocks the canonical event path or input polling.
+Likewise, the denser default seed world does not emit synthetic setup events just to announce extra regions, species, or polities; the chronicle remains focused on consequential transitions after simulation begins.
 
 Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
 

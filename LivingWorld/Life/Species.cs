@@ -1,5 +1,6 @@
 
 using LivingWorld.Core;
+using LivingWorld.Map;
 
 namespace LivingWorld.Life;
 
@@ -31,6 +32,8 @@ public sealed class Species
     public bool IsToxicToEat { get; set; }
     public double DomesticationAffinity { get; set; }
     public List<int> DietSpeciesIds { get; } = [];
+    public HashSet<RegionBiome> PreferredBiomes { get; } = [];
+    public HashSet<int> InitialRangeRegionIds { get; } = [];
 
     public Species(int id, string name, double intelligence, double cooperation)
     {

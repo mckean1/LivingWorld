@@ -6,6 +6,7 @@ LivingWorld uses aggregated entities rather than individual agents so long histo
 
 - `World`
 - `Region`
+- `RegionBiome`
 - `Species`
 - `RegionSpeciesPopulation`
 - `Polity`
@@ -118,6 +119,8 @@ Selected ecology fields:
 - `IsSapient`
 - `TrophicRole`
 - habitat preferences for fertility, water, and biomass
+- `PreferredBiomes`
+- `InitialRangeRegionIds`
 - `DietSpeciesIds`
 - `BaseCarryingCapacityFactor`
 - `MigrationCapability`, `ExpansionPressure`
@@ -149,6 +152,17 @@ Selected fields:
 
 These entries are population-level only. LivingWorld still does not simulate individual animals or genetics.
 The global `Species` definition remains the ancestral baseline. Mutation and divergence now happen on `RegionSpeciesPopulation` so one regional lineage can adapt without rewriting the parent species everywhere else.
+
+## Region
+
+`Region` now also carries lightweight biome identity through `Biome`.
+
+That biome is used by:
+
+- world generation profiles
+- seeded species-range selection
+- habitat suitability scoring
+- starting-polity placement heuristics
 
 ## Presentation And Persistence Types
 

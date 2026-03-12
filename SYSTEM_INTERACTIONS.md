@@ -93,6 +93,7 @@ Some handlers do more than emit follow-up events. They can also update temporary
 The new ecology phase is shared state for multiple systems:
 
 - `Region.SpeciesPopulations` feeds ecosystem predation and prey support
+- world generation seeds those populations only inside each species' initial viable range instead of treating the world as globally occupied
 - hunting reads the same regional populations and writes pressure back into them
 - mutation reads those same pressure markers plus same-season species-exchange flags, stores accumulated evolutionary pressure on each regional population, and writes trait offsets back into the same records
 - ecosystem growth, migration scoring, and carrying capacity now consume those evolved trait offsets
@@ -122,6 +123,16 @@ This keeps cause-and-effect local:
 - local prey decline comes from the settlements that hunted there
 - farm output comes from settlements actually occupying fertile land
 - migration relocates settlement records so later systems do not read stale locality state
+
+## Generation To Simulation Handoff
+
+The fuller starting world is still intentionally constrained at handoff time:
+
+- region biome profiles shape baseline fertility, water, and biomass
+- species start in clustered biome-suitable ranges rather than universal placement
+- starting polities are seeded into viable, spaced regions rather than random stacking
+
+That means early hunting, food stress, migration, and contact pressures begin from a richer world, but they still emerge from regional conditions instead of arbitrary clutter.
 
 ## Knowledge Split
 

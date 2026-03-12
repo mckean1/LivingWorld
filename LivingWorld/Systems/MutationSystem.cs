@@ -67,8 +67,10 @@ public sealed class MutationSystem
             : (double)population.PopulationCount / population.CarryingCapacity;
         double habitatMismatch = Math.Max(0.0, 0.82 - population.HabitatSuitability);
         double ancestralMismatch = Math.Max(0.0, 0.82 - population.BaseHabitatSuitability);
+        // Same-season arrivals should create a clear short-term mismatch spike even when
+        // the destination's recalculated baseline fit is only moderately hostile.
         double migrationShock = population.ReceivedMigrantsThisSeason
-            ? 0.10 + (ancestralMismatch * 0.25)
+            ? 0.12 + (ancestralMismatch * 0.25)
             : 0.0;
         double isolationGain = population.IsolationSeasons >= 4
             ? Math.Min(0.30, population.IsolationSeasons / 24.0)

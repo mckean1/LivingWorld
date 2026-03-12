@@ -26,6 +26,11 @@ public sealed class EcosystemSystem
                     continue;
                 }
 
+                if (species.InitialRangeRegionIds.Count > 0 && !species.InitialRangeRegionIds.Contains(region.Id))
+                {
+                    continue;
+                }
+
                 population.PopulationCount = CalculateInitialPopulation(species, population.CarryingCapacity, population.HabitatSuitability);
             }
         }
@@ -426,8 +431,11 @@ public sealed class EcosystemSystem
             (region.MaxAnimalBiomass / 400.0 * species.AnimalBiomassAffinity),
             0.0,
             1.4);
+        double biomeFit = species.PreferredBiomes.Count == 0
+            ? 1.0
+            : species.PreferredBiomes.Contains(region.Biome) ? 1.05 : 0.45;
 
-        return Math.Clamp((fertilityFit * 0.35) + (waterFit * 0.25) + (biomassFit * 0.40), 0.05, 1.25);
+        return Math.Clamp((fertilityFit * 0.30) + (waterFit * 0.22) + (biomassFit * 0.33) + (biomeFit * 0.15), 0.03, 1.25);
     }
 
     private static double CalculateHabitatSuitability(Species species, RegionSpeciesPopulation population, double baseSuitability)

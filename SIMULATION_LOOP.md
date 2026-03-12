@@ -16,6 +16,7 @@ This document describes the simulation loop in terms of event capture, propagati
 Watch mode keeps species in the fixed status panel, separates discoveries from learned advancements there, and leaves chronicle lines leaner by omitting repeated polity species suffixes.
 The same watch renderer applies conservative syntax coloring after formatting: structured status lines color only their value segments, while narrative chronicle lines color only boundary-safe semantic units.
 The watch loop now also maintains a small UI state machine for top-level views, detail screens, pause state, and selection memory.
+The seed world entering this loop is now larger by default, but scale tuning remains centralized in `WorldGenerationSettings` rather than spread across systems.
 
 ## Monthly Systems
 
@@ -95,6 +96,7 @@ The simulation loop now supports:
 - population-level evolutionary drift driven by shared ecological pressures
 - adaptation milestones grounded in ancestral mismatch, divergence, trait gains, and regional persistence
 - player-facing adaptation lines only on new adaptation milestones, with scoped chronicle cooldown on top of source-side suppression
+- a fuller opening world without globally-uniform species placement or overcrowded starting polity stacks
 - structured history with causal ancestry
 - concise chronicle output that still reads like history rather than telemetry
 - safer hot-path lookup behavior through cached lookup snapshots and clearer invariant failures

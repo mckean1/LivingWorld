@@ -165,6 +165,7 @@ Species references remain in structured event data, but watch-mode chronicle lin
 Watch-mode coloring is also conservative: actor names, place names, known knowledge names, and explicit crisis or status phrases may be colored, but incidental descriptive prose should remain plain text.
 The watch inspection controls are UI-only and do not introduce new event types.
 The same is true for watch-loop pacing changes: responsive input and timed stepping change presentation behavior, not event semantics.
+The fuller seed world also does not introduce generation-only spam event types; denser starting state should surface through ordinary ecology, migration, settlement, and polity history.
 
 Watch mode also separates:
 

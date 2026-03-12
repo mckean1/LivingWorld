@@ -4,6 +4,12 @@ LivingWorld is a command-line autonomous world simulation where ecosystems, spec
 
 The player-facing experience is chronicle-first: the console follows one focal line of history, while the full simulation and structured event history continue underneath.
 
+Default world generation now starts from a fuller but still grounded baseline:
+
+- `36` connected regions on one early-continent landmass
+- `28` starting species with biome-aware range seeding
+- `10` starting polities distributed across viable, spaced-apart settlement regions
+
 The current simulation phase now treats ecology, hunting, and polity history as one connected layer:
 
 - regions track explicit per-species populations with carrying capacity, suitability, migration pressure, and recent ecological pressure
@@ -18,6 +24,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - watch mode also separates `Discoveries` from `Learned` advancements in that fixed status panel
 - visible chronicle lines keep polity names short and do not append species by default
 - hot-path systems now prefer cached id lookups and explicit invariant errors over raw LINQ `First(...)` crashes
+- generation defaults are centralized in `WorldGenerationSettings`, while curated biome/name/species templates live in `WorldGenerationCatalog`
 
 ## Core Principles
 

@@ -15,6 +15,7 @@ LivingWorld keeps simulation logic, event storage, propagation, formatting, and 
 
 Major systems:
 
+- world generation
 - food / ecology
 - regional species populations
 - ecosystem interactions
@@ -41,6 +42,16 @@ It builds cached dictionaries for regions, species, polities, active populations
 - avoid repeated linear scans in inner loops
 - recover gracefully where a missing reference can be ignored
 - throw clearer invariant errors where corruption would otherwise surface as an opaque LINQ exception
+
+## Generation Architecture
+
+World seeding is now split into a few explicit pieces so density tuning stays debuggable:
+
+- `WorldGenerationSettings` holds the main numeric knobs for region, species, and polity counts
+- `WorldGenerationCatalog` provides curated biome layout, name pools, and species templates
+- `WorldGenerator` turns those settings and templates into connected regions, seeded species ranges, and spaced starting polities
+
+This keeps the fuller starting world explicit rather than burying scale changes in scattered magic numbers.
 
 ## Canonical Event Architecture
 

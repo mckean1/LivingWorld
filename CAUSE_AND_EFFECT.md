@@ -77,6 +77,8 @@ Implemented chains:
 
 `all local populations gone -> global extinction`
 
+Those ecology chains now begin from biome-shaped initial ranges instead of every species starting everywhere, so migration and collapse have clearer geographic meaning from the opening years.
+
 ### Evolutionary Pressure
 
 Mutation and divergence now grow out of repeated simulation pressure rather than flavor-only randomness.

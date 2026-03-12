@@ -7,6 +7,7 @@ This roadmap describes how LivingWorld can deepen the simulation while keeping t
 Implemented core includes:
 
 - world generation
+- fuller default seed-world scale with centralized generation settings
 - ecology and food systems
 - regional species populations and seasonal ecosystem interactions
 - settlement hunting tied to regional wildlife
@@ -25,6 +26,7 @@ Implemented core includes:
 
 1. Chronicle quality tuning
 Keep improving event weighting, transition detection, and suppression so the live chronicle stays readable during busy simulation periods.
+The denser default world makes that especially important because more simultaneous societies and ecosystems now exist from year zero.
 
 2. History views
 Build richer lineage and event-history views over the stored event stream without changing simulation systems.
@@ -35,6 +37,9 @@ Allow the same stored history to be rendered through different focal filters or 
 
 4. Domestication and ecology follow-through
 Build on hunting pressure, edible discovery, domestication interest, and now-real settlement locality so repeatedly hunted species can become deliberate domestication candidates tied to actual settlement networks.
+
+6. Discovery/contact visibility refinement
+Replace first-pass generation-era visibility approximations with truer knowledge gating for regions, species, and foreign polities as simulation-side contact systems deepen.
 
 5. Speciation follow-through
 Build on regional divergence, isolation, mutation history, ancestral-fit tracking, and regional adaptation milestones so strongly diverged populations can split into named descendant lineages without replacing the current population-level foundation.

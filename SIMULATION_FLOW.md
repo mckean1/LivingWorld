@@ -3,6 +3,9 @@
 LivingWorld runs the full world in monthly ticks. Player-facing output is live chronicle playback, not a yearly report.
 The watch UI can now swap between chronicle and inspection screens without changing the simulation state it observes.
 
+The default seed world feeding that loop is now denser by default: `36` regions, `28` species, and `10` starting polities.
+Those entities are still range-limited and region-grounded before month one begins.
+
 ## Monthly Flow
 
 1. region ecology update

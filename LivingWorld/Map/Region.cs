@@ -4,6 +4,7 @@ public sealed class Region
 {
     public int Id { get; }
     public string Name { get; }
+    public RegionBiome Biome { get; set; }
 
     public double Fertility { get; set; }
     public double WaterAvailability { get; set; }
@@ -26,6 +27,7 @@ public sealed class Region
     {
         Id = id;
         Name = name;
+        Biome = RegionBiome.Plains;
     }
 
     public double TotalBiomass => PlantBiomass + AnimalBiomass;
