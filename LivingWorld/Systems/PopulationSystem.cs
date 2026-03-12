@@ -14,6 +14,8 @@ public sealed class PopulationSystem
             return;
         }
 
+        WorldLookup lookup = new(world);
+
         foreach (Polity polity in world.Polities)
         {
             int previousPopulation = polity.Population;
@@ -51,11 +53,16 @@ public sealed class PopulationSystem
                 polity.Population = 0;
             }
 
-            AddPopulationEvents(world, polity, previousPopulation);
+            if (polity.Population == 0)
+            {
+                polity.ClearSettlementState();
+            }
+
+            AddPopulationEvents(world, lookup, polity, previousPopulation);
         }
     }
 
-    private static void AddPopulationEvents(World world, Polity polity, int previousPopulation)
+    private static void AddPopulationEvents(World world, WorldLookup lookup, Polity polity, int previousPopulation)
     {
         if (previousPopulation > 0 && polity.Population == 0)
         {
@@ -72,7 +79,7 @@ public sealed class PopulationSystem
                 polityId: polity.Id,
                 polityName: polity.Name,
                 speciesId: polity.SpeciesId,
-                speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                speciesName: lookup.GetRequiredSpecies(polity.SpeciesId, "Population collapse").Name,
                 regionId: polity.RegionId,
                 before: new Dictionary<string, string>
                 {
@@ -106,7 +113,7 @@ public sealed class PopulationSystem
                     polityId: polity.Id,
                     polityName: polity.Name,
                     speciesId: polity.SpeciesId,
-                    speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                    speciesName: lookup.GetRequiredSpecies(polity.SpeciesId, "Population decline").Name,
                     regionId: polity.RegionId,
                     before: new Dictionary<string, string>
                     {
@@ -138,7 +145,7 @@ public sealed class PopulationSystem
             polityId: polity.Id,
             polityName: polity.Name,
             speciesId: polity.SpeciesId,
-            speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+            speciesName: lookup.GetRequiredSpecies(polity.SpeciesId, "Population milestone").Name,
             regionId: polity.RegionId,
             before: new Dictionary<string, string>
             {

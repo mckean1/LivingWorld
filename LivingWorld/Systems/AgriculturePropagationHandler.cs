@@ -11,6 +11,8 @@ public sealed class AgriculturePropagationHandler : IWorldEventHandler
 
     public IEnumerable<WorldEvent> Handle(World world, WorldEvent worldEvent)
     {
+        WorldLookup lookup = new(world);
+
         if (worldEvent.PolityId is not int polityId)
         {
             yield break;
@@ -22,7 +24,17 @@ public sealed class AgriculturePropagationHandler : IWorldEventHandler
             yield break;
         }
 
-        string regionName = world.Regions.First(region => region.Id == polity.RegionId).Name;
+        if (!lookup.TryGetRegion(polity.RegionId, out Map.Region? region) || region is null)
+        {
+            yield break;
+        }
+
+        string regionName = region.Name;
+        string? speciesName = lookup.TryGetSpecies(polity.SpeciesId, out Life.Species? species)
+            && species is not null
+            ? species.Name
+            : null;
+        Settlement? settlement = polity.GetPrimarySettlementInRegion(region.Id) ?? polity.GetPrimarySettlement();
 
         if (worldEvent.Type == WorldEventType.LearnedAdvancement
             && worldEvent.Metadata.TryGetValue("advancementId", out string? advancementId)
@@ -43,11 +55,11 @@ public sealed class AgriculturePropagationHandler : IWorldEventHandler
                 PolityId = polity.Id,
                 PolityName = polity.Name,
                 SpeciesId = polity.SpeciesId,
-                SpeciesName = world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                SpeciesName = speciesName,
                 RegionId = polity.RegionId,
                 RegionName = regionName,
-                SettlementId = polity.HasSettlements ? (polity.Id * 10) + polity.SettlementCount : null,
-                SettlementName = polity.HasSettlements ? $"{regionName} Hearth" : null
+                SettlementId = settlement?.Id,
+                SettlementName = settlement?.Name
             };
 
             yield break;
@@ -69,11 +81,11 @@ public sealed class AgriculturePropagationHandler : IWorldEventHandler
                 PolityId = polity.Id,
                 PolityName = polity.Name,
                 SpeciesId = polity.SpeciesId,
-                SpeciesName = world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                SpeciesName = speciesName,
                 RegionId = polity.RegionId,
                 RegionName = regionName,
-                SettlementId = (polity.Id * 10) + polity.SettlementCount,
-                SettlementName = $"{regionName} Hearth"
+                SettlementId = settlement?.Id,
+                SettlementName = settlement?.Name
             };
         }
     }

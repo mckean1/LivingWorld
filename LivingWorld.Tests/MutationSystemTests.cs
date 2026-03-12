@@ -209,6 +209,7 @@ public sealed class MutationSystemTests
         mutationSystem.UpdateSeason(world);
 
         Assert.True(population.RegionAdaptationRecorded);
+        Assert.Equal(1, population.LastAdaptationMilestone);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationAdaptedToRegion);
     }
 
@@ -254,7 +255,48 @@ public sealed class MutationSystemTests
         mutationSystem.UpdateSeason(world);
 
         Assert.False(population.RegionAdaptationRecorded);
+        Assert.Equal(0, population.LastAdaptationMilestone);
         Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationAdaptedToRegion);
+    }
+
+    [Fact]
+    public void AdaptationMilestone_ReEmitsOnlyWhenANewAdaptationStageIsReached()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+        MutationSystem mutationSystem = new(seed: 43);
+
+        population.BaseHabitatSuitability = 0.61;
+        population.HabitatSuitability = 0.80;
+        population.HabitatMismatchMutationPressure = 0.72;
+        population.DivergenceScore = 1.20;
+        population.ClimateToleranceOffset = 0.14;
+        population.DietFlexibilityOffset = 0.12;
+        population.PopulationCount = 28;
+        population.CarryingCapacity = 80;
+
+        mutationSystem.UpdateSeason(world);
+        mutationSystem.UpdateSeason(world);
+
+        Assert.Equal(1, world.Events.Count(evt => evt.Type == WorldEventType.SpeciesPopulationAdaptedToRegion));
+        Assert.Equal(1, population.LastAdaptationMilestone);
+
+        population.HabitatSuitability = 0.86;
+        population.HabitatMismatchMutationPressure = 0.90;
+        population.DivergenceScore = 1.60;
+        population.ClimateToleranceOffset = 0.20;
+        population.DietFlexibilityOffset = 0.18;
+        population.PopulationCount = 34;
+
+        mutationSystem.UpdateSeason(world);
+
+        Assert.Equal(2, world.Events.Count(evt => evt.Type == WorldEventType.SpeciesPopulationAdaptedToRegion));
+        Assert.Equal(2, population.LastAdaptationMilestone);
+        Assert.Contains(world.Events, evt =>
+            evt.Type == WorldEventType.SpeciesPopulationAdaptedToRegion
+            && evt.Severity == WorldEventSeverity.Major
+            && evt.Metadata.TryGetValue("adaptationMilestone", out string? milestone)
+            && milestone == "2");
     }
 
     [Fact]
@@ -403,9 +445,11 @@ public sealed class MutationSystemTests
         => world.Regions[0].GetSpeciesPopulation(4)!;
 
     private static Polity CreateSettledPolity(World world, Region region)
-        => new(10, "Riverwatch Clan", speciesId: 0, regionId: region.Id, population: 120)
-        {
-            SettlementStatus = SettlementStatus.Settled,
-            SettlementCount = 2
-        };
+    {
+        Polity polity = new(10, "Riverwatch Clan", speciesId: 0, regionId: region.Id, population: 120);
+        polity.EstablishFirstSettlement(region.Id, $"{region.Name} Hearth");
+        polity.SettlementStatus = SettlementStatus.Settled;
+        polity.AddSettlement(region.Id, $"{region.Name} Outpost 2");
+        return polity;
+    }
 }

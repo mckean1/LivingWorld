@@ -15,12 +15,12 @@ public sealed class EventPropagationTests
         try
         {
             World world = CreateWorld();
-            world.Polities.Add(new Polity(7, "River Clan", 1, 0, 80)
+            Polity polity = new(7, "River Clan", 1, 0, 80)
             {
-                SettlementStatus = SettlementStatus.SemiSettled,
-                SettlementCount = 1,
                 FoodStores = 10
-            });
+            };
+            polity.EstablishFirstSettlement(0, "Coast Hearth");
+            world.Polities.Add(polity);
 
             SimulationOptions options = new()
             {

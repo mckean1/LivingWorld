@@ -8,10 +8,12 @@ LivingWorld runs the full world in monthly ticks. Player-facing output is live c
 2. seasonal regional species population update on season boundaries
 3. seasonal ecosystem predation and regional species exchange on season boundaries
 4. seasonal settlement hunting on season boundaries
+   - each settlement hunts in its own region
 5. seasonal mutation and divergence update on season boundaries using the just-resolved species exchange state
 6. seasonal extinction cleanup and biomass sync on season boundaries
 7. wild food gathering
 8. settlement farming output
+   - each settlement farms in its own region and shares that region's arable capacity with all other local settlements
 9. trade evaluation and food redistribution
 10. food consumption and starvation tracking
 11. migration evaluation and relocation
@@ -19,6 +21,7 @@ LivingWorld runs the full world in monthly ticks. Player-facing output is live c
 13. watch mode formats and displays qualifying focal-polity chronicle entries
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
+For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
 
 ## Year-End Flow
 

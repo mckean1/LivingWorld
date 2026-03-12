@@ -12,6 +12,7 @@ World generation creates the starting simulation state: regions, species, and in
 
 World generation still creates only baseline species definitions. Mutation, divergence, and regional adaptation now begin from those starting populations during simulation rather than being pre-baked into world generation.
 That means regional adaptation later measures how far a local population has moved away from its ancestral fit in that region, not whether the generated species started there fully adapted.
+World generation still starts polities without durable settlement records. The settlement layer is created by simulation when settlement formation actually occurs, which keeps early locality history causal rather than pre-assumed.
 
 ## Starting Chronicle Focus
 

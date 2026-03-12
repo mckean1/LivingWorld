@@ -99,15 +99,18 @@ Implemented chain:
 
 `ancestral mismatch + sustained mismatch pressure + trait-driven fit improvement + persistence -> regional adaptation milestone`
 
+`further fit gain + stronger divergence + stronger persistence -> stronger adaptation milestone`
+
 ### Hunting Pressure
 
 Settlement hunting is now driven by regional species populations rather than abstract animal biomass.
+It is also settlement-local rather than polity-region-multiplied.
 
 Implemented chains:
 
 `regional prey abundance + polity hunting knowledge -> target selection`
 
-`hunt success -> food stores + edible discovery + prey decline`
+`settlement in region X -> local target selection in region X -> hunt success -> food stores + edible discovery + prey decline in region X`
 
 `dangerous prey -> hunter casualties + dangerous-prey knowledge`
 
@@ -154,6 +157,7 @@ Instead it favors:
 - durable recovery
 - accumulated pressure crossing mutation thresholds
 - divergence milestones that suggest a future speciation branch
+- adaptation milestone transitions rather than repeated reaffirmation of the same adaptation state
 
 This is why yearly hardship transitions remain important: they summarize meaningful changes without narrating every month of unchanged suffering.
 
@@ -164,6 +168,7 @@ This is why yearly hardship transitions remain important: they summarize meaning
 - propagation is capped by event count per source event
 - identical follow-ups within a step are deduped
 - chronicle presentation still filters and cools down repeated visible beats
+- hot-path systems now prefer cached lookup snapshots and clearer invariant failures so broken ids surface as explicit simulation problems rather than generic LINQ crashes
 
 ## Player Experience
 

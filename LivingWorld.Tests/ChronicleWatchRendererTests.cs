@@ -19,9 +19,9 @@ public sealed class ChronicleWatchRendererTests
 
         Polity polity = new(7, "Deepfield Tribe", 1, 0, 84)
         {
-            SettlementCount = 1,
             FoodStores = 63
         };
+        polity.EstablishFirstSettlement(0, "Green Barrow Hearth");
 
         List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(
             world,

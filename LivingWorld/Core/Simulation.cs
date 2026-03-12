@@ -190,6 +190,8 @@ public sealed class Simulation : IDisposable
 
     private void AddYearlyFoodStressEvents()
     {
+        WorldLookup lookup = new(_world);
+
         foreach (Polity polity in _world.Polities.Where(p => p.Population > 0))
         {
             HardshipTier currentTier = ResolveHardshipTier(polity);
@@ -218,9 +220,9 @@ public sealed class Simulation : IDisposable
                 polityId: polity.Id,
                 polityName: polity.Name,
                 speciesId: polity.SpeciesId,
-                speciesName: _world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                speciesName: lookup.GetRequiredSpecies(polity.SpeciesId, "Yearly food stress").Name,
                 regionId: polity.RegionId,
-                regionName: _world.Regions.First(r => r.Id == polity.RegionId).Name,
+                regionName: lookup.GetRequiredRegion(polity.RegionId, "Yearly food stress").Name,
                 before: new Dictionary<string, string>
                 {
                     ["hardshipTier"] = previousState.CurrentTier.ToString(),
@@ -288,6 +290,7 @@ public sealed class Simulation : IDisposable
             return;
         }
 
+        WorldLookup lookup = new(_world);
         Polity? successor = _world.Polities.FirstOrDefault(polity => polity.Id == transition.NewPolityId);
         if (successor is null)
         {
@@ -300,6 +303,7 @@ public sealed class Simulation : IDisposable
 
     private void EmitFocusTransitionEvent(ChronicleFocusTransition transition, Polity successor)
     {
+        WorldLookup lookup = new(_world);
         string eventType = transition.Kind switch
         {
             ChronicleFocusTransitionKind.Fragmentation => WorldEventType.FocusHandoffFragmentation,
@@ -335,12 +339,16 @@ public sealed class Simulation : IDisposable
             relatedPolityName: transition.PreviousPolityName,
             relatedPolitySpeciesId: _world.Polities.FirstOrDefault(polity => polity.Id == transition.PreviousPolityId)?.SpeciesId,
             relatedPolitySpeciesName: _world.Polities.FirstOrDefault(polity => polity.Id == transition.PreviousPolityId) is Polity previousPolity
-                ? _world.Species.FirstOrDefault(species => species.Id == previousPolity.SpeciesId)?.Name
+                ? lookup.TryGetSpecies(previousPolity.SpeciesId, out Life.Species? previousSpecies) && previousSpecies is not null
+                    ? previousSpecies.Name
+                    : null
                 : null,
             speciesId: successor.SpeciesId,
-            speciesName: _world.Species.FirstOrDefault(species => species.Id == successor.SpeciesId)?.Name,
+            speciesName: lookup.TryGetSpecies(successor.SpeciesId, out Life.Species? successorSpecies) && successorSpecies is not null
+                ? successorSpecies.Name
+                : null,
             regionId: successor.RegionId,
-            regionName: _world.Regions.First(region => region.Id == successor.RegionId).Name,
+            regionName: lookup.GetRequiredRegion(successor.RegionId, "Chronicle focus transition").Name,
             before: new Dictionary<string, string>
             {
                 ["focusedPolityId"] = transition.PreviousPolityId.ToString(),

@@ -4,6 +4,10 @@ namespace LivingWorld.Societies;
 
 public sealed class Polity
 {
+    private readonly List<Settlement> _settlements;
+    private readonly Dictionary<string, CulturalDiscovery> _discoveries;
+    private int _nextSettlementSequence;
+
     public int Id { get; }
     public string Name { get; }
     public int SpeciesId { get; set; }
@@ -71,7 +75,7 @@ public sealed class Polity
     public int StarvationMonthsThisYear { get; set; }
 
     public SettlementStatus SettlementStatus { get; set; }
-    public int SettlementCount { get; set; }
+    public int SettlementCount => _settlements.Count;
     public int YearsSinceFirstSettlement { get; set; }
     public FoodStateSummary? LastResolvedFoodState { get; set; }
     public int? LastResolvedFoodStateYear { get; set; }
@@ -88,8 +92,8 @@ public sealed class Polity
     public Dictionary<int, int> SuccessfulHuntsBySpecies { get; }
     public Dictionary<int, int> FailedHuntsBySpecies { get; }
     public Dictionary<int, double> DomesticationInterestBySpecies { get; }
-    public bool HasSettlements => SettlementCount > 0;
-    private readonly Dictionary<string, CulturalDiscovery> _discoveries;
+    public bool HasSettlements => _settlements.Count > 0;
+    public IReadOnlyList<Settlement> Settlements => _settlements;
 
     public Polity(
         int id,
@@ -161,6 +165,8 @@ public sealed class Polity
         ConsecutiveFarmingYears = 0;
         AgricultureEventCooldownYears = 0;
 
+        _nextSettlementSequence = 1;
+        _settlements = [];
         ClearSettlementState();
         LastResolvedFoodState = null;
         LastResolvedFoodStateYear = null;
@@ -238,8 +244,63 @@ public sealed class Polity
     public void ClearSettlementState()
     {
         SettlementStatus = SettlementStatus.Nomadic;
-        SettlementCount = 0;
         YearsSinceFirstSettlement = 0;
+        _settlements.Clear();
+    }
+
+    public Settlement EstablishFirstSettlement(int regionId, string name)
+    {
+        SettlementStatus = SettlementStatus.SemiSettled;
+        YearsSinceFirstSettlement = 0;
+        _settlements.Clear();
+        return AddSettlement(regionId, name);
+    }
+
+    public Settlement AddSettlement(int regionId, string name)
+    {
+        Settlement settlement = new(CreateSettlementId(), Id, regionId, name);
+        _settlements.Add(settlement);
+        return settlement;
+    }
+
+    public Settlement GetOrCreatePrimarySettlement(int regionId, string defaultName)
+    {
+        Settlement? existing = _settlements.FirstOrDefault(settlement => settlement.RegionId == regionId);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        if (_settlements.Count == 0)
+        {
+            return EstablishFirstSettlement(regionId, defaultName);
+        }
+
+        return AddSettlement(regionId, defaultName);
+    }
+
+    public Settlement? GetPrimarySettlementInRegion(int regionId)
+        => _settlements.FirstOrDefault(settlement => settlement.RegionId == regionId);
+
+    public Settlement? GetPrimarySettlement()
+        => _settlements.FirstOrDefault();
+
+    public void RelocateSettlements(int regionId, Func<int, string> nameFactory)
+    {
+        for (int index = 0; index < _settlements.Count; index++)
+        {
+            Settlement settlement = _settlements[index];
+            settlement.RegionId = regionId;
+            settlement.Name = nameFactory(index);
+        }
+    }
+
+    public void AdvanceSettlementAges()
+    {
+        foreach (Settlement settlement in _settlements)
+        {
+            settlement.YearsEstablished++;
+        }
     }
 
     public void TickPropagationState()
@@ -287,6 +348,9 @@ public sealed class Polity
         => values.TryGetValue(key, out int existing)
             ? existing
             : 0;
+
+    private int CreateSettlementId()
+        => (Id * 1000) + _nextSettlementSequence++;
 
     private static (int monthsRemaining, double bonus) TickBonus(int monthsRemaining, double bonus)
     {

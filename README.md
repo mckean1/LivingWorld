@@ -9,12 +9,15 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - regions track explicit per-species populations with carrying capacity, suitability, migration pressure, and recent ecological pressure
 - seasonal ecosystem processing runs food-web interactions between producers, herbivores, omnivores, predators, and apex species
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting or legendary hunts
+- settlement hunting now executes from actual settlements in their own regions instead of multiplying one polity-region hunt by settlement count
+- settlement farming now allocates real regional arable capacity across actual settlements, so multiple settlements in one region share land instead of double counting it
 - regional populations now also accumulate mutation pressure, isolation, divergence, and local trait offsets rather than mutating the global species baseline directly
 - mutation pressure comes from repeated food stress, predation, hunting, ancestral habitat mismatch, seasonal species-exchange shock, crowding near carrying capacity, and prolonged isolation
 - evolved regional traits now feed back into hunting danger and difficulty, predator-prey outcomes, habitat fit, migration capability, and reproduction/survival rates
 - watch mode shows the focal polity species in the fixed status panel
 - watch mode also separates `Discoveries` from `Learned` advancements in that fixed status panel
 - visible chronicle lines keep polity names short and do not append species by default
+- hot-path systems now prefer cached id lookups and explicit invariant errors over raw LINQ `First(...)` crashes
 
 ## Core Principles
 
@@ -69,6 +72,7 @@ Default watch mode still shows:
 
 The status panel carries secondary context such as the focal polity species so chronicle lines can stay concise and story-like.
 It also separates cultural discoveries from learned advancements so the player-facing UI matches the simulation terminology.
+Watch-mode syntax coloring is structure-first and token-aware: it colors years, actor names, regions, knowledge items, and true status outcomes, but it does not color arbitrary narrative prose from substring matches inside larger phrases.
 
 The main chronicle continues to favor:
 
@@ -82,6 +86,8 @@ The main chronicle continues to favor:
 
 Internal follow-up events such as migration pressure, starvation risk, cultivation growth, local tension, minor mutation drift, and isolation milestones remain structured-first unless they rise to the level of a true historical turning point.
 Mutation reacts to same-season regional species exchange from the ecology pipeline, not to the later monthly polity migration step.
+Polity migration still relocates the whole polity network for now, but it now relocates the polity's actual settlement records too so settlement-grounded systems stay coherent.
+Regional adaptation events now emit on meaningful adaptation milestones rather than on repeated reaffirmation of the same condition, and chronicle presentation applies a dedicated adaptation cooldown key so the same species-region adaptation beat does not spam the live feed.
 
 ## Propagation Safeguards
 
@@ -90,6 +96,7 @@ Mutation reacts to same-season regional species exchange from the ecology pipeli
 - propagation depth is capped
 - total emitted events per source event are capped
 - chronicle cooldowns still apply after storage
+- source systems such as mutation also suppress repeated emissions when no new adaptation or divergence milestone has been reached
 
 This keeps the world explainable without turning the chronicle into telemetry.
 

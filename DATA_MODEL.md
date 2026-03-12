@@ -9,6 +9,7 @@ LivingWorld uses aggregated entities rather than individual agents so long histo
 - `Species`
 - `RegionSpeciesPopulation`
 - `Polity`
+- `Settlement`
 - `PolityStage`
 - `WorldEvent`
 - `ChronicleFocus`
@@ -42,7 +43,7 @@ Selected fields:
 - food: `FoodStores` and annual food aggregates
 - migration: `MigrationPressure`, `MovedThisYear`, `MovesThisYear`
 - fragmentation: `FragmentationPressure`, `FoodStressYears`, `SplitCooldownYears`
-- settlements: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`
+- settlements: `SettlementStatus`, `SettlementCount`, `YearsSinceFirstSettlement`, and owned `Settlements`
 - discoveries: explicit cultural/world knowledge records in `Discoveries`
 - learned advancements: `Advancements`, derived `Capabilities`
 - hunting-specific runtime support: known edible species, known toxic species, dangerous prey knowledge, hunt success/failure tracking
@@ -58,6 +59,26 @@ Propagation support fields:
 - `LastLearnedAgricultureEventId`
 
 These are lightweight runtime fields used so one event can influence later system behavior without creating hidden randomness.
+
+## Settlement
+
+`Settlement` is a lightweight locality record owned by a `Polity`.
+
+Selected fields:
+
+- `Id`
+- `PolityId`
+- `RegionId`
+- `Name`
+- `CultivatedLand`
+- `YearsEstablished`
+
+Current design notes:
+
+- hunting executes from each settlement's `RegionId`
+- farming allocates regional capacity across settlements, not across abstract polity-region buckets
+- trade endpoints prefer real settlement references when available
+- polity migration currently relocates the polity's settlement records together
 
 ### Polity Knowledge Split
 
@@ -120,6 +141,7 @@ Selected fields:
 - per-population trait offsets for Intelligence, Sociality, Aggression, Endurance, Fertility, DietFlexibility, ClimateTolerance, and Size
 - accumulated mutation pressure by cause: food stress, predation, hunting, habitat mismatch, isolation, crowding, and low-pressure drift
 - divergence tracking: `DivergenceScore`, `IsolationSeasons`, mutation counts, and milestone markers
+- adaptation tracking: `LastAdaptationMilestone` plus compatibility `RegionAdaptationRecorded`
 - seasonal exchange markers so isolation and migration shock can be resolved cleanly
 - ancestral-fit versus adapted-fit tracking so regional adaptation can compare baseline species suitability against evolved local suitability
 
@@ -152,3 +174,5 @@ The global `Species` definition remains the ancestral baseline. Mutation and div
 - storage order and display order are intentionally different
 - lower-severity and chronicle-suppressed events remain structured even when hidden from the live chronicle
 - divergence state is intentionally lightweight so future speciation or domesticated variants can promote an existing regional population instead of replacing the architecture
+- settlement-local execution is intentionally lightweight so later settlement-specialization and cross-region trade can reuse the same records instead of reintroducing polity-level shortcuts
+- cached lookup snapshots are intentional infrastructure for both safety and performance in hot paths

@@ -41,7 +41,14 @@ public sealed class RegionSpeciesPopulation
     public int LastMajorMutationYear { get; set; } = -1;
     public int LastIsolationEventSeason { get; set; }
     public int LastDivergenceMilestone { get; set; }
-    public bool RegionAdaptationRecorded { get; set; }
+    public int LastAdaptationMilestone { get; set; }
+    public bool RegionAdaptationRecorded
+    {
+        get => LastAdaptationMilestone > 0;
+        set => LastAdaptationMilestone = value
+            ? Math.Max(1, LastAdaptationMilestone)
+            : 0;
+    }
 
     public RegionSpeciesPopulation(int speciesId, int regionId, int populationCount)
     {

@@ -60,6 +60,7 @@ Examples:
 
 Player-facing species context remains available, but it lives in the fixed watch-mode status panel rather than being appended to every chronicle line.
 The same watch-mode panel also separates cultural discoveries from learned advancements instead of collapsing them into one ambiguous knowledge field.
+Settlement references are now more often real execution sites rather than fabricated polity-region placeholders, especially for hunting, farming follow-through, and trade endpoints.
 
 Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
 
@@ -108,6 +109,7 @@ Structured-first follow-up types:
 - `predator_pressure`
 - `prey_collapse`
 - `hunting_success`
+- usually points at the settlement that actually hunted in that region
 - `hunting_disaster`
 - `dangerous_prey_killed_hunters`
 - `toxic_food_discovered`
@@ -118,12 +120,15 @@ Structured-first follow-up types:
 - `trade_transfer`
 - `trade_relief`
 
+Settlement-grounded systems should prefer true settlement references where available so structured history can answer not just which polity acted, but where the local action actually happened.
+
 Major biology-turn types that may surface when the focused line is meaningfully affected:
 
 - `species_population_major_mutation`
 - `species_population_evolutionary_turning_point`
 
 `species_population_adapted_to_region` remains structured-first by default even though it is historically meaningful. It becomes chronicle-worthy only when severity and focal-line relevance justify it.
+When it does surface, chronicle cooldown uses a dedicated scoped key built from species, region, reason, and any adaptation milestone metadata so repeated reaffirmations of the same adaptation state do not reappear as duplicate history beats.
 
 ## Chronicle Filtering Rules
 
@@ -144,6 +149,8 @@ The main chronicle favors:
 - rare evolutionary turns with strong local historical consequences
 - fragmentation, collapse, polity founding, and focus handoff beats
 
+Player-facing coloring is intentionally narrower than event semantics. Watch mode colors explicit semantic units such as years, actor names, places, knowledge items, and severe status words, but leaves ordinary descriptive prose uncolored.
+
 ## Anti-Spam Rules
 
 - systems emit events on state transitions, not repeated unchanged conditions
@@ -151,6 +158,7 @@ The main chronicle favors:
 - propagation depth is capped
 - total events per source event are capped
 - chronicle cooldowns still suppress repeated visible beats for the same actor scope
+- source systems may also suppress repeat emissions before they ever reach chronicle presentation when no new milestone has been crossed
 
 ## Example JSONL Record
 

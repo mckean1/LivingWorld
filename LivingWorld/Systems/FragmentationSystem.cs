@@ -1,5 +1,6 @@
 using LivingWorld.Advancement;
 using LivingWorld.Core;
+using LivingWorld.Life;
 using LivingWorld.Map;
 using LivingWorld.Societies;
 
@@ -26,6 +27,8 @@ public sealed class FragmentationSystem
         {
             return;
         }
+
+        WorldLookup lookup = new(world);
 
         // Fragmentation intentionally absorbs the old offshoot-expansion role.
         // Monthly migration still handles whole-polity relocation; this system only creates child polities.
@@ -56,9 +59,9 @@ public sealed class FragmentationSystem
                     polityId: polity.Id,
                     polityName: polity.Name,
                     speciesId: polity.SpeciesId,
-                    speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                    speciesName: lookup.GetRequiredSpecies(polity.SpeciesId, "Fragmentation risk").Name,
                     regionId: polity.RegionId,
-                    regionName: world.Regions.First(region => region.Id == polity.RegionId).Name,
+                    regionName: lookup.GetRequiredRegion(polity.RegionId, "Fragmentation risk").Name,
                     after: new Dictionary<string, string>
                     {
                         ["fragmentationPressure"] = polity.FragmentationPressure.ToString("F2")
@@ -70,7 +73,7 @@ public sealed class FragmentationSystem
                 continue;
             }
 
-            Region home = world.Regions.First(r => r.Id == polity.RegionId);
+            Region home = lookup.GetRequiredRegion(polity.RegionId, "Fragmentation home");
             Region? target = FindSplitTarget(world, polity, home);
             if (target is null)
             {
@@ -98,9 +101,9 @@ public sealed class FragmentationSystem
                 relatedPolityId: child.Id,
                 relatedPolityName: child.Name,
                 relatedPolitySpeciesId: child.SpeciesId,
-                relatedPolitySpeciesName: world.Species.FirstOrDefault(species => species.Id == child.SpeciesId)?.Name,
+                relatedPolitySpeciesName: lookup.TryGetSpecies(child.SpeciesId, out Species? childSpecies) && childSpecies is not null ? childSpecies.Name : null,
                 speciesId: polity.SpeciesId,
-                speciesName: world.Species.FirstOrDefault(species => species.Id == polity.SpeciesId)?.Name,
+                speciesName: lookup.TryGetSpecies(polity.SpeciesId, out Species? parentSpecies) && parentSpecies is not null ? parentSpecies.Name : null,
                 regionId: target.Id,
                 regionName: target.Name,
                 metadata: new Dictionary<string, string>
@@ -139,7 +142,8 @@ public sealed class FragmentationSystem
 
     private static double CalculateFragmentationPressure(World world, Polity polity)
     {
-        Region home = world.Regions.First(r => r.Id == polity.RegionId);
+        WorldLookup lookup = new(world);
+        Region home = lookup.GetRequiredRegion(polity.RegionId, "Fragmentation pressure");
         int localPopulation = world.Polities
             .Where(p => p.RegionId == polity.RegionId && p.Population > 0)
             .Sum(p => p.Population);
@@ -195,7 +199,8 @@ public sealed class FragmentationSystem
             return false;
         }
 
-        Region home = world.Regions.First(r => r.Id == polity.RegionId);
+        WorldLookup lookup = new(world);
+        Region home = lookup.GetRequiredRegion(polity.RegionId, "Fragmentation split check");
         if (home.ConnectedRegionIds.Count == 0)
         {
             return false;

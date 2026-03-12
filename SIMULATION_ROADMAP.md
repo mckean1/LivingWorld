@@ -33,7 +33,7 @@ Build a Civilization History view over the stored event stream without changing 
 Allow the same stored history to be rendered through different focal filters or narrative lenses.
 
 4. Domestication and ecology follow-through
-Build on hunting pressure, edible discovery, and domestication interest so repeatedly hunted species can become deliberate domestication candidates.
+Build on hunting pressure, edible discovery, domestication interest, and now-real settlement locality so repeatedly hunted species can become deliberate domestication candidates tied to actual settlement networks.
 
 5. Speciation follow-through
 Build on regional divergence, isolation, mutation history, ancestral-fit tracking, and regional adaptation milestones so strongly diverged populations can split into named descendant lineages without replacing the current population-level foundation.

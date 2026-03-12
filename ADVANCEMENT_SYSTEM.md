@@ -43,3 +43,4 @@ They flow through:
 Breakthrough discoveries such as fire, agriculture, leadership traditions, and craft specialization are classified as `Major`, so they can appear in the default chronicle. Lower-level discoveries remain in structured history even when they do not surface live.
 
 This remains separate from biology milestones: mutation and regional adaptation events are ecology-driven population outcomes, not polity `Learned` capability gains.
+Agriculture is also now consumed by a settlement-grounded farming layer: learned capability unlocks the ability to farm, but actual output depends on real settlements competing for real regional arable capacity.

@@ -12,47 +12,68 @@ public sealed class HuntingSystem
 
     public void UpdateSeason(World world)
     {
+        WorldLookup lookup = new(world);
+
         foreach (Polity polity in world.Polities.Where(candidate => candidate.Population > 0 && candidate.HasSettlements))
         {
-            Region region = world.Regions.First(region => region.Id == polity.RegionId);
-            List<RegionSpeciesPopulation> viableTargets = region.SpeciesPopulations
-                .Where(population => population.PopulationCount > 0)
-                .Where(population =>
-                {
-                    Species species = world.Species.First(candidate => candidate.Id == population.SpeciesId);
-                    return !species.IsSapient && species.TrophicRole != TrophicRole.Producer;
-                })
-                .ToList();
-
-            if (viableTargets.Count == 0)
+            int adultPopulation = (int)Math.Round(polity.Population * AdultPopulationShare);
+            int totalHunters = Math.Max(1, (int)Math.Round(adultPopulation * BaseHuntingRatio));
+            IReadOnlyList<Settlement> settlements = polity.Settlements;
+            if (settlements.Count == 0)
             {
                 continue;
             }
 
-            int settlementCount = Math.Max(1, polity.SettlementCount);
-            int adultPopulation = (int)Math.Round(polity.Population * AdultPopulationShare);
-            int totalHunters = Math.Max(1, (int)Math.Round(adultPopulation * BaseHuntingRatio));
-            int huntersPerSettlement = Math.Max(1, totalHunters / settlementCount);
+            int[] huntersBySettlement = AllocateWorkers(totalHunters, settlements.Count);
 
-            for (int settlementIndex = 0; settlementIndex < settlementCount; settlementIndex++)
+            for (int settlementIndex = 0; settlementIndex < settlements.Count; settlementIndex++)
             {
-                RegionSpeciesPopulation? targetPopulation = SelectTargetSpecies(world, polity, viableTargets);
+                Settlement settlement = settlements[settlementIndex];
+                if (huntersBySettlement[settlementIndex] <= 0)
+                {
+                    continue;
+                }
+
+                if (!lookup.TryGetRegion(settlement.RegionId, out Region? region) || region is null)
+                {
+                    continue;
+                }
+
+                List<RegionSpeciesPopulation> viableTargets = region.SpeciesPopulations
+                    .Where(population => population.PopulationCount > 0)
+                    .Where(population =>
+                    {
+                        if (!lookup.TryGetSpecies(population.SpeciesId, out Species? species) || species is null)
+                        {
+                            return false;
+                        }
+
+                        return !species.IsSapient && species.TrophicRole != TrophicRole.Producer;
+                    })
+                    .ToList();
+
+                if (viableTargets.Count == 0)
+                {
+                    continue;
+                }
+
+                RegionSpeciesPopulation? targetPopulation = SelectTargetSpecies(lookup, polity, viableTargets);
                 if (targetPopulation is null)
                 {
                     continue;
                 }
 
-                ResolveHunt(world, polity, region, targetPopulation, huntersPerSettlement);
+                ResolveHunt(world, lookup, polity, settlement, region, targetPopulation, huntersBySettlement[settlementIndex]);
             }
         }
     }
 
-    private static RegionSpeciesPopulation? SelectTargetSpecies(World world, Polity polity, IReadOnlyList<RegionSpeciesPopulation> targets)
+    private static RegionSpeciesPopulation? SelectTargetSpecies(WorldLookup lookup, Polity polity, IReadOnlyList<RegionSpeciesPopulation> targets)
     {
         return targets
             .OrderByDescending(population =>
             {
-                Species species = world.Species.First(candidate => candidate.Id == population.SpeciesId);
+                Species species = lookup.GetRequiredSpecies(population.SpeciesId, "Hunting target selection");
                 double expectedYield = PopulationTraitResolver.GetEffectiveMeatYield(species, population) * Math.Min(population.PopulationCount, 20);
                 double familiarity = polity.SuccessfulHuntsBySpecies.TryGetValue(species.Id, out int successes)
                     ? successes * 6.0
@@ -73,9 +94,17 @@ public sealed class HuntingSystem
             .FirstOrDefault();
     }
 
-    private static void ResolveHunt(World world, Polity polity, Region region, RegionSpeciesPopulation targetPopulation, int huntersCommitted)
+    private static void ResolveHunt(
+        World world,
+        WorldLookup lookup,
+        Polity polity,
+        Settlement settlement,
+        Region region,
+        RegionSpeciesPopulation targetPopulation,
+        int huntersCommitted)
     {
-        Species targetSpecies = world.Species.First(species => species.Id == targetPopulation.SpeciesId);
+        Species targetSpecies = lookup.GetRequiredSpecies(targetPopulation.SpeciesId, "Hunt resolution");
+        Species hunterSpecies = lookup.GetRequiredSpecies(polity.SpeciesId, "Hunt resolution");
         int targetBefore = targetPopulation.PopulationCount;
         if (targetBefore <= 0)
         {
@@ -122,9 +151,11 @@ public sealed class HuntingSystem
                 polityId: polity.Id,
                 polityName: polity.Name,
                 speciesId: polity.SpeciesId,
-                speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                speciesName: hunterSpecies.Name,
                 regionId: region.Id,
                 regionName: region.Name,
+                settlementId: settlement.Id,
+                settlementName: settlement.Name,
                 metadata: new Dictionary<string, string>
                 {
                     ["targetSpeciesId"] = targetSpecies.Id.ToString(),
@@ -146,17 +177,19 @@ public sealed class HuntingSystem
                     WorldEventSeverity.Major,
                     $"{polity.Name} suffered a disastrous hunt in {region.Name}",
                     $"{casualties} hunters died or were lost while pursuing {targetSpecies.Name}.",
-                    reason: "hunt_failed",
-                    scope: WorldEventScope.Polity,
-                    polityId: polity.Id,
-                    polityName: polity.Name,
-                    speciesId: polity.SpeciesId,
-                    speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
-                    regionId: region.Id,
-                    regionName: region.Name,
-                    metadata: new Dictionary<string, string>
-                    {
-                        ["targetSpeciesId"] = targetSpecies.Id.ToString(),
+                        reason: "hunt_failed",
+                        scope: WorldEventScope.Polity,
+                        polityId: polity.Id,
+                        polityName: polity.Name,
+                        speciesId: polity.SpeciesId,
+                        speciesName: hunterSpecies.Name,
+                        regionId: region.Id,
+                        regionName: region.Name,
+                        settlementId: settlement.Id,
+                        settlementName: settlement.Name,
+                        metadata: new Dictionary<string, string>
+                        {
+                            ["targetSpeciesId"] = targetSpecies.Id.ToString(),
                         ["targetSpeciesName"] = targetSpecies.Name
                     });
             }
@@ -183,9 +216,11 @@ public sealed class HuntingSystem
                 polityId: polity.Id,
                 polityName: polity.Name,
                 speciesId: polity.SpeciesId,
-                speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                speciesName: hunterSpecies.Name,
                 regionId: region.Id,
                 regionName: region.Name,
+                settlementId: settlement.Id,
+                settlementName: settlement.Name,
                 metadata: new Dictionary<string, string>
                 {
                     ["targetSpeciesId"] = targetSpecies.Id.ToString(),
@@ -224,9 +259,11 @@ public sealed class HuntingSystem
                 polityId: polity.Id,
                 polityName: polity.Name,
                 speciesId: polity.SpeciesId,
-                speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                speciesName: hunterSpecies.Name,
                 regionId: region.Id,
                 regionName: region.Name,
+                settlementId: settlement.Id,
+                settlementName: settlement.Name,
                 metadata: new Dictionary<string, string>
                 {
                     ["targetSpeciesId"] = targetSpecies.Id.ToString(),
@@ -235,13 +272,15 @@ public sealed class HuntingSystem
                 });
         }
 
-        EmitHuntOutcome(world, polity, region, targetSpecies, targetBefore, targetPopulation, huntedCount, meatGained, casualties);
-        EmitPressureEvents(world, polity, region, targetSpecies, targetBefore, targetPopulation);
+        EmitHuntOutcome(world, hunterSpecies, polity, settlement, region, targetSpecies, targetBefore, targetPopulation, huntedCount, meatGained, casualties);
+        EmitPressureEvents(world, polity, settlement, region, targetSpecies, targetBefore, targetPopulation);
     }
 
     private static void EmitHuntOutcome(
         World world,
+        Species hunterSpecies,
         Polity polity,
+        Settlement settlement,
         Region region,
         Species targetSpecies,
         int targetBefore,
@@ -267,9 +306,11 @@ public sealed class HuntingSystem
                 polityId: polity.Id,
                 polityName: polity.Name,
                 speciesId: polity.SpeciesId,
-                speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                speciesName: hunterSpecies.Name,
                 regionId: region.Id,
                 regionName: region.Name,
+                settlementId: settlement.Id,
+                settlementName: settlement.Name,
                 metadata: new Dictionary<string, string>
                 {
                     ["targetSpeciesId"] = targetSpecies.Id.ToString(),
@@ -293,9 +334,11 @@ public sealed class HuntingSystem
             polityId: polity.Id,
             polityName: polity.Name,
             speciesId: polity.SpeciesId,
-            speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+            speciesName: hunterSpecies.Name,
             regionId: region.Id,
             regionName: region.Name,
+            settlementId: settlement.Id,
+            settlementName: settlement.Name,
             before: new Dictionary<string, string>
             {
                 ["targetPopulation"] = targetBefore.ToString()
@@ -316,6 +359,7 @@ public sealed class HuntingSystem
     private static void EmitPressureEvents(
         World world,
         Polity polity,
+        Settlement settlement,
         Region region,
         Species targetSpecies,
         int targetBefore,
@@ -335,7 +379,9 @@ public sealed class HuntingSystem
                 speciesId: targetSpecies.Id,
                 speciesName: targetSpecies.Name,
                 regionId: region.Id,
-                regionName: region.Name);
+                regionName: region.Name,
+                settlementId: settlement.Id,
+                settlementName: settlement.Name);
             return;
         }
 
@@ -358,6 +404,8 @@ public sealed class HuntingSystem
             speciesName: targetSpecies.Name,
             regionId: region.Id,
             regionName: region.Name,
+            settlementId: settlement.Id,
+            settlementName: settlement.Name,
             after: new Dictionary<string, string>
             {
                 ["targetPopulation"] = targetPopulation.PopulationCount.ToString(),
@@ -374,5 +422,23 @@ public sealed class HuntingSystem
 
         polity.HuntingCasualtiesThisYear += casualties;
         polity.Population = Math.Max(0, polity.Population - casualties);
+    }
+
+    private static int[] AllocateWorkers(int totalWorkers, int settlementCount)
+    {
+        int[] workers = new int[settlementCount];
+        if (settlementCount == 0)
+        {
+            return workers;
+        }
+
+        int baseShare = totalWorkers / settlementCount;
+        int remainder = totalWorkers % settlementCount;
+        for (int index = 0; index < settlementCount; index++)
+        {
+            workers[index] = baseShare + (index < remainder ? 1 : 0);
+        }
+
+        return workers;
     }
 }

@@ -13,6 +13,7 @@ public sealed class ChroniclePresentationPolicy
             [WorldEventType.Migration] = new ChronicleCooldownRule(20, BuildChronicleScopeKey),
             [WorldEventType.SettlementConsolidated] = new ChronicleCooldownRule(25, BuildChronicleScopeKey),
             [WorldEventType.FoodStress] = new ChronicleCooldownRule(15, BuildChronicleScopeKey),
+            [WorldEventType.SpeciesPopulationAdaptedToRegion] = new ChronicleCooldownRule(30, BuildAdaptationScopeKey),
             [WorldEventType.SpeciesPopulationMajorMutation] = new ChronicleCooldownRule(24, BuildChronicleScopeKey),
             [WorldEventType.SpeciesPopulationEvolutionaryTurningPoint] = new ChronicleCooldownRule(30, BuildChronicleScopeKey)
         };
@@ -118,6 +119,38 @@ public sealed class ChroniclePresentationPolicy
             "hardship_worsened" or
             "hardship_improved" or
             "hardship_recovered";
+    }
+
+    private static string? BuildAdaptationScopeKey(WorldEvent worldEvent)
+    {
+        if (!worldEvent.SpeciesId.HasValue || !worldEvent.RegionId.HasValue || string.IsNullOrWhiteSpace(worldEvent.Reason))
+        {
+            return null;
+        }
+
+        List<string> parts =
+        [
+            $"species:{worldEvent.SpeciesId.Value}",
+            $"region:{worldEvent.RegionId.Value}",
+            $"reason:{worldEvent.Reason}"
+        ];
+
+        if (worldEvent.Metadata.TryGetValue("adaptationMilestone", out string? milestone) && !string.IsNullOrWhiteSpace(milestone))
+        {
+            parts.Add($"milestone:{milestone}");
+        }
+
+        if (worldEvent.Metadata.TryGetValue("adaptationStage", out string? stage) && !string.IsNullOrWhiteSpace(stage))
+        {
+            parts.Add($"stage:{stage}");
+        }
+
+        if (worldEvent.Metadata.TryGetValue("adaptationSignal", out string? signal) && !string.IsNullOrWhiteSpace(signal))
+        {
+            parts.Add($"signal:{signal}");
+        }
+
+        return string.Join(":", parts);
     }
 
     // Scope keys are presentation-only throttling keys. Prefer the primary actor

@@ -9,6 +9,7 @@ LivingWorld keeps simulation logic, event storage, propagation, formatting, and 
 - regions
 - species
 - polities
+- polity-owned settlements
 - time
 - canonical world events
 
@@ -27,6 +28,19 @@ Major systems:
 - settlement
 - fragmentation
 - polity stage progression
+
+## Settlement-Grounded Locality
+
+`Polity` now owns lightweight `Settlement` records.
+Those records are the local execution points for hunting, farming, and settlement-aware trade endpoints.
+The polity-level `RegionId` still exists as the polity's current center of movement and presentation, but food-production systems no longer assume one abstract settlement multiplied by `SettlementCount`.
+
+`WorldLookup` is the current shared lookup layer for hot-path systems.
+It builds cached dictionaries for regions, species, polities, active populations by region, and settlements by region so systems can:
+
+- avoid repeated linear scans in inner loops
+- recover gracefully where a missing reference can be ignored
+- throw clearer invariant errors where corruption would otherwise surface as an opaque LINQ exception
 
 ## Canonical Event Architecture
 
@@ -106,6 +120,7 @@ Watch mode is built from:
 
 - `ChronicleEventFormatter`
 - `ChronicleWatchRenderer`
+- `ChronicleColorWriter`
 
 Important traits:
 
@@ -116,6 +131,7 @@ Important traits:
 - the fixed top panel shows focal polity context such as species
 - the fixed top panel separates discoveries from learned advancements
 - chronicle lines do not append species to every polity name
+- syntax coloring is applied after formatting, with structured status-line parsing first and boundary-aware semantic matching for narrative lines
 
 ## Focus And Continuity
 
@@ -136,6 +152,7 @@ Monthly:
 - seasonal regional species population update on season boundaries
 - seasonal ecosystem food-web processing and species exchange on season boundaries
 - seasonal settlement hunting on season boundaries
+- those seasonal hunts iterate actual settlements in actual regions
 - seasonal mutation and divergence processing after same-season species exchange
 - seasonal extinction cleanup and biomass sync after mutation processing
 - gathering, farming, trade redistribution, consumption, migration
@@ -144,6 +161,7 @@ Monthly:
 - follow-up events are processed immediately through the same event pipeline
 
 The later monthly `MigrationSystem` still handles polity relocation after food resolution. Mutation does not read polity movement directly; it reads seasonal species-exchange state on `RegionSpeciesPopulation`.
+When polity migration does occur, settlement records are relocated with the polity so settlement-grounded systems keep a coherent local model until a later phase introduces true cross-region polity settlement networks.
 
 Year-end:
 
@@ -167,3 +185,4 @@ The architecture continues to prioritize:
 - population-level biological divergence layered on regional populations rather than rewritten species definitions
 - future hooks for speciation, lineage naming, domestication variants, and cultural discovery of remarkable fauna
 - future alternate history views without rewriting simulation systems
+- source-side milestone guards plus chronicle cooldown keys so visible history beats stay about transitions rather than repeated reaffirmation

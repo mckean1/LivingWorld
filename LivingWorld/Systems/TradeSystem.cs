@@ -1,5 +1,6 @@
 using LivingWorld.Core;
 using LivingWorld.Economy;
+using LivingWorld.Life;
 using LivingWorld.Map;
 using LivingWorld.Societies;
 
@@ -28,6 +29,7 @@ public sealed class TradeSystem
     {
         _pairsUsedThisMonth.Clear();
         EnsurePartnerBuckets(world);
+        WorldLookup lookup = new(world);
 
         List<Polity> activePolities = world.Polities
             .Where(polity => polity.Population > 0)
@@ -58,9 +60,9 @@ public sealed class TradeSystem
         foreach (Polity importer in importers)
         {
             // 1) internal-bloc redistribution first
-            TrySatisfyImporter(world, importer, exporters, internalPriorityOnly: true);
+            TrySatisfyImporter(world, lookup, importer, exporters, internalPriorityOnly: true);
             // 2) external partners after internal options are exhausted
-            TrySatisfyImporter(world, importer, exporters, internalPriorityOnly: false);
+            TrySatisfyImporter(world, lookup, importer, exporters, internalPriorityOnly: false);
         }
 
         TickInactiveLinks(world);
@@ -80,6 +82,7 @@ public sealed class TradeSystem
 
     private void TrySatisfyImporter(
         World world,
+        WorldLookup lookup,
         Polity importer,
         IReadOnlyList<Polity> allExporters,
         bool internalPriorityOnly)
@@ -126,23 +129,26 @@ public sealed class TradeSystem
             }
 
             double shortageBefore = Math.Max(0, importer.FoodNeededThisMonth - importer.FoodStores);
-            ExecuteTransfer(world, exporter, importer, transfer, shortageBefore, internalPriorityOnly);
+            ExecuteTransfer(world, lookup, exporter, importer, transfer, shortageBefore, internalPriorityOnly);
             remainingNeed = EstimateImportNeed(importer);
         }
     }
 
     private void ExecuteTransfer(
         World world,
+        WorldLookup lookup,
         Polity exporter,
         Polity importer,
         double quantity,
         double shortageBefore,
         bool internalPriorityMode)
     {
-        Region exporterRegion = world.Regions.First(region => region.Id == exporter.RegionId);
-        Region importerRegion = world.Regions.First(region => region.Id == importer.RegionId);
-        TradeEndpoint exporterEndpoint = ResolveEndpoint(world, exporter);
-        TradeEndpoint importerEndpoint = ResolveEndpoint(world, importer);
+        Region exporterRegion = lookup.GetRequiredRegion(exporter.RegionId, "Trade transfer exporter");
+        Region importerRegion = lookup.GetRequiredRegion(importer.RegionId, "Trade transfer importer");
+        Species exporterSpecies = lookup.GetRequiredSpecies(exporter.SpeciesId, "Trade transfer exporter");
+        Species importerSpecies = lookup.GetRequiredSpecies(importer.SpeciesId, "Trade transfer importer");
+        TradeEndpoint exporterEndpoint = ResolveEndpoint(exporter, exporterRegion);
+        TradeEndpoint importerEndpoint = ResolveEndpoint(importer, importerRegion);
 
         double exporterBefore = exporter.FoodStores;
         double importerBefore = importer.FoodStores;
@@ -202,9 +208,9 @@ public sealed class TradeSystem
             relatedPolityId: importer.Id,
             relatedPolityName: importer.Name,
             relatedPolitySpeciesId: importer.SpeciesId,
-            relatedPolitySpeciesName: world.Species.First(species => species.Id == importer.SpeciesId).Name,
+            relatedPolitySpeciesName: importerSpecies.Name,
             speciesId: exporter.SpeciesId,
-            speciesName: world.Species.First(species => species.Id == exporter.SpeciesId).Name,
+            speciesName: exporterSpecies.Name,
             regionId: importer.RegionId,
             regionName: importerRegion.Name,
             settlementId: importerEndpoint.SettlementId,
@@ -247,9 +253,9 @@ public sealed class TradeSystem
                 relatedPolityId: exporter.Id,
                 relatedPolityName: exporter.Name,
                 relatedPolitySpeciesId: exporter.SpeciesId,
-                relatedPolitySpeciesName: world.Species.First(species => species.Id == exporter.SpeciesId).Name,
+                relatedPolitySpeciesName: exporterSpecies.Name,
                 speciesId: importer.SpeciesId,
-                speciesName: world.Species.First(species => species.Id == importer.SpeciesId).Name,
+                speciesName: importerSpecies.Name,
                 regionId: importerRegion.Id,
                 regionName: importerRegion.Name,
                 settlementId: importerEndpoint.SettlementId,
@@ -292,8 +298,11 @@ public sealed class TradeSystem
 
         _links[key] = created;
 
-        Region exporterRegion = world.Regions.First(region => region.Id == exporter.RegionId);
-        Region importerRegion = world.Regions.First(region => region.Id == importer.RegionId);
+        WorldLookup lookup = new(world);
+        Region exporterRegion = lookup.GetRequiredRegion(exporter.RegionId, "Trade link creation exporter");
+        Region importerRegion = lookup.GetRequiredRegion(importer.RegionId, "Trade link creation importer");
+        Species exporterSpecies = lookup.GetRequiredSpecies(exporter.SpeciesId, "Trade link creation exporter");
+        Species importerSpecies = lookup.GetRequiredSpecies(importer.SpeciesId, "Trade link creation importer");
 
         world.AddEvent(
             WorldEventType.TradeLinkStarted,
@@ -306,9 +315,9 @@ public sealed class TradeSystem
             relatedPolityId: importer.Id,
             relatedPolityName: importer.Name,
             relatedPolitySpeciesId: importer.SpeciesId,
-            relatedPolitySpeciesName: world.Species.First(species => species.Id == importer.SpeciesId).Name,
+            relatedPolitySpeciesName: importerSpecies.Name,
             speciesId: exporter.SpeciesId,
-            speciesName: world.Species.First(species => species.Id == exporter.SpeciesId).Name,
+            speciesName: exporterSpecies.Name,
             regionId: exporterRegion.Id,
             regionName: exporterRegion.Name,
             settlementId: exporterEndpoint.SettlementId,
@@ -358,6 +367,7 @@ public sealed class TradeSystem
             Polity? importer = world.Polities.FirstOrDefault(polity => polity.Id == staleLink.ImporterPolityId);
             if (exporter is not null && importer is not null)
             {
+                WorldLookup lookup = new(world);
                 world.AddEvent(
                     WorldEventType.TradeLinkCollapsed,
                     WorldEventSeverity.Notable,
@@ -369,9 +379,9 @@ public sealed class TradeSystem
                     relatedPolityId: importer.Id,
                     relatedPolityName: importer.Name,
                     relatedPolitySpeciesId: importer.SpeciesId,
-                    relatedPolitySpeciesName: world.Species.First(species => species.Id == importer.SpeciesId).Name,
+                    relatedPolitySpeciesName: lookup.GetRequiredSpecies(importer.SpeciesId, "Trade link collapse importer").Name,
                     speciesId: exporter.SpeciesId,
-                    speciesName: world.Species.First(species => species.Id == exporter.SpeciesId).Name,
+                    speciesName: lookup.GetRequiredSpecies(exporter.SpeciesId, "Trade link collapse exporter").Name,
                     settlementId: staleLink.ExporterSettlementId,
                     settlementName: staleLink.ExporterSettlementName,
                     metadata: new Dictionary<string, string>
@@ -416,7 +426,9 @@ public sealed class TradeSystem
         }
 
         _dependencyEventRaisedThisYear.Add(polity.Id);
-        Region region = world.Regions.First(r => r.Id == polity.RegionId);
+        WorldLookup lookup = new(world);
+        Region region = lookup.GetRequiredRegion(polity.RegionId, "Annual trade dependency");
+        Species species = lookup.GetRequiredSpecies(polity.SpeciesId, "Annual trade dependency");
 
         world.AddEvent(
             WorldEventType.TradeDependency,
@@ -427,7 +439,7 @@ public sealed class TradeSystem
             polityId: polity.Id,
             polityName: polity.Name,
             speciesId: polity.SpeciesId,
-            speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+            speciesName: species.Name,
             regionId: region.Id,
             regionName: region.Name,
             after: new Dictionary<string, string>
@@ -451,7 +463,9 @@ public sealed class TradeSystem
             return;
         }
 
-        Region region = world.Regions.First(r => r.Id == polity.RegionId);
+        WorldLookup lookup = new(world);
+        Region region = lookup.GetRequiredRegion(polity.RegionId, "Annual trade stability");
+        Species species = lookup.GetRequiredSpecies(polity.SpeciesId, "Annual trade stability");
         world.AddEvent(
             WorldEventType.TradeRelief,
             WorldEventSeverity.Notable,
@@ -461,7 +475,7 @@ public sealed class TradeSystem
             polityId: polity.Id,
             polityName: polity.Name,
             speciesId: polity.SpeciesId,
-            speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+            speciesName: species.Name,
             regionId: region.Id,
             regionName: region.Name,
             metadata: new Dictionary<string, string>
@@ -526,6 +540,7 @@ public sealed class TradeSystem
 
     private static int RegionHopDistance(World world, int sourceRegionId, int targetRegionId)
     {
+        WorldLookup lookup = new(world);
         if (sourceRegionId == targetRegionId)
         {
             return 0;
@@ -539,7 +554,10 @@ public sealed class TradeSystem
         while (queue.Count > 0)
         {
             (int currentRegionId, int depth) = queue.Dequeue();
-            Region current = world.Regions.First(region => region.Id == currentRegionId);
+            if (!lookup.TryGetRegion(currentRegionId, out Region? current) || current is null)
+            {
+                continue;
+            }
 
             foreach (int neighborId in current.ConnectedRegionIds)
             {
@@ -614,14 +632,20 @@ public sealed class TradeSystem
     }
 
     private static TradeEndpoint ResolveEndpoint(World world, Polity polity)
+        => throw new NotSupportedException("Use ResolveEndpoint(polity, region) to keep trade endpoints settlement-aware.");
+
+    private static TradeEndpoint ResolveEndpoint(Polity polity, Region region)
     {
-        Region region = world.Regions.First(r => r.Id == polity.RegionId);
+        Settlement? settlement = polity.GetPrimarySettlementInRegion(region.Id) ?? polity.GetPrimarySettlement();
+        if (settlement is not null)
+        {
+            return new TradeEndpoint(settlement.Id, settlement.Name);
+        }
+
         string settlementName = polity.SettlementStatus == SettlementStatus.Nomadic
             ? $"{region.Name} Camps"
             : $"{region.Name} Hearth";
-
-        int settlementId = (polity.Id * 10) + Math.Max(1, polity.SettlementCount);
-        return new TradeEndpoint(settlementId, settlementName);
+        return new TradeEndpoint(null, settlementName);
     }
 
     private void EnsurePartnerBuckets(World world)
@@ -659,5 +683,5 @@ public sealed class TradeSystem
         Full
     }
 
-    private readonly record struct TradeEndpoint(int SettlementId, string SettlementName);
+    private readonly record struct TradeEndpoint(int? SettlementId, string SettlementName);
 }

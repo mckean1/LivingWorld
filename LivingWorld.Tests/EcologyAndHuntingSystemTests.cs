@@ -46,11 +46,10 @@ public sealed class EcologyAndHuntingSystemTests
     {
         World world = CreateWorld();
         Region region = world.Regions[0];
-        Polity polity = new(10, "Riverwatch Clan", speciesId: 0, regionId: region.Id, population: 120)
-        {
-            SettlementStatus = SettlementStatus.Settled,
-            SettlementCount = 2
-        };
+        Polity polity = new(10, "Riverwatch Clan", speciesId: 0, regionId: region.Id, population: 120);
+        polity.EstablishFirstSettlement(region.Id, $"{region.Name} Hearth");
+        polity.SettlementStatus = SettlementStatus.Settled;
+        polity.AddSettlement(region.Id, $"{region.Name} Outpost 2");
 
         world.Polities.Add(polity);
 

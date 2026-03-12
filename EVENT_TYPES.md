@@ -46,6 +46,7 @@ Current implementation uses `learned_advancement` for capability-granting breakt
   - transition into a more settled society
 - `cultivation_expanded`
   - fields become active or expand meaningfully
+  - the event can now be grounded in a polity's real settlement network
 - `settlement_stabilized`
   - follow-up event when cultivation improves settlement reliability
 
@@ -82,6 +83,7 @@ Current implementation uses `learned_advancement` for capability-granting breakt
 - `trade_link_collapsed`
 
 Trade events are often structured-first, while their consequences may surface later through hardship recovery or stabilization events.
+When a trade event includes settlement references, they should describe the actual settlement endpoint if one exists, not an inferred polity-region placeholder.
 
 ### Ecology And Hunting
 
@@ -96,7 +98,7 @@ Trade events are often structured-first, while their consequences may surface la
 - `global_species_extinction`
   - no populations of the species remain anywhere
 - `hunting_success`
-  - a settlement hunt materially changed food supply or local wildlife pressure
+  - a real settlement hunt materially changed food supply or local wildlife pressure
 - `hunting_disaster`
   - a hunt failed badly enough to become a historical turning point
 - `dangerous_prey_killed_hunters`
@@ -115,6 +117,7 @@ Trade events are often structured-first, while their consequences may surface la
   - prolonged separation without meaningful exchange
 - `species_population_adapted_to_region`
   - regional lineage overcame ancestral habitat mismatch through sustained pressure, divergence, and improved effective fit
+  - emitted on adaptation-stage transitions rather than repeated reaffirmation of the same regional condition
 - `species_population_evolutionary_turning_point`
   - divergence milestone that may become chronicle-worthy
 
@@ -159,6 +162,7 @@ The same terminology rule now applies to hunting:
 ## Player-Facing Formatting Rule
 
 Species references remain in structured event data, but watch-mode chronicle lines do not append species to each polity name. The focal polity species is shown in the fixed top status panel instead.
+Watch-mode coloring is also conservative: actor names, place names, known knowledge names, and explicit crisis or status phrases may be colored, but incidental descriptive prose should remain plain text.
 
 Watch mode also separates:
 
@@ -198,3 +202,4 @@ Usually structured-only unless escalated:
 - most `species_population_adapted_to_region`
 
 Adaptation events are one-time milestones per regional population, not recurring telemetry.
+If a later adaptation event appears, it should represent a stronger milestone rather than the same adaptation beat repeated.

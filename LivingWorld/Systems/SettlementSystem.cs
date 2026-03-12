@@ -1,5 +1,6 @@
 using LivingWorld.Advancement;
 using LivingWorld.Core;
+using LivingWorld.Life;
 using LivingWorld.Map;
 using LivingWorld.Societies;
 
@@ -22,19 +23,22 @@ public sealed class SettlementSystem
             return;
         }
 
+        WorldLookup lookup = new(world);
+
         foreach (Polity polity in world.Polities.Where(p => p.Population > 0))
         {
             bool alreadyHadSettlement = polity.HasSettlements;
-            Region region = world.Regions.First(r => r.Id == polity.RegionId);
+            Region region = lookup.GetRequiredRegion(polity.RegionId, "Settlement update");
+            Species species = lookup.GetRequiredSpecies(polity.SpeciesId, "Settlement update");
             int residenceYears = GetResidenceYearsAfterCurrentYear(polity);
 
             switch (polity.SettlementStatus)
             {
                 case SettlementStatus.Nomadic:
-                    TryEstablishFirstSettlement(world, polity, region, residenceYears);
+                    TryEstablishFirstSettlement(world, polity, species, region, residenceYears);
                     break;
                 case SettlementStatus.SemiSettled:
-                    TryBecomeSettledSociety(world, polity, region, residenceYears);
+                    TryBecomeSettledSociety(world, polity, species, region, residenceYears);
                     break;
             }
 
@@ -43,11 +47,12 @@ public sealed class SettlementSystem
                 polity.YearsSinceFirstSettlement++;
             }
 
+            polity.AdvanceSettlementAges();
             polity.YearsInCurrentRegion = residenceYears;
         }
     }
 
-    private void TryEstablishFirstSettlement(World world, Polity polity, Region region, int residenceYears)
+    private void TryEstablishFirstSettlement(World world, Polity polity, Species species, Region region, int residenceYears)
     {
         double chance = CalculateFirstSettlementChance(world, polity, region, residenceYears);
         if (_random.NextDouble() > chance)
@@ -55,9 +60,7 @@ public sealed class SettlementSystem
             return;
         }
 
-        polity.SettlementStatus = SettlementStatus.SemiSettled;
-        polity.SettlementCount = Math.Max(1, polity.SettlementCount);
-        polity.YearsSinceFirstSettlement = 0;
+        Settlement settlement = polity.EstablishFirstSettlement(region.Id, $"{region.Name} Hearth");
 
         world.AddEvent(
             WorldEventType.SettlementFounded,
@@ -69,9 +72,11 @@ public sealed class SettlementSystem
             polityId: polity.Id,
             polityName: polity.Name,
             speciesId: polity.SpeciesId,
-            speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+            speciesName: species.Name,
             regionId: region.Id,
             regionName: region.Name,
+            settlementId: settlement.Id,
+            settlementName: settlement.Name,
             before: new Dictionary<string, string>
             {
                 ["settlementStatus"] = SettlementStatus.Nomadic.ToString(),
@@ -85,11 +90,12 @@ public sealed class SettlementSystem
             metadata: new Dictionary<string, string>
             {
                 ["rollChance"] = chance.ToString("F3"),
-                ["eventDrivenSettlementBonus"] = polity.EventDrivenSettlementChanceBonus.ToString("F3")
+                ["eventDrivenSettlementBonus"] = polity.EventDrivenSettlementChanceBonus.ToString("F3"),
+                ["settlementId"] = settlement.Id.ToString()
             });
     }
 
-    private void TryBecomeSettledSociety(World world, Polity polity, Region region, int residenceYears)
+    private void TryBecomeSettledSociety(World world, Polity polity, Species species, Region region, int residenceYears)
     {
         double chance = CalculateConsolidationChance(polity, region, residenceYears);
         if (_random.NextDouble() > chance)
@@ -98,6 +104,7 @@ public sealed class SettlementSystem
         }
 
         polity.SettlementStatus = SettlementStatus.Settled;
+        Settlement settlement = polity.GetOrCreatePrimarySettlement(region.Id, $"{region.Name} Hearth");
 
         world.AddEvent(
             WorldEventType.SettlementConsolidated,
@@ -109,9 +116,11 @@ public sealed class SettlementSystem
             polityId: polity.Id,
             polityName: polity.Name,
             speciesId: polity.SpeciesId,
-            speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+            speciesName: species.Name,
             regionId: region.Id,
             regionName: region.Name,
+            settlementId: settlement.Id,
+            settlementName: settlement.Name,
             before: new Dictionary<string, string>
             {
                 ["settlementStatus"] = SettlementStatus.SemiSettled.ToString()

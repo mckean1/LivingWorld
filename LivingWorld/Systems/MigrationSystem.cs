@@ -1,5 +1,6 @@
 ﻿using LivingWorld.Core;
 using LivingWorld.Map;
+using LivingWorld.Life;
 using LivingWorld.Societies;
 
 namespace LivingWorld.Systems;
@@ -15,12 +16,15 @@ public sealed class MigrationSystem
 
     public void UpdateMigration(World world)
     {
+        WorldLookup lookup = new(world);
+
         foreach (Polity polity in world.Polities)
         {
             if (polity.Population <= 0)
                 continue;
 
-            Region currentRegion = world.Regions.First(r => r.Id == polity.RegionId);
+            Region currentRegion = lookup.GetRequiredRegion(polity.RegionId, "Migration update");
+            Species species = lookup.GetRequiredSpecies(polity.SpeciesId, "Migration update");
 
             polity.MigrationPressure = CalculateMigrationPressure(world, polity, currentRegion);
 
@@ -32,6 +36,12 @@ public sealed class MigrationSystem
                 {
                     polity.PreviousRegionId = polity.RegionId;
                     polity.RegionId = target.Id;
+                    if (polity.HasSettlements)
+                    {
+                        polity.RelocateSettlements(target.Id, index => index == 0
+                            ? $"{target.Name} Hearth"
+                            : $"{target.Name} Outpost {index + 1}");
+                    }
 
                     polity.MovedThisYear = true;
                     polity.MovesThisYear++;
@@ -48,7 +58,7 @@ public sealed class MigrationSystem
                         polityId: polity.Id,
                         polityName: polity.Name,
                         speciesId: polity.SpeciesId,
-                        speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                        speciesName: species.Name,
                         regionId: target.Id,
                         regionName: target.Name,
                         before: new Dictionary<string, string>

@@ -129,6 +129,41 @@ public sealed class ChronicleEventFormatterTests
     }
 
     [Fact]
+    public void AdaptationEvents_WithinCooldown_AreSuppressed_ForSameSpeciesRegionReasonAndMilestone()
+    {
+        WorldEvent firstAdaptation = CreateAdaptationEvent(
+            year: 132,
+            milestone: 2,
+            narrative: "Ashfang Wolf in Amber Reach became strongly adapted to the region");
+        WorldEvent repeatedAdaptation = CreateAdaptationEvent(
+            year: 138,
+            milestone: 2,
+            narrative: "Ashfang Wolf in Amber Reach became strongly adapted to the region");
+
+        Assert.True(_formatter.TryFormat(firstAdaptation, _focus, out _));
+        Assert.False(_formatter.TryFormat(repeatedAdaptation, _focus, out _));
+    }
+
+    [Fact]
+    public void AdaptationEscalation_WithNewMilestone_RemainsVisibleWithinCooldown()
+    {
+        WorldEvent firstAdaptation = CreateAdaptationEvent(
+            year: 140,
+            milestone: 1,
+            severity: WorldEventSeverity.Major,
+            narrative: "Ashfang Wolf adapted to Amber Reach");
+        WorldEvent strongerAdaptation = CreateAdaptationEvent(
+            year: 142,
+            milestone: 2,
+            severity: WorldEventSeverity.Legendary,
+            narrative: "Ashfang Wolf in Amber Reach became strongly adapted to the region");
+
+        Assert.True(_formatter.TryFormat(firstAdaptation, _focus, out _));
+        Assert.True(_formatter.TryFormat(strongerAdaptation, _focus, out string chronicleLine));
+        Assert.Equal("Year 142 - Ashfang Wolf in Amber Reach became strongly adapted to the region.", chronicleLine);
+    }
+
+    [Fact]
     public void MajorTurningPoints_RemainVisible()
     {
         WorldEvent stageChange = CreateEvent(
@@ -356,6 +391,37 @@ public sealed class ChronicleEventFormatterTests
                 ["previousLineageId"] = currentFocusedLineageId.ToString(),
                 ["newPolityId"] = successorPolityId.ToString(),
                 ["newLineageId"] = successorLineageId.ToString()
+            }
+        };
+    }
+
+    private static WorldEvent CreateAdaptationEvent(
+        int year,
+        int milestone,
+        string narrative,
+        WorldEventSeverity severity = WorldEventSeverity.Major)
+    {
+        return new WorldEvent
+        {
+            EventId = year,
+            Year = year,
+            Month = 12,
+            Season = Season.Winter,
+            Type = WorldEventType.SpeciesPopulationAdaptedToRegion,
+            Severity = severity,
+            Narrative = narrative,
+            Reason = "sustained_habitat_mismatch",
+            RelatedPolityId = 7,
+            RelatedPolityName = "River Clan",
+            SpeciesId = 6,
+            SpeciesName = "Ashfang Wolf",
+            RegionId = 2,
+            RegionName = "Amber Reach",
+            Metadata = new Dictionary<string, string>
+            {
+                ["adaptationMilestone"] = milestone.ToString(),
+                ["adaptationStage"] = milestone >= 2 ? "strong_adaptation" : "regional_adaptation",
+                ["adaptationSignal"] = "climate_tolerance"
             }
         };
     }

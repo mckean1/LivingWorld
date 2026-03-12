@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using LivingWorld.Advancement;
 using LivingWorld.Core;
+using LivingWorld.Societies;
 
 namespace LivingWorld.Presentation;
 
@@ -117,7 +118,8 @@ public sealed class ChronicleColorContext
         IEnumerable<string> placeNames = world.Regions
             .Select(region => region.Name);
         IEnumerable<string> knowledgeNames = AdvancementCatalog.All
-            .Select(definition => definition.Name);
+            .Select(definition => definition.Name)
+            .Concat(world.Polities.SelectMany(polity => polity.Discoveries).Select(discovery => discovery.Summary));
 
         return new ChronicleColorContext(polityNames, placeNames, knowledgeNames);
     }
@@ -150,12 +152,14 @@ public readonly record struct ChronicleStyledSegment(string Text, ChronicleSeman
 internal sealed class ChronicleLineColorizer
 {
     private static readonly Regex YearHeaderRegex = new(@"^Year\s+\d+", RegexOptions.Compiled);
+    private static readonly Regex StatusYearRegex = new(@"^\s*Year:\s+(\d+)$", RegexOptions.Compiled);
     private static readonly Regex MajorHeaderRegex = new(@"^Year\s+\d+\s+-\s+([A-Z][A-Z\s]+)$", RegexOptions.Compiled);
     private static readonly Regex PopulationRegex = new(@"^Population:\s+\d+\s+\(([^)]+)\)", RegexOptions.Compiled);
     private static readonly Regex RegionRegex = new(@"^Region:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex DiscoveryRegex = new(@"^Discoveries:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex LearnedRegex = new(@"^Learned:\s+(.+)$", RegexOptions.Compiled);
     private static readonly Regex FoodRegex = new(@"^Food:\s+(.+)$", RegexOptions.Compiled);
+    private static readonly Regex FoodStoresRegex = new(@"^Food Stores:\s+\d+\s+\(([^)]+)\)", RegexOptions.Compiled);
     private static readonly Regex SectionHeaderRegex = new(@"^(This Year|Notable Changes)$", RegexOptions.Compiled);
 
     private static readonly string[] PositivePhrases =
@@ -166,8 +170,7 @@ internal sealed class ChronicleLineColorizer
         "prosperous season",
         "growth resumed",
         "trade route established",
-        "settlement flourished",
-        "grew to"
+        "settlement flourished"
     ];
 
     private static readonly string[] WarningPhrases =
@@ -178,11 +181,6 @@ internal sealed class ChronicleLineColorizer
         "unstable food",
         "low supplies",
         "shortages"
-    ];
-
-    private static readonly string[] ResourcePhrases =
-    [
-        "imported food"
     ];
 
     private static readonly string[] CrisisPhrases =
@@ -200,11 +198,13 @@ internal sealed class ChronicleLineColorizer
         }
 
         List<SemanticSpan> spans = new();
-        AddStructuralSpans(line, spans);
-        AddPhraseSpans(line, PositivePhrases, ChronicleSemantic.Positive, 80, spans);
-        AddPhraseSpans(line, WarningPhrases, ChronicleSemantic.Warning, 90, spans);
-        AddPhraseSpans(line, CrisisPhrases, ChronicleSemantic.Crisis, 100, spans);
-        AddPhraseSpans(line, ResourcePhrases, ChronicleSemantic.PlaceName, 68, spans);
+        bool structuredLine = AddStructuralSpans(line, spans);
+        if (!structuredLine)
+        {
+            AddPhraseSpans(line, PositivePhrases, ChronicleSemantic.Positive, 80, spans);
+            AddPhraseSpans(line, WarningPhrases, ChronicleSemantic.Warning, 90, spans);
+            AddPhraseSpans(line, CrisisPhrases, ChronicleSemantic.Crisis, 100, spans);
+        }
         AddNameSpans(line, context.PolityNames, ChronicleSemantic.PolityName, 70, spans);
         AddNameSpans(line, context.PlaceNames, ChronicleSemantic.PlaceName, 65, spans);
         AddNameSpans(line, context.KnowledgeNames, ChronicleSemantic.KnowledgeName, 75, spans);
@@ -218,18 +218,29 @@ internal sealed class ChronicleLineColorizer
         return BuildSegments(line, selected);
     }
 
-    private static void AddStructuralSpans(string line, List<SemanticSpan> spans)
+    private static bool AddStructuralSpans(string line, List<SemanticSpan> spans)
     {
+        bool structuredLine = false;
+
         Match section = SectionHeaderRegex.Match(line);
         if (section.Success)
         {
             spans.Add(new SemanticSpan(section.Index, section.Length, ChronicleSemantic.Subtle, 120));
+            structuredLine = true;
         }
 
         Match year = YearHeaderRegex.Match(line);
         if (year.Success)
         {
             spans.Add(new SemanticSpan(year.Index, year.Length, ChronicleSemantic.YearHeader, 110));
+        }
+
+        Match statusYear = StatusYearRegex.Match(line.TrimStart());
+        if (statusYear.Success)
+        {
+            int offset = line.Length - line.TrimStart().Length;
+            spans.Add(new SemanticSpan(offset + statusYear.Groups[1].Index, statusYear.Groups[1].Length, ChronicleSemantic.YearHeader, 95));
+            structuredLine = true;
         }
 
         Match majorHeader = MajorHeaderRegex.Match(line);
@@ -246,25 +257,31 @@ internal sealed class ChronicleLineColorizer
             }
         }
 
-        Match region = RegionRegex.Match(line);
+        Match region = RegionRegex.Match(line.TrimStart());
         if (region.Success)
         {
-            spans.Add(new SemanticSpan(region.Groups[1].Index, region.Groups[1].Length, ChronicleSemantic.PlaceName, 95));
+            int offset = line.Length - line.TrimStart().Length;
+            spans.Add(new SemanticSpan(offset + region.Groups[1].Index, region.Groups[1].Length, ChronicleSemantic.PlaceName, 95));
+            structuredLine = true;
         }
 
-        Match discoveries = DiscoveryRegex.Match(line);
+        Match discoveries = DiscoveryRegex.Match(line.TrimStart());
         if (discoveries.Success)
         {
-            spans.Add(new SemanticSpan(discoveries.Groups[1].Index, discoveries.Groups[1].Length, ChronicleSemantic.KnowledgeName, 95));
+            int offset = line.Length - line.TrimStart().Length;
+            spans.Add(new SemanticSpan(offset + discoveries.Groups[1].Index, discoveries.Groups[1].Length, ChronicleSemantic.KnowledgeName, 95));
+            structuredLine = true;
         }
 
-        Match learned = LearnedRegex.Match(line);
+        Match learned = LearnedRegex.Match(line.TrimStart());
         if (learned.Success)
         {
-            spans.Add(new SemanticSpan(learned.Groups[1].Index, learned.Groups[1].Length, ChronicleSemantic.KnowledgeName, 95));
+            int offset = line.Length - line.TrimStart().Length;
+            spans.Add(new SemanticSpan(offset + learned.Groups[1].Index, learned.Groups[1].Length, ChronicleSemantic.KnowledgeName, 95));
+            structuredLine = true;
         }
 
-        Match food = FoodRegex.Match(line);
+        Match food = FoodRegex.Match(line.TrimStart());
         if (food.Success)
         {
             string state = food.Groups[1].Value.Trim();
@@ -279,11 +296,36 @@ internal sealed class ChronicleLineColorizer
 
             if (semantic != ChronicleSemantic.Text)
             {
-                spans.Add(new SemanticSpan(food.Groups[1].Index, food.Groups[1].Length, semantic, 95));
+                int offset = line.Length - line.TrimStart().Length;
+                spans.Add(new SemanticSpan(offset + food.Groups[1].Index, food.Groups[1].Length, semantic, 95));
             }
+
+            structuredLine = true;
         }
 
-        Match population = PopulationRegex.Match(line);
+        Match foodStores = FoodStoresRegex.Match(line.TrimStart());
+        if (foodStores.Success)
+        {
+            string state = foodStores.Groups[1].Value.Trim();
+            ChronicleSemantic semantic = state switch
+            {
+                "Surplus" => ChronicleSemantic.Positive,
+                "Hunger" => ChronicleSemantic.Warning,
+                "Famine" => ChronicleSemantic.Crisis,
+                "Stable" => ChronicleSemantic.Subtle,
+                _ => ChronicleSemantic.Text
+            };
+
+            if (semantic != ChronicleSemantic.Text)
+            {
+                int offset = line.Length - line.TrimStart().Length;
+                spans.Add(new SemanticSpan(offset + foodStores.Groups[1].Index, foodStores.Groups[1].Length, semantic, 95));
+            }
+
+            structuredLine = true;
+        }
+
+        Match population = PopulationRegex.Match(line.TrimStart());
         if (population.Success)
         {
             string delta = population.Groups[1].Value.Trim();
@@ -295,9 +337,14 @@ internal sealed class ChronicleLineColorizer
 
             if (semantic != ChronicleSemantic.Text)
             {
-                spans.Add(new SemanticSpan(population.Groups[1].Index, population.Groups[1].Length, semantic, 95));
+                int offset = line.Length - line.TrimStart().Length;
+                spans.Add(new SemanticSpan(offset + population.Groups[1].Index, population.Groups[1].Length, semantic, 95));
             }
+
+            structuredLine = true;
         }
+
+        return structuredLine;
     }
 
     private static ChronicleSemantic ResolveMajorHeadlineSemantic(string headline)
@@ -346,7 +393,11 @@ internal sealed class ChronicleLineColorizer
                     break;
                 }
 
-                spans.Add(new SemanticSpan(index, phrase.Length, semantic, priority));
+                if (IsBoundary(line, index, phrase.Length))
+                {
+                    spans.Add(new SemanticSpan(index, phrase.Length, semantic, priority));
+                }
+
                 offset = index + phrase.Length;
             }
         }

@@ -1,5 +1,6 @@
 using LivingWorld.Core;
 using LivingWorld.Map;
+using LivingWorld.Life;
 using LivingWorld.Societies;
 
 namespace LivingWorld.Systems;
@@ -11,38 +12,53 @@ public sealed class AgricultureSystem
 
     public void ProduceFarmFood(World world)
     {
+        WorldLookup lookup = new(world);
+
+        foreach (Polity polity in world.Polities)
+        {
+            polity.CultivatedLand = polity.Settlements.Sum(settlement => settlement.CultivatedLand);
+        }
+
         foreach (Region region in world.Regions)
         {
-            List<Polity> farmers = world.Polities
-                .Where(polity => polity.Population > 0)
-                .Where(polity => polity.RegionId == region.Id)
-                .Where(CanFarmInSettlementContext)
+            double regionalArableCapacity = CalculateRegionalArableCapacity(region);
+            IReadOnlyList<Settlement> localSettlements = lookup.GetSettlementsInRegion(region.Id)
+                .Where(settlement => lookup.TryGetPolity(settlement.PolityId, out Polity? owner)
+                    && owner is not null
+                    && owner.Population > 0
+                    && CanFarmInSettlementContext(owner))
                 .ToList();
 
-            if (farmers.Count == 0)
+            if (localSettlements.Count == 0 || regionalArableCapacity <= 0)
             {
                 continue;
             }
 
-            double regionalArableCapacity = CalculateRegionalArableCapacity(region);
-            Dictionary<int, double> desiredCultivation = farmers.ToDictionary(
-                polity => polity.Id,
-                polity => CalculateDesiredCultivation(polity));
+            Dictionary<int, Polity> ownersBySettlementId = localSettlements.ToDictionary(
+                settlement => settlement.Id,
+                settlement => lookup.GetRequiredPolity(settlement.PolityId, "Agriculture settlement owner"));
+            Dictionary<int, int> settlementCountsByPolity = localSettlements
+                .GroupBy(settlement => settlement.PolityId)
+                .ToDictionary(group => group.Key, group => group.Count());
+            Dictionary<int, double> desiredCultivation = localSettlements.ToDictionary(
+                settlement => settlement.Id,
+                settlement => CalculateDesiredCultivation(ownersBySettlementId[settlement.Id], settlementCountsByPolity[settlement.PolityId]));
 
             double totalDesired = desiredCultivation.Values.Sum();
-            if (totalDesired <= 0 || regionalArableCapacity <= 0)
+            if (totalDesired <= 0)
             {
                 continue;
             }
 
-            foreach (Polity polity in farmers)
+            foreach (Settlement settlement in localSettlements)
             {
-                double share = desiredCultivation[polity.Id] / totalDesired;
+                Polity polity = ownersBySettlementId[settlement.Id];
+                double share = desiredCultivation[settlement.Id] / totalDesired;
                 double allocatedLand = regionalArableCapacity * share;
 
-                UpdateCultivation(polity, allocatedLand);
+                UpdateCultivation(polity, settlement, allocatedLand);
 
-                double monthlyYield = CalculateSeasonalYield(polity, region, polity.CultivatedLand, world.Time.Season);
+                double monthlyYield = CalculateSeasonalYield(polity, region, settlement.CultivatedLand, world.Time.Season);
                 if (monthlyYield <= 0)
                 {
                     continue;
@@ -50,10 +66,15 @@ public sealed class AgricultureSystem
 
                 polity.FoodFarmedThisMonth += monthlyYield;
                 polity.AnnualFoodFarmed += monthlyYield;
-                polity.AnnualCultivatedLandTotal += polity.CultivatedLand;
+                polity.AnnualCultivatedLandTotal += settlement.CultivatedLand;
                 polity.FarmingMonthsThisYear++;
                 polity.FoodStores += monthlyYield;
             }
+        }
+
+        foreach (Polity polity in world.Polities)
+        {
+            polity.CultivatedLand = polity.Settlements.Sum(settlement => settlement.CultivatedLand);
         }
     }
 
@@ -63,6 +84,8 @@ public sealed class AgricultureSystem
         {
             return;
         }
+
+        WorldLookup lookup = new(world);
 
         foreach (Polity polity in world.Polities.Where(polity => polity.Population > 0))
         {
@@ -89,7 +112,8 @@ public sealed class AgricultureSystem
                 continue;
             }
 
-            Region region = world.Regions.First(region => region.Id == polity.RegionId);
+            Region region = lookup.GetRequiredRegion(polity.RegionId, "Annual agriculture");
+            Species species = lookup.GetRequiredSpecies(polity.SpeciesId, "Annual agriculture");
 
             if (polity.ConsecutiveFarmingYears == 0)
             {
@@ -103,7 +127,7 @@ public sealed class AgricultureSystem
                     polityId: polity.Id,
                     polityName: polity.Name,
                     speciesId: polity.SpeciesId,
-                    speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                    speciesName: species.Name,
                     regionId: region.Id,
                     regionName: region.Name,
                     parentEventIds: polity.LastLearnedAgricultureEventId is long eventId ? [eventId] : null,
@@ -125,7 +149,7 @@ public sealed class AgricultureSystem
                     polityId: polity.Id,
                     polityName: polity.Name,
                     speciesId: polity.SpeciesId,
-                    speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                    speciesName: species.Name,
                     regionId: region.Id,
                     regionName: region.Name,
                     parentEventIds: polity.LastLearnedAgricultureEventId is long growthEventId ? [growthEventId] : null,
@@ -154,7 +178,7 @@ public sealed class AgricultureSystem
                         polityId: polity.Id,
                         polityName: polity.Name,
                         speciesId: polity.SpeciesId,
-                        speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                        speciesName: species.Name,
                         regionId: region.Id,
                         regionName: region.Name,
                         parentEventIds: polity.LastLearnedAgricultureEventId is long stabilityEventId ? [stabilityEventId] : null,
@@ -177,7 +201,7 @@ public sealed class AgricultureSystem
                         polityId: polity.Id,
                         polityName: polity.Name,
                         speciesId: polity.SpeciesId,
-                        speciesName: world.Species.First(species => species.Id == polity.SpeciesId).Name,
+                        speciesName: species.Name,
                         regionId: region.Id,
                         regionName: region.Name,
                         after: new Dictionary<string, string>
@@ -205,7 +229,7 @@ public sealed class AgricultureSystem
         return region.CarryingCapacity * quality * BaseRegionalArableFactor;
     }
 
-    private static double CalculateDesiredCultivation(Polity polity)
+    private static double CalculateDesiredCultivation(Polity polity, int settlementCount)
     {
         double settlementLaborShare = polity.SettlementStatus switch
         {
@@ -214,18 +238,20 @@ public sealed class AgricultureSystem
             _ => 0.0
         };
 
-        double settlementScale = 1.0 + (Math.Max(0, polity.SettlementCount - 1) * 0.18);
         double knowledgeScale = 1.0 + (polity.Capabilities.FarmingYieldPerPerson * 0.80);
-        double laborDrivenTarget = polity.Population * settlementLaborShare * settlementScale * knowledgeScale;
+        double localPopulation = settlementCount <= 0
+            ? 0.0
+            : polity.Population / (double)settlementCount;
+        double laborDrivenTarget = localPopulation * settlementLaborShare * knowledgeScale;
 
         return Math.Max(0, laborDrivenTarget);
     }
 
-    private static void UpdateCultivation(Polity polity, double targetCultivation)
+    private static void UpdateCultivation(Polity polity, Settlement settlement, double targetCultivation)
     {
         if (targetCultivation <= 0)
         {
-            polity.CultivatedLand *= 0.60;
+            settlement.CultivatedLand *= 0.60;
             return;
         }
 
@@ -238,16 +264,16 @@ public sealed class AgricultureSystem
 
         expansionRate += Math.Clamp(polity.YearsSinceFirstSettlement / 40.0, 0.0, 0.04);
 
-        if (polity.CultivatedLand < targetCultivation)
+        if (settlement.CultivatedLand < targetCultivation)
         {
-            polity.CultivatedLand += (targetCultivation - polity.CultivatedLand) * expansionRate;
+            settlement.CultivatedLand += (targetCultivation - settlement.CultivatedLand) * expansionRate;
         }
         else
         {
-            polity.CultivatedLand -= (polity.CultivatedLand - targetCultivation) * 0.30;
+            settlement.CultivatedLand -= (settlement.CultivatedLand - targetCultivation) * 0.30;
         }
 
-        polity.CultivatedLand = Math.Max(0, polity.CultivatedLand);
+        settlement.CultivatedLand = Math.Max(0, settlement.CultivatedLand);
     }
 
     private static double CalculateSeasonalYield(Polity polity, Region region, double cultivatedLand, Season season)

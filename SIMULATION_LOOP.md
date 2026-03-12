@@ -14,6 +14,7 @@ This document describes the simulation loop in terms of event capture, propagati
 8. `ChronicleWatchRenderer` displays the surviving lines
 
 Watch mode keeps species in the fixed status panel, separates discoveries from learned advancements there, and leaves chronicle lines leaner by omitting repeated polity species suffixes.
+The same watch renderer applies conservative syntax coloring after formatting: structured status lines color only their value segments, while narrative chronicle lines color only boundary-safe semantic units.
 
 ## Monthly Systems
 
@@ -21,9 +22,11 @@ Watch mode keeps species in the fixed status panel, separates discoveries from l
 - seasonal regional species population maintenance every third month
 - seasonal ecosystem interactions and species exchange every third month
 - seasonal settlement hunting every third month
+- hunting is resolved per settlement, using that settlement's actual region
 - seasonal mutation and divergence pass every third month using the same season's species exchange flags
 - seasonal extinction cleanup and biomass sync every third month
 - food gathering and farming
+- farming is resolved per settlement, with settlements in the same region competing for the same regional arable capacity
 - trade redistribution
 - food consumption
 - migration
@@ -74,7 +77,10 @@ The simulation loop now supports:
 
 - stronger cause-and-effect chains
 - ecology, hunting, and polity history sharing one data model
+- settlement-grounded food production instead of polity-region multiplication shortcuts
 - population-level evolutionary drift driven by shared ecological pressures
 - adaptation milestones grounded in ancestral mismatch, divergence, trait gains, and regional persistence
+- player-facing adaptation lines only on new adaptation milestones, with scoped chronicle cooldown on top of source-side suppression
 - structured history with causal ancestry
 - concise chronicle output that still reads like history rather than telemetry
+- safer hot-path lookup behavior through cached lookup snapshots and clearer invariant failures

@@ -206,11 +206,16 @@ public sealed class LineagePolityFocusSelectorTests
         PolityStage stage = PolityStage.Band,
         int settlements = 0)
     {
-        Polity polity = new(id, name, speciesId, regionId, population, lineageId, parentPolityId, stage)
+        Polity polity = new(id, name, speciesId, regionId, population, lineageId, parentPolityId, stage);
+        if (settlements > 0)
         {
-            SettlementCount = settlements,
-            SettlementStatus = settlements > 0 ? SettlementStatus.Settled : SettlementStatus.Nomadic
-        };
+            polity.EstablishFirstSettlement(regionId, $"{world.Regions.First(region => region.Id == regionId).Name} Hearth");
+            polity.SettlementStatus = SettlementStatus.Settled;
+            for (int index = 1; index < settlements; index++)
+            {
+                polity.AddSettlement(regionId, $"{world.Regions.First(region => region.Id == regionId).Name} Outpost {index + 1}");
+            }
+        }
 
         world.Polities.Add(polity);
         return polity;

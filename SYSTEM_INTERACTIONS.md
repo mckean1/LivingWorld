@@ -99,12 +99,29 @@ The new ecology phase is shared state for multiple systems:
 - hunting difficulty, danger, and yield now also consume regional trait divergence instead of using only species baselines
 - regional biomass is synchronized from species populations so existing food gathering and migration heuristics still have region-level ecological context
 - polity discoveries, hunting knowledge, and domestication interest are stored on the polity for future systems to consume
+- mutation also tracks adaptation milestones on each regional population so adaptation events emit only when a new stage is crossed
 
 Important timing boundary:
 
 - seasonal species exchange happens inside `EcosystemSystem` before mutation runs
 - later monthly polity migration happens in `MigrationSystem` after food resolution
 - mutation inputs such as `EstablishedThisSeason`, `ReceivedMigrantsThisSeason`, and `SentMigrantsThisSeason` refer only to the first category
+- chronicle presentation then applies its own scoped cooldown rules, including a dedicated adaptation key for visible adaptation beats
+
+## Settlement-Grounded Production Layer
+
+Hunting, farming, and settlement-aware trade now share the same locality layer:
+
+- `Polity.Settlements` are the concrete execution points
+- hunting reads wildlife from each settlement's region
+- agriculture allocates each region's arable capacity across all settlements in that region
+- trade prefers real settlement endpoints when settlements exist and falls back to camps/hearth labels only when necessary
+
+This keeps cause-and-effect local:
+
+- local prey decline comes from the settlements that hunted there
+- farm output comes from settlements actually occupying fertile land
+- migration relocates settlement records so later systems do not read stale locality state
 
 ## Knowledge Split
 
@@ -135,3 +152,4 @@ That separation keeps the architecture clean:
 - simulation systems stay honest about causality
 - structured history preserves the full chain
 - chronicle presentation stays readable
+- watch-mode coloring remains token-aware so semantic highlights do not bleed into unrelated prose

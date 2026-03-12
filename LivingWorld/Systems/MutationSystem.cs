@@ -290,11 +290,6 @@ public sealed class MutationSystem
 
     private void EmitAdaptationMilestone(World world, Region region, RegionSpeciesPopulation population, Species species)
     {
-        if (population.RegionAdaptationRecorded)
-        {
-            return;
-        }
-
         double baseSuitability = population.BaseHabitatSuitability;
         double suitabilityGain = population.HabitatSuitability - baseSuitability;
         double climateTolerance = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.ClimateTolerance);
@@ -315,14 +310,34 @@ public sealed class MutationSystem
             return;
         }
 
-        population.RegionAdaptationRecorded = true;
+        int adaptationMilestone = ResolveAdaptationMilestone(population, suitabilityGain, climateGain, dietGain);
+        if (adaptationMilestone <= population.LastAdaptationMilestone)
+        {
+            return;
+        }
+
+        population.LastAdaptationMilestone = adaptationMilestone;
+        Polity? relatedPolity = FindRelevantPolity(world, region, species.Id);
+        (int? polityId, string? polityName, int? relatedPolityId, string? relatedPolityName, int? relatedPolitySpeciesId, string? relatedPolitySpeciesName) =
+            ResolvePolityContext(world, relatedPolity, species.Id);
+        string adaptationSignal = ResolveAdaptationSignal(climateGain, dietGain);
+        WorldEventSeverity severity = adaptationMilestone >= 2
+            ? WorldEventSeverity.Major
+            : WorldEventSeverity.Notable;
+
         world.AddEvent(
             WorldEventType.SpeciesPopulationAdaptedToRegion,
-            WorldEventSeverity.Notable,
-            $"{species.Name} adapted to {region.Name}",
+            severity,
+            BuildAdaptationNarrative(region, species, adaptationMilestone, adaptationSignal),
             $"{species.Name} in {region.Name} now shows stronger climate tolerance ({climateTolerance:F2}) and diet flexibility ({dietFlexibility:F2}) after sustained habitat mismatch.",
             reason: "sustained_habitat_mismatch",
             scope: WorldEventScope.Regional,
+            polityId: polityId,
+            polityName: polityName,
+            relatedPolityId: relatedPolityId,
+            relatedPolityName: relatedPolityName,
+            relatedPolitySpeciesId: relatedPolitySpeciesId,
+            relatedPolitySpeciesName: relatedPolitySpeciesName,
             speciesId: species.Id,
             speciesName: species.Name,
             regionId: region.Id,
@@ -344,6 +359,9 @@ public sealed class MutationSystem
             },
             metadata: new Dictionary<string, string>
             {
+                ["adaptationMilestone"] = adaptationMilestone.ToString(),
+                ["adaptationStage"] = adaptationMilestone >= 2 ? "strong_adaptation" : "regional_adaptation",
+                ["adaptationSignal"] = adaptationSignal,
                 ["adaptationSignals"] = $"baseMismatch={baseSuitability:F2}, fitGain={suitabilityGain:F2}, climateGain={climateGain:F2}, dietGain={dietGain:F2}",
                 ["habitatMismatchPressure"] = population.HabitatMismatchMutationPressure.ToString("F2"),
                 ["population"] = population.PopulationCount.ToString()
@@ -613,6 +631,59 @@ public sealed class MutationSystem
             1 => $"{species.Name} in {region.Name} began to diverge from its ancestral form",
             2 => $"{species.Name} in {region.Name} reached a clear evolutionary turning point",
             _ => $"{species.Name} in {region.Name} emerged as a strongly diverged lineage"
+        };
+    }
+
+    private static int ResolveAdaptationMilestone(
+        RegionSpeciesPopulation population,
+        double suitabilityGain,
+        double climateGain,
+        double dietGain)
+    {
+        bool strongTraitShift = climateGain >= 0.14
+            || dietGain >= 0.16
+            || (climateGain >= 0.10 && dietGain >= 0.10);
+        bool strongRegionalFit = suitabilityGain >= 0.18 && population.HabitatSuitability >= 0.84;
+        bool deepDivergence = population.DivergenceScore >= 1.45;
+        bool strongPersistence = population.PopulationCount >= Math.Max(10, population.CarryingCapacity / 6);
+
+        return strongTraitShift && strongRegionalFit && deepDivergence && strongPersistence
+            ? 2
+            : 1;
+    }
+
+    private static string ResolveAdaptationSignal(double climateGain, double dietGain)
+    {
+        if (climateGain >= dietGain + 0.04)
+        {
+            return "climate_tolerance";
+        }
+
+        if (dietGain >= climateGain + 0.04)
+        {
+            return "diet_flexibility";
+        }
+
+        return "mixed_adaptation";
+    }
+
+    private static string BuildAdaptationNarrative(Region region, Species species, int adaptationMilestone, string adaptationSignal)
+    {
+        if (adaptationMilestone >= 2)
+        {
+            return adaptationSignal switch
+            {
+                "climate_tolerance" => $"{species.Name} in {region.Name} grew strongly adapted to its climate",
+                "diet_flexibility" => $"{species.Name} in {region.Name} grew strongly adapted to leaner food webs",
+                _ => $"{species.Name} in {region.Name} became strongly adapted to the region"
+            };
+        }
+
+        return adaptationSignal switch
+        {
+            "climate_tolerance" => $"{species.Name} adapted to the climate of {region.Name}",
+            "diet_flexibility" => $"{species.Name} adapted to the harsher food web of {region.Name}",
+            _ => $"{species.Name} adapted to {region.Name}"
         };
     }
 
