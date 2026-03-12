@@ -96,6 +96,7 @@ In watch mode:
 - cap propagation depth
 - cap total follow-up count
 - keep chronicle cooldowns separate from storage
+- chronicle cooldowns now use event-family profiles with actor scope plus semantic state keys, so changed-state turning points can bypass earlier than repeated same-state lines
 
 ## Focus And Lineage Continuity
 

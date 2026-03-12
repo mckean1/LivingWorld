@@ -111,6 +111,29 @@ public sealed class ChronicleEventFormatterTests
     }
 
     [Fact]
+    public void RepeatedFoodRecoveryState_WithinCooldown_IsSuppressed()
+    {
+        WorldEvent firstRecovery = CreateEvent(
+            WorldEventType.FoodStabilized,
+            WorldEventSeverity.Major,
+            year: 113,
+            reason: "food_recovered",
+            narrative: "River Clan stabilized after hardship");
+        firstRecovery.After["hardshipTier"] = "Stable";
+
+        WorldEvent repeatedRecovery = CreateEvent(
+            WorldEventType.FoodStabilized,
+            WorldEventSeverity.Major,
+            year: 118,
+            reason: "food_recovered",
+            narrative: "River Clan stabilized after hardship");
+        repeatedRecovery.After["hardshipTier"] = "Stable";
+
+        Assert.True(_formatter.TryFormat(firstRecovery, _focus, out _));
+        Assert.False(_formatter.TryFormat(repeatedRecovery, _focus, out _));
+    }
+
+    [Fact]
     public void NoCooldownEventTypes_AlwaysAppear()
     {
         WorldEvent firstDiscovery = CreateEvent(
@@ -161,6 +184,53 @@ public sealed class ChronicleEventFormatterTests
         Assert.True(_formatter.TryFormat(firstAdaptation, _focus, out _));
         Assert.True(_formatter.TryFormat(strongerAdaptation, _focus, out string chronicleLine));
         Assert.Equal("Year 142 - Ashfang Wolf in Amber Reach became strongly adapted to the region.", chronicleLine);
+    }
+
+    [Fact]
+    public void DifferentRegionalEvolutionaryTurns_DoNotSuppressEachOther()
+    {
+        WorldEvent firstTurningPoint = CreateEvolutionEvent(
+            year: 145,
+            regionId: 2,
+            regionName: "Amber Reach",
+            milestone: 2,
+            narrative: "Ashfang Wolf in Amber Reach reached a clear evolutionary turning point");
+        WorldEvent secondTurningPoint = CreateEvolutionEvent(
+            year: 146,
+            regionId: 3,
+            regionName: "Stonewater",
+            milestone: 2,
+            narrative: "Ashfang Wolf in Stonewater reached a clear evolutionary turning point");
+
+        Assert.True(_formatter.TryFormat(firstTurningPoint, _focus, out _));
+        Assert.True(_formatter.TryFormat(secondTurningPoint, _focus, out _));
+    }
+
+    [Fact]
+    public void MigrationNeedsMeaningfulGapBeforeDifferentDestinationRepeatsAppear()
+    {
+        WorldEvent firstMigration = CreateMigrationEvent(
+            year: 150,
+            fromRegionId: 1,
+            toRegionId: 2,
+            toRegionName: "Amber Reach",
+            narrative: "River Clan migrated to Amber Reach");
+        WorldEvent tooSoonMigration = CreateMigrationEvent(
+            year: 154,
+            fromRegionId: 2,
+            toRegionId: 3,
+            toRegionName: "Stonewater",
+            narrative: "River Clan migrated to Stonewater");
+        WorldEvent laterMigration = CreateMigrationEvent(
+            year: 159,
+            fromRegionId: 3,
+            toRegionId: 4,
+            toRegionName: "High Ridge",
+            narrative: "River Clan migrated to High Ridge");
+
+        Assert.True(_formatter.TryFormat(firstMigration, _focus, out _));
+        Assert.False(_formatter.TryFormat(tooSoonMigration, _focus, out _));
+        Assert.True(_formatter.TryFormat(laterMigration, _focus, out _));
     }
 
     [Fact]
@@ -274,6 +344,22 @@ public sealed class ChronicleEventFormatterTests
             narrative: "River Clan came under migration pressure");
 
         Assert.False(_formatter.TryFormat(migrationPressure, _focus, out _));
+    }
+
+    [Fact]
+    public void SuppressedEventsRemainCanonicalEvenWhenChronicleHidesThem()
+    {
+        World world = new(new WorldTime(200, 12));
+        WorldEvent migrationPressure = CreateEvent(
+            WorldEventType.MigrationPressure,
+            WorldEventSeverity.Legendary,
+            year: 200,
+            narrative: "River Clan came under migration pressure");
+
+        world.AddEvent(migrationPressure);
+
+        Assert.Single(world.Events);
+        Assert.False(_formatter.TryFormat(world.Events[0], _focus, out _));
     }
 
     [Fact]
@@ -422,6 +508,58 @@ public sealed class ChronicleEventFormatterTests
                 ["adaptationMilestone"] = milestone.ToString(),
                 ["adaptationStage"] = milestone >= 2 ? "strong_adaptation" : "regional_adaptation",
                 ["adaptationSignal"] = "climate_tolerance"
+            }
+        };
+    }
+
+    private static WorldEvent CreateEvolutionEvent(int year, int regionId, string regionName, int milestone, string narrative)
+    {
+        return new WorldEvent
+        {
+            EventId = year,
+            Year = year,
+            Month = 12,
+            Season = Season.Winter,
+            Type = WorldEventType.SpeciesPopulationEvolutionaryTurningPoint,
+            Severity = WorldEventSeverity.Major,
+            Narrative = narrative,
+            Reason = "accumulated_divergence",
+            RelatedPolityId = 7,
+            RelatedPolityName = "River Clan",
+            SpeciesId = 6,
+            SpeciesName = "Ashfang Wolf",
+            RegionId = regionId,
+            RegionName = regionName,
+            Metadata = new Dictionary<string, string>
+            {
+                ["milestone"] = milestone.ToString()
+            }
+        };
+    }
+
+    private static WorldEvent CreateMigrationEvent(int year, int fromRegionId, int toRegionId, string toRegionName, string narrative)
+    {
+        return new WorldEvent
+        {
+            EventId = year,
+            Year = year,
+            Month = 12,
+            Season = Season.Winter,
+            Type = WorldEventType.Migration,
+            Severity = WorldEventSeverity.Major,
+            Narrative = narrative,
+            Reason = "migration_pressure",
+            PolityId = 7,
+            PolityName = "River Clan",
+            RegionId = toRegionId,
+            RegionName = toRegionName,
+            Before = new Dictionary<string, string>
+            {
+                ["regionId"] = fromRegionId.ToString()
+            },
+            After = new Dictionary<string, string>
+            {
+                ["regionId"] = toRegionId.ToString()
             }
         };
     }

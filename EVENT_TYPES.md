@@ -229,3 +229,4 @@ Usually structured-only unless escalated:
 
 Adaptation events are one-time milestones per regional population, not recurring telemetry.
 If a later adaptation event appears, it should represent a stronger milestone rather than the same adaptation beat repeated.
+Chronicle presentation now applies the same idea more broadly to other noisy families: hardship, recovery, migration, and some ecology turns are filtered by semantic state change rather than by raw event repetition alone.

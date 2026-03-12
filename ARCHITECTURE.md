@@ -149,6 +149,7 @@ Important traits:
 - the visible chronicle buffer is rendered newest-first
 - only `Major+` turning points are shown in normal player mode
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
+- chronicle presentation now uses per-family visibility profiles with semantic scope keys, state signatures, and separate same-state versus changed-state cooldown gaps
 - the fixed top panel shows focal polity context such as species
 - the fixed top panel now also shows `RUNNING` / `PAUSED` and the active watch view
 - the fixed top panel separates discoveries from learned advancements
@@ -237,3 +238,4 @@ The architecture continues to prioritize:
 - the first lineage-aware descendant-species path now exists; later phases can deepen naming, deep-history, and domestication variants without replacing the population-level model
 - future alternate history views without rewriting simulation systems
 - source-side milestone guards plus chronicle cooldown keys so visible history beats stay about transitions rather than repeated reaffirmation
+- a stricter presentation split where structured history may still keep repeated pressure/follow-up events even when the live chronicle hides them

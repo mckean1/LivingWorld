@@ -182,6 +182,7 @@ That separation keeps the architecture clean:
 - structured history preserves the full chain
 - chronicle presentation stays readable
 - watch-mode coloring remains token-aware so semantic highlights do not bleed into unrelated prose
+- chronicle presentation can now suppress same-state repeats for one actor while still allowing distinct actors, regions, or changed-state milestones through
 
 ## Watch Inspection Layer
 

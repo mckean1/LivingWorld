@@ -4,19 +4,73 @@ namespace LivingWorld.Presentation;
 
 public sealed class ChroniclePresentationPolicy
 {
-    private readonly IReadOnlyDictionary<string, ChronicleCooldownRule> _cooldownRules;
+    private const int MinimumVisibilityScore = 5;
+    private readonly IReadOnlyDictionary<string, ChronicleEventProfile> _profiles;
 
     public ChroniclePresentationPolicy()
     {
-        _cooldownRules = new Dictionary<string, ChronicleCooldownRule>(StringComparer.Ordinal)
+        _profiles = new Dictionary<string, ChronicleEventProfile>(StringComparer.Ordinal)
         {
-            [WorldEventType.Migration] = new ChronicleCooldownRule(20, BuildChronicleScopeKey),
-            [WorldEventType.SettlementConsolidated] = new ChronicleCooldownRule(25, BuildChronicleScopeKey),
-            [WorldEventType.FoodStress] = new ChronicleCooldownRule(15, BuildChronicleScopeKey),
-            [WorldEventType.SpeciesPopulationAdaptedToRegion] = new ChronicleCooldownRule(30, BuildAdaptationScopeKey),
-            [WorldEventType.SpeciesPopulationMajorMutation] = new ChronicleCooldownRule(24, BuildChronicleScopeKey),
-            [WorldEventType.SpeciesPopulationEvolutionaryTurningPoint] = new ChronicleCooldownRule(30, BuildChronicleScopeKey),
-            [WorldEventType.NewSpeciesAppeared] = new ChronicleCooldownRule(40, BuildChronicleScopeKey)
+            [WorldEventType.Migration] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 20,
+                ChangedStateCooldownYears: 8,
+                BuildPrimaryPolityScopeKey,
+                BuildMigrationStateKey),
+            [WorldEventType.SettlementConsolidated] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 25,
+                ChangedStateCooldownYears: 12,
+                BuildPrimaryPolityScopeKey,
+                BuildSettlementStateKey),
+            [WorldEventType.SettlementStabilized] = new ChronicleEventProfile(
+                BasePriority: 2,
+                SameStateCooldownYears: 18,
+                ChangedStateCooldownYears: 8,
+                BuildPrimaryPolityScopeKey,
+                BuildSettlementStateKey),
+            [WorldEventType.FoodStress] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 15,
+                ChangedStateCooldownYears: 0,
+                BuildPrimaryPolityScopeKey,
+                BuildHardshipStateKey),
+            [WorldEventType.FoodStabilized] = new ChronicleEventProfile(
+                BasePriority: 3,
+                SameStateCooldownYears: 12,
+                ChangedStateCooldownYears: 3,
+                BuildPrimaryPolityScopeKey,
+                BuildHardshipStateKey),
+            [WorldEventType.StageChanged] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 30,
+                ChangedStateCooldownYears: 0,
+                BuildPrimaryPolityScopeKey,
+                BuildStageStateKey),
+            [WorldEventType.SpeciesPopulationAdaptedToRegion] = new ChronicleEventProfile(
+                BasePriority: 3,
+                SameStateCooldownYears: 30,
+                ChangedStateCooldownYears: 0,
+                BuildSpeciesRegionScopeKey,
+                BuildAdaptationStateKey),
+            [WorldEventType.SpeciesPopulationMajorMutation] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 24,
+                ChangedStateCooldownYears: 6,
+                BuildSpeciesRegionScopeKey,
+                BuildEcologyTransitionStateKey),
+            [WorldEventType.SpeciesPopulationEvolutionaryTurningPoint] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 30,
+                ChangedStateCooldownYears: 0,
+                BuildSpeciesRegionScopeKey,
+                BuildEcologyTransitionStateKey),
+            [WorldEventType.NewSpeciesAppeared] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 40,
+                ChangedStateCooldownYears: 0,
+                BuildSpeciesRegionScopeKey,
+                BuildEcologyTransitionStateKey)
         };
     }
 
@@ -50,18 +104,21 @@ public sealed class ChroniclePresentationPolicy
             return false;
         }
 
-        if (!_cooldownRules.TryGetValue(worldEvent.Type, out ChronicleCooldownRule? cooldownRule))
+        ChronicleEventProfile profile = ResolveProfile(worldEvent);
+        if (!MeetsVisibilityBar(worldEvent, profile))
         {
-            return true;
+            return false;
         }
 
-        string? actorScope = cooldownRule.ScopeKeyFactory(worldEvent);
+        string? actorScope = profile.ScopeKeyFactory(worldEvent);
         if (string.IsNullOrWhiteSpace(actorScope))
         {
             return true;
         }
 
         presentationKey = $"{worldEvent.Type}:{actorScope}";
+        string? stateKey = profile.StateKeyFactory?.Invoke(worldEvent);
+
         if (!previouslyPresented.TryGetValue(presentationKey, out ChroniclePresentationRecord? previousRecord))
         {
             return true;
@@ -72,7 +129,11 @@ public sealed class ChroniclePresentationPolicy
             return true;
         }
 
-        return worldEvent.Year - previousRecord.Year >= cooldownRule.Years;
+        bool sameState = string.Equals(stateKey, previousRecord.StateKey, StringComparison.Ordinal);
+        int requiredGap = sameState
+            ? profile.SameStateCooldownYears
+            : profile.ChangedStateCooldownYears;
+        return worldEvent.Year - previousRecord.Year >= requiredGap;
     }
 
     private static bool IsPlayerFacingChronicleEvent(WorldEvent worldEvent)
@@ -99,6 +160,27 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.FocusLineageContinued or
             WorldEventType.FocusLineageExtinctFallback;
     }
+
+    private ChronicleEventProfile ResolveProfile(WorldEvent worldEvent)
+        => _profiles.TryGetValue(worldEvent.Type, out ChronicleEventProfile? profile)
+            ? profile
+            : new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 0,
+                ChangedStateCooldownYears: 0,
+                BuildChronicleScopeKey,
+                StateKeyFactory: null);
+
+    private static bool MeetsVisibilityBar(WorldEvent worldEvent, ChronicleEventProfile profile)
+        => profile.BasePriority + ResolveSeverityWeight(worldEvent.Severity) >= MinimumVisibilityScore;
+
+    private static int ResolveSeverityWeight(WorldEventSeverity severity)
+        => severity switch
+        {
+            WorldEventSeverity.Legendary => 3,
+            WorldEventSeverity.Major => 2,
+            _ => 0
+        };
 
     private static bool ShouldBypassCooldown(WorldEvent currentEvent, ChroniclePresentationRecord previousRecord)
     {
@@ -155,6 +237,81 @@ public sealed class ChroniclePresentationPolicy
         return string.Join(":", parts);
     }
 
+    private static string? BuildAdaptationStateKey(WorldEvent worldEvent)
+        => BuildAdaptationScopeKey(worldEvent);
+
+    private static string? BuildHardshipStateKey(WorldEvent worldEvent)
+    {
+        string reason = worldEvent.Reason ?? string.Empty;
+        string hardshipTier = TryGetValue(worldEvent.After, "hardshipTier")
+            ?? TryGetValue(worldEvent.Metadata, "hardshipTier")
+            ?? string.Empty;
+        string transitionKind = TryGetValue(worldEvent.Metadata, "transitionKind") ?? reason;
+        return $"{transitionKind}:{hardshipTier}";
+    }
+
+    private static string? BuildMigrationStateKey(WorldEvent worldEvent)
+    {
+        string fromRegion = TryGetValue(worldEvent.Before, "regionId") ?? string.Empty;
+        string toRegion = worldEvent.RegionId?.ToString() ?? TryGetValue(worldEvent.After, "regionId") ?? string.Empty;
+        return $"{worldEvent.Reason ?? string.Empty}:{fromRegion}->{toRegion}";
+    }
+
+    private static string? BuildSettlementStateKey(WorldEvent worldEvent)
+    {
+        string location = worldEvent.SettlementId?.ToString()
+            ?? worldEvent.RegionId?.ToString()
+            ?? string.Empty;
+        return $"{worldEvent.Reason ?? string.Empty}:{location}";
+    }
+
+    private static string? BuildStageStateKey(WorldEvent worldEvent)
+        => $"{worldEvent.Reason ?? string.Empty}:{TryGetValue(worldEvent.After, "stage") ?? string.Empty}";
+
+    private static string? BuildEcologyTransitionStateKey(WorldEvent worldEvent)
+    {
+        string milestone = TryGetValue(worldEvent.Metadata, "adaptationMilestone")
+            ?? TryGetValue(worldEvent.Metadata, "milestone")
+            ?? TryGetValue(worldEvent.Metadata, "divergenceMilestone")
+            ?? string.Empty;
+        return $"{worldEvent.Reason ?? string.Empty}:{worldEvent.RegionId?.ToString() ?? string.Empty}:{milestone}";
+    }
+
+    private static string? BuildPrimaryPolityScopeKey(WorldEvent worldEvent)
+    {
+        if (worldEvent.PolityId.HasValue)
+        {
+            return $"polity:{worldEvent.PolityId.Value}";
+        }
+
+        if (worldEvent.RelatedPolityId.HasValue)
+        {
+            return $"relatedPolity:{worldEvent.RelatedPolityId.Value}";
+        }
+
+        return BuildChronicleScopeKey(worldEvent);
+    }
+
+    private static string? BuildSpeciesRegionScopeKey(WorldEvent worldEvent)
+    {
+        if (worldEvent.SpeciesId.HasValue && worldEvent.RegionId.HasValue)
+        {
+            return $"species:{worldEvent.SpeciesId.Value}:region:{worldEvent.RegionId.Value}";
+        }
+
+        if (worldEvent.SpeciesId.HasValue)
+        {
+            return $"species:{worldEvent.SpeciesId.Value}";
+        }
+
+        return BuildChronicleScopeKey(worldEvent);
+    }
+
+    private static string? TryGetValue(IReadOnlyDictionary<string, string> values, string key)
+        => values.TryGetValue(key, out string? value) && !string.IsNullOrWhiteSpace(value)
+            ? value
+            : null;
+
     // Scope keys are presentation-only throttling keys. Prefer the primary actor
     // whose visible story beat is being suppressed so unrelated actors do not
     // accidentally mute one another and future species-facing events can plug in cleanly.
@@ -188,7 +345,12 @@ public sealed class ChroniclePresentationPolicy
         return null;
     }
 
-    private sealed record ChronicleCooldownRule(int Years, Func<WorldEvent, string?> ScopeKeyFactory);
+    private sealed record ChronicleEventProfile(
+        int BasePriority,
+        int SameStateCooldownYears,
+        int ChangedStateCooldownYears,
+        Func<WorldEvent, string?> ScopeKeyFactory,
+        Func<WorldEvent, string?>? StateKeyFactory);
 }
 
-public sealed record ChroniclePresentationRecord(int Year, WorldEventSeverity Severity);
+public sealed record ChroniclePresentationRecord(int Year, WorldEventSeverity Severity, string? StateKey);

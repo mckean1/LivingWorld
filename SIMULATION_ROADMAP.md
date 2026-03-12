@@ -30,6 +30,7 @@ Implemented core includes:
 Keep improving event weighting, transition detection, and suppression so the live chronicle stays readable during busy simulation periods.
 The denser default world makes that especially important because more simultaneous societies and ecosystems now exist from year zero.
 The current opening pass is meant to create more real early turning points, not more filler.
+The current implementation now includes semantic chronicle profiles for noisy event families, but future passes should keep tuning weights and transition bands as new systems come online.
 
 2. History views
 Build richer lineage and event-history views over the stored event stream without changing simulation systems.

@@ -113,6 +113,7 @@ Internal follow-up events such as migration pressure, starvation risk, cultivati
 Mutation reacts to same-season regional species exchange from the ecology pipeline, not to the later monthly polity migration step.
 Polity migration still relocates the whole polity network for now, but it now relocates the polity's actual settlement records too so settlement-grounded systems stay coherent.
 Regional adaptation events now emit on meaningful adaptation milestones rather than on repeated reaffirmation of the same condition, and chronicle presentation applies a dedicated adaptation cooldown key so the same species-region adaptation beat does not spam the live feed.
+Chronicle presentation now also uses semantic state signatures for noisy families such as hardship, recovery, migration, settlement stabilization, and regional ecology turns. The live feed can surface a changed state sooner than a repeated same-state reminder, while identical or near-identical beats remain in structured history only.
 
 ## Watch Controls
 
@@ -159,6 +160,7 @@ Watch-loop responsiveness notes:
 - propagation depth is capped
 - total emitted events per source event are capped
 - chronicle cooldowns still apply after storage
+- chronicle cooldowns are now family-specific and semantic: they key off actor scope plus the visible state change, not just raw event type
 - source systems such as mutation also suppress repeated emissions when no new adaptation or divergence milestone has been reached
 
 This keeps the world explainable without turning the chronicle into telemetry.

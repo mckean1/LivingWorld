@@ -186,6 +186,7 @@ Instead it favors:
 - accumulated pressure crossing mutation thresholds
 - divergence milestones that suggest a future speciation branch
 - adaptation milestone transitions rather than repeated reaffirmation of the same adaptation state
+- chronicle-visible hardship, recovery, migration, and ecology beats only when the tracked visible band actually changes or enough quiet time has passed
 
 This is why yearly hardship transitions remain important: they summarize meaningful changes without narrating every month of unchanged suffering.
 The fuller-world opening is therefore tuned by improving real local anchors, homeland support, and viability, not by inventing disconnected drama.

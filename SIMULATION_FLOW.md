@@ -64,11 +64,12 @@ When `Month == 12`:
 Sinks:
 
 - `HistoryJsonlWriter` writes append-only structured history
-- `ChronicleEventFormatter` applies chronicle severity filtering and cooldown suppression
+- `ChronicleEventFormatter` applies chronicle severity filtering, visibility weighting, and semantic cooldown suppression
 - `ChronicleWatchRenderer` redraws the watch console with newest entries first
 
 Simulation emits and records events before chronicle presentation. The chronicle is not the source of truth.
 Chronicle pacing is now non-blocking: visible-event recording no longer sleeps inside the event path, so input responsiveness does not depend on whether time is paused.
+The chronicle formatter now distinguishes between repeated same-state reminders and real changed-state transitions for noisy event families, which keeps live playback readable during busy eras without thinning structured history.
 
 ## Default Watch Output
 
