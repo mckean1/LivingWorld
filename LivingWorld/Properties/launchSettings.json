@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LivingWorld": {
+      "commandName": "Project",
+      "commandLineArgs": "--years 1000 --delay-ms 1000"
+    }
+  }
+}

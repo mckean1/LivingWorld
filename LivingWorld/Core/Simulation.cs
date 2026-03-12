@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
@@ -7,6 +8,8 @@ namespace LivingWorld.Core;
 
 public sealed class Simulation : IDisposable
 {
+    private const int IdleLoopSleepMilliseconds = 8;
+    private const int MinimumInteractiveStepIntervalMilliseconds = 16;
     private const int PersistentHardshipSummaryIntervalYears = 6;
     private readonly World _world;
     private readonly FoodSystem _foodSystem;
@@ -31,6 +34,10 @@ public sealed class Simulation : IDisposable
     private readonly IPolityFocusSelector _focusSelector;
     private readonly HistoryJsonlWriter? _historyWriter;
     private readonly Dictionary<int, HardshipChronicleState> _hardshipStates = [];
+    private readonly Stopwatch _watchLoopStopwatch = Stopwatch.StartNew();
+    private long _nextSimulationStepAtMilliseconds;
+    private bool _renderInvalidated = true;
+    private bool _wasPausedInInteractiveLoop;
 
     public Simulation(World world, SimulationOptions? options = null, IPolityFocusSelector? focusSelector = null)
     {
@@ -82,24 +89,49 @@ public sealed class Simulation : IDisposable
 
     public void RunMonths(int months)
     {
+        if (!ShouldUseInteractiveWatchLoop())
+        {
+            for (int i = 0; i < months; i++)
+            {
+                RunTick();
+            }
+
+            return;
+        }
+
         int completedMonths = 0;
+        _nextSimulationStepAtMilliseconds = _watchLoopStopwatch.ElapsedMilliseconds;
         while (completedMonths < months)
         {
-            bool uiChanged = PumpWatchInput();
-            if (_options.OutputMode == OutputMode.Watch && _watchUiState.IsPaused)
+            PumpWatchInput();
+            long now = _watchLoopStopwatch.ElapsedMilliseconds;
+            if (_watchUiState.IsPaused)
             {
-                if (!uiChanged)
-                {
-                    Thread.Sleep(40);
-                }
-
+                _wasPausedInInteractiveLoop = true;
+                RenderIfInvalidated();
+                Thread.Sleep(IdleLoopSleepMilliseconds);
                 continue;
             }
 
-            RunTick();
-            completedMonths++;
-            PumpWatchInput();
+            if (_wasPausedInInteractiveLoop)
+            {
+                _nextSimulationStepAtMilliseconds = now + ResolveInteractiveStepIntervalMilliseconds();
+                _wasPausedInInteractiveLoop = false;
+            }
+
+            if (now >= _nextSimulationStepAtMilliseconds)
+            {
+                RunTick();
+                completedMonths++;
+                _renderInvalidated = true;
+                _nextSimulationStepAtMilliseconds = _watchLoopStopwatch.ElapsedMilliseconds + ResolveInteractiveStepIntervalMilliseconds();
+            }
+
+            RenderIfInvalidated();
+            Thread.Sleep(IdleLoopSleepMilliseconds);
         }
+
+        RenderIfInvalidated();
     }
 
     public void Dispose()
@@ -204,7 +236,10 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        _chronicleWatchRenderer.Record(_world, _chronicleFocus, _watchUiState, worldEvent);
+        if (_chronicleWatchRenderer.Record(_world, _chronicleFocus, _watchUiState, worldEvent))
+        {
+            _renderInvalidated = true;
+        }
     }
 
     private void AddYearlyFoodStressEvents()
@@ -400,7 +435,8 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        _chronicleWatchRenderer.Render(_world, _chronicleFocus, _watchUiState);
+        _renderInvalidated = true;
+        RenderIfInvalidated(force: true);
     }
 
     private bool PumpWatchInput()
@@ -419,11 +455,30 @@ public sealed class Simulation : IDisposable
 
         if (handledAny)
         {
-            _chronicleWatchRenderer.Render(_world, _chronicleFocus, _watchUiState);
+            _renderInvalidated = true;
         }
 
         return handledAny;
     }
+
+    private void RenderIfInvalidated(bool force = false)
+    {
+        if (!force && !_renderInvalidated)
+        {
+            return;
+        }
+
+        _chronicleWatchRenderer.Render(_world, _chronicleFocus, _watchUiState);
+        _renderInvalidated = false;
+    }
+
+    private bool ShouldUseInteractiveWatchLoop()
+        => _options.OutputMode == OutputMode.Watch
+            && !Console.IsInputRedirected
+            && !Console.IsOutputRedirected;
+
+    private int ResolveInteractiveStepIntervalMilliseconds()
+        => Math.Max(MinimumInteractiveStepIntervalMilliseconds, _options.ChroniclePlaybackDelayMilliseconds);
 
     private void PrintDebugYearEvents()
     {

@@ -1,4 +1,3 @@
-using System.Threading;
 using LivingWorld.Core;
 using LivingWorld.Societies;
 
@@ -41,27 +40,22 @@ public sealed class ChronicleWatchRenderer : IDisposable
         Draw(layout, world);
     }
 
-    public void Record(World world, ChronicleFocus focus, WatchUiState uiState, WorldEvent worldEvent)
+    public bool Record(World world, ChronicleFocus focus, WatchUiState uiState, WorldEvent worldEvent)
     {
         if (_options.OutputMode != OutputMode.Watch)
         {
-            return;
+            return false;
         }
 
         if (!_formatter.TryFormat(worldEvent, focus, out string chronicleLine))
         {
-            return;
+            return false;
         }
 
         _chronicleEntries.Insert(0, chronicleLine);
         uiState.OnChronicleEntryAdded();
         TrimRetainedEntries();
-        Render(world, focus, uiState);
-
-        if (_options.ChroniclePlaybackDelayMilliseconds > 0)
-        {
-            Thread.Sleep(_options.ChroniclePlaybackDelayMilliseconds);
-        }
+        return true;
     }
 
     public void Dispose()

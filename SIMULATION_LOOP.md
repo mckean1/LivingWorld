@@ -61,9 +61,13 @@ This keeps causal chains deterministic and local to the state transition that cr
 In watch mode:
 
 - key input is polled independently of monthly simulation advancement
+- the main watch loop checks input every iteration, even while time is running
+- monthly simulation advancement occurs only when the next scheduled step time arrives
 - changing views does not affect world logic
 - `Space` pauses monthly advancement but leaves the watch UI responsive
 - while paused, the renderer can still redraw list/detail screens and scroll chronicle history
+- unpausing resets the next step deadline instead of trying to catch up missed paused time
+- chronicle pacing no longer sleeps inside event recording, so view changes stay immediate during live simulation
 
 ## Anti-Spam Rules
 

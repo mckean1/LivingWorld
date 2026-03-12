@@ -147,6 +147,7 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 - `WatchInspectionData` computes grounded first-pass visibility sets for known regions, species, and polities
 - `WatchScreenBuilder` renders top-level and detail inspection screens from current world state
 - `ChronicleWatchRenderer` remains responsible for low-flicker console drawing, the fixed top panel, chronicle retention, and viewport slicing
+- `Simulation` now acts as the watch-loop coordinator: it polls input every iteration, advances months only when the next step time has arrived, and renders only when invalidated
 
 Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
 

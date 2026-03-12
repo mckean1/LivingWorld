@@ -174,3 +174,4 @@ This is why yearly hardship transitions remain important: they summarize meaning
 
 The chronicle still mainly shows effects, but those effects now come from a stronger underlying cause-and-effect chain. Structured history retains the intermediate steps for debugging and future history views.
 The new watch inspection UI reads that same state and event history without adding extra causes of its own. Pausing or changing views affects presentation timing only, not simulation causality.
+Responsive watch input follows the same rule: the loop now separates input polling, timed month advancement, and redraw invalidation so player interaction does not distort or accelerate underlying cause-and-effect.

@@ -164,6 +164,7 @@ The same terminology rule now applies to hunting:
 Species references remain in structured event data, but watch-mode chronicle lines do not append species to each polity name. The focal polity species is shown in the fixed top status panel instead.
 Watch-mode coloring is also conservative: actor names, place names, known knowledge names, and explicit crisis or status phrases may be colored, but incidental descriptive prose should remain plain text.
 The watch inspection controls are UI-only and do not introduce new event types.
+The same is true for watch-loop pacing changes: responsive input and timed stepping change presentation behavior, not event semantics.
 
 Watch mode also separates:
 

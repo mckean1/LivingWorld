@@ -20,7 +20,9 @@ The watch UI can now swap between chronicle and inspection screens without chang
 11. migration evaluation and relocation
 12. structured events emitted immediately into the canonical event pipeline
 13. watch mode formats and displays qualifying focal-polity chronicle entries
-14. watch input can change views at any time; if paused, input continues while monthly advancement is held
+14. watch input can change views at any time
+15. watch mode advances the next month only when its timed step cadence is due
+16. rendering occurs on invalidation rather than after every loop pass; when paused, input continues while monthly advancement is held
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
@@ -55,6 +57,7 @@ Sinks:
 - `ChronicleWatchRenderer` redraws the watch console with newest entries first
 
 Simulation emits and records events before chronicle presentation. The chronicle is not the source of truth.
+Chronicle pacing is now non-blocking: visible-event recording no longer sleeps inside the event path, so input responsiveness does not depend on whether time is paused.
 
 ## Default Watch Output
 

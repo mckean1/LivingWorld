@@ -116,6 +116,13 @@ Phase 1 visibility rules are intentionally conservative and grounded:
 
 These views are observational only. They do not create simulation events or allow direct control over the world.
 
+Watch-loop responsiveness notes:
+
+- input is polled continuously while watch mode is active
+- monthly simulation steps now run on a timed cadence instead of monopolizing the loop
+- chronicle pacing no longer sleeps inside event recording, so view switching stays responsive while time is running
+- unpausing resumes normal cadence from the current moment and does not burst through queued catch-up ticks
+
 ## Propagation Safeguards
 
 - systems emit on meaningful transitions, not every tick
