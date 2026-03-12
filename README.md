@@ -19,6 +19,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - `Region.AnimalBiomass` is now a derived ecological summary of current non-producer populations rather than a separate consumable meat pool
 - world generation now seeds broader herbivore and omnivore coverage, while ecosystem initialization scales early wildlife from habitat suitability and ecological capacity instead of tiny flat starts
 - early producer abundance now gives herbivores more room to establish and grow before predator pressure becomes dominant
+- world generation also now protects against fauna-empty fertile regions by expanding the nearest plausible herbivore cluster into those regions instead of leaving plant-only dead zones
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting, recolonization pressure, or legendary hunts
 - settlement hunting now executes from actual settlements in their own regions instead of multiplying one polity-region hunt by settlement count
 - settlement farming now allocates real regional arable capacity across actual settlements, so multiple settlements in one region share land instead of double counting it

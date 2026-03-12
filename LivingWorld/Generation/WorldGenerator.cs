@@ -35,6 +35,8 @@ public sealed class WorldGenerator
         GenerateSpecies(world);
         _speciesById = world.Species.ToDictionary(species => species.Id);
         AssignInitialSpeciesRanges(world);
+        EnsureFertileRegionsHaveFauna(world);
+        ConstrainPredatorRangesToPreySupportedRegions(world);
         GeneratePolities(world);
 
         return world;
@@ -168,6 +170,107 @@ public sealed class WorldGenerator
             foreach (int regionId in BuildClusteredRange(world, viableRegions, seedRegion.Id, targetRangeSize))
             {
                 species.InitialRangeRegionIds.Add(regionId);
+            }
+        }
+    }
+
+    private void EnsureFertileRegionsHaveFauna(World world)
+    {
+        List<Species> herbivores = world.Species
+            .Where(species => species.TrophicRole == TrophicRole.Herbivore)
+            .ToList();
+        HashSet<int> herbivoreCoveredRegions = herbivores
+            .SelectMany(species => species.InitialRangeRegionIds)
+            .ToHashSet();
+
+        foreach (Region region in world.Regions
+                     .Where(IsFertileFaunaTarget)
+                     .OrderByDescending(ResolveFertileFaunaScore)
+                     .ThenBy(region => region.Id))
+        {
+            if (herbivoreCoveredRegions.Contains(region.Id))
+            {
+                continue;
+            }
+
+            Species? bestHerbivore = null;
+            List<int>? bestExpansionPath = null;
+            double bestFit = double.MinValue;
+            int bestPathLength = int.MaxValue;
+
+            foreach (Species herbivore in herbivores)
+            {
+                double fit = ScoreRegionForSpecies(herbivore, region);
+                if (fit < 0.70)
+                {
+                    continue;
+                }
+
+                List<int>? path = BuildRangeExpansionPath(world, herbivore, region.Id);
+                if (path is null)
+                {
+                    continue;
+                }
+
+                if (bestHerbivore is null
+                    || path.Count < bestPathLength
+                    || (path.Count == bestPathLength && fit > bestFit))
+                {
+                    bestHerbivore = herbivore;
+                    bestExpansionPath = path;
+                    bestFit = fit;
+                    bestPathLength = path.Count;
+                }
+            }
+
+            if (bestHerbivore is null || bestExpansionPath is null)
+            {
+                continue;
+            }
+
+            foreach (int regionId in bestExpansionPath)
+            {
+                if (bestHerbivore.InitialRangeRegionIds.Contains(regionId))
+                {
+                    continue;
+                }
+
+                bestHerbivore.InitialRangeRegionIds.Add(regionId);
+                herbivoreCoveredRegions.Add(regionId);
+            }
+        }
+    }
+
+    private void ConstrainPredatorRangesToPreySupportedRegions(World world)
+    {
+        HashSet<int> herbivoreCoveredRegions = world.Species
+            .Where(species => species.TrophicRole == TrophicRole.Herbivore)
+            .SelectMany(species => species.InitialRangeRegionIds)
+            .ToHashSet();
+
+        foreach (Species predator in world.Species.Where(species => species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex))
+        {
+            List<int> supportedRegions = predator.InitialRangeRegionIds
+                .Where(herbivoreCoveredRegions.Contains)
+                .Distinct()
+                .ToList();
+
+            if (supportedRegions.Count == 0)
+            {
+                Region? fallbackRegion = world.Regions
+                    .Where(region => herbivoreCoveredRegions.Contains(region.Id))
+                    .OrderByDescending(region => ScoreRegionForSpecies(predator, region))
+                    .FirstOrDefault();
+                if (fallbackRegion is not null)
+                {
+                    supportedRegions.Add(fallbackRegion.Id);
+                }
+            }
+
+            predator.InitialRangeRegionIds.Clear();
+            foreach (int regionId in supportedRegions)
+            {
+                predator.InitialRangeRegionIds.Add(regionId);
             }
         }
     }
@@ -306,6 +409,72 @@ public sealed class WorldGenerator
         return int.MaxValue;
     }
 
+    private List<int>? BuildRangeExpansionPath(World world, Species species, int targetRegionId)
+    {
+        if (species.InitialRangeRegionIds.Contains(targetRegionId))
+        {
+            return [];
+        }
+
+        HashSet<int> occupied = species.InitialRangeRegionIds.ToHashSet();
+        Queue<int> frontier = new();
+        Dictionary<int, int?> parents = new();
+
+        foreach (int seedRegionId in occupied)
+        {
+            frontier.Enqueue(seedRegionId);
+            parents[seedRegionId] = null;
+        }
+
+        while (frontier.Count > 0)
+        {
+            int currentRegionId = frontier.Dequeue();
+            if (currentRegionId == targetRegionId)
+            {
+                break;
+            }
+
+            foreach (int neighborId in world.Regions[currentRegionId].ConnectedRegionIds
+                         .OrderByDescending(id => ScoreRegionForSpecies(species, world.Regions[id]))
+                         .ThenBy(id => id))
+            {
+                if (parents.ContainsKey(neighborId))
+                {
+                    continue;
+                }
+
+                if (ScoreRegionForSpecies(species, world.Regions[neighborId]) < ResolveRangeThreshold(species))
+                {
+                    continue;
+                }
+
+                parents[neighborId] = currentRegionId;
+                frontier.Enqueue(neighborId);
+            }
+        }
+
+        if (!parents.ContainsKey(targetRegionId))
+        {
+            return null;
+        }
+
+        List<int> path = [];
+        int? cursor = targetRegionId;
+        while (cursor is not null)
+        {
+            int regionId = cursor.Value;
+            if (!occupied.Contains(regionId))
+            {
+                path.Add(regionId);
+            }
+
+            cursor = parents[regionId];
+        }
+
+        path.Reverse();
+        return path;
+    }
+
     private void ApplyRegionProfile(Region region, RegionBiome biome)
     {
         (double fertilityMin, double fertilityMax, double waterMin, double waterMax, int plantMin, int plantMax, int animalMin, int animalMax) = biome switch
@@ -428,6 +597,17 @@ public sealed class WorldGenerator
         return Math.Clamp((fertilityFit * 0.30) + (waterFit * 0.25) + (biomeFit * 0.20) + (biomassFit * 0.25), 0.0, 1.5);
     }
 
+    private static bool IsFertileFaunaTarget(Region region)
+        => ResolveFertileFaunaScore(region) >= 0.70;
+
+    private static double ResolveFertileFaunaScore(Region region)
+    {
+        double plantCapacityFit = Math.Clamp(region.MaxPlantBiomass / 1200.0, 0.0, 1.0);
+        return (region.Fertility * 0.42)
+            + (region.WaterAvailability * 0.24)
+            + (plantCapacityFit * 0.34);
+    }
+
     private static double ResolveBiomeSettlementBonus(RegionBiome biome)
         => biome switch
         {
@@ -447,8 +627,8 @@ public sealed class WorldGenerator
         int desired = species.TrophicRole switch
         {
             TrophicRole.Producer => _random.Next(8, 15),
-            TrophicRole.Herbivore => _random.Next(8, 14),
-            TrophicRole.Omnivore => _random.Next(6, 11),
+            TrophicRole.Herbivore => _random.Next(6, 11),
+            TrophicRole.Omnivore => _random.Next(5, 9),
             TrophicRole.Predator => _random.Next(4, 6),
             TrophicRole.Apex => _random.Next(3, 5),
             _ => _random.Next(4, 8)
@@ -466,8 +646,8 @@ public sealed class WorldGenerator
         => species.TrophicRole switch
         {
             TrophicRole.Producer => 0.56,
-            TrophicRole.Herbivore => 0.55,
-            TrophicRole.Omnivore => 0.57,
+            TrophicRole.Herbivore => 0.60,
+            TrophicRole.Omnivore => 0.61,
             TrophicRole.Predator => 0.64,
             TrophicRole.Apex => 0.68,
             _ => 0.60

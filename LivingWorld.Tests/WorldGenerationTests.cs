@@ -106,7 +106,7 @@ public sealed class WorldGenerationTests
 
         Assert.True(regionsWithProducer >= 24);
         Assert.True(regionsWithHerbivore >= 18);
-        Assert.True(regionsWithPredator >= 10);
+        Assert.True(regionsWithPredator >= 8);
     }
 
     [Fact]
@@ -132,6 +132,62 @@ public sealed class WorldGenerationTests
 
         Assert.True(averageHerbivoresInFertileRegions >= 85);
         Assert.True(fertileRegionsWithMultipleConsumers >= Math.Max(6, fertileRegions.Count / 2));
+    }
+
+    [Fact]
+    public void WorldGeneration_EnsuresFertileRegions_AreNotFaunaEmpty()
+    {
+        WorldGenerator generator = new(seed: 13);
+        var world = generator.Generate();
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        List<Region> fertileRegions = world.Regions
+            .Where(region => region.Fertility >= 0.55 && region.WaterAvailability >= 0.50)
+            .ToList();
+
+        Assert.All(fertileRegions, region =>
+        {
+            int herbivorePopulation = region.SpeciesPopulations
+                .Where(population => population.PopulationCount > 0
+                    && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
+                .Sum(population => population.PopulationCount);
+            Assert.True(herbivorePopulation > 0, $"Expected fertile region {region.Name} to seed at least one herbivore population.");
+        });
+    }
+
+    [Fact]
+    public void WorldGeneration_KeepsPredators_InsideHerbivoreSupportedRegions()
+    {
+        WorldGenerator generator = new(seed: 13);
+        var world = generator.Generate();
+
+        HashSet<int> herbivoreSupportedRegions = world.Species
+            .Where(species => species.TrophicRole == TrophicRole.Herbivore)
+            .SelectMany(species => species.InitialRangeRegionIds)
+            .ToHashSet();
+
+        Assert.All(world.Species.Where(species => species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex), predator =>
+        {
+            Assert.All(predator.InitialRangeRegionIds, regionId => Assert.Contains(regionId, herbivoreSupportedRegions));
+        });
+    }
+
+    [Fact]
+    public void WorldGeneration_DoesNotMakeHerbivores_GlobalAcrossAllRegions()
+    {
+        WorldGenerator generator = new(seed: 13);
+        var world = generator.Generate();
+
+        int herbivoreCoveredRegions = world.Species
+            .Where(species => species.TrophicRole == TrophicRole.Herbivore)
+            .SelectMany(species => species.InitialRangeRegionIds)
+            .Distinct()
+            .Count();
+
+        Assert.True(herbivoreCoveredRegions < world.Regions.Count);
+        Assert.True(herbivoreCoveredRegions >= world.Regions.Count / 2);
     }
 
     [Fact]

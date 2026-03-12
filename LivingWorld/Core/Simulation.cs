@@ -66,6 +66,11 @@ public sealed class Simulation : IDisposable
         _watchInputController = new WatchInputController(_watchUiState);
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
         _ecosystemSystem.InitializeRegionalPopulations(_world);
+        if (_options.OutputMode == OutputMode.Debug)
+        {
+            PrintInitialWildlifeDiagnostics();
+        }
+
         ChronicleFocusSelection initialFocus = _focusSelector.SelectInitialFocus(_world, _options);
         _chronicleFocus.SetFocus(initialFocus.PolityId, initialFocus.LineageId);
         _world.ConfigureEventPropagation(new EventPropagationCoordinator(
@@ -543,6 +548,20 @@ public sealed class Simulation : IDisposable
         }
 
         PrintDebugEcologySummary();
+    }
+
+    private void PrintInitialWildlifeDiagnostics()
+    {
+        Console.WriteLine("=== INITIAL WILDLIFE SEEDING ===");
+        foreach (Region region in _world.Regions.OrderBy(region => region.Id))
+        {
+            bool herbivorePresent = ResolveHerbivorePopulation(region) > 0;
+            bool predatorPresent = ResolvePredatorPopulation(region) > 0;
+            Console.WriteLine(
+                $"  [{region.Id,2}] {region.Name,-18} {region.Biome,-12} Fert={region.Fertility,4:F2} Water={region.WaterAvailability,4:F2} Herbivore={(herbivorePresent ? "Y" : "N")} Predator={(predatorPresent ? "Y" : "N")}");
+        }
+
+        Console.WriteLine();
     }
 
     private void PrintDebugEcologySummary()
