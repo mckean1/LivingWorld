@@ -1,1 +1,242 @@
+# LivingWorld — Implemented Systems List
 
+This document is the canonical source of truth for:
+- what has been implemented
+- what is currently in progress
+- what comes next
+
+A feature is not fully complete until:
+1. the code is implemented
+2. tests are updated/passing
+3. this list is updated
+4. relevant documentation is updated
+
+---
+
+## Phase 1 — Core World Simulation Foundations
+**Status:** Complete
+
+Implemented:
+- Core simulation loop foundation
+- Monthly tick-based simulation structure with seasonal logic layered on top
+- Society → civilization progression foundation
+- Aggregated population model
+- Early polity/society lifecycle foundations
+- Single-continent world generation baseline
+
+---
+
+## Phase 2 — Settlement, Food, and Survival Foundations
+**Status:** Complete
+
+Implemented:
+- Settlement-centered simulation foundation
+- Food production/consumption basics
+- Storage, shortage, and survival pressure foundations
+- Seasonal food behavior groundwork
+- Early migration/survival pressure integration
+
+---
+
+## Phase 3 — Knowledge, Advancement, and Discovery Foundations
+**Status:** Complete
+
+Implemented:
+- Capability-based advancement system foundation
+- “Learned” capability model
+- Discovery model distinct from advancements
+- Cultural knowledge vs polity knowledge distinction
+- Discovery terminology and log wording direction
+- Resource/species/world knowledge foundations
+
+---
+
+## Phase 4 — Chronicle and Player-Facing History Foundations
+**Status:** Complete
+
+Implemented:
+- Chronicle-style simulation output replacing generic yearly-report feel
+- Short, player-facing historical event phrasing
+- Focus on readable historical storytelling output
+- Main chronicle as the primary player-facing simulation view
+
+---
+
+## Phase 5 — Event Architecture and Cause-and-Effect Systems
+**Status:** Complete
+
+Implemented:
+- Structured event objects and metadata pipeline
+- Cause-and-effect event architecture
+- Event scopes and subscription model
+- Event propagation coordinator and propagation handlers
+- Causal ancestry support and safeguards
+- Structured background debug/history record separate from player chronicle
+
+---
+
+## Phase 6 — Chronicle Filtering and Focus Systems
+**Status:** Complete
+
+Implemented:
+- Major/Legendary emphasis for player-facing chronicle
+- Reduced chronicle spam through filtering/cooldowns
+- State-transition-style chronicle behavior
+- Player lineage focus system
+- Chronicle-first historical presentation direction
+
+---
+
+## Phase 7 — Watch Mode and Chronicle UI Foundations
+**Status:** Complete
+
+Implemented:
+- Watch mode presentation improvements
+- Fixed top status panel
+- Chronicle viewport below status panel
+- Newest chronicle entries shown at the top
+- Reduced flicker / partial redraw direction
+- Playback pacing improvements
+- Focal polity status integration into the watch experience
+
+---
+
+## Phase 8 — Regional Resource System
+**Status:** Complete
+
+Implemented:
+- Regional resource abundance model
+- Resource categories such as wood, stone, clay, copper, iron, and salt
+- Resources modeled as environmental capacity rather than simple inventories
+- Discovery-aligned resource knowledge direction
+
+---
+
+## Phase 9 — Regional Species Population and Ecology System
+**Status:** Complete
+
+Implemented:
+- Species as a core simulation pillar
+- Regional per-species population tracking
+- Habitat suitability / species range logic
+- Food web / ecological niche foundation
+- Producer, herbivore, predator, and apex ecosystem relationships
+- Regional extinction/global extinction support
+- Seasonal ecology simulation basis
+
+---
+
+## Phase 10 — Hunting and Settlement-Grounded Food Interaction
+**Status:** Complete
+
+Implemented:
+- Settlement-based hunting system
+- Preferred prey targeting
+- Hunting success affected by species traits
+- Species population reduction from hunting
+- Dangerous-animal hunting risk
+- Hunting-based cultural discoveries
+- Overhunting pressure support
+- Legendary/major hunt storytelling hooks
+
+---
+
+## Phase 11 — Mutation, Divergence, and Speciation
+**Status:** Complete
+
+Implemented:
+- Population-level mutation model
+- Minor and major mutation tiers
+- Regional divergence support
+- Speciation from long-term isolated divergence
+- Species lineage tracking direction
+- Founder-population-based evolutionary spread
+- Anti-cascade / cooldown safeguards for speciation behavior
+
+---
+
+## Phase 12 — Predator Ecology Improvements
+**Status:** Complete
+
+Implemented:
+- Predator establishment improvements
+- Predator growth tied to prey support
+- Founder predator failure dynamics
+- Ecology balancing improvements to avoid weak persistent predator remnants
+
+---
+
+## Phase 13 — World Visibility and Navigation UI
+**Status:** Complete
+
+Implemented:
+- Live keypress-based screen navigation while simulation runs
+- Pause/unpause support
+- Direct screen switching / cycling behavior
+- Views for Chronicle, My Polity, Current Region, Known Regions, Known Species, Known Polities, and World Overview
+- Visibility-aware world data presentation
+- Shared knowledge visibility rules foundation
+
+---
+
+## Phase 14 — Focal Polity UI and Routing Corrections
+**Status:** Complete
+
+Implemented:
+- My Polity as focal-only player-facing screen
+- Enter key no longer drills into generic polity detail from My Polity
+- Focal-only fields preserved on My Polity
+- Navigation behavior fixes and related tests
+
+---
+
+## Phase 15 — Regional Trade and Resource Exchange
+**Status:** Complete
+
+Implemented:
+- Inter-settlement food surplus/deficit detection
+- Monthly transfer/resource-exchange groundwork
+- Early internal logistics between settlements
+- Trade/resource exchange foundation for broader economy systems
+
+---
+
+## Phase 16 — Domestication and Early Agriculture Expansion
+**Status:** Complete
+
+Implemented:
+- Domestication candidates and domestication foundations
+- Managed herds
+- Cultivated crop foundations
+- Managed food integration into the economy/survival loop
+- Early agriculture expansion beyond simple foraging/hunting
+
+---
+
+## Phase 17 — Material Economy & Production Chains
+**Status:** Planned
+
+Design/documentation completed:
+- Phase design spec created in `MATERIALS_ECONOMY_AND_PRODUCTION_CHAINS.md`
+
+Planned implementation:
+- Raw material extraction
+- Settlement material stockpiles
+- Basic production recipes/chains
+- Material effects on existing systems
+- Same-polity material redistribution
+- Emergent settlement specialization
+- UI summaries
+- Structured events/history integration
+- Major material milestones in the chronicle
+
+---
+
+# Next Feature To Implement
+**Phase 17 — Material Economy & Production Chains**
+
+---
+
+# Not Yet Implemented
+- Material Economy & Production Chains
+- Any later phases after Phase 17 must be decided from this list once Phase 17 is completed and synced
