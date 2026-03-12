@@ -22,7 +22,7 @@ public static class AdvancementCatalog
             [
                 Effect(foodNeedMultiplier: 0.97, harvestEfficiencyBonus: 0.03)
             ],
-            discoveryNarrative: polity => $"{polity.Name} mastered Fire"),
+            discoveryNarrative: polity => $"{polity.Name} learned Fire"),
         new AdvancementDefinition(
             AdvancementId.StoneTools,
             "Stone Tools",

@@ -117,7 +117,7 @@ public sealed class ChronicleEventFormatterTests
             WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Major,
             year: 130,
-            narrative: "River Clan mastered Fire");
+            narrative: "River Clan learned Fire");
         WorldEvent secondDiscovery = CreateEvent(
             WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Major,
@@ -225,7 +225,7 @@ public sealed class ChronicleEventFormatterTests
             WorldEventSeverity.Major,
             year: 181,
             polityId: 7,
-            narrative: "River Clan mastered Fire");
+            narrative: "River Clan learned Fire");
         WorldEvent successorEvent = CreateEvent(
             WorldEventType.LearnedAdvancement,
             WorldEventSeverity.Major,
