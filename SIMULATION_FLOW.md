@@ -15,7 +15,7 @@ Those entities are still range-limited and region-grounded before month one begi
    - each settlement hunts in its own region
 5. seasonal mutation and divergence update on season boundaries using the just-resolved species exchange state
 6. seasonal extinction cleanup and biomass sync on season boundaries
-7. wild food gathering
+7. wild plant gathering
 8. settlement farming output
    - each settlement farms in its own region and shares that region's arable capacity with all other local settlements
 9. trade evaluation and food redistribution
@@ -28,6 +28,7 @@ Those entities are still range-limited and region-grounded before month one begi
 16. rendering occurs on invalidation rather than after every loop pass; when paused, input continues while monthly advancement is held
 
 Because starting polities now begin with a home settlement anchor, step 4 can produce real local hunting and discovery pressure from the opening season instead of waiting for a later founding roll.
+Animal food no longer enters at step 7. It enters only at step 4 through species-level hunting, while step 7 is now plant-foraging only.
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.

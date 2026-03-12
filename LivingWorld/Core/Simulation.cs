@@ -523,6 +523,7 @@ public sealed class Simulation : IDisposable
                 $"Food={polity.FoodStores,6:F1} " +
                 $"AFR={annualFoodRatio,4:F2} " +
                 $"Wild={polity.AnnualFoodGathered,6:F0} " +
+                $"Hunt={polity.FoodHuntedThisYear,6:F0} " +
                 $"Farm={polity.AnnualFoodFarmed,6:F0} " +
                 $"Imp={polity.AnnualFoodImported,6:F0} " +
                 $"IntImp={polity.AnnualFoodImportedInternal,6:F0} " +
@@ -538,6 +539,21 @@ public sealed class Simulation : IDisposable
                 $"Settle={polity.SettlementStatus,-11} " +
                 $"Stage={polity.Stage,-14}");
         }
+
+        PrintDebugEcologySummary();
+    }
+
+    private void PrintDebugEcologySummary()
+    {
+        int regionsWithAnimalBiomass = _world.Regions.Count(region => region.AnimalBiomass > 0.1);
+        double totalAnimalBiomass = _world.Regions.Sum(region => region.AnimalBiomass);
+        int activeConsumerPopulations = _world.Regions.Sum(region => region.SpeciesPopulations.Count(population => population.PopulationCount > 0))
+            - _world.Regions.Sum(region => region.SpeciesPopulations.Count(population =>
+                population.PopulationCount > 0
+                && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == Life.TrophicRole.Producer));
+
+        Console.WriteLine(
+            $"Ecology: AnimalBiomass={totalAnimalBiomass:F0} RegionsWithAnimals={regionsWithAnimalBiomass}/{_world.Regions.Count} ActiveConsumerPops={activeConsumerPopulations}");
     }
 
     private static bool ShouldEmitHardshipEvent(HardshipChronicleState previousState, HardshipTier currentTier, int currentYear)

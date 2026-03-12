@@ -107,6 +107,7 @@ Structured-first follow-up types:
 - `schism_risk`
 - `local_tension`
 - `species_population_established`
+- can also represent wildlife recolonization into an emptied neighboring region when migration restores a local population
 - `species_population_mutated`
 - `species_population_isolated`
 - `species_population_adapted_to_region`
@@ -125,6 +126,7 @@ Structured-first follow-up types:
 - `trade_relief`
 
 Settlement-grounded systems should prefer true settlement references where available so structured history can answer not just which polity acted, but where the local action actually happened.
+The same ecology rule now applies to food sourcing: generic foraging events describe plant gathering pressure, while animal food gains should always be traceable to an actual hunted species population.
 
 Major biology-turn types that may surface when the focused line is meaningfully affected:
 

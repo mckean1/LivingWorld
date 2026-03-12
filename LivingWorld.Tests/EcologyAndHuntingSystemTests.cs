@@ -68,6 +68,83 @@ public sealed class EcologyAndHuntingSystemTests
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.HuntingSuccess);
     }
 
+    [Fact]
+    public void FoodSystem_GatherFood_UsesPlantBiomassOnly()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        Polity polity = new(10, "Riverwatch Clan", speciesId: 0, regionId: region.Id, population: 80);
+        polity.EstablishFirstSettlement(region.Id, $"{region.Name} Hearth");
+        polity.SettlementStatus = SettlementStatus.Settled;
+        world.Polities.Add(polity);
+
+        double animalBiomassBefore = region.AnimalBiomass;
+        FoodSystem foodSystem = new();
+
+        foodSystem.GatherFood(world);
+
+        Assert.True(polity.FoodGatheredThisMonth > 0);
+        Assert.True(region.PlantBiomass < 600);
+        Assert.Equal(animalBiomassBefore, region.AnimalBiomass);
+    }
+
+    [Fact]
+    public void EcosystemSystem_SyncsAnimalBiomass_FromRegionalConsumerPopulations()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        region.GetOrCreateSpeciesPopulation(3).PopulationCount = 120;
+        region.GetOrCreateSpeciesPopulation(4).PopulationCount = 40;
+        region.GetOrCreateSpeciesPopulation(6).PopulationCount = 10;
+        region.GetOrCreateSpeciesPopulation(7).PopulationCount = 5;
+
+        ecosystemSystem.ResolveSeasonalCleanup(world);
+
+        double expectedPlantBiomass = Math.Min(
+            region.MaxPlantBiomass,
+            region.SpeciesPopulations
+                .Where(population => world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Producer)
+                .Sum(population => population.PopulationCount) * 2.2);
+        double expectedAnimalBiomass = Math.Min(
+            region.MaxAnimalBiomass,
+            region.SpeciesPopulations
+                .Where(population => world.Species.First(species => species.Id == population.SpeciesId).TrophicRole != TrophicRole.Producer)
+                .Sum(population => population.PopulationCount) * 1.1);
+
+        Assert.Equal(expectedPlantBiomass, region.PlantBiomass);
+        Assert.Equal(expectedAnimalBiomass, region.AnimalBiomass);
+    }
+
+    [Fact]
+    public void EcosystemSystem_CanRecolonize_EmptyNeighboringRegion()
+    {
+        World world = CreateWorld();
+        Region sourceRegion = world.Regions[0];
+        Region targetRegion = world.Regions[1];
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        RegionSpeciesPopulation sourcePopulation = sourceRegion.GetOrCreateSpeciesPopulation(4);
+        RegionSpeciesPopulation targetPopulation = targetRegion.GetOrCreateSpeciesPopulation(4);
+        sourcePopulation.PopulationCount = Math.Max(60, sourcePopulation.CarryingCapacity / 2);
+        targetPopulation.PopulationCount = 0;
+
+        ecosystemSystem.UpdateSeason(world);
+
+        Assert.True(targetPopulation.PopulationCount > 0);
+        Assert.Contains(world.Events, evt =>
+            evt.Type == WorldEventType.SpeciesPopulationEstablished
+            && evt.RegionId == targetRegion.Id
+            && evt.SpeciesId == 4
+            && evt.Metadata.TryGetValue("migrationKind", out string? kind)
+            && kind == "recolonization");
+    }
+
     private static World CreateWorld()
     {
         World world = new(new WorldTime(5, 3));

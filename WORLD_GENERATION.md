@@ -39,7 +39,7 @@ The fuller starting world still aims to read as one coherent early continent rat
 - regions are generated on a `6 x 6` continent grid
 - connectivity starts from orthogonal neighbors, then adds a small amount of diagonal and river-corridor reinforcement
 - each generated region receives a `RegionBiome`
-- biome profiles shape fertility, water availability, plant biomass, animal biomass, and carrying capacity
+- biome profiles shape fertility, water availability, plant biomass, animal-biomass capacity, and carrying capacity
 
 Current biome mix is lightweight by design and covers:
 
@@ -101,3 +101,4 @@ Regional species populations now exist before the first polity season resolves, 
 Those starting regional populations also now have clean divergence state slots, so future mutation, speciation, and domestication phases can build historical lineage change forward from generation year zero.
 The denser seed world is intentionally still range-limited and biome-shaped so early chronicle output gains context without turning into random clutter.
 Starting-polity homeland scoring also now prefers nearby support species coverage, so focal starts are less likely to open in a dead ecological pocket.
+Initial `AnimalBiomass` values are best read as starting ecological context for species seeding and region summaries; once the simulation begins, animal biomass is derived from real consumer populations rather than harvested as an independent food pool.

@@ -165,6 +165,24 @@ That biome is used by:
 - habitat suitability scoring
 - starting-polity placement heuristics
 
+Selected ecology/resource fields on `Region`:
+
+- `PlantBiomass`
+  - current forageable plant biomass
+- `MaxPlantBiomass`
+  - plant biomass capacity used by growth and carrying-capacity heuristics
+- `AnimalBiomass`
+  - derived summary of current non-producer regional populations
+- `MaxAnimalBiomass`
+  - ecological capacity input used by habitat and carrying-capacity calculations
+
+Important model rule:
+
+- `PlantBiomass` is still a directly gathered monthly resource
+- `AnimalBiomass` is no longer a directly consumable food pool
+- animal food enters polity stores only through successful species-level hunting
+- wildlife recovery comes from `RegionSpeciesPopulation` reproduction, migration, and habitat fit, then flows back into `AnimalBiomass` during ecosystem sync
+
 ## Presentation And Persistence Types
 
 - `ChronicleFocus`

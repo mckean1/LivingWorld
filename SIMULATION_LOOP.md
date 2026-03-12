@@ -20,18 +20,25 @@ The seed world entering this loop is now larger by default, but scale tuning rem
 
 ## Monthly Systems
 
-- region biomass refresh
+- region plant biomass refresh
 - seasonal regional species population maintenance every third month
 - seasonal ecosystem interactions and species exchange every third month
 - seasonal settlement hunting every third month
 - hunting is resolved per settlement, using that settlement's actual region
 - seasonal mutation and divergence pass every third month using the same season's species exchange flags
 - seasonal extinction cleanup and biomass sync every third month
-- food gathering and farming
+- plant gathering and farming
 - farming is resolved per settlement, with settlements in the same region competing for the same regional arable capacity
 - trade redistribution
 - food consumption
 - migration
+
+`Region.AnimalBiomass` is not consumed during the monthly food-gathering step.
+Instead:
+
+- plant gathering subtracts from `Region.PlantBiomass`
+- hunting subtracts from actual `RegionSpeciesPopulation` prey counts
+- seasonal ecosystem cleanup derives `Region.AnimalBiomass` back from surviving non-producer populations
 
 At the start of each month, temporary propagation bonuses tick down.
 

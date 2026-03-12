@@ -18,26 +18,13 @@ public sealed class FoodSystem
             _ => 0.65
         };
 
-        double animalSeasonMultiplier = world.Time.Season switch
-        {
-            Season.Winter => 0.60,
-            Season.Spring => 0.90,
-            Season.Summer => 1.00,
-            _ => 0.85
-        };
-
         foreach (Region region in world.Regions)
         {
             double plantGrowth =
                 ((region.Fertility * 20.0) + (region.WaterAvailability * 15.0))
                 * plantSeasonMultiplier;
 
-            double animalGrowth =
-                ((region.Fertility * 6.0) + (region.WaterAvailability * 4.0))
-                * animalSeasonMultiplier;
-
             region.PlantBiomass = Math.Min(region.MaxPlantBiomass, region.PlantBiomass + plantGrowth);
-            region.AnimalBiomass = Math.Min(region.MaxAnimalBiomass, region.AnimalBiomass + animalGrowth);
         }
     }
 
@@ -80,43 +67,30 @@ public sealed class FoodSystem
                 p => p.Id,
                 p => p.Population * 0.85 * p.Capabilities.HarvestEfficiencyMultiplier);
 
-            Dictionary<int, double> animalDemand = localPolities.ToDictionary(
-                p => p.Id,
-                p => p.Population * 0.35 * p.Capabilities.HarvestEfficiencyMultiplier);
-
             double totalPlantDemand = plantDemand.Values.Sum();
-            double totalAnimalDemand = animalDemand.Values.Sum();
 
             double startingPlantBiomass = region.PlantBiomass;
-            double startingAnimalBiomass = region.AnimalBiomass;
 
             double actualPlantHarvest = 0;
-            double actualAnimalHarvest = 0;
 
             foreach (Polity polity in localPolities)
             {
+                // Generic monthly gathering is plant-foraging only. Animal food now
+                // enters polity stores exclusively through species-level hunting.
                 double plantShare = totalPlantDemand <= 0
                     ? 0
                     : startingPlantBiomass * (plantDemand[polity.Id] / totalPlantDemand);
 
-                double animalShare = totalAnimalDemand <= 0
-                    ? 0
-                    : startingAnimalBiomass * (animalDemand[polity.Id] / totalAnimalDemand);
-
                 double gatheredPlants = Math.Min(plantShare, plantDemand[polity.Id]);
-                double gatheredAnimals = Math.Min(animalShare, animalDemand[polity.Id]);
-                double totalFood = gatheredPlants + gatheredAnimals;
 
-                polity.FoodGatheredThisMonth += totalFood;
-                polity.AnnualFoodGathered += totalFood;
-                polity.FoodStores += totalFood;
+                polity.FoodGatheredThisMonth += gatheredPlants;
+                polity.AnnualFoodGathered += gatheredPlants;
+                polity.FoodStores += gatheredPlants;
 
                 actualPlantHarvest += gatheredPlants;
-                actualAnimalHarvest += gatheredAnimals;
             }
 
             region.PlantBiomass = Math.Max(0, region.PlantBiomass - actualPlantHarvest);
-            region.AnimalBiomass = Math.Max(0, region.AnimalBiomass - actualAnimalHarvest);
         }
     }
 

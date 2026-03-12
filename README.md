@@ -14,11 +14,14 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 
 - regions track explicit per-species populations with carrying capacity, suitability, migration pressure, and recent ecological pressure
 - seasonal ecosystem processing runs food-web interactions between producers, herbivores, omnivores, predators, and apex species
-- settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting or legendary hunts
+- monthly wild gathering now forages plant biomass only, while animal food comes only from species-level hunting
+- `Region.AnimalBiomass` is now a derived ecological summary of current non-producer populations rather than a separate consumable meat pool
+- settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting, recolonization pressure, or legendary hunts
 - settlement hunting now executes from actual settlements in their own regions instead of multiplying one polity-region hunt by settlement count
 - settlement farming now allocates real regional arable capacity across actual settlements, so multiple settlements in one region share land instead of double counting it
 - starting polities now begin with a real home settlement anchor, so settlement-grounded hunting and early locality pressure exist from year zero
 - regional populations now also accumulate mutation pressure, isolation, divergence, and local trait offsets rather than mutating the global species baseline directly
+- neighboring wildlife populations can now recolonize empty suitable regions through the existing migration system instead of waiting for magical respawns
 - mutation pressure comes from repeated food stress, predation, hunting, ancestral habitat mismatch, seasonal species-exchange shock, crowding near carrying capacity, and prolonged isolation
 - evolved regional traits now feed back into hunting danger and difficulty, predator-prey outcomes, habitat fit, migration capability, and reproduction/survival rates
 - watch mode shows the focal polity species in the fixed status panel

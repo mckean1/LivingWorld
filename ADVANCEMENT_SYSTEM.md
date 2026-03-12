@@ -23,6 +23,9 @@ At year-end, for each polity:
 - movement pressure
 - prerequisite advancements
 
+The ecology context now treats `Region.AnimalBiomass` as a derived wildlife-summary signal rather than a separate monthly food stock.
+That means advancement weighting can still notice whether a region is rich in animal life without reintroducing direct abstract animal harvesting into the food model.
+
 ## Outputs
 
 1. capability changes consumed by simulation systems

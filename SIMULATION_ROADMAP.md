@@ -12,6 +12,7 @@ Implemented core includes:
 - ecology and food systems
 - regional species populations and seasonal ecosystem interactions
 - settlement hunting tied to regional wildlife
+- plant gathering separated cleanly from animal food so wildlife is pressured only through the species layer
 - mutation and regional divergence foundations
 - migration, settlement, population, fragmentation
 - advancement and capability effects

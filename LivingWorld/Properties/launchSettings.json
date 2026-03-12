@@ -2,7 +2,7 @@
   "profiles": {
     "LivingWorld": {
       "commandName": "Project",
-      "commandLineArgs": "--years 1000 --delay-ms 500"
+      "commandLineArgs": "--years 1000 --delay-ms 250"
     }
   }
 }

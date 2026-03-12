@@ -8,6 +8,8 @@ public sealed class EcosystemSystem
 {
     private const double ProducerPopulationToBiomass = 2.2;
     private const double ConsumerPopulationToBiomass = 1.1;
+    private const double MigrationPressureThreshold = 0.45;
+    private const double RecolonizationTargetScoreThreshold = 0.58;
     private readonly HashSet<string> _preyCollapseCooldownKeys = new(StringComparer.Ordinal);
 
     public void InitializeRegionalPopulations(World world)
@@ -234,7 +236,7 @@ public sealed class EcosystemSystem
             foreach (RegionSpeciesPopulation sourcePopulation in activePopulations)
             {
                 Species species = speciesById[sourcePopulation.SpeciesId];
-                if (sourcePopulation.MigrationPressure < 0.45 || region.ConnectedRegionIds.Count == 0 || species.MigrationCapability <= 0)
+                if (region.ConnectedRegionIds.Count == 0 || species.MigrationCapability <= 0)
                 {
                     continue;
                 }
@@ -260,10 +262,19 @@ public sealed class EcosystemSystem
                     continue;
                 }
 
+                bool canRecolonize = CanAttemptRecolonization(sourcePopulation, species, target, bestTargetScore);
+                if (sourcePopulation.MigrationPressure < MigrationPressureThreshold && !canRecolonize)
+                {
+                    continue;
+                }
+
                 RegionSpeciesPopulation targetPopulation = target.GetOrCreateSpeciesPopulation(species.Id);
                 int sourceBefore = sourcePopulation.PopulationCount;
                 double migrationCapability = PopulationTraitResolver.GetEffectiveMigrationCapability(species, sourcePopulation);
-                int transfer = (int)Math.Round(sourceBefore * Math.Min(0.16, (migrationCapability * 0.10) + (sourcePopulation.MigrationPressure * 0.08)));
+                double transferRate = canRecolonize
+                    ? Math.Min(0.10, 0.03 + (migrationCapability * 0.08))
+                    : Math.Min(0.16, (migrationCapability * 0.10) + (sourcePopulation.MigrationPressure * 0.08));
+                int transfer = (int)Math.Round(sourceBefore * transferRate);
                 transfer = Math.Min(transfer, Math.Max(0, sourcePopulation.PopulationCount - 1));
                 if (transfer <= 0)
                 {
@@ -304,7 +315,8 @@ public sealed class EcosystemSystem
                         metadata: new Dictionary<string, string>
                         {
                             ["sourceRegionId"] = region.Id.ToString(),
-                            ["sourceRegionName"] = region.Name
+                            ["sourceRegionName"] = region.Name,
+                            ["migrationKind"] = canRecolonize ? "recolonization" : "pressure"
                         });
                 }
             }
@@ -472,6 +484,28 @@ public sealed class EcosystemSystem
         }
 
         return Math.Clamp(predatorPopulation / 250.0, 0.0, 1.0);
+    }
+
+    private static bool CanAttemptRecolonization(
+        RegionSpeciesPopulation sourcePopulation,
+        Species species,
+        Region target,
+        double bestTargetScore)
+    {
+        RegionSpeciesPopulation? targetPopulation = target.GetSpeciesPopulation(species.Id);
+        if (targetPopulation?.PopulationCount > 0)
+        {
+            return false;
+        }
+
+        if (bestTargetScore < RecolonizationTargetScoreThreshold || sourcePopulation.CarryingCapacity <= 0)
+        {
+            return false;
+        }
+
+        double sourceCapacityRatio = (double)sourcePopulation.PopulationCount / sourcePopulation.CarryingCapacity;
+        return sourcePopulation.PopulationCount >= Math.Max(8, sourcePopulation.CarryingCapacity / 5)
+            && sourceCapacityRatio >= 0.42;
     }
 
     private static double CalculateBaseHabitatSuitability(Species species, Region region)

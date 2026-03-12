@@ -75,6 +75,8 @@ Implemented chains:
 
 `regional pressure -> species migration -> new regional population establishment`
 
+`surviving neighboring population + open suitable habitat -> wildlife recolonization`
+
 `all local populations gone -> global extinction`
 
 Those ecology chains now begin from biome-shaped initial ranges instead of every species starting everywhere, so migration and collapse have clearer geographic meaning from the opening years.
@@ -121,9 +123,14 @@ Implemented chains:
 
 `repeated hunting pressure -> overhunting -> local extinction -> ecosystem instability`
 
+`neighboring surviving prey population -> recolonization migration -> prey return in a previously emptied region`
+
 Discovery outcomes now persist as explicit cultural knowledge on the polity rather than only as one-off events or scattered runtime flags.
 
 Advancement outcomes remain separate capability gains that later systems can consume through `Capabilities`.
+
+Generic monthly food gathering no longer consumes `Region.AnimalBiomass`.
+That removed the previous double-pressure bug where abstract animal harvesting and species-level hunting both depleted the same ecological layer.
 
 ### Fragmentation Pressure
 

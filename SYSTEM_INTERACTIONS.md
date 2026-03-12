@@ -93,12 +93,14 @@ Some handlers do more than emit follow-up events. They can also update temporary
 The new ecology phase is shared state for multiple systems:
 
 - `Region.SpeciesPopulations` feeds ecosystem predation and prey support
+- `FoodSystem` now gathers only plant biomass, so it no longer depletes wildlife outside the hunting layer
 - world generation seeds those populations only inside each species' initial viable range instead of treating the world as globally occupied
 - hunting reads the same regional populations and writes pressure back into them
 - mutation reads those same pressure markers plus same-season species-exchange flags, stores accumulated evolutionary pressure on each regional population, and writes trait offsets back into the same records
 - ecosystem growth, migration scoring, and carrying capacity now consume those evolved trait offsets
 - hunting difficulty, danger, and yield now also consume regional trait divergence instead of using only species baselines
-- regional biomass is synchronized from species populations so existing food gathering and migration heuristics still have region-level ecological context
+- neighboring wildlife populations can re-establish empty suitable regions through seasonal species migration, which gives local ecology a non-magical recovery path
+- regional animal biomass is synchronized from species populations so migration heuristics, region screens, and advancement weighting still have region-level ecological context without creating a second animal-food resource
 - polity discoveries, hunting knowledge, and domestication interest are stored on the polity for future systems to consume
 - mutation also tracks adaptation milestones on each regional population so adaptation events emit only when a new stage is crossed
 
@@ -122,6 +124,7 @@ Hunting, farming, and settlement-aware trade now share the same locality layer:
 This keeps cause-and-effect local:
 
 - local prey decline comes from the settlements that hunted there
+- animal food gains come from the species those settlements actually hunted
 - farm output comes from settlements actually occupying fertile land
 - migration relocates settlement records so later systems do not read stale locality state
 

@@ -89,6 +89,7 @@ When a trade event includes settlement references, they should describe the actu
 
 - `species_population_established`
   - migration or expansion created a new regional population
+  - may also mark wildlife recolonization when a neighboring surviving population returns to an empty suitable region
 - `predator_pressure`
   - predator food shortages became historically meaningful
 - `prey_collapse`
@@ -99,6 +100,7 @@ When a trade event includes settlement references, they should describe the actu
   - no populations of the species remain anywhere
 - `hunting_success`
   - a real settlement hunt materially changed food supply or local wildlife pressure
+  - animal food should now always come from this path, not from abstract regional animal biomass harvesting
 - `hunting_disaster`
   - a hunt failed badly enough to become a historical turning point
 - `dangerous_prey_killed_hunters`
@@ -158,6 +160,12 @@ The same terminology rule now applies to hunting:
 - discovering that `Stonehorn Elk` are edible is `Discovery`
 - discovering that `Redcap Mushroom` is toxic is `Discovery`
 - learning improved hunting tactics would be `Learned`
+
+The same sourcing rule now applies to food:
+
+- plant food can come from ordinary wild gathering
+- animal food must come from species-level hunting
+- `AnimalBiomass` is an ecological summary metric, not a generic gatherable pool
 
 ## Player-Facing Formatting Rule
 
