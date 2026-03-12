@@ -38,12 +38,15 @@ public sealed class RegionSpeciesPopulation
     public double DivergencePressure { get; set; }
     public double DivergenceScore { get; set; }
     public int IsolationSeasons { get; set; }
+    public int SpeciationReadinessSeasons { get; set; }
     public int MinorMutationCount { get; set; }
     public int MajorMutationCount { get; set; }
     public int LastMutationYear { get; set; } = -1;
+    public int LastMinorMutationEventYear { get; set; } = -1;
+    public int LastMajorMutationEventYear { get; set; } = -1;
     public int LastMajorMutationYear { get; set; } = -1;
     public int LastSpeciationYear { get; set; } = -1;
-    public int LastIsolationEventSeason { get; set; }
+    public int LastIsolationEventMilestone { get; set; }
     public int LastDivergenceMilestone { get; set; }
     public int LastAdaptationMilestone { get; set; }
     public bool HasEverExisted { get; set; }
@@ -84,6 +87,37 @@ public sealed class RegionSpeciesPopulation
         FounderYear = year;
         FounderMonth = month;
     }
+
+    public bool CanBePruned()
+        => PopulationCount <= 0
+           && !HasEverExisted
+           && !EstablishedThisSeason
+           && !ReceivedMigrantsThisSeason
+           && !SentMigrantsThisSeason
+           && FounderSeasonsRemaining <= 0
+           && MigrationCooldownSeasons <= 0
+           && RecentPredationPressure <= 0
+           && RecentHuntingPressure <= 0
+           && RecentFoodStress <= 0
+           && FoodStressMutationPressure <= 0
+           && PredationMutationPressure <= 0
+           && HuntingMutationPressure <= 0
+           && HabitatMismatchMutationPressure <= 0
+           && IsolationMutationPressure <= 0
+           && CrowdingMutationPressure <= 0
+           && DriftMutationPressure <= 0
+           && DivergencePressure <= 0
+           && DivergenceScore <= 0
+           && IsolationSeasons <= 0
+           && SpeciationReadinessSeasons <= 0
+           && MinorMutationCount <= 0
+           && MajorMutationCount <= 0
+           && LastAdaptationMilestone <= 0
+           && LastDivergenceMilestone <= 0
+           && LastSpeciationYear < 0
+           && FounderKind is null
+           && FounderSourceRegionId is null
+           && FounderSourceSpeciesId is null;
 
     public void MarkLocalExtinction(int year, int month, string reason)
     {

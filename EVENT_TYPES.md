@@ -120,10 +120,12 @@ When a trade event includes settlement references, they should describe the actu
   - rare high-risk major-prey hunt worthy of the main chronicle
 - `species_population_mutated`
   - minor regional trait drift; usually structured/debug-first
+  - now respects stricter emission cooldowns so repeated small shifts do not spam structured history every active year
 - `species_population_major_mutation`
   - rare major lineage-level change with stronger ecological consequences
 - `species_population_isolated`
   - prolonged separation without meaningful exchange
+  - now emitted on broader isolation milestones rather than every repeated short interval
 - `species_population_adapted_to_region`
   - regional lineage overcame ancestral habitat mismatch through sustained pressure, divergence, and improved effective fit
   - emitted on adaptation-stage transitions rather than repeated reaffirmation of the same regional condition
@@ -131,6 +133,7 @@ When a trade event includes settlement references, they should describe the actu
   - divergence milestone that may become chronicle-worthy
 - `new_species_appeared`
   - a long-isolated viable regional population diverged enough to become a descendant species
+  - now also requires descendant-species age, meaningful global population, sustained readiness, and stabilization guards before another split can happen
   - usually structured-first unless it lands at `Major` severity inside the focused historical line
 
 ## Current Propagation Chains
@@ -230,3 +233,16 @@ Usually structured-only unless escalated:
 Adaptation events are one-time milestones per regional population, not recurring telemetry.
 If a later adaptation event appears, it should represent a stronger milestone rather than the same adaptation beat repeated.
 Chronicle presentation now applies the same idea more broadly to other noisy families: hardship, recovery, migration, and some ecology turns are filtered by semantic state change rather than by raw event repetition alone.
+## Phase 12 Food Redistribution Events
+
+New structured event types:
+- `food_aid_sent`: significant internal food convoy between settlements
+- `famine_relief`: aid prevented a starving settlement from remaining in famine
+- `aid_failed`: a starving settlement remained unaided after redistribution
+
+Expected severity:
+- `Minor`: ordinary internal aid transfer
+- `Major`: large convoy or starvation prevented
+- `Legendary`: massive famine rescue
+
+Each aid event carries location, actors, cause, distance, transport loss, and settlement food-state metadata so event propagation and structured history preserve the cause-and-effect chain.

@@ -41,6 +41,24 @@ public sealed class ChroniclePresentationPolicy
                 ChangedStateCooldownYears: 3,
                 BuildPrimaryPolityScopeKey,
                 BuildHardshipStateKey),
+            [WorldEventType.FoodAidSent] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 6,
+                ChangedStateCooldownYears: 2,
+                BuildSettlementAidScopeKey,
+                BuildSettlementAidStateKey),
+            [WorldEventType.FamineRelief] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 8,
+                ChangedStateCooldownYears: 0,
+                BuildSettlementAidScopeKey,
+                BuildSettlementAidStateKey),
+            [WorldEventType.AidFailed] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 10,
+                ChangedStateCooldownYears: 0,
+                BuildSettlementAidScopeKey,
+                BuildSettlementAidStateKey),
             [WorldEventType.StageChanged] = new ChronicleEventProfile(
                 BasePriority: 5,
                 SameStateCooldownYears: 30,
@@ -147,6 +165,9 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.LearnedAdvancement or
             WorldEventType.FoodStress or
             WorldEventType.FoodStabilized or
+            WorldEventType.FoodAidSent or
+            WorldEventType.FamineRelief or
+            WorldEventType.AidFailed or
             WorldEventType.Fragmentation or
             WorldEventType.PolityFounded or
             WorldEventType.StageChanged or
@@ -263,6 +284,25 @@ public sealed class ChroniclePresentationPolicy
             ?? worldEvent.RegionId?.ToString()
             ?? string.Empty;
         return $"{worldEvent.Reason ?? string.Empty}:{location}";
+    }
+
+    private static string? BuildSettlementAidStateKey(WorldEvent worldEvent)
+    {
+        string actorKey = worldEvent.SettlementId?.ToString()
+            ?? TryGetValue(worldEvent.Metadata, "senderSettlementId")
+            ?? worldEvent.RegionId?.ToString()
+            ?? string.Empty;
+        string cause = worldEvent.Reason ?? TryGetValue(worldEvent.Metadata, "cause") ?? string.Empty;
+        return $"{cause}:{actorKey}:{TryGetValue(worldEvent.After, "foodState") ?? string.Empty}";
+    }
+
+    private static string? BuildSettlementAidScopeKey(WorldEvent worldEvent)
+    {
+        string receiverKey = worldEvent.SettlementId?.ToString()
+            ?? worldEvent.RegionId?.ToString()
+            ?? string.Empty;
+        string senderKey = TryGetValue(worldEvent.Metadata, "senderSettlementId") ?? string.Empty;
+        return $"receiver:{receiverKey}:sender:{senderKey}";
     }
 
     private static string? BuildStageStateKey(WorldEvent worldEvent)

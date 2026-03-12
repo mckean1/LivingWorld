@@ -21,6 +21,7 @@ public sealed class Simulation : IDisposable
     private readonly MutationSystem _mutationSystem;
     private readonly AgricultureSystem _agricultureSystem;
     private readonly TradeSystem _tradeSystem;
+    private readonly SettlementFoodRedistributionSystem _settlementFoodRedistributionSystem;
     private readonly PopulationSystem _populationSystem;
     private readonly MigrationSystem _migrationSystem;
     private readonly AdvancementSystem _advancementSystem;
@@ -36,8 +37,11 @@ public sealed class Simulation : IDisposable
     private readonly WatchInputController _watchInputController;
     private readonly IPolityFocusSelector _focusSelector;
     private readonly HistoryJsonlWriter? _historyWriter;
+    private readonly SimulationPerformanceTracker _performanceTracker;
     private readonly Dictionary<int, HardshipChronicleState> _hardshipStates = [];
+    private readonly List<WorldEvent> _eventsThisYear = [];
     private readonly Stopwatch _watchLoopStopwatch = Stopwatch.StartNew();
+    private TimeSpan _historyWriteTimeAtYearStart = TimeSpan.Zero;
     private long _nextSimulationStepAtMilliseconds;
     private bool _renderInvalidated = true;
     private bool _wasPausedInInteractiveLoop;
@@ -51,6 +55,7 @@ public sealed class Simulation : IDisposable
         _mutationSystem = new MutationSystem();
         _agricultureSystem = new AgricultureSystem();
         _tradeSystem = new TradeSystem();
+        _settlementFoodRedistributionSystem = new SettlementFoodRedistributionSystem();
         _populationSystem = new PopulationSystem();
         _migrationSystem = new MigrationSystem();
         _advancementSystem = new AdvancementSystem();
@@ -66,7 +71,9 @@ public sealed class Simulation : IDisposable
         _watchUiState = new WatchUiState();
         _watchInputController = new WatchInputController(_watchUiState);
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
+        _performanceTracker = new SimulationPerformanceTracker(_options.EnablePerformanceInstrumentation);
         _ecosystemSystem.InitializeRegionalPopulations(_world);
+        _performanceTracker.BeginYear(_world.Time.Year);
         if (_options.OutputMode == OutputMode.Debug)
         {
             PrintInitialWildlifeDiagnostics();
@@ -91,6 +98,8 @@ public sealed class Simulation : IDisposable
         {
             _world.EventRecorded += OnWorldEventRecorded;
         }
+
+        _eventsThisYear.AddRange(_world.Events.Where(evt => evt.Year == _world.Time.Year));
 
         _chronicleWatchRenderer.Render(_world, _chronicleFocus, _watchUiState);
     }
@@ -183,6 +192,7 @@ public sealed class Simulation : IDisposable
         _agricultureSystem.ProduceFarmFood(_world);
         _tradeSystem.UpdateTrade(_world);
         _foodSystem.ConsumeFood(_world);
+        _settlementFoodRedistributionSystem.UpdateMonthlyFoodStatesAndRedistribution(_world);
         _migrationSystem.UpdateMigration(_world);
     }
 
@@ -196,10 +206,15 @@ public sealed class Simulation : IDisposable
         // Biology uses the current season's regional species exchange from the
         // ecosystem pass. Monthly polity migration still happens later because it
         // is driven by food resolution and social pressure rather than wildlife flow.
+        long ecosystemStartedAt = Stopwatch.GetTimestamp();
         _ecosystemSystem.UpdateSeason(_world);
+        _performanceTracker.AddEcosystemTime(Stopwatch.GetElapsedTime(ecosystemStartedAt));
         _huntingSystem.UpdateSeason(_world);
+        long mutationStartedAt = Stopwatch.GetTimestamp();
         _mutationSystem.UpdateSeason(_world);
+        _performanceTracker.AddMutationTime(Stopwatch.GetElapsedTime(mutationStartedAt));
         _ecosystemSystem.ResolveSeasonalCleanup(_world);
+        _performanceTracker.RecordSeason(_ecosystemSystem.LastSeasonMetrics, _mutationSystem.LastSeasonMetrics, _world.Species.Count);
     }
 
     private void RunYearEndSystems()
@@ -228,6 +243,18 @@ public sealed class Simulation : IDisposable
 
         RenderYearBoundaryOutput();
         ResetAnnualStats();
+        if (_historyWriter is not null)
+        {
+            TimeSpan totalHistoryWriteTime = _historyWriter.TotalWriteTime;
+            _performanceTracker.SetHistoryWriteTime(totalHistoryWriteTime - _historyWriteTimeAtYearStart);
+            _historyWriteTimeAtYearStart = totalHistoryWriteTime;
+        }
+        else
+        {
+            _performanceTracker.SetHistoryWriteTime(TimeSpan.Zero);
+        }
+        _eventsThisYear.Clear();
+        _performanceTracker.BeginYear(_world.Time.Year + 1);
 
         if (_options.PauseAfterEachYear)
         {
@@ -238,6 +265,8 @@ public sealed class Simulation : IDisposable
     private void OnWorldEventRecorded(WorldEvent worldEvent)
     {
         _historyWriter?.Write(worldEvent);
+        _eventsThisYear.Add(worldEvent);
+        _performanceTracker.AddEvent(worldEvent);
 
         if (worldEvent.Severity == WorldEventSeverity.Debug)
         {
@@ -340,13 +369,14 @@ public sealed class Simulation : IDisposable
 
     private void ResolveChronicleFocusForYear()
     {
-        List<WorldEvent> eventsThisYear = _world.Events
-            .Where(evt => evt.Year == _world.Time.Year)
+        long startedAt = Stopwatch.GetTimestamp();
+        List<WorldEvent> eventsThisYear = _eventsThisYear
             .OrderBy(evt => evt.Month)
             .ThenBy(evt => evt.EventId)
             .ToList();
 
         ChronicleFocusTransition? transition = _focusSelector.ResolveYearEndFocus(_world, _chronicleFocus, eventsThisYear);
+        _performanceTracker.AddFocusResolutionTime(Stopwatch.GetElapsedTime(startedAt));
         if (transition is null)
         {
             return;
@@ -549,6 +579,26 @@ public sealed class Simulation : IDisposable
         }
 
         PrintDebugEcologySummary();
+        PrintDebugPerformanceSummary();
+    }
+
+    private void PrintDebugPerformanceSummary()
+    {
+        if (!_performanceTracker.Enabled)
+        {
+            return;
+        }
+
+        SimulationYearPerformanceSnapshot snapshot = _performanceTracker.Snapshot();
+        string eventCategories = snapshot.EventCountsByCategory.Count == 0
+            ? "none"
+            : string.Join(", ", snapshot.EventCountsByCategory.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key}={entry.Value}"));
+
+        Console.WriteLine(
+            $"Perf: Species={snapshot.TotalSpeciesCount} ActiveRegionalPops={snapshot.ActiveRegionalPopulationCount} EcologyIter={snapshot.EcologyIterations} MutationChecks={snapshot.MutationChecks} SpecCandidates={snapshot.SpeciationCandidates} SpecEvents={snapshot.SpeciationEvents}");
+        Console.WriteLine(
+            $"Perf Time: Eco={snapshot.EcosystemTime.TotalMilliseconds:F1}ms Mut={snapshot.MutationTime.TotalMilliseconds:F1}ms Focus={snapshot.FocusResolutionTime.TotalMilliseconds:F1}ms History={snapshot.HistoryWriteTime.TotalMilliseconds:F1}ms");
+        Console.WriteLine($"Perf Events: {eventCategories}");
     }
 
     private void PrintInitialWildlifeDiagnostics()

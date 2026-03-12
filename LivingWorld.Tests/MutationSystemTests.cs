@@ -81,11 +81,11 @@ public sealed class MutationSystemTests
         RegionSpeciesPopulation population = GetElkPopulation(world);
         MutationSystem mutationSystem = new(seed: 7);
 
-        population.IsolationSeasons = 7;
+        population.IsolationSeasons = 11;
 
         mutationSystem.UpdateSeason(world);
 
-        Assert.Equal(8, population.IsolationSeasons);
+        Assert.Equal(12, population.IsolationSeasons);
         Assert.True(population.IsolationMutationPressure > 0);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationIsolated);
     }
@@ -108,7 +108,6 @@ public sealed class MutationSystemTests
         }
 
         Assert.True(population.MinorMutationCount > 0);
-        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationMutated);
         Assert.True(population.DivergenceScore > 0.20);
     }
 
@@ -342,21 +341,31 @@ public sealed class MutationSystemTests
         World world = CreateWorld(withConnectedPopulation: false);
         Region region = world.Regions[0];
         RegionSpeciesPopulation population = GetElkPopulation(world);
-        MutationSystem mutationSystem = new(seed: 53);
+        MutationSystem mutationSystem = new(seed: 53, settings: new MutationSettings
+        {
+            MinimumSpeciesAgeYearsForSpeciation = 0,
+            DescendantSpeciesStabilizationYears = 12,
+            RegionalRootSpeciationCooldownYears = 0,
+            RegionalRootLineageSoftCap = 99,
+            RegionalRootLineageHardCap = 999
+        });
 
         int startingSpeciesCount = world.Species.Count;
         population.PopulationCount = 42;
         population.CarryingCapacity = 80;
         population.IsolationSeasons = 16;
+        population.SpeciationReadinessSeasons = 16;
         population.DivergencePressure = 1.65;
         population.DivergenceScore = 3.20;
         population.MajorMutationCount = 1;
-        population.MinorMutationCount = 2;
+        population.MinorMutationCount = 3;
         population.RegionAdaptationRecorded = true;
         population.ClimateToleranceOffset = 0.18;
         population.DietFlexibilityOffset = 0.14;
         population.EnduranceOffset = 0.12;
         population.IntelligenceOffset = 0.08;
+        world.Species.First(species => species.Id == 4).EarliestSpeciationYear = 0;
+        world.Regions[1].GetOrCreateSpeciesPopulation(4).PopulationCount = 24;
 
         mutationSystem.UpdateSeason(world);
 
@@ -367,7 +376,81 @@ public sealed class MutationSystemTests
         Assert.Equal(4, descendant.ParentSpeciesId);
         Assert.Equal(region.Id, descendant.OriginRegionId);
         Assert.True(descendantPopulation.PopulationCount > 0);
+        Assert.Equal(0, descendantPopulation.IsolationSeasons);
+        Assert.Equal(0, descendantPopulation.SpeciationReadinessSeasons);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.NewSpeciesAppeared && evt.SpeciesId == descendant.Id);
+    }
+
+    [Fact]
+    public void DescendantSpecies_StartWithStabilizationPeriod_AndCannotImmediatelyRespeciate()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        Region region = world.Regions[0];
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+        MutationSystem mutationSystem = new(seed: 59, settings: new MutationSettings
+        {
+            MinimumSpeciesAgeYearsForSpeciation = 0,
+            DescendantSpeciesStabilizationYears = 12,
+            RegionalRootSpeciationCooldownYears = 0,
+            RegionalRootLineageSoftCap = 99,
+            RegionalRootLineageHardCap = 999
+        });
+
+        population.PopulationCount = 60;
+        population.CarryingCapacity = 90;
+        population.IsolationSeasons = 20;
+        population.SpeciationReadinessSeasons = 18;
+        population.DivergencePressure = 1.80;
+        population.DivergenceScore = 3.30;
+        population.MajorMutationCount = 2;
+        population.MinorMutationCount = 3;
+        population.RegionAdaptationRecorded = true;
+        world.Species.First(species => species.Id == 4).EarliestSpeciationYear = 0;
+        world.Regions[1].GetOrCreateSpeciesPopulation(4).PopulationCount = 28;
+
+        mutationSystem.UpdateSeason(world);
+
+        Species descendant = world.Species.OrderByDescending(species => species.Id).First();
+        RegionSpeciesPopulation descendantPopulation = region.GetSpeciesPopulation(descendant.Id)!;
+
+        Assert.True(descendant.EarliestSpeciationYear > world.Time.Year);
+        Assert.Equal(0, descendantPopulation.IsolationSeasons);
+        Assert.Equal(0, descendantPopulation.SpeciationReadinessSeasons);
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.NewSpeciesAppeared && evt.SpeciesId != descendant.Id);
+    }
+
+    [Fact]
+    public void Speciation_IsBlocked_WhenTooManySameRootLineagesAlreadyExistInRegion()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        Region region = world.Regions[0];
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+        MutationSystem mutationSystem = new(seed: 61, settings: new MutationSettings
+        {
+            MinimumSpeciesAgeYearsForSpeciation = 0,
+            RegionalRootLineageSoftCap = 2,
+            RegionalRootLineageHardCap = 3,
+            DescendantSpeciesStabilizationYears = 12
+        });
+
+        population.PopulationCount = 70;
+        population.CarryingCapacity = 90;
+        population.IsolationSeasons = 20;
+        population.SpeciationReadinessSeasons = 20;
+        population.DivergencePressure = 2.10;
+        population.DivergenceScore = 3.60;
+        population.MajorMutationCount = 2;
+        population.MinorMutationCount = 4;
+        population.RegionAdaptationRecorded = true;
+        world.Species.First(species => species.Id == 4).EarliestSpeciationYear = 0;
+        world.Regions[1].GetOrCreateSpeciesPopulation(4).PopulationCount = 40;
+
+        AddDescendantSpecies(world, region, newSpeciesId: 40, rootAncestorSpeciesId: 4);
+        AddDescendantSpecies(world, region, newSpeciesId: 41, rootAncestorSpeciesId: 4);
+
+        mutationSystem.UpdateSeason(world);
+
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.NewSpeciesAppeared);
     }
 
     private static World CreateWorld(bool withConnectedPopulation = true)
@@ -477,6 +560,27 @@ public sealed class MutationSystemTests
 
     private static RegionSpeciesPopulation GetElkPopulation(World world)
         => world.Regions[0].GetSpeciesPopulation(4)!;
+
+    private static void AddDescendantSpecies(World world, Region region, int newSpeciesId, int rootAncestorSpeciesId)
+    {
+        Species descendant = new(newSpeciesId, $"Synthetic Lineage {newSpeciesId}", 0.2, 0.3)
+        {
+            TrophicRole = TrophicRole.Herbivore,
+            ParentSpeciesId = 4,
+            RootAncestorSpeciesId = rootAncestorSpeciesId,
+            OriginRegionId = region.Id,
+            OriginYear = 0,
+            EarliestSpeciationYear = 999
+        };
+
+        world.Species.Add(descendant);
+        RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(newSpeciesId);
+        population.PopulationCount = 18;
+        population.CarryingCapacity = 40;
+        population.HabitatSuitability = 0.82;
+        population.BaseHabitatSuitability = 0.80;
+        population.HasEverExisted = true;
+    }
 
     private static Polity CreateSettledPolity(World world, Region region)
     {

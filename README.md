@@ -28,11 +28,15 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - settlement farming now allocates real regional arable capacity across actual settlements, so multiple settlements in one region share land instead of double counting it
 - starting polities now begin with a real home settlement anchor, so settlement-grounded hunting and early locality pressure exist from year zero
 - regional populations now also accumulate mutation pressure, isolation, divergence, and local trait offsets rather than mutating the global species baseline directly
+- descendant species now begin with a stabilization period and heavily damped inherited divergence/isolation readiness, so speciation remains a rare long-horizon outcome instead of a recursive doubling wave
+- speciation now also requires species age, meaningful global population, sustained readiness, and durable isolation/divergence rather than only one threshold-crossing season
+- isolated regions now also enforce root-lineage crowding pressure and a per-region lineage cooldown so the same ancestral branch cannot keep splitting every few decades forever
 - neighboring wildlife populations can now recolonize empty suitable regions through the existing migration system instead of waiting for magical respawns
 - mutation pressure comes from repeated food stress, predation, hunting, ancestral habitat mismatch, seasonal species-exchange shock, crowding near carrying capacity, and prolonged isolation
-- strongly isolated high-divergence regional populations can now produce descendant species with tracked parentage, origin region/time, and inherited local ecological traits
+- strongly isolated high-divergence regional populations can still produce descendant species with tracked parentage, origin region/time, and inherited local ecological traits, but those descendant populations must first stabilize before they can ever branch again
 - local extinction and global extinction are now explicit species-population outcomes with recolonization flowing back through the same neighboring founder-migration path
 - evolved regional traits now feed back into hunting danger and difficulty, predator-prey outcomes, habitat fit, migration capability, and reproduction/survival rates
+- region species storage is now sparse by default: meaningful active or historically relevant regional populations are tracked, while never-established region-species pairs are not materialized every season
 - watch mode shows the focal polity species in the fixed status panel
 - watch mode also separates `Discoveries` from `Learned` advancements in that fixed status panel
 - watch mode now uses a shared knowledge snapshot so chronicle, region, species, polity, and world-overview screens all read from the same discovery-aware visibility rules
@@ -162,6 +166,8 @@ Watch-loop responsiveness notes:
 - chronicle cooldowns still apply after storage
 - chronicle cooldowns are now family-specific and semantic: they key off actor scope plus the visible state change, not just raw event type
 - source systems such as mutation also suppress repeated emissions when no new adaptation or divergence milestone has been reached
+- structured history writing is buffered in small batches instead of flushing every event immediately
+- year-end focus resolution now uses the current year's rolling event cache instead of rescanning the full world history list
 
 This keeps the world explainable without turning the chronicle into telemetry.
 
@@ -186,6 +192,7 @@ Default mode is watch mode. Useful flags:
 - `--buffer-size <n>` to raise the retained chronicle history floor
 - `--focus-polity <id>` to watch a specific polity
 - `--debug` to restore developer-oriented yearly summaries and raw yearly event listings
+- `--perf` to print lightweight yearly performance counters in debug mode
 
 Manual pause via `Space` is available during normal watch mode. It pauses simulation advancement while still allowing navigation across watch views.
 
@@ -194,3 +201,10 @@ Example:
 ```powershell
 dotnet run --project LivingWorld -- --years 120 --delay-ms 250
 ```
+## Phase 12 - Regional Trade and Resource Exchange
+
+Phase 12 adds the first settlement-level logistics layer. Each monthly tick now classifies every settlement into `Surplus`, `Stable`, `Deficit`, or `Starving` after food production, consumption, and store allocation are resolved.
+
+Settlements inside the same polity can redistribute food before downstream hardship systems react. Aid routes prioritize the same region first, then neighboring regions, then the closest reachable regions by hop distance. A sender can export at most 25% of its current surplus in a month, and each regional hop removes 5% of the shipment as transport loss.
+
+Large convoys, starvation relief, and failed aid attempts are recorded as structured events. Only `Major` and `Legendary` famine-relief outcomes surface in the chronicle; smaller transfers remain in structured history and inspection views.

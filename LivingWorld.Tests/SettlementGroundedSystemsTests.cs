@@ -127,6 +127,96 @@ public sealed class SettlementGroundedSystemsTests
     }
 
     [Fact]
+    public void SettlementFoodState_UsesMonthlyBalanceThresholds()
+    {
+        Settlement surplus = new(1001, 1, 0, "Granary");
+        surplus.FoodProduced = 80;
+        surplus.FoodStored = 40;
+        surplus.FoodRequired = 90;
+
+        Settlement stable = new(1002, 1, 0, "Commons");
+        stable.FoodProduced = 70;
+        stable.FoodStored = 10;
+        stable.FoodRequired = 85;
+
+        Settlement deficit = new(1003, 1, 0, "Leanfield");
+        deficit.FoodProduced = 40;
+        deficit.FoodStored = 10;
+        deficit.FoodRequired = 70;
+
+        Settlement starving = new(1004, 1, 0, "Bleakhold");
+        starving.FoodProduced = 20;
+        starving.FoodStored = 5;
+        starving.FoodRequired = 60;
+
+        Assert.Equal(FoodState.Surplus, surplus.CalculateFoodState());
+        Assert.Equal(FoodState.Stable, stable.CalculateFoodState());
+        Assert.Equal(FoodState.Deficit, deficit.CalculateFoodState());
+        Assert.Equal(FoodState.Starving, starving.CalculateFoodState());
+    }
+
+    [Fact]
+    public void SettlementRedistribution_PrioritizesSameRegionBeforeNeighbors_AndAppliesTransportLoss()
+    {
+        World world = CreateWorld();
+        Region distant = new(2, "High Ridge")
+        {
+            Fertility = 0.30,
+            WaterAvailability = 0.28,
+            PlantBiomass = 300,
+            AnimalBiomass = 120,
+            MaxPlantBiomass = 700,
+            MaxAnimalBiomass = 240
+        };
+        world.Regions[1].AddConnection(distant.Id);
+        distant.AddConnection(world.Regions[1].Id);
+        world.Regions.Add(distant);
+
+        Polity polity = CreateSettledPolity(world, 80, "Breadbasket League", 140, world.Regions[0].Id);
+        Settlement sender = polity.Settlements[0];
+        sender.CultivatedLand = 20;
+        Settlement sameRegionReceiver = polity.AddSettlement(world.Regions[0].Id, "Near Camp");
+        Settlement neighboringReceiver = polity.AddSettlement(world.Regions[1].Id, "Hill Camp");
+
+        polity.FoodNeededThisMonth = 140;
+        polity.FoodFarmedThisMonth = 200;
+        polity.FoodGatheredThisMonth = 0;
+        polity.FoodStores = 0;
+        world.Polities.Add(polity);
+
+        SettlementFoodRedistributionSystem system = new();
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        Assert.Equal(FoodState.Stable, sameRegionReceiver.FoodState);
+        Assert.True(sameRegionReceiver.LastAidReceived >= 19.9);
+        Assert.True(neighboringReceiver.LastAidReceived > 0);
+        Assert.True(neighboringReceiver.LastAidReceived < 5.0);
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.FoodAidSent && evt.SettlementId == sameRegionReceiver.Id);
+    }
+
+    [Fact]
+    public void SettlementRedistribution_EmitsFamineRelief_WhenAidPreventsStarvation()
+    {
+        World world = CreateWorld();
+        Polity polity = CreateSettledPolity(world, 81, "Stone Valley", 140, world.Regions[0].Id);
+        Settlement sender = polity.Settlements[0];
+        sender.CultivatedLand = 22;
+        Settlement starvingReceiver = polity.AddSettlement(world.Regions[1].Id, "Hill Camp");
+
+        polity.FoodNeededThisMonth = 140;
+        polity.FoodFarmedThisMonth = 220;
+        polity.FoodGatheredThisMonth = 0;
+        polity.FoodStores = 0;
+        world.Polities.Add(polity);
+
+        SettlementFoodRedistributionSystem system = new();
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        Assert.NotEqual(FoodState.Starving, starvingReceiver.FoodState);
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.FamineRelief && evt.SettlementId == starvingReceiver.Id);
+    }
+
+    [Fact]
     public void Migration_RelocatesSettlementNetworkWithThePolity()
     {
         World world = CreateWorld();

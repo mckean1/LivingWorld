@@ -28,6 +28,7 @@ These values are intentionally centralized so density tuning can happen without 
 6. generate starting polities from sapient species only
 
 World generation still creates only baseline species definitions. Mutation, divergence, regional adaptation, and descendant-species splitting now begin from those starting populations during simulation rather than being pre-baked into world generation.
+Generation also now hands off a sparse regional-population map: only seeded or otherwise meaningful starting populations are materialized, rather than every species-region pair.
 That means regional adaptation later measures how far a local population has moved away from its ancestral fit in that region, not whether the generated species started there fully adapted.
 World generation now gives each starting polity one grounded home settlement anchor in its starting region.
 That anchor is intentionally lightweight: it enables settlement-grounded hunting, trade endpoints, migration locality, and focal inspection from year zero without fabricating extra setup events.

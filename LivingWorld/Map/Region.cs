@@ -61,4 +61,14 @@ public sealed class Region
         _speciesPopulationsBySpeciesId[speciesId] = created;
         return created;
     }
+
+    public bool RemoveSpeciesPopulation(int speciesId)
+    {
+        if (!_speciesPopulationsBySpeciesId.Remove(speciesId, out RegionSpeciesPopulation? population))
+        {
+            return false;
+        }
+
+        return SpeciesPopulations.Remove(population);
+    }
 }

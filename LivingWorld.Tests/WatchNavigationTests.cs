@@ -181,6 +181,29 @@ public sealed class WatchNavigationTests
     }
 
     [Fact]
+    public void MyPolity_ShowsSettlementFoodStateBalanceAndAid()
+    {
+        World world = CreateWorld();
+        Polity polity = world.Polities.First(candidate => candidate.Id == 7);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodProduced = 20;
+        settlement.FoodStored = 5;
+        settlement.FoodRequired = 40;
+        settlement.AidReceivedThisYear = 12;
+        settlement.CalculateFoodState();
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.MyPolity);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(lines, line => line.Contains("food Deficit (-15.0)", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("aid ytd 12.0", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void WorldOverview_UsesKnownCountsRatherThanGlobalTotals()
     {
         World world = CreateWorld();

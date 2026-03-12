@@ -59,7 +59,8 @@ class Program
             PauseAfterEachYear = programOptions.PauseAfterEachYear,
             FocusedPolityId = programOptions.FocusedPolityId,
             WriteStructuredHistory = !programOptions.DisableHistory,
-            HistoryFilePath = programOptions.HistoryFilePath ?? defaults.HistoryFilePath
+            HistoryFilePath = programOptions.HistoryFilePath ?? defaults.HistoryFilePath,
+            EnablePerformanceInstrumentation = programOptions.EnablePerformanceInstrumentation
         };
     }
 
@@ -75,6 +76,7 @@ class Program
         Console.WriteLine("  --buffer-size <n>   Minimum retained chronicle history entries");
         Console.WriteLine("  --no-history        Disable JSONL history output");
         Console.WriteLine("  --history-path <p>  Override JSONL history output path");
+        Console.WriteLine("  --perf              Enable lightweight performance instrumentation");
         Console.WriteLine("  --pause-before-start");
         Console.WriteLine("  --pause-after-year");
         Console.WriteLine("  --help");
@@ -90,6 +92,7 @@ class Program
         public int? FocusedPolityId { get; private set; }
         public bool DisableHistory { get; private set; }
         public string? HistoryFilePath { get; private set; }
+        public bool EnablePerformanceInstrumentation { get; private set; }
         public bool PauseBeforeStart { get; private set; }
         public bool PauseAfterEachYear { get; private set; }
         public bool ShowHelp { get; private set; }
@@ -129,6 +132,9 @@ class Program
                         break;
                     case "--history-path":
                         options.HistoryFilePath = ParseString(args, ref i, "--history-path");
+                        break;
+                    case "--perf":
+                        options.EnablePerformanceInstrumentation = true;
                         break;
                     case "--pause-before-start":
                         options.PauseBeforeStart = true;

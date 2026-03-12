@@ -10,6 +10,7 @@ public sealed class EcosystemSystem
     private const double ConsumerPopulationToBiomass = 1.1;
     private readonly EcosystemSettings _settings;
     private readonly HashSet<string> _preyCollapseCooldownKeys = new(StringComparer.Ordinal);
+    public EcosystemSeasonMetrics LastSeasonMetrics { get; private set; } = EcosystemSeasonMetrics.Empty;
 
     public EcosystemSystem(EcosystemSettings? settings = null)
     {
@@ -24,23 +25,16 @@ public sealed class EcosystemSystem
         {
             foreach (Species species in speciesById.Values)
             {
-                RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
-                population.BaseHabitatSuitability = SpeciesEcology.CalculateBaseHabitatSuitability(species, region);
-                population.HabitatSuitability = SpeciesEcology.CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
-                population.CarryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
-
-                if (population.PopulationCount > 0 || population.CarryingCapacity <= 0)
+                if (species.InitialRangeRegionIds.Count > 0 && !species.InitialRangeRegionIds.Contains(region.Id))
                 {
-                    if (population.PopulationCount > 0 && !population.HasEverExisted)
-                    {
-                        population.MarkEstablished(world.Time.Year, world.Time.Month, "worldgen_seed", region.Id, species.Id);
-                    }
-
                     continue;
                 }
 
-                if (species.InitialRangeRegionIds.Count > 0 && !species.InitialRangeRegionIds.Contains(region.Id))
+                RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
+                RefreshPopulationState(region, species, population);
+                if (population.CarryingCapacity <= 0)
                 {
+                    region.RemoveSpeciesPopulation(species.Id);
                     continue;
                 }
 
@@ -48,6 +42,10 @@ public sealed class EcosystemSystem
                 if (population.PopulationCount > 0)
                 {
                     population.MarkEstablished(world.Time.Year, world.Time.Month, "worldgen_seed", region.Id, species.Id);
+                }
+                else if (population.CanBePruned())
+                {
+                    region.RemoveSpeciesPopulation(species.Id);
                 }
             }
         }
@@ -58,15 +56,36 @@ public sealed class EcosystemSystem
     public void UpdateSeason(World world)
     {
         Dictionary<int, Species> speciesById = world.Species.ToDictionary(species => species.Id);
+        int activePopulationCount = 0;
+        int ecologyIterations = 0;
 
         foreach (Region region in world.Regions)
         {
-            EnsureRegionEntries(region, speciesById);
+            foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
+            {
+                if (!speciesById.TryGetValue(population.SpeciesId, out Species? species))
+                {
+                    continue;
+                }
+
+                RefreshPopulationState(region, species, population);
+                ecologyIterations++;
+                if (population.PopulationCount > 0)
+                {
+                    activePopulationCount++;
+                }
+            }
+
             ProcessRegionalGrowth(region, speciesById, world.Time.Season);
             ProcessRegionalFoodWeb(world, region, speciesById);
         }
 
         ProcessMigration(world, speciesById);
+        LastSeasonMetrics = LastSeasonMetrics with
+        {
+            ActiveRegionalPopulationCount = activePopulationCount,
+            EcologyIterations = ecologyIterations
+        };
     }
 
     public void ResolveSeasonalCleanup(World world)
@@ -74,20 +93,20 @@ public sealed class EcosystemSystem
         Dictionary<int, Species> speciesById = world.Species.ToDictionary(species => species.Id);
         ResolveExtinctions(world, speciesById);
         SyncBiomeBiomass(world, speciesById);
+        LastSeasonMetrics = LastSeasonMetrics with
+        {
+            ActiveRegionalPopulationCount = world.Regions.Sum(region => region.SpeciesPopulations.Count(population => population.PopulationCount > 0))
+        };
     }
 
-    private void EnsureRegionEntries(Region region, IReadOnlyDictionary<int, Species> speciesById)
+    private static void RefreshPopulationState(Region region, Species species, RegionSpeciesPopulation population)
     {
-        foreach (Species species in speciesById.Values)
-        {
-            RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
-            population.BaseHabitatSuitability = SpeciesEcology.CalculateBaseHabitatSuitability(species, region);
-            population.HabitatSuitability = SpeciesEcology.CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
-            population.CarryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
-            population.EstablishedThisSeason = false;
-            population.ReceivedMigrantsThisSeason = false;
-            population.SentMigrantsThisSeason = false;
-        }
+        population.BaseHabitatSuitability = SpeciesEcology.CalculateBaseHabitatSuitability(species, region);
+        population.HabitatSuitability = SpeciesEcology.CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
+        population.CarryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
+        population.EstablishedThisSeason = false;
+        population.ReceivedMigrantsThisSeason = false;
+        population.SentMigrantsThisSeason = false;
     }
 
     private void ProcessRegionalGrowth(Region region, IReadOnlyDictionary<int, Species> speciesById, Season season)
@@ -348,7 +367,7 @@ public sealed class EcosystemSystem
     {
         foreach (Region region in world.Regions)
         {
-            foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
+            foreach (RegionSpeciesPopulation population in region.SpeciesPopulations.ToList())
             {
                 if (population.PopulationCount > 0)
                 {
@@ -359,12 +378,8 @@ public sealed class EcosystemSystem
 
                 Species species = speciesById[population.SpeciesId];
                 bool wasPresentBefore = population.HasEverExisted;
-                bool alreadyRecordedThisSeason = world.Events.Any(evt =>
-                    evt.Type == WorldEventType.LocalSpeciesExtinction
-                    && evt.SpeciesId == species.Id
-                    && evt.RegionId == region.Id
-                    && evt.Year == world.Time.Year
-                    && evt.Month == world.Time.Month);
+                bool alreadyRecordedThisSeason = population.LastLocalExtinctionYear == world.Time.Year
+                    && population.LastLocalExtinctionMonth == world.Time.Month;
                 bool suppressBecauseSpeciation = string.Equals(population.LastPopulationExitReason, "speciation_split", StringComparison.Ordinal);
 
                 if (wasPresentBefore && !population.LocalExtinctionRecorded && !alreadyRecordedThisSeason && !suppressBecauseSpeciation)
@@ -394,6 +409,11 @@ public sealed class EcosystemSystem
                 population.RecentPredationPressure = 0;
                 population.RecentHuntingPressure = 0;
                 population.SeasonsUnderPressure = 0;
+
+                if (population.CanBePruned())
+                {
+                    region.RemoveSpeciesPopulation(population.SpeciesId);
+                }
             }
         }
 
@@ -1031,5 +1051,12 @@ public sealed class EcosystemSystem
                 ["foodRatio"] = foodRatio.ToString("F2"),
                 ["population"] = predatorPopulation.PopulationCount.ToString()
             });
+    }
+
+    public sealed record EcosystemSeasonMetrics(
+        int ActiveRegionalPopulationCount,
+        int EcologyIterations)
+    {
+        public static EcosystemSeasonMetrics Empty { get; } = new(0, 0);
     }
 }

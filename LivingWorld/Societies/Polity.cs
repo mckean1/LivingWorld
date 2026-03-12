@@ -208,6 +208,14 @@ public sealed class Polity
         FoodHuntedThisYear = 0;
         HuntingCasualtiesThisYear = 0;
         LegendaryHuntsThisYear = 0;
+
+        foreach (Settlement settlement in _settlements)
+        {
+            settlement.AidReceivedThisYear = 0;
+            settlement.AidSentThisYear = 0;
+            settlement.LastAidReceived = 0;
+            settlement.LastAidSent = 0;
+        }
     }
 
     public bool HasAdvancement(AdvancementId advancementId)

@@ -23,6 +23,7 @@ Implemented core includes:
 - configurable chronicle playback delay
 - append-only JSONL history output
 - lineage-aware focus handoff across fragmentation and collapse
+- lightweight debug/perf instrumentation for long-run balancing and regression detection
 
 ## Near-Term Priorities
 
@@ -50,7 +51,7 @@ Replace first-pass generation-era visibility approximations with truer knowledge
 Current Phase 8 completion still uses a lightweight horizon model based on settlements, nearby regions, and explicit discoveries; richer diplomacy/contact memory remains intentionally deferred rather than faked in the UI.
 
 5. Speciation follow-through
-The first descendant-species pipeline now exists. Follow-up work should focus on better naming, richer cultural encounter/discovery around descendant fauna, and deeper long-horizon history tools rather than replacing the regional-population model.
+The first descendant-species pipeline now exists with explicit stabilization and anti-cascade safeguards. Follow-up work should focus on better naming, richer cultural encounter/discovery around descendant fauna, and deeper long-horizon history tools rather than replacing the regional-population model or reopening recursive growth waves.
 
 ## Mid-Term Systems
 

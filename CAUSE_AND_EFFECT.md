@@ -115,7 +115,9 @@ Implemented chain:
 
 `accumulated divergence -> mutation event -> ecological and hunting effects -> possible evolutionary turning point`
 
-`sustained isolation + durable divergence + viable local population -> descendant species appears in one region`
+`sustained isolation + durable divergence + viable local population + readiness + species maturity -> descendant species appears in one region`
+
+`new descendant species -> stabilization window + reset readiness -> later independent divergence path`
 
 `ancestral mismatch + sustained mismatch pressure + trait-driven fit improvement + persistence -> regional adaptation milestone`
 
@@ -199,6 +201,7 @@ The fuller-world opening is therefore tuned by improving real local anchors, hom
 - identical follow-ups within a step are deduped
 - chronicle presentation still filters and cools down repeated visible beats
 - hot-path systems now prefer cached lookup snapshots and clearer invariant failures so broken ids surface as explicit simulation problems rather than generic LINQ crashes
+- sparse ecology storage, buffered history writes, and current-year event caches are now also explicit performance safeguards so long-run cause-and-effect remains traceable without late-game quadratic overhead
 
 ## Player Experience
 
@@ -206,3 +209,14 @@ The chronicle still mainly shows effects, but those effects now come from a stro
 The new watch inspection UI reads that same state and event history without adding extra causes of its own. Pausing or changing views affects presentation timing only, not simulation causality.
 Responsive watch input follows the same rule: the loop now separates input polling, timed month advancement, and redraw invalidation so player interaction does not distort or accelerate underlying cause-and-effect.
 The Phase 8 visibility pass keeps that same boundary: screen content now flows through a shared focal-polity knowledge snapshot, so hiding unknown regions, species, and polity knowledge is a presentation rule built on existing state rather than a new simulation-side mechanic.
+## Phase 12 Cause and Effect
+
+Settlement aid follows a strict causal sequence:
+1. settlements receive monthly production and store shares from already-resolved food systems
+2. each settlement computes a local food balance
+3. only true surplus settlements can export aid
+4. aid first targets the closest needy settlements inside the same polity
+5. distance removes part of the convoy through transport loss
+6. the receiver's post-aid food state determines whether relief succeeded or failed
+
+This keeps stories grounded. Nearby breadbasket settlements can keep a frontier camp alive through winter, while remote camps may still starve if distance friction or insufficient surplus limits what arrives.

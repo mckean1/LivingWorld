@@ -411,6 +411,39 @@ public sealed class ChronicleEventFormatterTests
         Assert.Contains("learned", learnedLine, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void MajorFamineRelief_RemainsVisibleInChronicle()
+    {
+        WorldEvent reliefEvent = new()
+        {
+            EventId = 230,
+            Year = 230,
+            Month = 1,
+            Season = Season.Winter,
+            Type = WorldEventType.FamineRelief,
+            Severity = WorldEventSeverity.Major,
+            Narrative = "Food caravans arrived from Stone Valley, relieving famine in Hill Camp",
+            Reason = "settlement_starvation_prevented",
+            PolityId = 7,
+            PolityName = "River Clan",
+            RegionId = 1,
+            RegionName = "Red Valley",
+            SettlementId = 7001,
+            SettlementName = "Hill Camp",
+            Metadata = new Dictionary<string, string>
+            {
+                ["senderSettlementId"] = "7002"
+            },
+            After = new Dictionary<string, string>
+            {
+                ["foodState"] = "Stable"
+            }
+        };
+
+        Assert.True(_formatter.TryFormat(reliefEvent, _focus, out string chronicleLine));
+        Assert.Equal("Year 230 - Food caravans arrived from Stone Valley, relieving famine in Hill Camp.", chronicleLine);
+    }
+
     private static WorldEvent CreateEvent(
         string type,
         WorldEventSeverity severity,

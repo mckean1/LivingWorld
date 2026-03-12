@@ -99,6 +99,8 @@ The new ecology phase is shared state for multiple systems:
 - if a fertile region would otherwise be fauna-empty, world generation now attaches it to the nearest plausible herbivore cluster instead of leaving hunting and prey chains with no local foothold
 - hunting reads the same regional populations and writes pressure back into them
 - mutation reads those same pressure markers plus same-season species-exchange flags, stores accumulated evolutionary pressure on each regional population, and writes trait offsets back into the same records
+- mutation now also builds speciation readiness gradually and requires descendant-species stabilization before a new lineage can branch again
+- mutation also enforces regional root-lineage cooldowns and crowding penalties so chronically isolated basins cannot recursively spawn unlimited same-ancestor descendants
 - ecosystem growth, migration scoring, and carrying capacity now consume those evolved trait offsets
 - ecosystem initialization and seasonal growth now let healthy producer biomass translate into stronger herbivore establishment and earlier wildlife expansion
 - seasonal fauna migration now turns that pressure into real founder populations in neighboring regions, so empty but suitable regions can join the food web without any separate spawn system
@@ -109,6 +111,7 @@ The new ecology phase is shared state for multiple systems:
 - polity discoveries, hunting knowledge, and domestication interest are stored on the polity for future systems to consume
 - mutation also tracks adaptation milestones on each regional population so adaptation events emit only when a new stage is crossed
 - mutation now also tracks divergence pressure, founder/source lineage metadata, and descendant-species creation from isolated high-divergence populations
+- sparse regional-population storage means those mutation and migration rules now operate primarily on active populations plus explicit founder targets, not on dormant region-species placeholders everywhere
 
 Important timing boundary:
 
@@ -118,6 +121,7 @@ Important timing boundary:
 - later monthly polity migration happens in `MigrationSystem` after food resolution
 - mutation inputs such as `EstablishedThisSeason`, `ReceivedMigrantsThisSeason`, and `SentMigrantsThisSeason` refer only to the first category
 - extinction cleanup now marks local extinction once, emits global extinction once per species, and leaves later recovery to the same neighboring founder-migration path
+- repeated biology status events such as isolation and minor mutation are now source-throttled more aggressively so the event pipeline preserves causality without late-game spam
 - chronicle presentation then applies its own scoped cooldown rules, including a dedicated adaptation key for visible adaptation beats
 
 ## Settlement-Grounded Production Layer
@@ -196,3 +200,20 @@ The new inspection UI is a read-only observer layer on top of those systems:
 - the simulation loop now schedules month advancement on a timed cadence and uses render invalidation so input polling stays responsive during live play
 - foreign-polity detail intentionally hides that polity's private discoveries and learned capabilities unless it is the current focal polity
 - focal-polity inspection is intentionally separate: `My Polity` is treated as the already-expanded self-view, so `Enter` there does not fall through to the generic polity-detail renderer
+## Phase 12 - Food Redistribution Interactions
+
+`FoodSystem` and `AgricultureSystem` still generate polity-level food totals, but those totals are now projected back onto settlements each month so settlement inspection and aid routing can operate on concrete local states.
+
+`SettlementFoodRedistributionSystem` consumes:
+- monthly food gathered
+- monthly food farmed
+- current polity food stores
+- regional connectivity
+- settlement cultivated land and location
+
+It produces:
+- settlement food pressure classifications
+- settlement aid totals for UI visibility
+- structured aid events for the event pipeline
+
+The chronicle continues to stay high-signal by showing only `Major` and `Legendary` rescue/failure outcomes.

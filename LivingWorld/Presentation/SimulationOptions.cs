@@ -34,6 +34,8 @@ public sealed class SimulationOptions
 
     public string HistoryFilePath { get; init; } = BuildDefaultHistoryFilePath();
 
+    public bool EnablePerformanceInstrumentation { get; init; }
+
     private static string BuildDefaultHistoryFilePath()
     {
         string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");

@@ -128,6 +128,7 @@ Selected ecology fields:
 - seasonal reproduction and decline inputs
 - hunting traits such as `MeatYield`, `HuntingDifficulty`, `HuntingDanger`, `IsToxicToEat`
 - `DomesticationAffinity`
+- `EarliestSpeciationYear`
 
 ## RegionSpeciesPopulation
 
@@ -149,16 +150,24 @@ Selected fields:
 - `FounderSeasonsRemaining` tracks short predator founder-establishment windows so new predator colonies can either mature or fail under normal ecology rules
 - per-population trait offsets for Intelligence, Sociality, Aggression, Endurance, Fertility, DietFlexibility, ClimateTolerance, and Size
 - accumulated mutation pressure by cause: food stress, predation, hunting, habitat mismatch, isolation, crowding, and low-pressure drift
-- divergence tracking: `DivergencePressure`, `DivergenceScore`, `IsolationSeasons`, mutation counts, and milestone markers
+- divergence tracking: `DivergencePressure`, `DivergenceScore`, `IsolationSeasons`, `SpeciationReadinessSeasons`, mutation counts, and milestone markers
 - founder/source metadata: founder kind, source region/species, and founder year/month
 - extinction bookkeeping: `HasEverExisted`, local-extinction markers, and last exit reason
 - adaptation tracking: `LastAdaptationMilestone` plus compatibility `RegionAdaptationRecorded`
 - seasonal exchange markers so isolation and migration shock can be resolved cleanly
 - ancestral-fit versus adapted-fit tracking so regional adaptation can compare baseline species suitability against evolved local suitability
 
+Important storage rule:
+
+- `RegionSpeciesPopulation` is sparse by default
+- regions do not maintain permanent entries for every species
+- never-established empty region-species pairs should be absent unless an explicit migration/speciation/founder action creates one
+- empty records can be pruned again when they never became meaningful state
+
 These entries are population-level only. LivingWorld still does not simulate individual animals or genetics.
 The global `Species` definition remains the ancestral baseline. Mutation and divergence now happen on `RegionSpeciesPopulation` so one regional lineage can adapt without rewriting the parent species everywhere else.
 When divergence matures into speciation, a new `Species` record is created with parent/root lineage metadata, origin region/time, and inherited baseline traits derived from the evolved regional population.
+That descendant population does not inherit full speciation readiness. Isolation progress, divergence readiness, and immediate re-branching pressure are reset or heavily damped so the new species must stabilize before it can ever speciate again.
 
 ## Region
 
@@ -245,3 +254,4 @@ It centralizes:
 - divergence state stays lightweight, but it now promotes existing regional populations into descendant species instead of stopping at milestone-only tracking
 - settlement-local execution is intentionally lightweight so later settlement-specialization and cross-region trade can reuse the same records instead of reintroducing polity-level shortcuts
 - cached lookup snapshots plus direct region species-population indexing are intentional infrastructure for both safety and performance in hot paths
+- simulation control may now also keep rolling year-local summaries such as current-year event caches and perf counters so late-game work does not require rescanning full historical storage

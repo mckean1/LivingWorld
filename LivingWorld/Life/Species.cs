@@ -38,6 +38,7 @@ public sealed class Species
     public int OriginMonth { get; set; }
     public string? OriginCause { get; set; }
     public string? OriginPressureSummary { get; set; }
+    public int EarliestSpeciationYear { get; set; }
     public bool IsGloballyExtinct { get; set; }
     public int? ExtinctionYear { get; set; }
     public int? ExtinctionMonth { get; set; }
@@ -75,6 +76,7 @@ public sealed class Species
         RootAncestorSpeciesId = id;
         OriginYear = 0;
         OriginMonth = 1;
+        EarliestSpeciationYear = 0;
         IsGloballyExtinct = false;
     }
 

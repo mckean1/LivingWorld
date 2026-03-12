@@ -23,9 +23,11 @@ The seed world entering this loop is now larger by default, but scale tuning rem
 - region plant biomass refresh
 - seasonal regional species population maintenance every third month
 - seasonal ecosystem interactions, founder migration, and species exchange every third month
+- ecosystem work is now sparse: it iterates existing regional populations and explicit frontier candidates rather than forcing every species into every region each season
 - seasonal settlement hunting every third month
 - hunting is resolved per settlement, using that settlement's actual region
 - seasonal mutation, divergence, and speciation pass every third month using the same season's species exchange flags
+- speciation eligibility now also depends on species age, global population, sustained readiness, and descendant stabilization
 - seasonal extinction cleanup and biomass sync every third month
 - plant gathering and farming
 - farming is resolved per settlement, with settlements in the same region competing for the same regional arable capacity
@@ -97,6 +99,7 @@ In watch mode:
 - cap total follow-up count
 - keep chronicle cooldowns separate from storage
 - chronicle cooldowns now use event-family profiles with actor scope plus semantic state keys, so changed-state turning points can bypass earlier than repeated same-state lines
+- source systems now also suppress repeated biology status events through milestone guards and year-level cooldowns before those events ever hit storage
 
 ## Focus And Lineage Continuity
 
@@ -122,3 +125,17 @@ The simulation loop now supports:
 - structured history with causal ancestry
 - concise chronicle output that still reads like history rather than telemetry
 - safer hot-path lookup behavior through cached lookup snapshots and clearer invariant failures
+- lightweight perf instrumentation for species count, active regional populations, mutation/speciation checks, event categories, and year-end hot-path timings when `--perf` is enabled
+## Phase 12 Integration Point
+
+The monthly loop now runs settlement food redistribution after:
+- food gathering
+- farm production
+- trade updates
+- food consumption
+
+and before:
+- migration pressure resolution
+- later annual starvation-driven population change
+
+That ordering matters because settlement aid is intended to alter the final local hardship state that downstream systems react to, without introducing a separate market simulation.

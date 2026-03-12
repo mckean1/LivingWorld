@@ -44,6 +44,7 @@ It builds cached dictionaries for regions, species, polities, active populations
 - throw clearer invariant errors where corruption would otherwise surface as an opaque LINQ exception
 
 `Region` also now keeps direct indexing for species-population entries, which removes another repeated lookup hotspot from seasonal ecology and hunting code.
+Those entries are sparse by default now: regions keep active or historically meaningful populations instead of materializing every species in every region.
 
 ## Generation Architecture
 
@@ -73,6 +74,7 @@ The canonical flow is now:
 - recording chronological history
 - invoking the propagation coordinator
 - publishing `EventRecorded`
+- leaving any year-local control caches to higher-level simulation logic rather than mixing them into canonical storage
 
 ### EventPropagationCoordinator
 
@@ -196,6 +198,7 @@ Monthly:
 - those seasonal hunts iterate actual settlements in actual regions
 - regional animal biomass is derived during seasonal ecosystem sync from surviving consumer populations and is not harvested directly
 - seasonal mutation, divergence, and speciation processing after same-season species exchange
+- descendant-species creation now feeds into a stabilization window and readiness rebuild rather than inheriting near-ready speciation state
 - seasonal extinction cleanup and biomass sync after mutation processing
 - plant gathering, farming, trade redistribution, consumption, migration
 - propagation state bonuses tick down
@@ -210,9 +213,11 @@ The food architecture is intentionally asymmetric now:
 - `Region.AnimalBiomass` exists for ecology context, watch screens, migration heuristics, and advancement weighting, not as an independent meat store
 - early herbivore establishment now comes from range-limited worldgen plus carrying-capacity-driven initialization and producer-supported growth rather than from any abstract animal stock
 - ongoing fauna spread now also lives in `EcosystemSystem`: adjacent-region founder migration happens after seasonal food-web pressure is known and before mutation consumes same-season exchange markers
+- ecology processing is now sparse and active-population driven: suitability and carrying-capacity refresh happens for existing regional populations, while empty region-species pairs are evaluated only when an explicit founder or recolonization attempt targets them
 
 The later monthly `MigrationSystem` still handles polity relocation after food resolution. Mutation does not read polity movement directly; it reads seasonal species-exchange state on `RegionSpeciesPopulation`.
 `MutationSystem` now owns the regional evolution pass on those same records: pressure accumulation, local trait drift, divergence pressure, adaptation milestones, and descendant-species creation for long-isolated viable populations.
+Speciation is now additionally gated by descendant-species age, global species population, sustained readiness, and stabilization rules so evolutionary storytelling remains visible without turning into recursive geometric growth.
 When polity migration does occur, settlement records are relocated with the polity so settlement-grounded systems keep a coherent local model until a later phase introduces true cross-region polity settlement networks.
 
 Year-end:
@@ -225,6 +230,7 @@ Year-end:
 - annual agriculture and trade review
 - annual hardship transition events
 - focus validation and handoff
+- optional perf instrumentation snapshots
 
 ## Design Direction
 
@@ -238,4 +244,14 @@ The architecture continues to prioritize:
 - the first lineage-aware descendant-species path now exists; later phases can deepen naming, deep-history, and domestication variants without replacing the population-level model
 - future alternate history views without rewriting simulation systems
 - source-side milestone guards plus chronicle cooldown keys so visible history beats stay about transitions rather than repeated reaffirmation
+- sparse regional-population tracking and descendant-species stabilization as first-class performance safeguards
 - a stricter presentation split where structured history may still keep repeated pressure/follow-up events even when the live chronicle hides them
+## Phase 12 - Settlement Aid Layer
+
+Regional food exchange now sits between settlement production/consumption bookkeeping and later social-pressure systems. The new monthly pass is settlement-centric: it derives each settlement's local food requirement, production share, and stored food share from the current polity-level totals, classifies the settlement food state, and then performs intra-polity redistribution.
+
+This layer does not introduce markets, prices, currency, or diplomacy. It is a logistical redistribution system whose main responsibilities are:
+- classify settlement food pressure
+- move food along region-aware routes inside a polity
+- apply transport loss by regional distance
+- emit high-signal aid and famine-relief events through the normal world event pipeline

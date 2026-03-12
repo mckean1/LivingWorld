@@ -476,7 +476,8 @@ public static class WatchScreenBuilder
             string ownerName = lookup.TryGetPolity(settlement.PolityId, out Polity? polity) && polity is not null
                 ? polity.Name
                 : $"Polity {settlement.PolityId}";
-            lines.Add($"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1}");
+            lines.Add(
+                $"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1} - food {settlement.FoodState} ({settlement.FoodBalance:F1}) - aid ytd {settlement.AidReceivedThisYear:F1}");
         }
     }
 

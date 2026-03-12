@@ -166,6 +166,7 @@ The main chronicle favors:
 
 Player-facing coloring is intentionally narrower than event semantics. Watch mode colors explicit semantic units such as years, actor names, places, knowledge items, and severe status words, but leaves ordinary descriptive prose uncolored.
 Most recolonization, local extinction, and minor mutation beats remain structured-first even when they now carry richer lineage/source metadata; only unusually consequential descendant-species appearances should surface live.
+Biology families now also use stricter source-side milestone guards: prolonged isolation emits on wider milestone bands, minor mutation events observe year-level cooldowns, and descendant-species appearances require stabilization-aware speciation gates.
 The chronicle formatter now also treats some event families as semantic transition bands rather than plain repeated messages. For example, repeated recovery into the same hardship state is cooled down more aggressively than a true hardship escalation or a later stable recovery.
 
 ## Anti-Spam Rules
@@ -177,6 +178,7 @@ The chronicle formatter now also treats some event families as semantic transiti
 - chronicle cooldowns still suppress repeated visible beats for the same actor scope
 - visible cooldowns are now semantic and family-specific, so repeated same-state events are suppressed more strongly than changed-state transitions
 - source systems may also suppress repeat emissions before they ever reach chronicle presentation when no new milestone has been crossed
+- history writing is still append-only, but flushes are now batched so heavy biology years do not force a synchronous disk flush per event
 
 ## Example JSONL Record
 

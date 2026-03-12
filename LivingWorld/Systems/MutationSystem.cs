@@ -9,6 +9,8 @@ public sealed class MutationSystem
 {
     private readonly Random _random;
     private readonly MutationSettings _settings;
+    private readonly Dictionary<(int RegionId, int RootAncestorSpeciesId), int> _lastRootSpeciationYearByRegion = [];
+    public MutationSeasonMetrics LastSeasonMetrics { get; private set; } = MutationSeasonMetrics.Empty;
 
     public MutationSystem(int seed = 24680, MutationSettings? settings = null)
     {
@@ -21,27 +23,55 @@ public sealed class MutationSystem
         // Mutation reacts to the current seasonal ecology pass, including same-season
         // regional species exchange recorded by EcosystemSystem. Later monthly polity
         // migration is a social movement step and does not backfill these flags.
+        SpeciationContext speciationContext = BuildSpeciationContext(world);
+        int mutationChecks = 0;
+        int speciationCandidates = 0;
+        int speciationEvents = 0;
+
         foreach (Region region in world.Regions)
         {
             foreach (RegionSpeciesPopulation population in region.SpeciesPopulations.Where(candidate => candidate.PopulationCount > 0).ToList())
             {
-                Species species = world.Species.First(candidate => candidate.Id == population.SpeciesId);
+                if (!speciationContext.SpeciesById.TryGetValue(population.SpeciesId, out Species? species))
+                {
+                    continue;
+                }
 
                 UpdateIsolation(world, region, population, species);
                 AccumulatePressure(species, region, population);
                 EmitIsolationMilestone(world, region, population, species);
                 EmitAdaptationMilestone(world, region, population, species);
+                mutationChecks++;
 
                 if (!ShouldMutate(population, out MutationTier tier))
                 {
-                    TrySpeciate(world, region, population, species);
+                    if (IsSpeciationCandidate(world, population, species, speciationContext, out SpeciationCandidateState nonMutationCandidateState))
+                    {
+                        speciationCandidates++;
+                    }
+
+                    if (TrySpeciate(world, region, population, species, speciationContext, nonMutationCandidateState))
+                    {
+                        speciationEvents++;
+                    }
+
                     continue;
                 }
 
                 ApplyMutation(world, region, population, species, tier);
-                TrySpeciate(world, region, population, species);
+                if (IsSpeciationCandidate(world, population, species, speciationContext, out SpeciationCandidateState mutatedCandidateState))
+                {
+                    speciationCandidates++;
+                }
+
+                if (TrySpeciate(world, region, population, species, speciationContext, mutatedCandidateState))
+                {
+                    speciationEvents++;
+                }
             }
         }
+
+        LastSeasonMetrics = new MutationSeasonMetrics(mutationChecks, speciationCandidates, speciationEvents);
     }
 
     private void UpdateIsolation(World world, Region region, RegionSpeciesPopulation population, Species species)
@@ -50,6 +80,7 @@ public sealed class MutationSystem
         if (exchanged)
         {
             population.IsolationSeasons = Math.Max(0, population.IsolationSeasons - 3);
+            population.SpeciationReadinessSeasons = Math.Max(0, population.SpeciationReadinessSeasons - 4);
             population.IsolationMutationPressure *= 0.72;
             return;
         }
@@ -62,6 +93,15 @@ public sealed class MutationSystem
         population.IsolationSeasons = connectedPopulationExists
             ? Math.Max(0, population.IsolationSeasons - 1)
             : population.IsolationSeasons + 1;
+
+        if (population.IsolationSeasons >= _settings.SpeciationIsolationSeasonsThreshold && population.PopulationCount >= _settings.SpeciationMinimumPopulation)
+        {
+            population.SpeciationReadinessSeasons++;
+        }
+        else
+        {
+            population.SpeciationReadinessSeasons = Math.Max(0, population.SpeciationReadinessSeasons - 1);
+        }
     }
 
     private void AccumulatePressure(Species species, Region region, RegionSpeciesPopulation population)
@@ -255,41 +295,54 @@ public sealed class MutationSystem
         string narrative = BuildMutationNarrative(region, species, plan, dominantPressure, tier);
         string details = BuildMutationDetails(region, species, population, rankedPressures, plan, tier);
 
-        world.AddEvent(
-            eventType,
-            severity,
-            narrative,
-            details,
-            reason: $"pressure_{dominantPressure.Name}",
-            scope: WorldEventScope.Regional,
-            polityId: polityId,
-            polityName: polityName,
-            relatedPolityId: relatedPolityId,
-            relatedPolityName: relatedPolityName,
-            relatedPolitySpeciesId: relatedPolitySpeciesId,
-            relatedPolitySpeciesName: relatedPolitySpeciesName,
-            speciesId: species.Id,
-            speciesName: species.Name,
-            regionId: region.Id,
-            regionName: region.Name,
-            before: before,
-            after: after,
-            metadata: metadata);
+        if (ShouldEmitMutationEvent(world, population, tier, impact))
+        {
+            world.AddEvent(
+                eventType,
+                severity,
+                narrative,
+                details,
+                reason: $"pressure_{dominantPressure.Name}",
+                scope: WorldEventScope.Regional,
+                polityId: polityId,
+                polityName: polityName,
+                relatedPolityId: relatedPolityId,
+                relatedPolityName: relatedPolityName,
+                relatedPolitySpeciesId: relatedPolitySpeciesId,
+                relatedPolitySpeciesName: relatedPolitySpeciesName,
+                speciesId: species.Id,
+                speciesName: species.Name,
+                regionId: region.Id,
+                regionName: region.Name,
+                before: before,
+                after: after,
+                metadata: metadata);
+
+            if (tier == MutationTier.Major)
+            {
+                population.LastMajorMutationEventYear = world.Time.Year;
+            }
+            else
+            {
+                population.LastMinorMutationEventYear = world.Time.Year;
+            }
+        }
 
         EmitDivergenceMilestone(world, region, population, species, relatedPolity);
     }
 
     private void EmitIsolationMilestone(World world, Region region, RegionSpeciesPopulation population, Species species)
     {
-        if (population.IsolationSeasons < 8 || population.IsolationSeasons - population.LastIsolationEventSeason < 8)
+        int milestone = ResolveIsolationMilestone(population.IsolationSeasons);
+        if (milestone == 0 || milestone <= population.LastIsolationEventMilestone)
         {
             return;
         }
 
-        population.LastIsolationEventSeason = population.IsolationSeasons;
+        population.LastIsolationEventMilestone = milestone;
         world.AddEvent(
             WorldEventType.SpeciesPopulationIsolated,
-            WorldEventSeverity.Minor,
+            milestone >= 3 ? WorldEventSeverity.Notable : WorldEventSeverity.Minor,
             $"{species.Name} remained isolated in {region.Name}",
             $"{species.Name} in {region.Name} has remained without meaningful exchange for {population.IsolationSeasons} seasons.",
             reason: "prolonged_isolation",
@@ -302,6 +355,10 @@ public sealed class MutationSystem
             {
                 ["isolationSeasons"] = population.IsolationSeasons.ToString(),
                 ["divergenceScore"] = population.DivergenceScore.ToString("F2")
+            },
+            metadata: new Dictionary<string, string>
+            {
+                ["isolationMilestone"] = milestone.ToString()
             });
     }
 
@@ -704,11 +761,22 @@ public sealed class MutationSystem
         };
     }
 
-    private void TrySpeciate(World world, Region region, RegionSpeciesPopulation population, Species species)
+    private bool TrySpeciate(
+        World world,
+        Region region,
+        RegionSpeciesPopulation population,
+        Species species,
+        SpeciationContext speciationContext,
+        SpeciationCandidateState candidateState)
     {
-        if (!CanSpeciate(world, population, species))
+        if (!candidateState.IsCandidate && !IsSpeciationCandidate(world, population, species, speciationContext, out candidateState))
         {
-            return;
+            return false;
+        }
+
+        if (!CanSpeciate(world, population, species, speciationContext, candidateState))
+        {
+            return false;
         }
 
         List<MutationPressureContribution> rankedPressures = RankPressures(population);
@@ -724,14 +792,16 @@ public sealed class MutationSystem
         {
             world.Species.Remove(descendant);
             species.DescendantSpeciesIds.Remove(descendant.Id);
-            return;
+            return false;
         }
 
+        int parentPopulationBeforeSplit = population.PopulationCount;
         population.PopulationCount = Math.Max(1, population.PopulationCount - descendantPopulationCount);
         population.LastSpeciationYear = world.Time.Year;
         population.DivergenceScore *= _settings.ParentPostSpeciationDivergenceRetention;
         population.DivergencePressure *= 0.55;
         population.IsolationMutationPressure *= 0.60;
+        population.SpeciationReadinessSeasons = Math.Max(0, population.SpeciationReadinessSeasons / 3);
 
         RegionSpeciesPopulation descendantPopulation = region.GetOrCreateSpeciesPopulation(descendant.Id);
         descendantPopulation.PopulationCount = descendantPopulationCount;
@@ -746,21 +816,25 @@ public sealed class MutationSystem
         descendantPopulation.DietFlexibilityOffset = population.DietFlexibilityOffset * _settings.DescendantResidualOffsetShare;
         descendantPopulation.ClimateToleranceOffset = population.ClimateToleranceOffset * _settings.DescendantResidualOffsetShare;
         descendantPopulation.SizeOffset = population.SizeOffset * _settings.DescendantResidualOffsetShare;
-        descendantPopulation.FoodStressMutationPressure = population.FoodStressMutationPressure * 0.45;
-        descendantPopulation.PredationMutationPressure = population.PredationMutationPressure * 0.45;
-        descendantPopulation.HuntingMutationPressure = population.HuntingMutationPressure * 0.45;
+        descendantPopulation.FoodStressMutationPressure = population.FoodStressMutationPressure * _settings.DescendantStartingStressPressureRetention;
+        descendantPopulation.PredationMutationPressure = population.PredationMutationPressure * _settings.DescendantStartingStressPressureRetention;
+        descendantPopulation.HuntingMutationPressure = population.HuntingMutationPressure * _settings.DescendantStartingStressPressureRetention;
         descendantPopulation.HabitatMismatchMutationPressure = population.HabitatMismatchMutationPressure * 0.55;
-        descendantPopulation.IsolationMutationPressure = population.IsolationMutationPressure * 0.75;
+        descendantPopulation.IsolationMutationPressure = population.IsolationMutationPressure * _settings.DescendantStartingIsolationPressureRetention;
         descendantPopulation.CrowdingMutationPressure = population.CrowdingMutationPressure * 0.35;
         descendantPopulation.DriftMutationPressure = population.DriftMutationPressure * 0.50;
-        descendantPopulation.DivergencePressure = population.DivergencePressure * 0.50;
-        descendantPopulation.DivergenceScore = Math.Max(0.45, population.DivergenceScore * _settings.DescendantStartingDivergenceRetention);
-        descendantPopulation.IsolationSeasons = population.IsolationSeasons;
-        descendantPopulation.MinorMutationCount = Math.Max(0, population.MinorMutationCount / 2);
-        descendantPopulation.MajorMutationCount = Math.Max(1, population.MajorMutationCount);
+        descendantPopulation.DivergencePressure = population.DivergencePressure * _settings.DescendantStartingDivergencePressureRetention;
+        descendantPopulation.DivergenceScore = Math.Max(0.0, population.DivergenceScore * _settings.DescendantStartingDivergenceRetention);
+        descendantPopulation.IsolationSeasons = _settings.DescendantStartingIsolationSeasons;
+        descendantPopulation.SpeciationReadinessSeasons = _settings.DescendantStartingReadinessSeasons;
+        descendantPopulation.MinorMutationCount = 0;
+        descendantPopulation.MajorMutationCount = 0;
         descendantPopulation.LastMutationYear = world.Time.Year;
-        descendantPopulation.LastMajorMutationYear = population.LastMajorMutationYear;
-        descendantPopulation.LastSpeciationYear = world.Time.Year;
+        descendantPopulation.LastMajorMutationYear = -1;
+        descendantPopulation.LastSpeciationYear = -1;
+        descendantPopulation.LastIsolationEventMilestone = 0;
+        descendantPopulation.LastDivergenceMilestone = 0;
+        descendantPopulation.LastAdaptationMilestone = 0;
         descendantPopulation.MarkEstablished(world.Time.Year, world.Time.Month, "speciation", region.Id, species.Id);
         descendantPopulation.HasEverExisted = true;
 
@@ -791,7 +865,7 @@ public sealed class MutationSystem
             regionName: region.Name,
             before: new Dictionary<string, string>
             {
-                ["parentPopulation"] = (population.PopulationCount + descendantPopulationCount).ToString(),
+                ["parentPopulation"] = parentPopulationBeforeSplit.ToString(),
                 ["parentDivergenceScore"] = (population.DivergenceScore / _settings.ParentPostSpeciationDivergenceRetention).ToString("F2")
             },
             after: new Dictionary<string, string>
@@ -807,26 +881,97 @@ public sealed class MutationSystem
                 ["rootAncestorSpeciesId"] = descendant.RootAncestorSpeciesId.ToString(),
                 ["originRegionId"] = region.Id.ToString(),
                 ["originRegionName"] = region.Name,
-                ["pressureSummary"] = pressureSummary
+                ["pressureSummary"] = pressureSummary,
+                ["earliestSpeciationYear"] = descendant.EarliestSpeciationYear.ToString()
             });
+
+        _lastRootSpeciationYearByRegion[(region.Id, species.RootAncestorSpeciesId)] = world.Time.Year;
+        speciationContext.RegisterNewSpecies(descendant, region.Id, descendantPopulationCount);
+
+        return true;
     }
 
-    private bool CanSpeciate(World world, RegionSpeciesPopulation population, Species species)
+    private bool IsSpeciationCandidate(
+        World world,
+        RegionSpeciesPopulation population,
+        Species species,
+        SpeciationContext speciationContext,
+        out SpeciationCandidateState candidateState)
     {
-        if (species.IsSapient || population.PopulationCount < _settings.SpeciationMinimumPopulation)
+        candidateState = default;
+
+        if (species.IsSapient
+            || world.Time.Year < species.EarliestSpeciationYear
+            || ResolveSpeciesAgeYears(world, species) < _settings.MinimumSpeciesAgeYearsForSpeciation
+            || population.PopulationCount < _settings.SpeciationMinimumPopulation)
         {
             return false;
         }
 
-        if (population.IsolationSeasons < _settings.SpeciationIsolationSeasonsThreshold
-            || population.DivergenceScore < _settings.SpeciationDivergenceThreshold
-            || population.LastSpeciationYear >= 0 && world.Time.Year - population.LastSpeciationYear < _settings.SpeciationCooldownYears)
+        int sameRootSpeciesInRegion = speciationContext.CountSameRootSpeciesInRegion(population.RegionId, species.RootAncestorSpeciesId);
+        if (sameRootSpeciesInRegion >= _settings.RegionalRootLineageHardCap)
+        {
+            return false;
+        }
+
+        int crowdingOverSoftCap = Math.Max(0, sameRootSpeciesInRegion - _settings.RegionalRootLineageSoftCap);
+        double requiredDivergence = _settings.SpeciationDivergenceThreshold + (crowdingOverSoftCap * _settings.RegionalCrowdingExtraDivergencePerSpecies);
+        int requiredReadiness = _settings.SpeciationReadinessSeasonsThreshold + (crowdingOverSoftCap * _settings.RegionalCrowdingExtraReadinessSeasonsPerSpecies);
+
+        bool isCandidate = population.IsolationSeasons >= _settings.SpeciationIsolationSeasonsThreshold
+               && population.SpeciationReadinessSeasons >= requiredReadiness
+               && population.DivergenceScore >= requiredDivergence;
+
+        if (isCandidate)
+        {
+            candidateState = new SpeciationCandidateState(
+                true,
+                sameRootSpeciesInRegion,
+                crowdingOverSoftCap,
+                requiredDivergence,
+                requiredReadiness);
+        }
+
+        return isCandidate;
+    }
+
+    private bool CanSpeciate(
+        World world,
+        RegionSpeciesPopulation population,
+        Species species,
+        SpeciationContext speciationContext,
+        SpeciationCandidateState candidateState)
+    {
+        if (!candidateState.IsCandidate)
+        {
+            return false;
+        }
+
+        if (population.LastSpeciationYear >= 0 && world.Time.Year - population.LastSpeciationYear < _settings.SpeciationCooldownYears)
+        {
+            return false;
+        }
+
+        int globalPopulation = speciationContext.ResolveGlobalPopulation(species.Id);
+        int requiredGlobalPopulation = _settings.SpeciationMinimumGlobalPopulation + (candidateState.CrowdingOverSoftCap * _settings.RegionalCrowdingExtraGlobalPopulationPerSpecies);
+        if (globalPopulation < requiredGlobalPopulation)
+        {
+            return false;
+        }
+
+        if (_lastRootSpeciationYearByRegion.TryGetValue((population.RegionId, species.RootAncestorSpeciesId), out int lastRootSpeciationYear)
+            && world.Time.Year - lastRootSpeciationYear < _settings.RegionalRootSpeciationCooldownYears)
         {
             return false;
         }
 
         int mutationCount = population.MinorMutationCount + (population.MajorMutationCount * 2);
         if (mutationCount < _settings.SpeciationMinimumMutations)
+        {
+            return false;
+        }
+
+        if (population.MajorMutationCount < _settings.SpeciationMinimumMajorMutations)
         {
             return false;
         }
@@ -882,6 +1027,7 @@ public sealed class MutationSystem
             OriginYear = world.Time.Year,
             OriginMonth = world.Time.Month,
             OriginCause = "regional_speciation",
+            EarliestSpeciationYear = world.Time.Year + _settings.DescendantSpeciesStabilizationYears + ResolveSpeciationJitterYears(newSpeciesId, region.Id),
             OriginPressureSummary = rankedPressures.Count == 0
                 ? "mixed pressure"
                 : string.Join(", ", rankedPressures.Take(3).Select(candidate => $"{candidate.Name}:{candidate.Value:F2}"))
@@ -900,6 +1046,66 @@ public sealed class MutationSystem
         descendant.PreferredBiomes.Add(region.Biome);
         descendant.InitialRangeRegionIds.Add(region.Id);
         return descendant;
+    }
+
+    private bool ShouldEmitMutationEvent(World world, RegionSpeciesPopulation population, MutationTier tier, double impact)
+    {
+        if (tier == MutationTier.Major)
+        {
+            return population.LastMajorMutationEventYear < 0
+                || world.Time.Year - population.LastMajorMutationEventYear >= 1
+                || impact >= 0.26;
+        }
+
+        return impact >= 0.10
+            && (population.LastMinorMutationEventYear < 0
+                || world.Time.Year - population.LastMinorMutationEventYear >= _settings.MinorMutationEventCooldownYears);
+    }
+
+    private int ResolveIsolationMilestone(int isolationSeasons)
+    {
+        if (isolationSeasons < _settings.IsolationEventBaseThresholdSeasons)
+        {
+            return 0;
+        }
+
+        return isolationSeasons switch
+        {
+            >= 60 => 4,
+            >= 40 => 3,
+            >= 24 => 2,
+            _ => 1
+        };
+    }
+
+    private static int ResolveSpeciesAgeYears(World world, Species species)
+        => Math.Max(0, world.Time.Year - species.OriginYear);
+
+    private static int ResolveSpeciationJitterYears(int speciesId, int regionId)
+        => Math.Abs((speciesId * 31) + (regionId * 17)) % 7;
+
+    private static SpeciationContext BuildSpeciationContext(World world)
+    {
+        Dictionary<int, Species> speciesById = world.Species.ToDictionary(species => species.Id);
+        Dictionary<int, int> globalPopulationBySpeciesId = [];
+        Dictionary<(int RegionId, int RootAncestorSpeciesId), int> sameRootCountsByRegion = [];
+
+        foreach (Region region in world.Regions)
+        {
+            foreach (RegionSpeciesPopulation population in region.SpeciesPopulations.Where(candidate => candidate.PopulationCount > 0))
+            {
+                globalPopulationBySpeciesId[population.SpeciesId] =
+                    globalPopulationBySpeciesId.GetValueOrDefault(population.SpeciesId) + population.PopulationCount;
+
+                if (speciesById.TryGetValue(population.SpeciesId, out Species? species))
+                {
+                    (int RegionId, int RootAncestorSpeciesId) key = (region.Id, species.RootAncestorSpeciesId);
+                    sameRootCountsByRegion[key] = sameRootCountsByRegion.GetValueOrDefault(key) + 1;
+                }
+            }
+        }
+
+        return new SpeciationContext(speciesById, globalPopulationBySpeciesId, sameRootCountsByRegion);
     }
 
     private static string BuildDescendantSpeciesName(World world, Region region, Species parent)
@@ -937,7 +1143,43 @@ public sealed class MutationSystem
         Major
     }
 
+    public sealed record MutationSeasonMetrics(
+        int MutationChecks,
+        int SpeciationCandidates,
+        int SpeciationEvents)
+    {
+        public static MutationSeasonMetrics Empty { get; } = new(0, 0, 0);
+    }
+
     private sealed record MutationPressureContribution(string Name, string DisplayName, double Value);
     private sealed record TraitChange(SpeciesTrait Trait, double Delta);
     private sealed record MutationPlan(IReadOnlyList<TraitChange> Changes);
+    private readonly record struct SpeciationCandidateState(
+        bool IsCandidate,
+        int SameRootSpeciesInRegion,
+        int CrowdingOverSoftCap,
+        double RequiredDivergence,
+        int RequiredReadiness);
+
+    private sealed class SpeciationContext(
+        Dictionary<int, Species> speciesById,
+        Dictionary<int, int> globalPopulationBySpeciesId,
+        Dictionary<(int RegionId, int RootAncestorSpeciesId), int> sameRootCountsByRegion)
+    {
+        public Dictionary<int, Species> SpeciesById { get; } = speciesById;
+
+        public int ResolveGlobalPopulation(int speciesId)
+            => globalPopulationBySpeciesId.GetValueOrDefault(speciesId);
+
+        public int CountSameRootSpeciesInRegion(int regionId, int rootAncestorSpeciesId)
+            => sameRootCountsByRegion.GetValueOrDefault((regionId, rootAncestorSpeciesId));
+
+        public void RegisterNewSpecies(Species species, int regionId, int populationCount)
+        {
+            SpeciesById[species.Id] = species;
+            globalPopulationBySpeciesId[species.Id] = populationCount;
+            (int RegionId, int RootAncestorSpeciesId) key = (regionId, species.RootAncestorSpeciesId);
+            sameRootCountsByRegion[key] = sameRootCountsByRegion.GetValueOrDefault(key) + 1;
+        }
+    }
 }

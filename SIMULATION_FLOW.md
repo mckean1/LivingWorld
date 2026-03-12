@@ -14,6 +14,7 @@ Those entities are still range-limited and region-grounded before month one begi
 4. seasonal settlement hunting on season boundaries
    - each settlement hunts in its own region
 5. seasonal mutation, divergence, and speciation update on season boundaries using the just-resolved species exchange state
+   - speciation now requires sustained readiness and descendant-species stabilization, so new species do not immediately create another synchronized burst
 6. seasonal extinction cleanup and biomass sync on season boundaries
 7. wild plant gathering
 8. settlement farming output
@@ -34,7 +35,7 @@ The same opening pass now relies on stronger wildlife seeding and herbivore grow
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
 Seasonal species exchange at items 2-6 is also the main long-run recovery path for locally depleted wildlife, because recolonization now rebuilds real populations rather than refilling a separate animal pool.
-That same seasonal pass is now also where descendant species can appear, only after local pressure, exchange, and persistence state are already known.
+That same seasonal pass is now also where descendant species can appear, only after local pressure, exchange, persistence, and stabilization gates are already known.
 That ecology-side migration is role-specific: herbivores and omnivores can open suitable adjacent frontiers first, while predators and apex populations generally follow only once prey support exists in the destination region.
 Predator founders then pass through a short establishment window where strong prey support lets them grow into real local populations, while weak support makes them collapse back out naturally.
 
@@ -64,12 +65,14 @@ When `Month == 12`:
 Sinks:
 
 - `HistoryJsonlWriter` writes append-only structured history
+- `HistoryJsonlWriter` now batches flushes to reduce write amplification while keeping append-only semantics
 - `ChronicleEventFormatter` applies chronicle severity filtering, visibility weighting, and semantic cooldown suppression
 - `ChronicleWatchRenderer` redraws the watch console with newest entries first
 
 Simulation emits and records events before chronicle presentation. The chronicle is not the source of truth.
 Chronicle pacing is now non-blocking: visible-event recording no longer sleeps inside the event path, so input responsiveness does not depend on whether time is paused.
 The chronicle formatter now distinguishes between repeated same-state reminders and real changed-state transitions for noisy event families, which keeps live playback readable during busy eras without thinning structured history.
+Year-end focus resolution now also consumes the current year's rolling event cache instead of filtering the full historical event list every year.
 
 ## Default Watch Output
 
@@ -104,3 +107,13 @@ It does not show:
 ## Debug Output
 
 `OutputMode.Debug` still prints yearly developer summaries and the full yearly event list for diagnostics and balancing work.
+## Phase 12 Monthly Food Redistribution
+
+Monthly food resolution now has an extra settlement step:
+1. food gathering and farming update polity stores
+2. consumption resolves monthly polity shortages
+3. settlement food states are calculated from produced food, stored food, and required food
+4. surplus settlements send limited aid to deficit or starving settlements in the same polity
+5. migration and other downstream pressures see the post-aid settlement state
+
+This keeps cause and effect local: a breadbasket settlement can relieve a nearby shortage, while remote settlements may still remain starving after transport loss.

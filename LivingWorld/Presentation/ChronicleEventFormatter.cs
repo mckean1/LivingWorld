@@ -39,6 +39,14 @@ public sealed class ChronicleEventFormatter
                 $"{worldEvent.Reason ?? string.Empty}:{TryGetValue(worldEvent.Before, "regionId") ?? string.Empty}->{worldEvent.RegionId?.ToString() ?? TryGetValue(worldEvent.After, "regionId") ?? string.Empty}",
             WorldEventType.SettlementConsolidated or WorldEventType.SettlementStabilized =>
                 $"{worldEvent.Reason ?? string.Empty}:{worldEvent.SettlementId?.ToString() ?? worldEvent.RegionId?.ToString() ?? string.Empty}",
+            WorldEventType.FoodAidSent or WorldEventType.FamineRelief or WorldEventType.AidFailed =>
+                string.Join(":", new[]
+                {
+                    worldEvent.Reason ?? string.Empty,
+                    worldEvent.SettlementId?.ToString() ?? string.Empty,
+                    TryGetValue(worldEvent.Metadata, "senderSettlementId") ?? string.Empty,
+                    TryGetValue(worldEvent.After, "foodState") ?? string.Empty
+                }),
             WorldEventType.StageChanged =>
                 $"{worldEvent.Reason ?? string.Empty}:{TryGetValue(worldEvent.After, "stage") ?? string.Empty}",
             WorldEventType.SpeciesPopulationAdaptedToRegion =>

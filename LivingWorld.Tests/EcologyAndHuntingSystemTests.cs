@@ -10,14 +10,23 @@ namespace LivingWorld.Tests;
 public sealed class EcologyAndHuntingSystemTests
 {
     [Fact]
-    public void EcosystemSystem_InitializesRegionalSpeciesPopulations_ForAllSpecies()
+    public void EcosystemSystem_InitializesRegionalSpeciesPopulations_SparselyFromInitialRanges()
     {
         World world = CreateWorld();
         EcosystemSystem ecosystemSystem = new();
+        foreach (Species species in world.Species)
+        {
+            species.InitialRangeRegionIds.Clear();
+        }
+
+        world.Species.First(species => species.Id == 3).InitialRangeRegionIds.Add(0);
+        world.Species.First(species => species.Id == 4).InitialRangeRegionIds.Add(0);
+        world.Species.First(species => species.Id == 6).InitialRangeRegionIds.Add(1);
 
         ecosystemSystem.InitializeRegionalPopulations(world);
 
-        Assert.All(world.Regions, region => Assert.Equal(world.Species.Count, region.SpeciesPopulations.Count));
+        Assert.True(world.Regions[0].SpeciesPopulations.Count < world.Species.Count);
+        Assert.DoesNotContain(world.Regions[1].SpeciesPopulations, population => population.SpeciesId == 4);
         Assert.Contains(world.Regions[0].SpeciesPopulations, population => population.SpeciesId == 3 && population.PopulationCount > 0);
     }
 

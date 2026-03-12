@@ -31,6 +31,9 @@ public static class WorldEventType
     public const string TradeRelief = "trade_relief";
     public const string TradeDependency = "trade_dependency";
     public const string TradeLinkCollapsed = "trade_link_collapsed";
+    public const string FoodAidSent = "food_aid_sent";
+    public const string FamineRelief = "famine_relief";
+    public const string AidFailed = "aid_failed";
     public const string SpeciesPopulationEstablished = "species_population_established";
     public const string SpeciesPopulationRecolonized = "species_population_recolonized";
     public const string LocalSpeciesExtinction = "local_species_extinction";
