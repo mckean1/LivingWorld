@@ -79,6 +79,10 @@ Implemented chains:
 
 `surviving neighboring population + open suitable habitat -> wildlife recolonization`
 
+`healthy herbivore source + suitable adjacent producer-rich region -> founder population -> later local food web growth`
+
+`prey-established frontier + predator prey support -> predator follow migration -> deeper regional food web`
+
 `all local populations gone -> global extinction`
 
 Those ecology chains now begin from biome-shaped initial ranges instead of every species starting everywhere, so migration and collapse have clearer geographic meaning from the opening years.
@@ -135,6 +139,7 @@ Advancement outcomes remain separate capability gains that later systems can con
 Generic monthly food gathering no longer consumes `Region.AnimalBiomass`.
 That removed the previous double-pressure bug where abstract animal harvesting and species-level hunting both depleted the same ecological layer.
 The current balance pass keeps that architecture intact and instead raises early wildlife through seeding and growth tuning.
+The next layer of wildlife recovery now comes from seasonal founder migration rather than from regeneration shortcuts: neighboring populations must exist, habitat must fit, and the founder population must then survive normal ecology rules.
 
 ### Fragmentation Pressure
 

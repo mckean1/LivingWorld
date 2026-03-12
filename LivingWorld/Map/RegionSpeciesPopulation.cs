@@ -15,6 +15,7 @@ public sealed class RegionSpeciesPopulation
     public double RecentHuntingPressure { get; set; }
     public double RecentFoodStress { get; set; }
     public int SeasonsUnderPressure { get; set; }
+    public int MigrationCooldownSeasons { get; set; }
     public bool EstablishedThisSeason { get; set; }
     public bool ReceivedMigrantsThisSeason { get; set; }
     public bool SentMigrantsThisSeason { get; set; }

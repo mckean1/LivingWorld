@@ -26,7 +26,10 @@ public sealed class EcologyAndHuntingSystemTests
     {
         World world = CreateWorld();
         Region region = world.Regions[0];
-        EcosystemSystem ecosystemSystem = new();
+        EcosystemSystem ecosystemSystem = new(new EcosystemSettings
+        {
+            MaxMigrationTargetsPerPopulation = 0
+        });
 
         ecosystemSystem.InitializeRegionalPopulations(world);
 
@@ -125,7 +128,11 @@ public sealed class EcologyAndHuntingSystemTests
         World world = CreateWorld();
         Region sourceRegion = world.Regions[0];
         Region targetRegion = world.Regions[1];
-        EcosystemSystem ecosystemSystem = new();
+        EcosystemSystem ecosystemSystem = new(new EcosystemSettings
+        {
+            HerbivoreExpansionCapacityRatioThreshold = 0.40,
+            FrontierTargetSuitability = 0.50
+        });
 
         ecosystemSystem.InitializeRegionalPopulations(world);
 
@@ -143,6 +150,96 @@ public sealed class EcologyAndHuntingSystemTests
             && evt.SpeciesId == 4
             && evt.Metadata.TryGetValue("migrationKind", out string? kind)
             && kind == "recolonization");
+    }
+
+    [Fact]
+    public void EcosystemSystem_PredatorsRequirePreySupport_ToMigrate()
+    {
+        World world = CreateWorld();
+        Region sourceRegion = world.Regions[0];
+        Region targetRegion = world.Regions[1];
+        EcosystemSystem ecosystemSystem = new(new EcosystemSettings
+        {
+            PredatorExpansionCapacityRatioThreshold = 0.40,
+            PredatorMinimumPreyPopulation = 20
+        });
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        RegionSpeciesPopulation predatorSource = sourceRegion.GetOrCreateSpeciesPopulation(6);
+        RegionSpeciesPopulation preySource = sourceRegion.GetOrCreateSpeciesPopulation(4);
+        RegionSpeciesPopulation predatorTarget = targetRegion.GetOrCreateSpeciesPopulation(6);
+        RegionSpeciesPopulation preyTarget = targetRegion.GetOrCreateSpeciesPopulation(4);
+
+        predatorSource.PopulationCount = Math.Max(30, predatorSource.CarryingCapacity);
+        preySource.PopulationCount = Math.Max(80, preySource.CarryingCapacity / 2);
+        predatorTarget.PopulationCount = 0;
+        preyTarget.PopulationCount = 0;
+
+        ecosystemSystem.UpdateSeason(world);
+
+        Assert.Equal(0, predatorTarget.PopulationCount);
+
+        preyTarget.PopulationCount = 60;
+        predatorSource.PopulationCount = Math.Max(30, predatorSource.CarryingCapacity);
+        ecosystemSystem.UpdateSeason(world);
+
+        Assert.True(predatorTarget.PopulationCount > 0);
+    }
+
+    [Fact]
+    public void EcosystemSystem_HerbivoresMigrateLocally_AndDoNotSkipDistantRegions()
+    {
+        World world = CreateThreeRegionMigrationWorld();
+        EcosystemSystem ecosystemSystem = new(new EcosystemSettings
+        {
+            HerbivoreExpansionCapacityRatioThreshold = 0.40,
+            FrontierTargetSuitability = 0.50
+        });
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        RegionSpeciesPopulation sourcePopulation = world.Regions[0].GetOrCreateSpeciesPopulation(4);
+        RegionSpeciesPopulation middlePopulation = world.Regions[1].GetOrCreateSpeciesPopulation(4);
+        RegionSpeciesPopulation distantPopulation = world.Regions[2].GetOrCreateSpeciesPopulation(4);
+        sourcePopulation.PopulationCount = Math.Max(80, sourcePopulation.CarryingCapacity / 2);
+        middlePopulation.PopulationCount = 0;
+        distantPopulation.PopulationCount = 0;
+
+        ecosystemSystem.UpdateSeason(world);
+
+        Assert.True(middlePopulation.PopulationCount > 0);
+        Assert.Equal(0, distantPopulation.PopulationCount);
+    }
+
+    [Fact]
+    public void EcosystemSystem_RejectsUnsuitableRegions_ForHerbivoreMigration()
+    {
+        World world = CreateWorld();
+        Region sourceRegion = world.Regions[0];
+        Region targetRegion = world.Regions[1];
+        EcosystemSystem ecosystemSystem = new(new EcosystemSettings
+        {
+            HerbivoreExpansionCapacityRatioThreshold = 0.40,
+            FrontierTargetSuitability = 0.60
+        });
+
+        targetRegion.Fertility = 0.12;
+        targetRegion.WaterAvailability = 0.10;
+        targetRegion.MaxPlantBiomass = 120;
+        targetRegion.MaxAnimalBiomass = 80;
+        targetRegion.PlantBiomass = 80;
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        RegionSpeciesPopulation sourcePopulation = sourceRegion.GetOrCreateSpeciesPopulation(4);
+        RegionSpeciesPopulation targetPopulation = targetRegion.GetOrCreateSpeciesPopulation(4);
+        sourcePopulation.PopulationCount = Math.Max(80, sourcePopulation.CarryingCapacity / 2);
+        targetPopulation.PopulationCount = 0;
+
+        ecosystemSystem.UpdateSeason(world);
+
+        Assert.Equal(0, targetPopulation.PopulationCount);
     }
 
     private static World CreateWorld()
@@ -243,6 +340,27 @@ public sealed class EcologyAndHuntingSystemTests
         world.Species.First(species => species.Id == 4).DietSpeciesIds.Add(3);
         world.Species.First(species => species.Id == 6).DietSpeciesIds.AddRange([4, 7]);
         world.Species.First(species => species.Id == 7).DietSpeciesIds.AddRange([4, 6]);
+
+        return world;
+    }
+
+    private static World CreateThreeRegionMigrationWorld()
+    {
+        World world = CreateWorld();
+        Region middleRegion = world.Regions[1];
+        Region distantRegion = new(2, "Far Meadow")
+        {
+            Fertility = 0.60,
+            WaterAvailability = 0.58,
+            PlantBiomass = 560,
+            AnimalBiomass = 120,
+            MaxPlantBiomass = 1000,
+            MaxAnimalBiomass = 400
+        };
+
+        middleRegion.AddConnection(2);
+        distantRegion.AddConnection(1);
+        world.Regions.Add(distantRegion);
 
         return world;
     }

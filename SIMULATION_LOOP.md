@@ -22,7 +22,7 @@ The seed world entering this loop is now larger by default, but scale tuning rem
 
 - region plant biomass refresh
 - seasonal regional species population maintenance every third month
-- seasonal ecosystem interactions and species exchange every third month
+- seasonal ecosystem interactions, founder migration, and species exchange every third month
 - seasonal settlement hunting every third month
 - hunting is resolved per settlement, using that settlement's actual region
 - seasonal mutation and divergence pass every third month using the same season's species exchange flags
@@ -38,6 +38,7 @@ The seasonal ecosystem pass now also carries more of the "alive world" burden in
 - initial consumer populations are seeded from ecological capacity and habitat fit
 - producer-rich regions give herbivores stronger early recovery and expansion headroom
 - predator starts stay narrower than herbivore coverage so prey foundations usually establish first
+- neighboring fauna can now create small founder populations in suitable adjacent regions over time instead of depending entirely on generation-era ranges
 
 `Region.AnimalBiomass` is not consumed during the monthly food-gathering step.
 Instead:
@@ -47,6 +48,7 @@ Instead:
 - seasonal ecosystem cleanup derives `Region.AnimalBiomass` back from surviving non-producer populations
 
 At the start of each month, temporary propagation bonuses tick down.
+Ecosystem migration pacing itself is centralized in `EcosystemSettings`, including source thresholds, suitability gates, founder sizing, prey-support requirements, and cooldowns.
 
 ## Year-End Systems
 

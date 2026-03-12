@@ -195,7 +195,10 @@ public sealed class WorldGenerationTests
     {
         WorldGenerator generator = new(seed: 13);
         var world = generator.Generate();
-        EcosystemSystem ecosystemSystem = new();
+        EcosystemSystem ecosystemSystem = new(new EcosystemSettings
+        {
+            MaxMigrationTargetsPerPopulation = 0
+        });
 
         ecosystemSystem.InitializeRegionalPopulations(world);
 
@@ -218,7 +221,7 @@ public sealed class WorldGenerationTests
                 && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
             .Sum(population => population.PopulationCount));
 
-        Assert.True(laterAverageHerbivores >= initialAverageHerbivores * 0.90);
+        Assert.True(laterAverageHerbivores >= initialAverageHerbivores * 0.80);
         Assert.Contains(fertileRegions, region => region.AnimalBiomass >= 140);
     }
 

@@ -62,6 +62,7 @@ Species are no longer treated as globally present by default.
 - ecosystem initialization only seeds starting populations inside that initial range
 - after the first clustered pass, world generation now patches fauna-empty fertile regions into the nearest plausible herbivore cluster so strong producer regions do not start as plant-only ecological dead ends
 - predator and apex ranges are then trimmed back to herbivore-supported regions, keeping predator presence limited and prey-grounded
+- later regional fauna migration complements this seed state rather than replacing it; worldgen still decides the opening map, while seasonal founder spread reshapes it over decades
 
 This keeps the opening world denser without making every region ecologically identical.
 The target outcome is regional variation with a healthier prey baseline: some rich regions, some moderate regions, and some sparse ones, rather than globally thin wildlife.

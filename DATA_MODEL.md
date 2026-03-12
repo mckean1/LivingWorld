@@ -145,6 +145,7 @@ Selected fields:
 - recent predation, hunting, and food-stress markers
 - `SeasonsUnderPressure`
 - seeded starting population is now derived from this entry's carrying capacity and habitat fit, so fertile regions can begin with meaningfully sized herbivore populations
+- `MigrationCooldownSeasons` now paces repeated founder attempts so populations do not thrash between regions every season
 - per-population trait offsets for Intelligence, Sociality, Aggression, Endurance, Fertility, DietFlexibility, ClimateTolerance, and Size
 - accumulated mutation pressure by cause: food stress, predation, hunting, habitat mismatch, isolation, crowding, and low-pressure drift
 - divergence tracking: `DivergenceScore`, `IsolationSeasons`, mutation counts, and milestone markers
@@ -184,6 +185,7 @@ Important model rule:
 - animal food enters polity stores only through successful species-level hunting
 - wildlife recovery comes from `RegionSpeciesPopulation` reproduction, migration, and habitat fit, then flows back into `AnimalBiomass` during ecosystem sync
 - early wildlife richness now comes from broader consumer seeding plus stronger herbivore ecological capacity in producer-rich regions, not from reintroducing an abstract animal reserve
+- migration now creates real founder populations in neighboring regions rather than toggling abstract range flags, so later growth, collapse, hunting pressure, and mutation all act on the same population records
 
 ## Presentation And Persistence Types
 

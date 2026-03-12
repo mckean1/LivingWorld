@@ -101,6 +101,7 @@ The new ecology phase is shared state for multiple systems:
 - mutation reads those same pressure markers plus same-season species-exchange flags, stores accumulated evolutionary pressure on each regional population, and writes trait offsets back into the same records
 - ecosystem growth, migration scoring, and carrying capacity now consume those evolved trait offsets
 - ecosystem initialization and seasonal growth now let healthy producer biomass translate into stronger herbivore establishment and earlier wildlife expansion
+- seasonal fauna migration now turns that pressure into real founder populations in neighboring regions, so empty but suitable regions can join the food web without any separate spawn system
 - hunting difficulty, danger, and yield now also consume regional trait divergence instead of using only species baselines
 - neighboring wildlife populations can re-establish empty suitable regions through seasonal species migration, which gives local ecology a non-magical recovery path
 - regional animal biomass is synchronized from species populations so migration heuristics, region screens, and advancement weighting still have region-level ecological context without creating a second animal-food resource
@@ -110,6 +111,7 @@ The new ecology phase is shared state for multiple systems:
 Important timing boundary:
 
 - seasonal species exchange happens inside `EcosystemSystem` before mutation runs
+- role-specific founder migration is part of that same seasonal ecology step, after local pressure is known and before mutation reads exchange flags
 - later monthly polity migration happens in `MigrationSystem` after food resolution
 - mutation inputs such as `EstablishedThisSeason`, `ReceivedMigrantsThisSeason`, and `SentMigrantsThisSeason` refer only to the first category
 - chronicle presentation then applies its own scoped cooldown rules, including a dedicated adaptation key for visible adaptation beats

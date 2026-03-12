@@ -20,6 +20,8 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - world generation now seeds broader herbivore and omnivore coverage, while ecosystem initialization scales early wildlife from habitat suitability and ecological capacity instead of tiny flat starts
 - early producer abundance now gives herbivores more room to establish and grow before predator pressure becomes dominant
 - world generation also now protects against fauna-empty fertile regions by expanding the nearest plausible herbivore cluster into those regions instead of leaving plant-only dead zones
+- seasonal fauna migration now lets healthy neighboring populations found real new regional populations over time, so producer-only regions can develop fuller food webs decades after generation
+- predator and apex migration now follows prey-supported frontiers rather than jumping blindly into empty regions
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting, recolonization pressure, or legendary hunts
 - settlement hunting now executes from actual settlements in their own regions instead of multiplying one polity-region hunt by settlement count
 - settlement farming now allocates real regional arable capacity across actual settlements, so multiple settlements in one region share land instead of double counting it
@@ -33,6 +35,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - visible chronicle lines keep polity names short and do not append species by default
 - hot-path systems now prefer cached id lookups and explicit invariant errors over raw LINQ `First(...)` crashes
 - generation defaults are centralized in `WorldGenerationSettings`, while curated biome/name/species templates live in `WorldGenerationCatalog`
+- ecology spread pacing is now centralized in `EcosystemSettings` so founder size, migration thresholds, prey support, and cooldowns can be tuned without rewriting the pipeline
 - early-world liveliness is now tuned through centralized homeland-support, polity-spacing, focal-viability, and starting-anchor settings rather than scattered magic numbers
 
 ## Core Principles

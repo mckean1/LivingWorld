@@ -90,6 +90,7 @@ When a trade event includes settlement references, they should describe the actu
 - `species_population_established`
   - migration or expansion created a new regional population
   - may also mark wildlife recolonization when a neighboring surviving population returns to an empty suitable region
+  - founder-population establishment now also covers slow ecological frontier opening from adjacent fauna-rich regions
 - `predator_pressure`
   - predator food shortages became historically meaningful
 - `prey_collapse`
@@ -108,7 +109,7 @@ When a trade event includes settlement references, they should describe the actu
 - `overhunting_pressure`
   - repeated hunting drove a local species population toward collapse
 - `prey_collapse` and `species_population_established`
-  - now more often reflect real regional food-web swings because world generation seeds a broader early herbivore base and seasonal migration can rebuild that base over time
+  - now more often reflect real regional food-web swings because world generation seeds a broader early herbivore base and seasonal migration can rebuild or extend that base over time
 - `ecosystem_collapse`
   - regional food-web instability became severe
 - `legendary_hunt`

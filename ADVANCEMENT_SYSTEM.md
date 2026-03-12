@@ -26,6 +26,7 @@ At year-end, for each polity:
 The ecology context now treats `Region.AnimalBiomass` as a derived wildlife-summary signal rather than a separate monthly food stock.
 That means advancement weighting can still notice whether a region is rich in animal life without reintroducing direct abstract animal harvesting into the food model.
 Because early wildlife seeding is now stronger in producer-rich regions, advancement rolls that care about ecological richness should also see a more believable early spread between animal-poor and animal-rich homelands.
+Seasonal fauna migration now makes that ecological signal more dynamic over long runs, so a polity's homeland can become richer or poorer in animal life through neighboring founder spread and later predator follow-through rather than staying frozen near generation-era conditions.
 
 ## Outputs
 

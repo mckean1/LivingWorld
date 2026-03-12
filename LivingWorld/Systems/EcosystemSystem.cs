@@ -8,9 +8,13 @@ public sealed class EcosystemSystem
 {
     private const double ProducerPopulationToBiomass = 2.2;
     private const double ConsumerPopulationToBiomass = 1.1;
-    private const double MigrationPressureThreshold = 0.45;
-    private const double RecolonizationTargetScoreThreshold = 0.58;
+    private readonly EcosystemSettings _settings;
     private readonly HashSet<string> _preyCollapseCooldownKeys = new(StringComparer.Ordinal);
+
+    public EcosystemSystem(EcosystemSettings? settings = null)
+    {
+        _settings = settings ?? new EcosystemSettings();
+    }
 
     public void InitializeRegionalPopulations(World world)
     {
@@ -90,6 +94,7 @@ public sealed class EcosystemSystem
                 population.RecentPredationPressure = 0;
                 population.RecentHuntingPressure = Math.Max(0, population.RecentHuntingPressure * 0.65);
                 population.MigrationPressure = 0;
+                population.MigrationCooldownSeasons = Math.Max(0, population.MigrationCooldownSeasons - 1);
                 continue;
             }
 
@@ -129,6 +134,7 @@ public sealed class EcosystemSystem
                 population.SeasonsUnderPressure = Math.Max(0, population.SeasonsUnderPressure - 1);
             }
 
+            population.MigrationCooldownSeasons = Math.Max(0, population.MigrationCooldownSeasons - 1);
             population.RecentFoodStress *= 0.70;
             population.RecentPredationPressure *= 0.65;
             population.RecentHuntingPressure *= 0.72;
@@ -237,88 +243,31 @@ public sealed class EcosystemSystem
             foreach (RegionSpeciesPopulation sourcePopulation in activePopulations)
             {
                 Species species = speciesById[sourcePopulation.SpeciesId];
-                if (region.ConnectedRegionIds.Count == 0 || species.MigrationCapability <= 0)
+                if (species.TrophicRole == TrophicRole.Producer
+                    || region.ConnectedRegionIds.Count == 0
+                    || species.MigrationCapability <= 0
+                    || sourcePopulation.MigrationCooldownSeasons > 0
+                    || !CanSourceAttemptMigration(region, speciesById, species, sourcePopulation))
                 {
                     continue;
                 }
 
-                Region? target = null;
-                double bestTargetScore = double.MinValue;
+                List<MigrationCandidate> candidates = region.ConnectedRegionIds
+                    .Select(candidateRegionId => EvaluateMigrationCandidate(world, speciesById, region, species, sourcePopulation, world.Regions[candidateRegionId]))
+                    .Where(candidate => candidate is not null)
+                    .Cast<MigrationCandidate>()
+                    .OrderByDescending(candidate => candidate.Score)
+                    .ToList();
 
-                foreach (int candidateRegionId in region.ConnectedRegionIds)
-                {
-                    Region candidate = world.Regions[candidateRegionId];
-                    double score = ScoreMigrationTarget(world, speciesById, species, sourcePopulation, candidate);
-                    if (score <= bestTargetScore)
-                    {
-                        continue;
-                    }
-
-                    bestTargetScore = score;
-                    target = candidate;
-                }
-
-                if (target is null)
+                if (candidates.Count == 0)
                 {
                     continue;
                 }
 
-                bool canRecolonize = CanAttemptRecolonization(sourcePopulation, species, target, bestTargetScore);
-                if (sourcePopulation.MigrationPressure < MigrationPressureThreshold && !canRecolonize)
+                foreach (MigrationCandidate candidate in PrioritizeMigrationCandidates(species, candidates)
+                             .Take(_settings.MaxMigrationTargetsPerPopulation))
                 {
-                    continue;
-                }
-
-                RegionSpeciesPopulation targetPopulation = target.GetOrCreateSpeciesPopulation(species.Id);
-                int sourceBefore = sourcePopulation.PopulationCount;
-                double migrationCapability = PopulationTraitResolver.GetEffectiveMigrationCapability(species, sourcePopulation);
-                double transferRate = canRecolonize
-                    ? Math.Min(0.10, 0.03 + (migrationCapability * 0.08))
-                    : Math.Min(0.16, (migrationCapability * 0.10) + (sourcePopulation.MigrationPressure * 0.08));
-                int transfer = (int)Math.Round(sourceBefore * transferRate);
-                transfer = Math.Min(transfer, Math.Max(0, sourcePopulation.PopulationCount - 1));
-                if (transfer <= 0)
-                {
-                    continue;
-                }
-
-                bool newlyEstablished = targetPopulation.PopulationCount == 0;
-                sourcePopulation.PopulationCount -= transfer;
-                targetPopulation.PopulationCount += transfer;
-                sourcePopulation.SentMigrantsThisSeason = true;
-                targetPopulation.ReceivedMigrantsThisSeason = true;
-                targetPopulation.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, target);
-                targetPopulation.HabitatSuitability = CalculateHabitatSuitability(species, targetPopulation, targetPopulation.BaseHabitatSuitability);
-                targetPopulation.CarryingCapacity = CalculateCarryingCapacity(species, targetPopulation, target, targetPopulation.HabitatSuitability);
-                targetPopulation.EstablishedThisSeason = newlyEstablished;
-
-                if (newlyEstablished)
-                {
-                    world.AddEvent(
-                        WorldEventType.SpeciesPopulationEstablished,
-                        WorldEventSeverity.Minor,
-                        $"{species.Name} established a new population in {target.Name}",
-                        $"{transfer} {species.Name} migrated from {region.Name} into {target.Name}.",
-                        reason: "seasonal_species_migration",
-                        scope: WorldEventScope.Regional,
-                        speciesId: species.Id,
-                        speciesName: species.Name,
-                        regionId: target.Id,
-                        regionName: target.Name,
-                        before: new Dictionary<string, string>
-                        {
-                            ["population"] = "0"
-                        },
-                        after: new Dictionary<string, string>
-                        {
-                            ["population"] = targetPopulation.PopulationCount.ToString()
-                        },
-                        metadata: new Dictionary<string, string>
-                        {
-                            ["sourceRegionId"] = region.Id.ToString(),
-                            ["sourceRegionName"] = region.Name,
-                            ["migrationKind"] = canRecolonize ? "recolonization" : "pressure"
-                        });
+                    ExecuteMigration(world, species, speciesById, region, sourcePopulation, candidate);
                 }
             }
         }
@@ -435,7 +384,7 @@ public sealed class EcosystemSystem
             _ => 0.10
         };
 
-    private static double ScoreMigrationTarget(World world, IReadOnlyDictionary<int, Species> speciesById, Species species, RegionSpeciesPopulation sourcePopulation, Region target)
+    private double ScoreMigrationTarget(World world, IReadOnlyDictionary<int, Species> speciesById, Species species, RegionSpeciesPopulation sourcePopulation, Region target)
     {
         RegionSpeciesPopulation? existing = target.GetSpeciesPopulation(species.Id);
         RegionSpeciesPopulation candidatePopulation = existing ?? new RegionSpeciesPopulation(species.Id, target.Id, 0)
@@ -487,7 +436,7 @@ public sealed class EcosystemSystem
         return Math.Clamp(predatorPopulation / 250.0, 0.0, 1.0);
     }
 
-    private static bool CanAttemptRecolonization(
+    private bool CanAttemptRecolonization(
         RegionSpeciesPopulation sourcePopulation,
         Species species,
         Region target,
@@ -499,7 +448,7 @@ public sealed class EcosystemSystem
             return false;
         }
 
-        if (bestTargetScore < RecolonizationTargetScoreThreshold || sourcePopulation.CarryingCapacity <= 0)
+        if (bestTargetScore < _settings.RecolonizationTargetScoreThreshold || sourcePopulation.CarryingCapacity <= 0)
         {
             return false;
         }
@@ -508,6 +457,277 @@ public sealed class EcosystemSystem
         return sourcePopulation.PopulationCount >= Math.Max(8, sourcePopulation.CarryingCapacity / 5)
             && sourceCapacityRatio >= 0.42;
     }
+
+    private bool CanSourceAttemptMigration(
+        Region sourceRegion,
+        IReadOnlyDictionary<int, Species> speciesById,
+        Species species,
+        RegionSpeciesPopulation sourcePopulation)
+    {
+        int minimumSourcePopulation = ResolveMinimumSourcePopulation(species);
+        if (sourcePopulation.PopulationCount < minimumSourcePopulation || sourcePopulation.CarryingCapacity <= 0)
+        {
+            return false;
+        }
+
+        double sourceCapacityRatio = (double)sourcePopulation.PopulationCount / sourcePopulation.CarryingCapacity;
+        int preySupport = ResolvePreySupportPopulation(sourceRegion, speciesById, species);
+
+        return species.TrophicRole switch
+        {
+            TrophicRole.Herbivore or TrophicRole.Omnivore =>
+                sourceCapacityRatio >= _settings.HerbivoreExpansionCapacityRatioThreshold
+                || sourcePopulation.MigrationPressure >= _settings.MigrationPressureThreshold,
+            TrophicRole.Predator =>
+                preySupport >= _settings.PredatorMinimumPreyPopulation
+                && (sourceCapacityRatio >= _settings.PredatorExpansionCapacityRatioThreshold
+                    || sourcePopulation.MigrationPressure >= _settings.MigrationPressureThreshold),
+            TrophicRole.Apex =>
+                preySupport >= _settings.ApexMinimumPreyPopulation
+                && (sourceCapacityRatio >= (_settings.PredatorExpansionCapacityRatioThreshold + 0.08)
+                    || sourcePopulation.MigrationPressure >= (_settings.MigrationPressureThreshold + 0.08)),
+            _ => false
+        };
+    }
+
+    private IEnumerable<MigrationCandidate> PrioritizeMigrationCandidates(Species species, IReadOnlyList<MigrationCandidate> candidates)
+    {
+        if (species.TrophicRole is TrophicRole.Herbivore or TrophicRole.Omnivore)
+        {
+            List<MigrationCandidate> frontierCandidates = candidates
+                .Where(candidate => candidate.Kind is "frontier" or "recolonization")
+                .ToList();
+            if (frontierCandidates.Count > 0)
+            {
+                return frontierCandidates;
+            }
+        }
+
+        return candidates;
+    }
+
+    private MigrationCandidate? EvaluateMigrationCandidate(
+        World world,
+        IReadOnlyDictionary<int, Species> speciesById,
+        Region sourceRegion,
+        Species species,
+        RegionSpeciesPopulation sourcePopulation,
+        Region target)
+    {
+        RegionSpeciesPopulation? targetPopulation = target.GetSpeciesPopulation(species.Id);
+        double suitabilityScore = ScoreMigrationTarget(world, speciesById, species, sourcePopulation, target);
+        bool emptyTarget = targetPopulation?.PopulationCount <= 0;
+        double targetSuitability = ResolveTargetSuitability(species, target, targetPopulation);
+        double openness = ResolveOpenness(species, target, targetPopulation);
+        int preySupport = ResolvePreySupportPopulation(target, speciesById, species);
+        int existingFaunaPopulation = ResolveConsumerPopulation(target, speciesById);
+        bool faunaFrontier = emptyTarget && existingFaunaPopulation == 0;
+        bool herbivoreFrontier = emptyTarget && ResolveHerbivorePopulation(target, speciesById) == 0;
+        bool canRecolonize = emptyTarget && CanAttemptRecolonization(sourcePopulation, species, target, suitabilityScore);
+
+        if (species.TrophicRole is TrophicRole.Herbivore or TrophicRole.Omnivore)
+        {
+            double minimumSuitability = faunaFrontier || herbivoreFrontier
+                ? _settings.FrontierTargetSuitability
+                : _settings.MinimumTargetSuitability;
+            if (targetSuitability < minimumSuitability)
+            {
+                return null;
+            }
+
+            string kind = canRecolonize
+                ? "recolonization"
+                : faunaFrontier || herbivoreFrontier
+                    ? "frontier"
+                    : "pressure";
+            double score = suitabilityScore
+                + (faunaFrontier ? _settings.EmptyFaunaFrontierBonus : 0.0)
+                + (herbivoreFrontier && species.TrophicRole == TrophicRole.Herbivore ? _settings.HerbivoreFrontierBonus : 0.0)
+                + Math.Max(0.0, sourcePopulation.MigrationPressure - _settings.MigrationPressureThreshold) * 0.18;
+
+            int founderPopulation = ResolveFounderPopulation(species, sourcePopulation, target);
+            if (founderPopulation <= 0)
+            {
+                return null;
+            }
+
+            WorldEventSeverity severity = faunaFrontier && species.TrophicRole == TrophicRole.Herbivore && targetSuitability >= 0.85
+                ? WorldEventSeverity.Major
+                : WorldEventSeverity.Minor;
+            return new MigrationCandidate(target, score, kind, founderPopulation, severity);
+        }
+
+        int minimumPreyPopulation = species.TrophicRole == TrophicRole.Apex
+            ? _settings.ApexMinimumPreyPopulation
+            : _settings.PredatorMinimumPreyPopulation;
+        if (preySupport < minimumPreyPopulation || targetSuitability < _settings.MinimumTargetSuitability)
+        {
+            return null;
+        }
+
+        double predatorScore = suitabilityScore
+            + Math.Min(0.28, preySupport / 160.0)
+            + (emptyTarget ? 0.05 : 0.0)
+            + (openness * 0.12);
+        int predatorFounderPopulation = ResolveFounderPopulation(species, sourcePopulation, target);
+        if (predatorFounderPopulation <= 0)
+        {
+            return null;
+        }
+
+        WorldEventSeverity predatorSeverity = emptyTarget && species.TrophicRole == TrophicRole.Apex
+            ? WorldEventSeverity.Major
+            : WorldEventSeverity.Notable;
+        return new MigrationCandidate(target, predatorScore, "predator_follow", predatorFounderPopulation, predatorSeverity);
+    }
+
+    private void ExecuteMigration(
+        World world,
+        Species species,
+        IReadOnlyDictionary<int, Species> speciesById,
+        Region sourceRegion,
+        RegionSpeciesPopulation sourcePopulation,
+        MigrationCandidate candidate)
+    {
+        Region target = candidate.Target;
+        RegionSpeciesPopulation targetPopulation = target.GetOrCreateSpeciesPopulation(species.Id);
+        int sourceBefore = sourcePopulation.PopulationCount;
+        int minimumSourceRemnant = Math.Max(1, ResolveMinimumSourcePopulation(species) / 2);
+        int transfer = Math.Min(candidate.FounderPopulation, Math.Max(0, sourcePopulation.PopulationCount - minimumSourceRemnant));
+        if (transfer <= 0)
+        {
+            return;
+        }
+
+        bool newlyEstablished = targetPopulation.PopulationCount == 0;
+        sourcePopulation.PopulationCount -= transfer;
+        targetPopulation.PopulationCount += transfer;
+        sourcePopulation.SentMigrantsThisSeason = true;
+        sourcePopulation.MigrationCooldownSeasons = _settings.MigrationCooldownSeasons;
+        targetPopulation.ReceivedMigrantsThisSeason = true;
+        targetPopulation.MigrationCooldownSeasons = _settings.MigrationCooldownSeasons;
+        targetPopulation.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, target);
+        targetPopulation.HabitatSuitability = CalculateHabitatSuitability(species, targetPopulation, targetPopulation.BaseHabitatSuitability);
+        targetPopulation.CarryingCapacity = CalculateCarryingCapacity(species, targetPopulation, target, targetPopulation.HabitatSuitability);
+        targetPopulation.EstablishedThisSeason = newlyEstablished;
+
+        if (!newlyEstablished)
+        {
+            return;
+        }
+
+        world.AddEvent(
+            WorldEventType.SpeciesPopulationEstablished,
+            candidate.Severity,
+            $"{species.Name} established a new population in {target.Name}",
+            $"{transfer} {species.Name} migrated from {sourceRegion.Name} into {target.Name}.",
+            reason: "seasonal_species_migration",
+            scope: WorldEventScope.Regional,
+            speciesId: species.Id,
+            speciesName: species.Name,
+            regionId: target.Id,
+            regionName: target.Name,
+            before: new Dictionary<string, string>
+            {
+                ["population"] = "0"
+            },
+            after: new Dictionary<string, string>
+            {
+                ["population"] = targetPopulation.PopulationCount.ToString()
+            },
+            metadata: new Dictionary<string, string>
+            {
+                ["sourceRegionId"] = sourceRegion.Id.ToString(),
+                ["sourceRegionName"] = sourceRegion.Name,
+                ["migrationKind"] = candidate.Kind,
+                ["sourcePopulationBefore"] = sourceBefore.ToString(),
+                ["founderPopulation"] = transfer.ToString()
+            });
+    }
+
+    private double ResolveTargetSuitability(Species species, Region target, RegionSpeciesPopulation? targetPopulation)
+    {
+        RegionSpeciesPopulation candidatePopulation = targetPopulation ?? new RegionSpeciesPopulation(species.Id, target.Id, 0);
+        return CalculateHabitatSuitability(species, candidatePopulation, CalculateBaseHabitatSuitability(species, target));
+    }
+
+    private double ResolveOpenness(Species species, Region target, RegionSpeciesPopulation? targetPopulation)
+    {
+        RegionSpeciesPopulation candidatePopulation = targetPopulation ?? new RegionSpeciesPopulation(species.Id, target.Id, 0);
+        double suitability = ResolveTargetSuitability(species, target, targetPopulation);
+        int localPopulation = targetPopulation?.PopulationCount ?? 0;
+        int carryingCapacity = CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
+        return carryingCapacity <= 0
+            ? 0.0
+            : Math.Clamp((double)(carryingCapacity - localPopulation) / carryingCapacity, 0.0, 1.0);
+    }
+
+    private int ResolveFounderPopulation(Species species, RegionSpeciesPopulation sourcePopulation, Region target)
+    {
+        double migrationCapability = PopulationTraitResolver.GetEffectiveMigrationCapability(species, sourcePopulation);
+        double roleShare = species.TrophicRole switch
+        {
+            TrophicRole.Herbivore => _settings.FounderPopulationShare + 0.02,
+            TrophicRole.Omnivore => _settings.FounderPopulationShare + 0.01,
+            TrophicRole.Predator => _settings.FounderPopulationShare - 0.01,
+            TrophicRole.Apex => _settings.FounderPopulationShare - 0.015,
+            _ => _settings.FounderPopulationShare
+        };
+        double transferShare = Math.Min(0.14, roleShare + (migrationCapability * 0.05) + (sourcePopulation.MigrationPressure * 0.05));
+        int minimumFounderPopulation = species.TrophicRole switch
+        {
+            TrophicRole.Herbivore => _settings.FounderPopulationMinimum + 2,
+            TrophicRole.Omnivore => _settings.FounderPopulationMinimum + 1,
+            _ => _settings.FounderPopulationMinimum
+        };
+
+        int founderPopulation = Math.Max(minimumFounderPopulation, (int)Math.Round(sourcePopulation.PopulationCount * transferShare));
+        RegionSpeciesPopulation candidatePopulation = new(species.Id, target.Id, founderPopulation);
+        double suitability = CalculateHabitatSuitability(species, candidatePopulation, CalculateBaseHabitatSuitability(species, target));
+        int carryingCapacity = CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
+        if (carryingCapacity > 0)
+        {
+            founderPopulation = Math.Min(founderPopulation, Math.Max(minimumFounderPopulation, carryingCapacity / 6));
+        }
+
+        return Math.Min(founderPopulation, Math.Max(0, sourcePopulation.PopulationCount - 1));
+    }
+
+    private int ResolveMinimumSourcePopulation(Species species)
+        => species.TrophicRole switch
+        {
+            TrophicRole.Herbivore => _settings.MinimumSourcePopulationForMigration,
+            TrophicRole.Omnivore => _settings.MinimumSourcePopulationForMigration,
+            TrophicRole.Predator => _settings.MinimumSourcePopulationForMigration + 4,
+            TrophicRole.Apex => _settings.MinimumSourcePopulationForMigration + 8,
+            _ => int.MaxValue
+        };
+
+    private static int ResolveConsumerPopulation(Region region, IReadOnlyDictionary<int, Species> speciesById)
+        => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && speciesById[population.SpeciesId].TrophicRole != TrophicRole.Producer)
+            .Sum(population => population.PopulationCount);
+
+    private static int ResolveHerbivorePopulation(Region region, IReadOnlyDictionary<int, Species> speciesById)
+        => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && speciesById[population.SpeciesId].TrophicRole == TrophicRole.Herbivore)
+            .Sum(population => population.PopulationCount);
+
+    private static int ResolvePreySupportPopulation(Region region, IReadOnlyDictionary<int, Species> speciesById, Species species)
+        => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && species.DietSpeciesIds.Contains(population.SpeciesId)
+                && speciesById[population.SpeciesId].TrophicRole != TrophicRole.Producer)
+            .Sum(population => population.PopulationCount);
+
+    private sealed record MigrationCandidate(
+        Region Target,
+        double Score,
+        string Kind,
+        int FounderPopulation,
+        WorldEventSeverity Severity);
 
     private static double CalculateBaseHabitatSuitability(Species species, Region region)
     {
