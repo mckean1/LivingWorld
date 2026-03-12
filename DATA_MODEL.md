@@ -201,8 +201,10 @@ Important model rule:
 - `ChronicleWatchRenderer`
 - `WatchUiState`
 - `WatchViewType`
+- `WatchViewCatalog`
 - `WatchInputController`
 - `WatchInspectionData`
+- `WatchKnowledgeSnapshot`
 - `WatchScreenBuilder`
 - `HistoryJsonlWriter`
 
@@ -214,6 +216,14 @@ Important model rule:
 - remembered scroll offset per scrollable view
 - current inspected region/species/polity ids for detail pages
 - a lightweight back stack for `Esc` navigation
+
+`WatchKnowledgeSnapshot` is the current player-knowledge projection for one watch render/input pass.
+It centralizes:
+
+- known regions from settlements, current center, discovered regions, and immediate neighboring connections
+- known species from visible populations, discovered species-use/safety knowledge, and known polity species
+- known polities from currently known regions
+- discovery-indexed region/species summaries for inspection screens
 
 ## Propagation Types
 

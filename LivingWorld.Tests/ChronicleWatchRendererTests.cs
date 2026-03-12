@@ -127,4 +127,42 @@ public sealed class ChronicleWatchRendererTests
 
         Assert.Contains(" Status: PAUSED | View: Known Species", statusLines);
     }
+
+    [Fact]
+    public void Record_KeepsNewestChronicleEntryFirst()
+    {
+        World world = new(new WorldTime(12, 1));
+        world.Regions.Add(new Region(0, "Green Barrow"));
+        world.Species.Add(new Species(1, "Humans", 0.8, 0.7));
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        world.Polities.Add(new Polity(7, "Deepfield Tribe", 1, 0, 84));
+        ChronicleWatchRenderer renderer = new(
+            new SimulationOptions { OutputMode = OutputMode.Watch },
+            new ChronicleColorWriter(),
+            new ChronicleEventFormatter());
+        WatchUiState uiState = new();
+
+        renderer.Record(world, focus, uiState, new WorldEvent
+        {
+            Year = 4,
+            Type = WorldEventType.Migration,
+            Severity = WorldEventSeverity.Major,
+            Narrative = "Older turning point",
+            PolityId = 7
+        });
+        renderer.Record(world, focus, uiState, new WorldEvent
+        {
+            Year = 5,
+            Type = WorldEventType.LearnedAdvancement,
+            Severity = WorldEventSeverity.Major,
+            Narrative = "Newer turning point",
+            PolityId = 7
+        });
+
+        IReadOnlyList<string> entries = renderer.SnapshotChronicleEntries();
+
+        Assert.Equal("Year 5 - Newer turning point.", entries[0]);
+        Assert.Equal("Year 4 - Older turning point.", entries[1]);
+    }
 }

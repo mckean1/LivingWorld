@@ -11,17 +11,19 @@ public static class WatchScreenBuilder
     public static IReadOnlyList<string> BuildBodyLines(World world, ChronicleFocus focus, WatchUiState uiState)
     {
         WorldLookup lookup = new(world);
+        WatchKnowledgeSnapshot knowledge = WatchInspectionData.CreateSnapshot(world, focus);
+
         return uiState.ActiveView switch
         {
-            WatchViewType.MyPolity => BuildMyPolityLines(WatchInspectionData.ResolveFocusedPolity(world, focus), lookup),
-            WatchViewType.CurrentRegion => BuildCurrentRegionLines(world, focus, lookup),
-            WatchViewType.KnownRegions => BuildKnownRegionsLines(world, focus, uiState, lookup),
-            WatchViewType.RegionDetail => BuildRegionDetailLines(world, uiState.SelectedRegionId, lookup),
-            WatchViewType.KnownSpecies => BuildKnownSpeciesLines(world, focus, uiState),
-            WatchViewType.SpeciesDetail => BuildSpeciesDetailLines(world, uiState.SelectedSpeciesId),
-            WatchViewType.KnownPolities => BuildKnownPolitiesLines(world, focus, uiState, lookup),
-            WatchViewType.PolityDetail => BuildPolityDetailLines(world, uiState.SelectedPolityId, lookup),
-            WatchViewType.WorldOverview => BuildWorldOverviewLines(world, lookup),
+            WatchViewType.MyPolity => BuildMyPolityLines(knowledge.FocalPolity, lookup),
+            WatchViewType.CurrentRegion => BuildCurrentRegionLines(world, knowledge, lookup),
+            WatchViewType.KnownRegions => BuildKnownRegionsLines(knowledge, uiState, lookup),
+            WatchViewType.RegionDetail => BuildRegionDetailLines(world, knowledge, uiState.SelectedRegionId, lookup),
+            WatchViewType.KnownSpecies => BuildKnownSpeciesLines(world, knowledge, uiState),
+            WatchViewType.SpeciesDetail => BuildSpeciesDetailLines(world, knowledge, uiState.SelectedSpeciesId),
+            WatchViewType.KnownPolities => BuildKnownPolitiesLines(knowledge, uiState, lookup),
+            WatchViewType.PolityDetail => BuildPolityDetailLines(world, knowledge, uiState.SelectedPolityId, lookup),
+            WatchViewType.WorldOverview => BuildWorldOverviewLines(world, knowledge, lookup),
             _ => ["The chronicle is quiet."]
         };
     }
@@ -29,21 +31,23 @@ public static class WatchScreenBuilder
     public static List<string> BuildFooterLines(WatchUiState uiState, int width)
     {
         string border = new('=', width);
-        string controls = " Space Pause  Tab Cycle  1-7 Views  Up/Down Move  Enter Inspect  Esc Back ";
+        string controls = WatchViewCatalog.BuildControlsSummary();
         string context = uiState.ActiveView switch
         {
-            WatchViewType.Chronicle => " Chronicle view keeps newest entries at the top. Up/Down scrolls through stored history. ",
-            WatchViewType.KnownRegions => " Known Regions currently includes settlement regions, the current center, and direct neighbors. ",
-            WatchViewType.KnownSpecies => " Known Species is derived from species present in currently known regions. ",
-            WatchViewType.KnownPolities => " Known Polities is derived from active polities in currently known regions. ",
-            _ => " Observation only: these screens inspect the world state without issuing orders. "
+            WatchViewType.Chronicle => "Chronicle stays newest-first. Up/Down scroll line-by-line; Left/Right page through history.",
+            WatchViewType.KnownRegions => "Known Regions uses the focal polity's settlements, current center, discovered regions, and adjacent regions.",
+            WatchViewType.KnownSpecies => "Known Species includes seen species, discovered prey knowledge, and species tied to known polities.",
+            WatchViewType.KnownPolities => "Known Polities reflects active groups present in currently known regions.",
+            WatchViewType.RegionDetail => "Region detail only shows discoveries and populations inside the focal polity's current knowledge horizon.",
+            WatchViewType.SpeciesDetail => "Species detail shows known regions, known diet links, and visible regional divergence only.",
+            WatchViewType.PolityDetail => "Foreign polity detail omits hidden discoveries and learned capabilities the focal polity has not actually observed.",
+            _ => "Observation only: these screens inspect current known world state without issuing orders."
         };
 
         return
         [
             border,
-            controls,
-            context
+            TruncateToWidth($"{controls} | {context}", width)
         ];
     }
 
@@ -54,7 +58,7 @@ public static class WatchScreenBuilder
             return 0;
         }
 
-        if (uiState.ActiveView is WatchViewType.KnownRegions or WatchViewType.KnownSpecies or WatchViewType.KnownPolities)
+        if (WatchViewCatalog.IsListView(uiState.ActiveView))
         {
             int selectedIndex = uiState.GetSelectedIndex(uiState.ActiveView);
             return Math.Clamp(selectedIndex - (viewportHeight / 2), 0, maxOffset);
@@ -64,19 +68,7 @@ public static class WatchScreenBuilder
     }
 
     public static string DescribeView(WatchViewType view)
-        => view switch
-        {
-            WatchViewType.MyPolity => "My Polity",
-            WatchViewType.CurrentRegion => "Current Region",
-            WatchViewType.KnownRegions => "Known Regions",
-            WatchViewType.RegionDetail => "Region Detail",
-            WatchViewType.KnownSpecies => "Known Species",
-            WatchViewType.SpeciesDetail => "Species Detail",
-            WatchViewType.KnownPolities => "Known Polities",
-            WatchViewType.PolityDetail => "Polity Detail",
-            WatchViewType.WorldOverview => "World Overview",
-            _ => "Chronicle"
-        };
+        => WatchViewCatalog.DescribeView(view);
 
     private static IReadOnlyList<string> BuildMyPolityLines(Polity? polity, WorldLookup lookup)
     {
@@ -103,28 +95,14 @@ public static class WatchScreenBuilder
             $" Food Stores: {polity.FoodStores:F0} ({ChronicleTextFormatter.DescribeFoodState(polity)})",
             $" Annual Food Ratio: {annualFoodRatio:F2}",
             $" Food Sources: Wild {polity.AnnualFoodGathered:F0} | Hunt {polity.FoodHuntedThisYear:F0} | Farm {polity.AnnualFoodFarmed:F0} | Trade {polity.AnnualFoodImported:F0}",
-            $" Starvation Months This Year: {polity.StarvationMonthsThisYear}",
-            $" Migration Pressure: {polity.MigrationPressure:F2}",
-            $" Fragmentation Pressure: {polity.FragmentationPressure:F2}",
+            $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2} | Starvation Months {polity.StarvationMonthsThisYear}",
+            $" Trade Links This Year: {polity.TradePartnerCountThisYear}",
+            $" Hunting Losses This Year: {polity.HuntingCasualtiesThisYear}",
             string.Empty,
             " Settlements:"
         ];
 
-        if (polity.Settlements.Count == 0)
-        {
-            lines.Add("  None");
-        }
-        else
-        {
-            foreach (Settlement settlement in polity.Settlements.OrderBy(settlement => settlement.Name, StringComparer.Ordinal))
-            {
-                string settlementRegion = lookup.TryGetRegion(settlement.RegionId, out Region? region) && region is not null
-                    ? region.Name
-                    : $"Region {settlement.RegionId}";
-                lines.Add($"  {settlement.Name} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1}");
-            }
-        }
-
+        AppendSettlementLines(lines, polity.Settlements, lookup);
         lines.Add(string.Empty);
         lines.Add($" Discoveries: {DescribeDiscoveries(polity)}");
         lines.Add($" Learned: {DescribeAdvancements(polity)}");
@@ -133,136 +111,139 @@ public static class WatchScreenBuilder
         return lines;
     }
 
-    private static IReadOnlyList<string> BuildCurrentRegionLines(World world, ChronicleFocus focus, WorldLookup lookup)
+    private static IReadOnlyList<string> BuildCurrentRegionLines(World world, WatchKnowledgeSnapshot knowledge, WorldLookup lookup)
     {
-        Region? region = WatchInspectionData.ResolveCurrentRegion(world, focus);
-        List<string> lines = BuildRegionDetailLines(world, region?.Id, lookup).ToList();
+        List<string> lines = BuildRegionDetailLines(world, knowledge, knowledge.CurrentRegion?.Id, lookup).ToList();
         lines.Add(string.Empty);
         lines.Add(" Press Enter for region detail.");
         return lines;
     }
 
-    private static IReadOnlyList<string> BuildKnownRegionsLines(World world, ChronicleFocus focus, WatchUiState uiState, WorldLookup lookup)
+    private static IReadOnlyList<string> BuildKnownRegionsLines(WatchKnowledgeSnapshot knowledge, WatchUiState uiState, WorldLookup lookup)
     {
-        List<Region> regions = WatchInspectionData.GetKnownRegions(world, focus);
         List<string> lines = ["Known Regions", string.Empty];
-
-        if (regions.Count == 0)
+        if (knowledge.KnownRegions.Count == 0)
         {
             lines.Add(" No known regions.");
             return lines;
         }
 
-        int selectedIndex = Math.Clamp(uiState.GetSelectedIndex(WatchViewType.KnownRegions), 0, regions.Count - 1);
-        uiState.SetSelectedIndex(WatchViewType.KnownRegions, selectedIndex);
-
-        for (int index = 0; index < regions.Count; index++)
+        int selectedIndex = NormalizeSelection(uiState, WatchViewType.KnownRegions, knowledge.KnownRegions.Count);
+        for (int index = 0; index < knowledge.KnownRegions.Count; index++)
         {
-            Region region = regions[index];
+            Region region = knowledge.KnownRegions[index];
             string marker = index == selectedIndex ? ">" : " ";
-            lines.Add($"{marker} {region.Name} - fertility {region.Fertility:F2} - active pop {lookup.GetActivePopulationInRegion(region.Id)} - settlements {lookup.GetSettlementsInRegion(region.Id).Count}");
+            string resourceSummary = DescribeRegionResourceSummary(knowledge, region.Id);
+            lines.Add(
+                $"{marker} {region.Name,-18} {region.Biome,-12} Fert {region.Fertility:F2} Sett {lookup.GetSettlementsInRegion(region.Id).Count} {resourceSummary}");
         }
 
         return lines;
     }
 
-    private static IReadOnlyList<string> BuildKnownSpeciesLines(World world, ChronicleFocus focus, WatchUiState uiState)
+    private static IReadOnlyList<string> BuildKnownSpeciesLines(World world, WatchKnowledgeSnapshot knowledge, WatchUiState uiState)
     {
-        List<Species> species = WatchInspectionData.GetKnownSpecies(world, focus);
         List<string> lines = ["Known Species", string.Empty];
-
-        if (species.Count == 0)
+        if (knowledge.KnownSpecies.Count == 0)
         {
             lines.Add(" No known species.");
             return lines;
         }
 
-        int selectedIndex = Math.Clamp(uiState.GetSelectedIndex(WatchViewType.KnownSpecies), 0, species.Count - 1);
-        uiState.SetSelectedIndex(WatchViewType.KnownSpecies, selectedIndex);
-
-        for (int index = 0; index < species.Count; index++)
+        int selectedIndex = NormalizeSelection(uiState, WatchViewType.KnownSpecies, knowledge.KnownSpecies.Count);
+        for (int index = 0; index < knowledge.KnownSpecies.Count; index++)
         {
-            Species item = species[index];
+            Species species = knowledge.KnownSpecies[index];
             string marker = index == selectedIndex ? ">" : " ";
-            lines.Add($"{marker} {item.Name} - {DescribeTrophicRole(item.TrophicRole)} - regions {WatchInspectionData.GetSpeciesRegionalPopulations(world, item.Id).Count} - danger {item.HuntingDanger:F2}");
+            int knownRegionCount = knowledge.GetKnownRegionalPopulations(world, species.Id).Count;
+            lines.Add(
+                $"{marker} {species.Name,-20} {DescribeTrophicRole(species.TrophicRole),-10} {DescribeSpeciesSize(species),-6} regions {knownRegionCount}");
         }
 
         return lines;
     }
 
-    private static IReadOnlyList<string> BuildKnownPolitiesLines(World world, ChronicleFocus focus, WatchUiState uiState, WorldLookup lookup)
+    private static IReadOnlyList<string> BuildKnownPolitiesLines(WatchKnowledgeSnapshot knowledge, WatchUiState uiState, WorldLookup lookup)
     {
-        List<Polity> polities = WatchInspectionData.GetKnownPolities(world, focus);
+        List<Polity> visibleForeignPolities = knowledge.KnownPolities
+            .Where(polity => polity.Id != knowledge.FocalPolity?.Id)
+            .ToList();
         List<string> lines = ["Known Polities", string.Empty];
 
-        if (polities.Count == 0)
+        if (visibleForeignPolities.Count == 0)
         {
-            lines.Add(" No known polities.");
+            lines.Add(" No known foreign polities.");
             return lines;
         }
 
-        int selectedIndex = Math.Clamp(uiState.GetSelectedIndex(WatchViewType.KnownPolities), 0, polities.Count - 1);
-        uiState.SetSelectedIndex(WatchViewType.KnownPolities, selectedIndex);
-
-        for (int index = 0; index < polities.Count; index++)
+        int selectedIndex = NormalizeSelection(uiState, WatchViewType.KnownPolities, visibleForeignPolities.Count);
+        for (int index = 0; index < visibleForeignPolities.Count; index++)
         {
-            Polity polity = polities[index];
-            string regionName = lookup.TryGetRegion(polity.RegionId, out Region? region) && region is not null
+            Polity polity = visibleForeignPolities[index];
+            string regionName = lookup.TryGetRegion(polity.RegionId, out Region? region) && region is not null && knowledge.IsRegionKnown(region.Id)
                 ? region.Name
-                : $"Region {polity.RegionId}";
+                : "Unknown";
             string marker = index == selectedIndex ? ">" : " ";
-            lines.Add($"{marker} {polity.Name} - pop {polity.Population} - {WatchInspectionData.DescribeStage(polity.Stage)} - {regionName}");
+            lines.Add(
+                $"{marker} {polity.Name,-22} {WatchInspectionData.DescribeStage(polity.Stage),-16} pop {polity.Population,4} settlements {knowledge.GetVisibleSettlementsForPolity(polity).Count,2} {regionName}");
         }
 
         return lines;
     }
 
-    private static IReadOnlyList<string> BuildWorldOverviewLines(World world, WorldLookup lookup)
+    private static IReadOnlyList<string> BuildWorldOverviewLines(World world, WatchKnowledgeSnapshot knowledge, WorldLookup lookup)
     {
-        List<Polity> activePolities = world.Polities
-            .Where(polity => polity.Population > 0)
-            .OrderByDescending(polity => polity.Population)
-            .ThenBy(polity => polity.Name, StringComparer.Ordinal)
-            .ToList();
-
+        Polity? focalPolity = knowledge.FocalPolity;
         List<string> lines =
         [
             "World Overview",
             string.Empty,
             $" Year: {world.Time.Year} ({world.Time.Season})",
-            $" Total Regions: {world.Regions.Count}",
-            $" Total Species: {world.Species.Count}",
-            $" Total Polities: {activePolities.Count}",
-            $" World Population: {activePolities.Sum(polity => polity.Population)}",
+            $" Known Regions: {knowledge.KnownRegions.Count}",
+            $" Known Species: {knowledge.KnownSpecies.Count}",
+            $" Known Polities: {Math.Max(0, knowledge.KnownPolities.Count - 1)}",
+            $" Focal Polity: {(focalPolity?.Name ?? "None")}",
+            $" Current Known Position: {(knowledge.CurrentRegion?.Name ?? "Unknown region")}",
             string.Empty,
-            " Largest Polities:"
+            " Recent Visible Major Events:"
         ];
 
-        foreach (Polity polity in activePolities.Take(5))
+        IReadOnlyList<WorldEvent> visibleEvents = knowledge.GetVisibleMajorEvents(world, limit: 5);
+        if (visibleEvents.Count == 0)
         {
-            string regionName = lookup.TryGetRegion(polity.RegionId, out Region? region) && region is not null
-                ? region.Name
-                : $"Region {polity.RegionId}";
-            lines.Add($"  {polity.Name} - pop {polity.Population} - {regionName}");
+            lines.Add("  None yet inside the current knowledge horizon.");
+        }
+        else
+        {
+            foreach (WorldEvent worldEvent in visibleEvents)
+            {
+                lines.Add($"  {worldEvent.HistoricalText}");
+            }
         }
 
         lines.Add(string.Empty);
-        lines.Add(" Most Populated Regions:");
-        foreach ((Region region, int population) in world.Regions
-                     .Select(region => (region, population: lookup.GetActivePopulationInRegion(region.Id)))
-                     .OrderByDescending(entry => entry.population)
+        lines.Add(" Known Regions With Settlements:");
+        foreach ((Region region, int count) in knowledge.KnownRegions
+                     .Select(region => (region, count: lookup.GetSettlementsInRegion(region.Id).Count))
+                     .Where(entry => entry.count > 0)
+                     .OrderByDescending(entry => entry.count)
                      .ThenBy(entry => entry.region.Name, StringComparer.Ordinal)
                      .Take(5))
         {
-            lines.Add($"  {region.Name} - active pop {population} - fertility {region.Fertility:F2}");
+            lines.Add($"  {region.Name} - {count} settlement(s) - {region.Biome} - fert {region.Fertility:F2}");
+        }
+
+        if (lines[^1] == " Known Regions With Settlements:")
+        {
+            lines.Add("  None");
         }
 
         return lines;
     }
 
-    private static IReadOnlyList<string> BuildRegionDetailLines(World world, int? regionId, WorldLookup lookup)
+    private static IReadOnlyList<string> BuildRegionDetailLines(World world, WatchKnowledgeSnapshot knowledge, int? regionId, WorldLookup lookup)
     {
-        if (!regionId.HasValue || !lookup.TryGetRegion(regionId.Value, out Region? region) || region is null)
+        if (!regionId.HasValue || !knowledge.IsRegionKnown(regionId.Value) || !lookup.TryGetRegion(regionId.Value, out Region? region) || region is null)
         {
             return ["Region detail unavailable."];
         }
@@ -272,106 +253,156 @@ public static class WatchScreenBuilder
             "Region Detail",
             string.Empty,
             $" Name: {region.Name}",
-            $" Connected Regions: {region.ConnectedRegionIds.Count}",
+            $" Biome: {region.Biome}",
             $" Fertility: {region.Fertility:F2}",
             $" Water Availability: {region.WaterAvailability:F2}",
-            $" Carrying Capacity: {region.CarryingCapacity:F1}",
-            $" Plant Biomass: {region.PlantBiomass:F1} / {region.MaxPlantBiomass:F1}",
-            $" Animal Biomass: {region.AnimalBiomass:F1} / {region.MaxAnimalBiomass:F1}",
-            $" Active Population Here: {lookup.GetActivePopulationInRegion(region.Id)}",
+            $" Environment: {DescribeEnvironment(region)}",
+            $" Ecology: Plant {region.PlantBiomass:F0}/{region.MaxPlantBiomass:F0} | Animal {region.AnimalBiomass:F0}/{region.MaxAnimalBiomass:F0}",
+            $" Connected Known Regions: {region.ConnectedRegionIds.Count(knowledge.IsRegionKnown)}",
             string.Empty,
-            " Settlements:"
+            " Discovered Resources:"
         ];
 
-        IReadOnlyList<Settlement> settlements = lookup.GetSettlementsInRegion(region.Id);
-        if (settlements.Count == 0)
+        IReadOnlyList<CulturalDiscovery> resourceDiscoveries = knowledge.GetRegionDiscoveries(region.Id)
+            .Where(discovery => discovery.Category is CulturalDiscoveryCategory.Resource or CulturalDiscoveryCategory.Environment or CulturalDiscoveryCategory.Geography)
+            .ToList();
+        if (resourceDiscoveries.Count == 0)
         {
-            lines.Add("  None");
+            lines.Add("  None recorded.");
         }
         else
         {
-            foreach (Settlement settlement in settlements.OrderBy(settlement => settlement.Name, StringComparer.Ordinal))
+            foreach (CulturalDiscovery discovery in resourceDiscoveries)
             {
-                string polityName = lookup.TryGetPolity(settlement.PolityId, out Polity? owner) && owner is not null
-                    ? owner.Name
-                    : $"Polity {settlement.PolityId}";
-                lines.Add($"  {settlement.Name} - {polityName} - cultivated {settlement.CultivatedLand:F1}");
+                lines.Add($"  {discovery.Summary}");
             }
         }
 
         lines.Add(string.Empty);
-        lines.Add(" Species Present:");
-        foreach ((Species species, RegionSpeciesPopulation population) in region.SpeciesPopulations
-                     .Where(population => population.PopulationCount > 0)
-                     .Select(population => (species: world.Species.First(candidate => candidate.Id == population.SpeciesId), population))
-                     .OrderByDescending(entry => entry.population.PopulationCount)
-                     .ThenBy(entry => entry.species.Name, StringComparer.Ordinal)
-                     .Take(8))
+        lines.Add(" Settlements:");
+        AppendSettlementLines(lines, lookup.GetSettlementsInRegion(region.Id), lookup);
+
+        lines.Add(string.Empty);
+        lines.Add(" Known Species Here:");
+        List<(Species Species, RegionSpeciesPopulation Population)> visibleSpecies = region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0 && knowledge.IsSpeciesKnown(population.SpeciesId))
+            .Select(population => (world.Species.First(species => species.Id == population.SpeciesId), population))
+            .OrderByDescending(entry => entry.Item2.PopulationCount)
+            .ThenBy(entry => entry.Item1.Name, StringComparer.Ordinal)
+            .Take(12)
+            .ToList();
+        if (visibleSpecies.Count == 0)
         {
-            lines.Add($"  {species.Name} - pop {population.PopulationCount} - fit {population.HabitatSuitability:F2} - pressure {population.MigrationPressure:F2}");
+            lines.Add("  None known.");
+        }
+        else
+        {
+            foreach ((Species species, RegionSpeciesPopulation population) in visibleSpecies)
+            {
+                lines.Add($"  {species.Name} - {DescribeTrophicRole(species.TrophicRole)} - pop {population.PopulationCount} - fit {population.HabitatSuitability:F2}");
+            }
         }
 
-        if (lines[^1] == " Species Present:")
+        lines.Add(string.Empty);
+        lines.Add(" Known Polity Presence:");
+        List<Settlement> settlements = lookup.GetSettlementsInRegion(region.Id).ToList();
+        List<string> polityNames = settlements
+            .Select(settlement => lookup.TryGetPolity(settlement.PolityId, out Polity? polity) && polity is not null && knowledge.IsPolityKnown(polity.Id)
+                ? polity.Name
+                : string.Empty)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+        if (polityNames.Count == 0)
         {
-            lines.Add("  None");
+            lines.Add("  None known.");
+        }
+        else
+        {
+            foreach (string polityName in polityNames)
+            {
+                lines.Add($"  {polityName}");
+            }
         }
 
         return lines;
     }
 
-    private static IReadOnlyList<string> BuildSpeciesDetailLines(World world, int? speciesId)
+    private static IReadOnlyList<string> BuildSpeciesDetailLines(World world, WatchKnowledgeSnapshot knowledge, int? speciesId)
     {
-        Species? species = world.Species.FirstOrDefault(entry => entry.Id == speciesId);
-        if (species is null)
+        if (!speciesId.HasValue || !knowledge.IsSpeciesKnown(speciesId.Value))
         {
             return ["Species detail unavailable."];
         }
+
+        Species species = knowledge.TryGetKnownSpecies(speciesId.Value)!;
+        IReadOnlyList<(Region Region, RegionSpeciesPopulation Population)> knownRegionalPopulations = knowledge.GetKnownRegionalPopulations(world, species.Id);
+        double maxKnownDivergence = knownRegionalPopulations.Count == 0 ? 0.0 : knownRegionalPopulations.Max(entry => entry.Population.DivergenceScore);
+        int adaptedKnownRegions = knownRegionalPopulations.Count(entry => entry.Population.RegionAdaptationRecorded);
+        List<string> knownDietTargets = species.DietSpeciesIds
+            .Select(knowledge.TryGetKnownSpecies)
+            .Where(target => target is not null)
+            .Select(target => target!.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+        double domesticationInterest = knowledge.FocalPolity?.DomesticationInterestBySpecies.TryGetValue(species.Id, out double value) == true
+            ? value
+            : 0.0;
 
         List<string> lines =
         [
             "Species Detail",
             string.Empty,
             $" Name: {species.Name}",
-            $" Sapient: {(species.IsSapient ? "Yes" : "No")}",
             $" Role: {DescribeTrophicRole(species.TrophicRole)}",
+            $" Size: {DescribeSpeciesSize(species)}",
+            $" Sapient: {(species.IsSapient ? "Yes" : "No")}",
             $" Intelligence: {species.Intelligence:F2}",
             $" Cooperation: {species.Cooperation:F2}",
-            $" Habitat Prefs: fertility {species.FertilityPreference:F2} | water {species.WaterPreference:F2}",
+            $" Habitat Preferences: fertility {species.FertilityPreference:F2} | water {species.WaterPreference:F2}",
             $" Biomass Affinity: plant {species.PlantBiomassAffinity:F2} | animal {species.AnimalBiomassAffinity:F2}",
-            $" Mobility: migration {species.MigrationCapability:F2} | expansion {species.ExpansionPressure:F2}",
+            $" Movement: migration {species.MigrationCapability:F2} | expansion {species.ExpansionPressure:F2}",
             $" Hunting: yield {species.MeatYield:F1} | difficulty {species.HuntingDifficulty:F2} | danger {species.HuntingDanger:F2}",
-            $" Food Safety: {(species.IsToxicToEat ? "Toxic" : "Edible or unknown")}",
-            $" Domestication Affinity: {species.DomesticationAffinity:F2}",
+            $" Food Safety: {DescribeFoodSafety(knowledge, species)}",
+            $" Domestication Relevance: {DescribeDomesticationRelevance(domesticationInterest, species.DomesticationAffinity)}",
+            $" Visible Divergence: max {maxKnownDivergence:F2} | adapted known regions {adaptedKnownRegions}",
             string.Empty,
-            " Regional Populations:"
+            $" Known Diet Targets: {(knownDietTargets.Count == 0 ? "Not yet known" : string.Join(", ", knownDietTargets))}",
+            $" Species Discoveries: {DescribeDiscoverySummaries(knowledge.GetSpeciesDiscoveries(species.Id))}",
+            string.Empty,
+            " Known Regions Present:"
         ];
 
-        foreach ((Region region, int population) in WatchInspectionData.GetSpeciesRegionalPopulations(world, species.Id).Take(8))
+        if (knownRegionalPopulations.Count == 0)
         {
-            lines.Add($"  {region.Name} - pop {population}");
+            lines.Add("  None currently observed.");
         }
-
-        if (lines[^1] == " Regional Populations:")
+        else
         {
-            lines.Add("  None");
+            foreach ((Region region, RegionSpeciesPopulation population) in knownRegionalPopulations.Take(10))
+            {
+                lines.Add($"  {region.Name} - pop {population.PopulationCount} - divergence {population.DivergenceScore:F2}");
+            }
         }
 
         return lines;
     }
 
-    private static IReadOnlyList<string> BuildPolityDetailLines(World world, int? polityId, WorldLookup lookup)
+    private static IReadOnlyList<string> BuildPolityDetailLines(World world, WatchKnowledgeSnapshot knowledge, int? polityId, WorldLookup lookup)
     {
-        if (!polityId.HasValue || !lookup.TryGetPolity(polityId.Value, out Polity? polity) || polity is null)
+        if (!polityId.HasValue || !knowledge.IsPolityKnown(polityId.Value) || !lookup.TryGetPolity(polityId.Value, out Polity? polity) || polity is null)
         {
             return ["Polity detail unavailable."];
         }
 
-        string speciesName = lookup.TryGetSpecies(polity.SpeciesId, out Species? species) && species is not null
+        bool isFocalPolity = polity.Id == knowledge.FocalPolity?.Id;
+        string speciesName = lookup.TryGetSpecies(polity.SpeciesId, out Species? species) && species is not null && knowledge.IsSpeciesKnown(species.Id)
             ? species.Name
-            : $"Species {polity.SpeciesId}";
-        string regionName = lookup.TryGetRegion(polity.RegionId, out Region? region) && region is not null
+            : "Unknown";
+        string regionName = lookup.TryGetRegion(polity.RegionId, out Region? region) && region is not null && knowledge.IsRegionKnown(region.Id)
             ? region.Name
-            : $"Region {polity.RegionId}";
+            : "Unknown";
         double annualFoodRatio = polity.AnnualFoodNeeded <= 0 ? 1.0 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
 
         List<string> lines =
@@ -384,42 +415,116 @@ public static class WatchScreenBuilder
             $" Population: {polity.Population}",
             $" Years Since Founded: {polity.YearsSinceFounded}",
             $" Current Region: {regionName}",
-            $" Years In Current Region: {polity.YearsInCurrentRegion}",
-            $" Settlement Status: {polity.SettlementStatus}",
-            $" Settlement Count: {polity.SettlementCount}",
-            $" Food Stores: {polity.FoodStores:F0} ({ChronicleTextFormatter.DescribeFoodState(polity)})",
-            $" Annual Food Ratio: {annualFoodRatio:F2}",
-            $" Annual Food Needed: {polity.AnnualFoodNeeded:F0}",
-            $" Annual Food Consumed: {polity.AnnualFoodConsumed:F0}",
-            $" Annual Food Shortage: {polity.AnnualFoodShortage:F0}",
-            $" Food Sources: Wild {polity.AnnualFoodGathered:F0} | Hunt {polity.FoodHuntedThisYear:F0} | Farm {polity.AnnualFoodFarmed:F0} | Trade {polity.AnnualFoodImported:F0}",
-            $" Trade Partners This Year: {polity.TradePartnerCountThisYear}",
-            $" Starvation Months This Year: {polity.StarvationMonthsThisYear}",
-            $" Migration Pressure: {polity.MigrationPressure:F2}",
-            $" Fragmentation Pressure: {polity.FragmentationPressure:F2}",
+            $" Settlement Count: {knowledge.GetVisibleSettlementsForPolity(polity).Count}",
+            $" Food Situation: {ChronicleTextFormatter.DescribeFoodState(polity)} | stores {polity.FoodStores:F0} | annual ratio {annualFoodRatio:F2}",
+            $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2}",
             string.Empty,
-            " Settlements:"
+            " Visible Settlements:"
         ];
 
-        if (polity.Settlements.Count == 0)
+        AppendSettlementLines(lines, knowledge.GetVisibleSettlementsForPolity(polity), lookup);
+        lines.Add(string.Empty);
+
+        if (isFocalPolity)
         {
-            lines.Add("  None");
+            lines.Add($" Discoveries: {DescribeDiscoveries(polity)}");
+            lines.Add($" Learned: {DescribeAdvancements(polity)}");
         }
         else
         {
-            foreach (Settlement settlement in polity.Settlements.OrderBy(settlement => settlement.Name, StringComparer.Ordinal))
-            {
-                string settlementRegionName = lookup.TryGetRegion(settlement.RegionId, out Region? settlementRegion) && settlementRegion is not null
-                    ? settlementRegion.Name
-                    : $"Region {settlement.RegionId}";
-                lines.Add($"  {settlement.Name} - {settlementRegionName} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1}");
-            }
+            lines.Add(" Discoveries: Not yet known");
+            lines.Add(" Learned: Not yet known");
         }
 
-        lines.Add(string.Empty);
-        lines.Add($" Discoveries: {DescribeDiscoveries(polity)}");
-        lines.Add($" Learned: {DescribeAdvancements(polity)}");
         return lines;
+    }
+
+    private static int NormalizeSelection(WatchUiState uiState, WatchViewType view, int count)
+    {
+        int selectedIndex = Math.Clamp(uiState.GetSelectedIndex(view), 0, Math.Max(0, count - 1));
+        uiState.SetSelectedIndex(view, selectedIndex);
+        return selectedIndex;
+    }
+
+    private static void AppendSettlementLines(List<string> lines, IEnumerable<Settlement> settlements, WorldLookup lookup)
+    {
+        List<Settlement> orderedSettlements = settlements
+            .OrderBy(settlement => settlement.Name, StringComparer.Ordinal)
+            .ToList();
+        if (orderedSettlements.Count == 0)
+        {
+            lines.Add("  None");
+            return;
+        }
+
+        foreach (Settlement settlement in orderedSettlements)
+        {
+            string settlementRegion = lookup.TryGetRegion(settlement.RegionId, out Region? region) && region is not null
+                ? region.Name
+                : $"Region {settlement.RegionId}";
+            string ownerName = lookup.TryGetPolity(settlement.PolityId, out Polity? polity) && polity is not null
+                ? polity.Name
+                : $"Polity {settlement.PolityId}";
+            lines.Add($"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1}");
+        }
+    }
+
+    private static string DescribeRegionResourceSummary(WatchKnowledgeSnapshot knowledge, int regionId)
+    {
+        IReadOnlyList<CulturalDiscovery> discoveries = knowledge.GetRegionDiscoveries(regionId)
+            .Where(discovery => discovery.Category == CulturalDiscoveryCategory.Resource)
+            .ToList();
+        return discoveries.Count == 0
+            ? "resources unknown"
+            : $"resources {string.Join(", ", discoveries.Select(discovery => discovery.Summary).Take(2))}";
+    }
+
+    private static string DescribeEnvironment(Region region)
+    {
+        string fertility = region.Fertility >= 0.70
+            ? "fertile"
+            : region.Fertility >= 0.45
+                ? "mixed"
+                : "lean";
+        string water = region.WaterAvailability >= 0.70
+            ? "wet"
+            : region.WaterAvailability >= 0.45
+                ? "temperate"
+                : "dry";
+        return $"{fertility}, {water}, {region.Biome}";
+    }
+
+    private static string DescribeFoodSafety(WatchKnowledgeSnapshot knowledge, Species species)
+    {
+        Polity? polity = knowledge.FocalPolity;
+        if (polity is null)
+        {
+            return "Unknown";
+        }
+
+        if (polity.KnownToxicSpeciesIds.Contains(species.Id))
+        {
+            return "Known toxic";
+        }
+
+        if (polity.KnownEdibleSpeciesIds.Contains(species.Id))
+        {
+            return "Known edible";
+        }
+
+        return species.IsToxicToEat ? "Unknown safety" : "Edible or unknown";
+    }
+
+    private static string DescribeDomesticationRelevance(double domesticationInterest, double domesticationAffinity)
+    {
+        if (domesticationInterest > 0.15)
+        {
+            return $"active interest {domesticationInterest:F2}";
+        }
+
+        return domesticationAffinity >= 0.45
+            ? $"promising affinity {domesticationAffinity:F2}"
+            : $"low affinity {domesticationAffinity:F2}";
     }
 
     private static string DescribeDiscoveries(Polity polity)
@@ -437,6 +542,11 @@ public static class WatchScreenBuilder
                 .OrderBy(id => id)
                 .Select(id => AdvancementCatalog.Get(id).Name));
 
+    private static string DescribeDiscoverySummaries(IReadOnlyList<CulturalDiscovery> discoveries)
+        => discoveries.Count == 0
+            ? "None"
+            : string.Join(", ", discoveries.Select(discovery => discovery.Summary));
+
     private static string DescribeTrophicRole(TrophicRole role)
         => role switch
         {
@@ -446,4 +556,27 @@ public static class WatchScreenBuilder
             TrophicRole.Herbivore => "Herbivore",
             _ => "Producer"
         };
+
+    private static string DescribeSpeciesSize(Species species)
+        => species.MeatYield switch
+        {
+            >= 22 => "Large",
+            >= 10 => "Medium",
+            _ => "Small"
+        };
+
+    private static string TruncateToWidth(string text, int width)
+    {
+        if (text.Length <= width)
+        {
+            return text;
+        }
+
+        if (width <= 3)
+        {
+            return text[..width];
+        }
+
+        return $"{text[..(width - 3)]}...";
+    }
 }

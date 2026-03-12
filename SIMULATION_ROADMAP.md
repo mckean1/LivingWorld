@@ -33,7 +33,7 @@ The current opening pass is meant to create more real early turning points, not 
 
 2. History views
 Build richer lineage and event-history views over the stored event stream without changing simulation systems.
-The first lightweight inspection layer is now in place through watch-mode polity, region, species, polity-list, and world-overview screens.
+The first lightweight inspection layer is now in place through watch-mode polity, region, species, polity-list, and world-overview screens, with shared discovery-aware visibility and consistent keyboard navigation.
 
 3. Multiple perspectives
 Allow the same stored history to be rendered through different focal filters or narrative lenses.
@@ -46,6 +46,7 @@ Current predator tuning assumes founder establishment and collapse are the main 
 
 6. Discovery/contact visibility refinement
 Replace first-pass generation-era visibility approximations with truer knowledge gating for regions, species, and foreign polities as simulation-side contact systems deepen.
+Current Phase 8 completion still uses a lightweight horizon model based on settlements, nearby regions, and explicit discoveries; richer diplomacy/contact memory remains intentionally deferred rather than faked in the UI.
 
 5. Speciation follow-through
 Build on regional divergence, isolation, mutation history, ancestral-fit tracking, and regional adaptation milestones so strongly diverged populations can split into named descendant lineages without replacing the current population-level foundation.

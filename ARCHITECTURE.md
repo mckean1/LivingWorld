@@ -136,9 +136,11 @@ Watch mode is built from:
 - `ChronicleEventFormatter`
 - `ChronicleWatchRenderer`
 - `ChronicleColorWriter`
+- `WatchViewCatalog`
 - `WatchUiState`
 - `WatchInputController`
 - `WatchInspectionData`
+- `WatchKnowledgeSnapshot`
 - `WatchScreenBuilder`
 
 Important traits:
@@ -158,14 +160,17 @@ Important traits:
 The watch UI is now a thin observation layer over the simulation rather than a chronicle-only screen.
 
 - `WatchUiState` stores active view, pause state, per-view selection, per-view scroll offsets, and the detail back stack
-- `WatchInputController` translates key presses into UI navigation and pause behavior
-- `WatchInspectionData` computes grounded first-pass visibility sets for known regions, species, and polities
-- `WatchScreenBuilder` renders top-level and detail inspection screens from current world state
+- `WatchViewCatalog` centralizes top-level screen labels, numbering, and control mapping
+- `WatchInputController` translates key presses into shared list/detail navigation, paging, and pause behavior
+- `WatchKnowledgeSnapshot` is the shared player-knowledge projection for one render/input pass
+- `WatchInspectionData` builds that knowledge snapshot from the focal polity's visible horizon and discovery records
+- `WatchScreenBuilder` renders top-level and detail inspection screens from that filtered world view instead of from omniscient raw state
 - `ChronicleWatchRenderer` remains responsible for low-flicker console drawing, the fixed top panel, chronicle retention, and viewport slicing
 - `Simulation` now acts as the watch-loop coordinator: it polls input every iteration, advances months only when the next step time has arrived, and renders only when invalidated
 - initial focus selection now runs after regional populations are initialized, so the selector can prefer a live starting polity rather than blindly taking the first id
 
 Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
+Left/Right paging is view-agnostic now: list screens page selection, while chronicle and detail screens page scroll offsets.
 
 ## Focus And Continuity
 

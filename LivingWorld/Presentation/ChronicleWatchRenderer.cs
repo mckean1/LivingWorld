@@ -58,6 +58,9 @@ public sealed class ChronicleWatchRenderer : IDisposable
         return true;
     }
 
+    internal IReadOnlyList<string> SnapshotChronicleEntries()
+        => _chronicleEntries.ToList();
+
     public void Dispose()
     {
         if (Console.IsOutputRedirected || !_cursorHidden || !OperatingSystem.IsWindows())
@@ -117,7 +120,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
         string border = new('=', width);
         List<string> lines = [border];
         string status = uiState.IsPaused ? "PAUSED" : "RUNNING";
-        string view = WatchScreenBuilder.DescribeView(uiState.ActiveView);
+        string view = WatchViewCatalog.DescribeView(uiState.ActiveView);
 
         if (polity is null)
         {
@@ -291,8 +294,8 @@ public sealed class ChronicleWatchRenderer : IDisposable
     private void TrimRetainedEntries()
     {
         int retentionLimit = Math.Max(
-            ResolveWindowHeight() * 4,
-            Math.Max(MinimumViewportHeight * 4, _options.ChronicleVisibleEntryLimit));
+            ResolveWindowHeight() * 8,
+            Math.Max(MinimumViewportHeight * 8, _options.ChronicleVisibleEntryLimit));
         while (_chronicleEntries.Count > retentionLimit)
         {
             _chronicleEntries.RemoveAt(_chronicleEntries.Count - 1);

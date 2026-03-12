@@ -2,17 +2,6 @@ namespace LivingWorld.Presentation;
 
 public sealed class WatchUiState
 {
-    private static readonly WatchViewType[] MainViews =
-    [
-        WatchViewType.Chronicle,
-        WatchViewType.MyPolity,
-        WatchViewType.CurrentRegion,
-        WatchViewType.KnownRegions,
-        WatchViewType.KnownSpecies,
-        WatchViewType.KnownPolities,
-        WatchViewType.WorldOverview
-    ];
-
     private readonly Dictionary<WatchViewType, int> _selectedIndices = [];
     private readonly Dictionary<WatchViewType, int> _scrollOffsets = [];
     private readonly Stack<WatchUiSnapshot> _backStack = [];
@@ -29,7 +18,7 @@ public sealed class WatchUiState
 
     public bool IsDetailView => ActiveView is WatchViewType.RegionDetail or WatchViewType.SpeciesDetail or WatchViewType.PolityDetail;
 
-    public IReadOnlyList<WatchViewType> OrderedMainViews => MainViews;
+    public IReadOnlyList<WatchViewType> OrderedMainViews => WatchViewCatalog.MainViews;
 
     public void TogglePaused()
         => IsPaused = !IsPaused;
@@ -45,19 +34,20 @@ public sealed class WatchUiState
 
     public void CycleMainView(int direction)
     {
-        int currentIndex = Array.IndexOf(MainViews, GetOwningMainView(ActiveView));
+        WatchViewType[] mainViews = WatchViewCatalog.MainViews.ToArray();
+        int currentIndex = Array.IndexOf(mainViews, WatchViewCatalog.GetOwningMainView(ActiveView));
         if (currentIndex < 0)
         {
             currentIndex = 0;
         }
 
-        int nextIndex = (currentIndex + direction) % MainViews.Length;
+        int nextIndex = (currentIndex + direction) % mainViews.Length;
         if (nextIndex < 0)
         {
-            nextIndex += MainViews.Length;
+            nextIndex += mainViews.Length;
         }
 
-        SetActiveMainView(MainViews[nextIndex]);
+        SetActiveMainView(mainViews[nextIndex]);
     }
 
     public int GetSelectedIndex(WatchViewType view)
@@ -118,15 +108,6 @@ public sealed class WatchUiState
             SetScrollOffset(WatchViewType.Chronicle, offset + 1);
         }
     }
-
-    private static WatchViewType GetOwningMainView(WatchViewType view)
-        => view switch
-        {
-            WatchViewType.RegionDetail => WatchViewType.KnownRegions,
-            WatchViewType.SpeciesDetail => WatchViewType.KnownSpecies,
-            WatchViewType.PolityDetail => WatchViewType.KnownPolities,
-            _ => view
-        };
 
     private sealed record WatchUiSnapshot(
         WatchViewType View,

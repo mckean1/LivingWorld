@@ -7,95 +7,33 @@ namespace LivingWorld.Presentation;
 
 public static class WatchInspectionData
 {
+    public static WatchKnowledgeSnapshot CreateSnapshot(World world, ChronicleFocus focus)
+        => WatchKnowledgeSnapshot.Create(world, focus);
+
     public static Polity? ResolveFocusedPolity(World world, ChronicleFocus focus)
-        => focus.ResolvePolity(world);
+        => CreateSnapshot(world, focus).FocalPolity;
 
     public static Region? ResolveCurrentRegion(World world, ChronicleFocus focus)
-    {
-        Polity? polity = ResolveFocusedPolity(world, focus);
-        if (polity is null)
-        {
-            return null;
-        }
-
-        int regionId = polity.GetPrimarySettlement()?.RegionId ?? polity.RegionId;
-        return world.Regions.FirstOrDefault(region => region.Id == regionId);
-    }
+        => CreateSnapshot(world, focus).CurrentRegion;
 
     public static List<Region> GetKnownRegions(World world, ChronicleFocus focus)
-    {
-        Polity? polity = ResolveFocusedPolity(world, focus);
-        if (polity is null)
-        {
-            return [];
-        }
-
-        // Phase 1 visibility rule: treat the focal polity as knowing the regions
-        // where it has settlements, plus its current center region, plus directly
-        // connected neighbors of those occupied regions.
-        HashSet<int> regionIds = polity.Settlements.Select(settlement => settlement.RegionId).ToHashSet();
-        regionIds.Add(polity.RegionId);
-
-        foreach (int occupiedRegionId in regionIds.ToList())
-        {
-            Region? occupiedRegion = world.Regions.FirstOrDefault(region => region.Id == occupiedRegionId);
-            if (occupiedRegion is null)
-            {
-                continue;
-            }
-
-            foreach (int connectedRegionId in occupiedRegion.ConnectedRegionIds)
-            {
-                regionIds.Add(connectedRegionId);
-            }
-        }
-
-        return world.Regions
-            .Where(region => regionIds.Contains(region.Id))
-            .OrderBy(region => region.Name, StringComparer.Ordinal)
-            .ToList();
-    }
+        => CreateSnapshot(world, focus).KnownRegions.ToList();
 
     public static List<Species> GetKnownSpecies(World world, ChronicleFocus focus)
-    {
-        HashSet<int> knownRegionIds = GetKnownRegions(world, focus)
-            .Select(region => region.Id)
-            .ToHashSet();
-
-        return world.Species
-            .Where(species => world.Regions.Any(region =>
-                knownRegionIds.Contains(region.Id)
-                && region.SpeciesPopulations.Any(population => population.SpeciesId == species.Id && population.PopulationCount > 0)))
-            .OrderByDescending(species => species.IsSapient)
-            .ThenBy(species => species.Name, StringComparer.Ordinal)
-            .ToList();
-    }
+        => CreateSnapshot(world, focus).KnownSpecies.ToList();
 
     public static List<Polity> GetKnownPolities(World world, ChronicleFocus focus)
     {
-        Polity? focalPolity = ResolveFocusedPolity(world, focus);
-        if (focalPolity is null)
-        {
-            return [];
-        }
-
-        HashSet<int> knownRegionIds = GetKnownRegions(world, focus)
-            .Select(region => region.Id)
-            .ToHashSet();
-
-        return world.Polities
-            .Where(polity => polity.Population > 0
-                && polity.Id != focalPolity.Id
-                && (knownRegionIds.Contains(polity.RegionId)
-                    || polity.Settlements.Any(settlement => knownRegionIds.Contains(settlement.RegionId))))
-            .OrderByDescending(polity => polity.Population)
-            .ThenBy(polity => polity.Name, StringComparer.Ordinal)
+        WatchKnowledgeSnapshot snapshot = CreateSnapshot(world, focus);
+        int? focalPolityId = snapshot.FocalPolity?.Id;
+        return snapshot.KnownPolities
+            .Where(polity => polity.Id != focalPolityId)
             .ToList();
     }
 
     public static List<(Region Region, int Population)> GetSpeciesRegionalPopulations(World world, int speciesId)
-    {
-        return world.Regions
+        {
+            return world.Regions
             .Select(region => (Region: region, Population: region.SpeciesPopulations
                 .Where(population => population.SpeciesId == speciesId)
                 .Sum(population => population.PopulationCount)))

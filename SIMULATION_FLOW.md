@@ -82,9 +82,11 @@ Default player mode shows:
 - newest messages first
 - concise `Major` and `Legendary` history only
 - key-driven inspection screens for polity, region, species, polity lists, and world overview
+- shared discovery-aware visibility across all watch inspection screens
 
 Chronicle lines themselves remain short and do not append species after every polity name.
 The intended fuller-world opening is now more active in years `0-20`: home-anchor hunting, early food relief or hardship, migration under real pressure, and faster first consolidations for viable lineages.
+Chronicle scrollback now retains a deeper in-memory buffer, and Left/Right paging is available for both chronicle history and list-heavy inspection screens.
 
 It does not show:
 

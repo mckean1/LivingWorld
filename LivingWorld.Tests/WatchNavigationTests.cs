@@ -3,6 +3,7 @@ using LivingWorld.Life;
 using LivingWorld.Map;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
+using LivingWorld.Advancement;
 using Xunit;
 
 namespace LivingWorld.Tests;
@@ -72,6 +73,86 @@ public sealed class WatchNavigationTests
         Assert.Equal(WatchViewType.WorldOverview, uiState.ActiveView);
     }
 
+    [Fact]
+    public void LeftRight_PagesThroughChronicleScrollback()
+    {
+        World world = CreateWorld();
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.Chronicle);
+        WatchInputController controller = new(uiState);
+
+        bool handled = controller.HandleKey(new ConsoleKeyInfo((char)0, ConsoleKey.RightArrow, false, false, false), world, focus);
+
+        Assert.True(handled);
+        Assert.True(uiState.GetScrollOffset(WatchViewType.Chronicle) > 0);
+    }
+
+    [Fact]
+    public void LeftRight_PagesKnownRegionSelection()
+    {
+        World world = CreateWideVisibilityWorld();
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.KnownRegions);
+        WatchInputController controller = new(uiState);
+
+        bool handled = controller.HandleKey(new ConsoleKeyInfo((char)0, ConsoleKey.RightArrow, false, false, false), world, focus);
+
+        Assert.True(handled);
+        Assert.True(uiState.GetSelectedIndex(WatchViewType.KnownRegions) >= 4);
+    }
+
+    [Fact]
+    public void SpeciesDetail_ShowsOnlyKnownRegionalPopulations()
+    {
+        World world = CreateWorld();
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.PushDetailView(WatchViewType.SpeciesDetail, entityId: 2);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(lines, line => line.Contains("Green Barrow", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Red Valley", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("Far North", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ForeignPolityDetail_HidesDiscoveriesAndLearned()
+    {
+        World world = CreateWorld();
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.PushDetailView(WatchViewType.PolityDetail, entityId: 8);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(" Discoveries: Not yet known", lines);
+        Assert.Contains(" Learned: Not yet known", lines);
+    }
+
+    [Fact]
+    public void WorldOverview_UsesKnownCountsRatherThanGlobalTotals()
+    {
+        World world = CreateWorld();
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.WorldOverview);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(" Known Regions: 2", lines);
+        Assert.Contains(" Known Species: 2", lines);
+        Assert.Contains(" Known Polities: 1", lines);
+        Assert.DoesNotContain(lines, line => line.Contains("Total Regions: 4", StringComparison.Ordinal));
+    }
+
     private static World CreateWorld()
     {
         World world = new(new WorldTime(10, 6));
@@ -91,23 +172,52 @@ public sealed class WatchNavigationTests
         Species snowMite = new(4, "Snow Mite", 0.0, 0.1);
         world.Species.AddRange([humans, riverElk, stoneWolf, snowMite]);
 
-        greenBarrow.SpeciesPopulations.Add(new RegionSpeciesPopulation(1, 0, 80));
-        greenBarrow.SpeciesPopulations.Add(new RegionSpeciesPopulation(2, 0, 140));
-        redValley.SpeciesPopulations.Add(new RegionSpeciesPopulation(2, 1, 220));
-        amberReach.SpeciesPopulations.Add(new RegionSpeciesPopulation(3, 2, 60));
-        farNorth.SpeciesPopulations.Add(new RegionSpeciesPopulation(4, 3, 500));
+        greenBarrow.GetOrCreateSpeciesPopulation(1).PopulationCount = 80;
+        greenBarrow.GetOrCreateSpeciesPopulation(2).PopulationCount = 140;
+        redValley.GetOrCreateSpeciesPopulation(2).PopulationCount = 220;
+        amberReach.GetOrCreateSpeciesPopulation(3).PopulationCount = 60;
+        farNorth.GetOrCreateSpeciesPopulation(4).PopulationCount = 500;
 
         Polity focalPolity = new(7, "Deepfield Tribe", 1, 0, 84);
         focalPolity.EstablishFirstSettlement(0, "Green Hearth");
+        focalPolity.AddDiscovery(new CulturalDiscovery("region-copper:0", "Green Barrow Copper", CulturalDiscoveryCategory.Resource, null, 0));
         world.Polities.Add(focalPolity);
 
         Polity neighborPolity = new(8, "Valley Clan", 1, 1, 55);
         neighborPolity.EstablishFirstSettlement(1, "Valley Hold");
+        neighborPolity.LearnAdvancement(AdvancementId.Fire);
+        neighborPolity.AddDiscovery(new CulturalDiscovery("species-edible:2", "River Elk Edible", CulturalDiscoveryCategory.SpeciesUse, 2, 1));
         world.Polities.Add(neighborPolity);
 
         Polity distantPolity = new(9, "Northwatch", 1, 3, 40);
         distantPolity.EstablishFirstSettlement(3, "Northwatch Camp");
         world.Polities.Add(distantPolity);
+
+        return world;
+    }
+
+    private static World CreateWideVisibilityWorld()
+    {
+        World world = new(new WorldTime(10, 6));
+        for (int index = 0; index < 14; index++)
+        {
+            Region region = new(index, $"Region {index:D2}") { Fertility = 0.5 + (index * 0.01), WaterAvailability = 0.4 };
+            if (index > 0)
+            {
+                region.AddConnection(index - 1);
+                world.Regions[index - 1].AddConnection(index);
+            }
+
+            world.Regions.Add(region);
+        }
+
+        Species humans = new(1, "Humans", 0.8, 0.7) { IsSapient = true };
+        world.Species.Add(humans);
+
+        Polity focalPolity = new(7, "Deepfield Tribe", 1, 6, 84);
+        focalPolity.EstablishFirstSettlement(6, "Green Hearth");
+        focalPolity.AddDiscovery(new CulturalDiscovery("region-route:10", "Region 10 Trade Path", CulturalDiscoveryCategory.Geography, null, 10));
+        world.Polities.Add(focalPolity);
 
         return world;
     }

@@ -83,6 +83,7 @@ In watch mode:
 - changing views does not affect world logic
 - `Space` pauses monthly advancement but leaves the watch UI responsive
 - while paused, the renderer can still redraw list/detail screens and scroll chronicle history
+- `Left` / `Right` now page chronicle or detail scroll state and jump faster through list selection
 - unpausing resets the next step deadline instead of trying to catch up missed paused time
 - chronicle pacing no longer sleeps inside event recording, so view changes stay immediate during live simulation
 

@@ -33,6 +33,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - evolved regional traits now feed back into hunting danger and difficulty, predator-prey outcomes, habitat fit, migration capability, and reproduction/survival rates
 - watch mode shows the focal polity species in the fixed status panel
 - watch mode also separates `Discoveries` from `Learned` advancements in that fixed status panel
+- watch mode now uses a shared knowledge snapshot so chronicle, region, species, polity, and world-overview screens all read from the same discovery-aware visibility rules
 - visible chronicle lines keep polity names short and do not append species by default
 - hot-path systems now prefer cached id lookups and explicit invariant errors over raw LINQ `First(...)` crashes
 - generation defaults are centralized in `WorldGenerationSettings`, while curated biome/name/species templates live in `WorldGenerationCatalog`
@@ -125,6 +126,7 @@ Watch mode now supports lightweight inspection without leaving the live simulati
 - `7` World Overview
 - `Tab` cycles the main top-level views
 - `Up` / `Down` move list selection or scroll the active screen where relevant
+- `Left` / `Right` page through chronicle/detail scrollback or jump faster through list screens
 - `Enter` inspects the selected list item or the current focal polity / region when supported
 - `Esc` returns from a detail screen to the previous list
 
@@ -135,6 +137,8 @@ Phase 1 visibility rules are intentionally conservative and grounded:
 - `Known Polities` uses active polities occupying those known regions
 
 These views are observational only. They do not create simulation events or allow direct control over the world.
+Foreign polity detail intentionally hides that polity's private discoveries and learned capabilities unless it is the focal polity.
+World Overview now summarizes only known regions, known species, known polities, and visible major events inside the focal polity's current horizon.
 
 Watch-loop responsiveness notes:
 

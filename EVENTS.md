@@ -131,6 +131,7 @@ The same ecology rule now applies to food sourcing: generic foraging events desc
 Because richer regions now begin with a sturdier prey layer, hunting and wildlife-recovery events are more likely to reflect meaningful regional abundance shifts instead of one tiny starting population blinking in and out.
 Seasonal fauna migration now records those shifts in structured history through `species_population_established`, but the main chronicle should still only surface the rare expansions that materially change a region or lineage context.
 The same restraint applies to predator founder success or failure: ordinary colony sorting should stay in structured/debug history unless it clearly changes the focal historical story.
+Phase 8 watch inspection does not add any new event types for UI navigation, pausing, paging, or screen changes. Those remain presentation-only.
 
 Major biology-turn types that may surface when the focused line is meaningfully affected:
 
