@@ -4,7 +4,7 @@ public sealed class WorldGenerationSettings
 {
     public int RegionCount { get; init; } = 36;
 
-    public int InitialSpeciesCount { get; init; } = 28;
+    public int InitialSpeciesCount { get; init; } = 31;
 
     public int InitialPolityCount { get; init; } = 10;
 

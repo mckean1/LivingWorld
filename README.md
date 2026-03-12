@@ -7,7 +7,7 @@ The player-facing experience is chronicle-first: the console follows one focal l
 Default world generation now starts from a fuller but still grounded baseline:
 
 - `36` connected regions on one early-continent landmass
-- `28` starting species with biome-aware range seeding
+- `31` starting species with biome-aware range seeding, including the full default predator and apex roster
 - `10` starting polities distributed across viable, spaced-apart settlement regions
 - fertile regions now usually open with multiple meaningful consumer populations rather than a single token herbivore pocket
 
@@ -22,6 +22,7 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - world generation also now protects against fauna-empty fertile regions by expanding the nearest plausible herbivore cluster into those regions instead of leaving plant-only dead zones
 - seasonal fauna migration now lets healthy neighboring populations found real new regional populations over time, so producer-only regions can develop fuller food webs decades after generation
 - predator and apex migration now follows prey-supported frontiers rather than jumping blindly into empty regions
+- predator founders now either establish into meaningful local populations when prey support is strong or collapse back out when support is weak, instead of lingering as permanent tiny seeds
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting, recolonization pressure, or legendary hunts
 - settlement hunting now executes from actual settlements in their own regions instead of multiplying one polity-region hunt by settlement count
 - settlement farming now allocates real regional arable capacity across actual settlements, so multiple settlements in one region share land instead of double counting it

@@ -17,7 +17,7 @@ public sealed class WorldGenerationTests
         var world = generator.Generate();
 
         Assert.Equal(36, world.Regions.Count);
-        Assert.Equal(28, world.Species.Count);
+        Assert.Equal(31, world.Species.Count);
         Assert.Equal(10, world.Polities.Count);
     }
 
@@ -175,6 +175,20 @@ public sealed class WorldGenerationTests
     }
 
     [Fact]
+    public void DefaultWorld_IncludesFullPredatorRoster_AndApexSpecies()
+    {
+        WorldGenerator generator = new(seed: 13);
+
+        var world = generator.Generate();
+
+        int predatorSpecies = world.Species.Count(species => species.TrophicRole == TrophicRole.Predator);
+        int apexSpecies = world.Species.Count(species => species.TrophicRole == TrophicRole.Apex);
+
+        Assert.True(predatorSpecies >= 3);
+        Assert.True(apexSpecies >= 2);
+    }
+
+    [Fact]
     public void WorldGeneration_DoesNotMakeHerbivores_GlobalAcrossAllRegions()
     {
         WorldGenerator generator = new(seed: 13);
@@ -223,6 +237,33 @@ public sealed class WorldGenerationTests
 
         Assert.True(laterAverageHerbivores >= initialAverageHerbivores * 0.80);
         Assert.Contains(fertileRegions, region => region.AnimalBiomass >= 140);
+    }
+
+    [Fact]
+    public void SeasonalEcosystem_KeepsPredatorsEstablished_InTheDefaultWorld()
+    {
+        WorldGenerator generator = new(seed: 13);
+        var world = generator.Generate();
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        for (int season = 0; season < 24; season++)
+        {
+            ecosystemSystem.UpdateSeason(world);
+            ecosystemSystem.ResolveSeasonalCleanup(world);
+        }
+
+        int occupiedPredatorRegions = world.Regions.Count(region => region.SpeciesPopulations.Any(population =>
+            population.PopulationCount > 0
+            && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole is TrophicRole.Predator or TrophicRole.Apex));
+        int establishedPredatorRegions = world.Regions.Count(region => region.SpeciesPopulations.Any(population =>
+            population.PopulationCount >= 6
+            && population.FounderSeasonsRemaining == 0
+            && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole is TrophicRole.Predator or TrophicRole.Apex));
+
+        Assert.True(occupiedPredatorRegions >= 8);
+        Assert.True(establishedPredatorRegions >= 4);
     }
 
     [Fact]

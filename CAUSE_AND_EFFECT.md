@@ -70,8 +70,11 @@ Implemented chains:
 `seasonal habitat + carrying capacity -> regional population growth or decline`
 
 `producer abundance -> herbivore support -> predator support`
+`strong prey support + suitable habitat -> predator founder establishment -> stable regional predator population`
 
 `broader suitable herbivore ranges + stronger ecological seeding -> richer early prey base`
+
+`weak prey support or poor habitat -> predator founder failure -> local predator collapse`
 
 `prey collapse -> predator food stress -> predator decline or ecosystem collapse`
 
@@ -81,7 +84,11 @@ Implemented chains:
 
 `healthy herbivore source + suitable adjacent producer-rich region -> founder population -> later local food web growth`
 
-`prey-established frontier + predator prey support -> predator follow migration -> deeper regional food web`
+`prey-established frontier + predator prey support -> predator follow migration -> predator founder population`
+
+`predator founder population + sustained prey support -> predator establishment`
+
+`predator founder population + repeated food shortage -> founder collapse`
 
 `all local populations gone -> global extinction`
 

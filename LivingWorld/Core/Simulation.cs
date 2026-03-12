@@ -3,6 +3,7 @@ using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
 using LivingWorld.Map;
+using LivingWorld.Life;
 using System.Threading;
 
 namespace LivingWorld.Core;
@@ -592,11 +593,27 @@ public sealed class Simulation : IDisposable
                 && herbivorePopulation < 90
                 && predatorPopulation >= Math.Max(12, herbivorePopulation * 0.55);
         });
+        List<Species> predatorSpecies = _world.Species
+            .Where(species => species.TrophicRole is Life.TrophicRole.Predator or Life.TrophicRole.Apex)
+            .ToList();
+        int occupiedPredatorRegions = _world.Regions.Count(region => ResolvePredatorPopulation(region) > 0);
+        int founderPredatorRegions = _world.Regions.Count(region => region.SpeciesPopulations.Any(population =>
+            population.PopulationCount > 0
+            && population.FounderSeasonsRemaining > 0
+            && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole is Life.TrophicRole.Predator or Life.TrophicRole.Apex));
+        int establishedPredatorRegions = _world.Regions.Count(region => region.SpeciesPopulations.Any(population =>
+            population.PopulationCount > 0
+            && population.FounderSeasonsRemaining == 0
+            && _world.Species.First(species => species.Id == population.SpeciesId).TrophicRole is Life.TrophicRole.Predator or Life.TrophicRole.Apex));
+        int activePredatorSpecies = predatorSpecies.Count(species => _world.Regions.Any(region => region.GetSpeciesPopulation(species.Id)?.PopulationCount > 0));
+        int totalPredatorPopulation = _world.Regions.Sum(ResolvePredatorPopulation);
 
         Console.WriteLine(
             $"Ecology: AnimalBiomass={totalAnimalBiomass:F0} RegionsWithAnimals={regionsWithAnimalBiomass}/{_world.Regions.Count} ActiveConsumerPops={activeConsumerPopulations}");
         Console.WriteLine(
             $"Wildlife: AvgHerbivores/Region={averageHerbivorePopulation:F0} AvgConsumers/Region={averageConsumerSpecies:F1} Fertile2+Consumers={fertileRegionsWithEstablishedConsumers}/{fertileRegions.Count} FertileHerbivore90+={fertileRegionsWithGrowingHerbivores}/{fertileRegions.Count} PredatorHotspots={predatorSuppressionHotspots}");
+        Console.WriteLine(
+            $"Predators: Regions={occupiedPredatorRegions}/{_world.Regions.Count} FounderRegions={founderPredatorRegions} EstablishedRegions={establishedPredatorRegions} TotalPop={totalPredatorPopulation} ActiveSpecies={activePredatorSpecies}/{predatorSpecies.Count}");
 
         if (_world.Time.Year is 0 or 5 or 20)
         {

@@ -146,6 +146,7 @@ Selected fields:
 - `SeasonsUnderPressure`
 - seeded starting population is now derived from this entry's carrying capacity and habitat fit, so fertile regions can begin with meaningfully sized herbivore populations
 - `MigrationCooldownSeasons` now paces repeated founder attempts so populations do not thrash between regions every season
+- `FounderSeasonsRemaining` tracks short predator founder-establishment windows so new predator colonies can either mature or fail under normal ecology rules
 - per-population trait offsets for Intelligence, Sociality, Aggression, Endurance, Fertility, DietFlexibility, ClimateTolerance, and Size
 - accumulated mutation pressure by cause: food stress, predation, hunting, habitat mismatch, isolation, crowding, and low-pressure drift
 - divergence tracking: `DivergenceScore`, `IsolationSeasons`, mutation counts, and milestone markers
@@ -186,6 +187,7 @@ Important model rule:
 - wildlife recovery comes from `RegionSpeciesPopulation` reproduction, migration, and habitat fit, then flows back into `AnimalBiomass` during ecosystem sync
 - early wildlife richness now comes from broader consumer seeding plus stronger herbivore ecological capacity in producer-rich regions, not from reintroducing an abstract animal reserve
 - migration now creates real founder populations in neighboring regions rather than toggling abstract range flags, so later growth, collapse, hunting pressure, and mutation all act on the same population records
+- predator founder populations use that same record model, with prey-support thresholds and a short establishment window rather than a separate scripted predator layer
 
 ## Presentation And Persistence Types
 

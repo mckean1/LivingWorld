@@ -7,7 +7,7 @@ World generation creates the starting simulation state: regions, species, and in
 The current fuller-world targets live in `LivingWorld/Generation/WorldGenerationSettings.cs`:
 
 - `RegionCount = 36`
-- `InitialSpeciesCount = 28`
+- `InitialSpeciesCount = 31`
 - `InitialPolityCount = 10`
 - `ContinentWidth = 6`
 - `ContinentHeight = 6`
@@ -62,6 +62,7 @@ Species are no longer treated as globally present by default.
 - ecosystem initialization only seeds starting populations inside that initial range
 - after the first clustered pass, world generation now patches fauna-empty fertile regions into the nearest plausible herbivore cluster so strong producer regions do not start as plant-only ecological dead ends
 - predator and apex ranges are then trimmed back to herbivore-supported regions, keeping predator presence limited and prey-grounded
+- the default species roster now includes the full built-in predator and apex set, so later regional predator variety is not capped by a truncated startup catalog
 - later regional fauna migration complements this seed state rather than replacing it; worldgen still decides the opening map, while seasonal founder spread reshapes it over decades
 
 This keeps the opening world denser without making every region ecologically identical.
@@ -109,3 +110,4 @@ Starting-polity homeland scoring also now prefers nearby support species coverag
 Initial `AnimalBiomass` values are best read as starting ecological context for species seeding and region summaries; once the simulation begins, animal biomass is derived from real consumer populations rather than harvested as an independent food pool.
 Initial consumer populations are now seeded from carrying capacity and habitat fit strongly enough that fertile producer-rich regions can support substantially larger herbivore starts.
 Predator coverage remains narrower, so early worlds usually establish a herbivore foundation before predator suppression becomes a major constraint.
+Predator starts are also intentionally less blanket-wide than herbivores, because later ecology is expected to sort predator founders into successful or failed colonies based on prey support rather than filling every suitable biome immediately.

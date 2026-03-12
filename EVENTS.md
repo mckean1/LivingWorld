@@ -108,6 +108,7 @@ Structured-first follow-up types:
 - `local_tension`
 - `species_population_established`
 - can also represent wildlife recolonization into an emptied neighboring region when migration restores a local population
+- can also represent a predator or apex founder successfully opening a new prey-supported ecological frontier when that shift is historically meaningful
 - `species_population_mutated`
 - `species_population_isolated`
 - `species_population_adapted_to_region`
@@ -129,6 +130,7 @@ Settlement-grounded systems should prefer true settlement references where avail
 The same ecology rule now applies to food sourcing: generic foraging events describe plant gathering pressure, while animal food gains should always be traceable to an actual hunted species population.
 Because richer regions now begin with a sturdier prey layer, hunting and wildlife-recovery events are more likely to reflect meaningful regional abundance shifts instead of one tiny starting population blinking in and out.
 Seasonal fauna migration now records those shifts in structured history through `species_population_established`, but the main chronicle should still only surface the rare expansions that materially change a region or lineage context.
+The same restraint applies to predator founder success or failure: ordinary colony sorting should stay in structured/debug history unless it clearly changes the focal historical story.
 
 Major biology-turn types that may surface when the focused line is meaningfully affected:
 

@@ -3,14 +3,14 @@
 LivingWorld runs the full world in monthly ticks. Player-facing output is live chronicle playback, not a yearly report.
 The watch UI can now swap between chronicle and inspection screens without changing the simulation state it observes.
 
-The default seed world feeding that loop is now denser by default: `36` regions, `28` species, and `10` starting polities.
+The default seed world feeding that loop is now denser by default: `36` regions, `31` species, and `10` starting polities.
 Those entities are still range-limited and region-grounded before month one begins.
 
 ## Monthly Flow
 
 1. region ecology update
 2. seasonal regional species population update on season boundaries
-3. seasonal ecosystem predation, founder migration, and regional species exchange on season boundaries
+3. seasonal ecosystem predation, founder migration, predator founder establishment/collapse, and regional species exchange on season boundaries
 4. seasonal settlement hunting on season boundaries
    - each settlement hunts in its own region
 5. seasonal mutation and divergence update on season boundaries using the just-resolved species exchange state
@@ -35,6 +35,7 @@ The migration step at item 11 is polity migration, not the regional species exch
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
 Seasonal species exchange at items 2-6 is also the main long-run recovery path for locally depleted wildlife, because recolonization now rebuilds real populations rather than refilling a separate animal pool.
 That ecology-side migration is role-specific: herbivores and omnivores can open suitable adjacent frontiers first, while predators and apex populations generally follow only once prey support exists in the destination region.
+Predator founders then pass through a short establishment window where strong prey support lets them grow into real local populations, while weak support makes them collapse back out naturally.
 
 ## Year-End Flow
 

@@ -91,6 +91,7 @@ When a trade event includes settlement references, they should describe the actu
   - migration or expansion created a new regional population
   - may also mark wildlife recolonization when a neighboring surviving population returns to an empty suitable region
   - founder-population establishment now also covers slow ecological frontier opening from adjacent fauna-rich regions
+  - most predator founder arrivals should remain structured-first unless they grow into a materially important regional shift
 - `predator_pressure`
   - predator food shortages became historically meaningful
 - `prey_collapse`
@@ -178,6 +179,7 @@ Watch-mode coloring is also conservative: actor names, place names, known knowle
 The watch inspection controls are UI-only and do not introduce new event types.
 The same is true for watch-loop pacing changes: responsive input and timed stepping change presentation behavior, not event semantics.
 The fuller seed world also does not introduce generation-only spam event types; denser starting state should surface through ordinary ecology, migration, settlement, and polity history.
+Predator founder failure and success are expected to be common structured ecology outcomes, but only unusually consequential arrivals or collapses should surface to the main chronicle.
 Anchored starting settlements are also generation state, not synthetic `settlement_founded` events. Chronicle-visible settlement beats still come from later real transitions such as consolidation.
 
 Watch mode also separates:

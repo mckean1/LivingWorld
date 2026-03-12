@@ -102,6 +102,7 @@ The new ecology phase is shared state for multiple systems:
 - ecosystem growth, migration scoring, and carrying capacity now consume those evolved trait offsets
 - ecosystem initialization and seasonal growth now let healthy producer biomass translate into stronger herbivore establishment and earlier wildlife expansion
 - seasonal fauna migration now turns that pressure into real founder populations in neighboring regions, so empty but suitable regions can join the food web without any separate spawn system
+- predator follow migration is now stricter than herbivore spread: prey support, suitability, source stability, and local predator competition all shape whether a new predator colony is attempted
 - hunting difficulty, danger, and yield now also consume regional trait divergence instead of using only species baselines
 - neighboring wildlife populations can re-establish empty suitable regions through seasonal species migration, which gives local ecology a non-magical recovery path
 - regional animal biomass is synchronized from species populations so migration heuristics, region screens, and advancement weighting still have region-level ecological context without creating a second animal-food resource
@@ -112,6 +113,7 @@ Important timing boundary:
 
 - seasonal species exchange happens inside `EcosystemSystem` before mutation runs
 - role-specific founder migration is part of that same seasonal ecology step, after local pressure is known and before mutation reads exchange flags
+- predator founders then continue through that same seasonal ecology step, where prey-rich colonies can establish and prey-poor colonies can fail without adding special-case spawn logic
 - later monthly polity migration happens in `MigrationSystem` after food resolution
 - mutation inputs such as `EstablishedThisSeason`, `ReceivedMigrantsThisSeason`, and `SentMigrantsThisSeason` refer only to the first category
 - chronicle presentation then applies its own scoped cooldown rules, including a dedicated adaptation key for visible adaptation beats
@@ -141,6 +143,7 @@ The fuller starting world is still intentionally constrained at handoff time:
 - species start in clustered biome-suitable ranges rather than universal placement
 - fertile biomes now more reliably hand off a real prey base into the first decade instead of abundant producers paired with token herbivores
 - predator seeding now remains subordinate to herbivore support, so predator-only range islands are trimmed out during worldgen
+- default world generation now also includes the full built-in predator and apex roster so regional predator variety is not lost before simulation even starts
 - starting polities are seeded into viable, spaced regions rather than random stacking
 - homeland scoring also prefers nearby support species and connected corridors so early settlement-grounded interaction is more likely
 

@@ -39,6 +39,7 @@ The seasonal ecosystem pass now also carries more of the "alive world" burden in
 - producer-rich regions give herbivores stronger early recovery and expansion headroom
 - predator starts stay narrower than herbivore coverage so prey foundations usually establish first
 - neighboring fauna can now create small founder populations in suitable adjacent regions over time instead of depending entirely on generation-era ranges
+- predator founder populations now use a short establishment window after migration, so they either grow into viable regional predators or fail under prey shortage and habitat mismatch
 
 `Region.AnimalBiomass` is not consumed during the monthly food-gathering step.
 Instead:
@@ -48,7 +49,7 @@ Instead:
 - seasonal ecosystem cleanup derives `Region.AnimalBiomass` back from surviving non-producer populations
 
 At the start of each month, temporary propagation bonuses tick down.
-Ecosystem migration pacing itself is centralized in `EcosystemSettings`, including source thresholds, suitability gates, founder sizing, prey-support requirements, and cooldowns.
+Ecosystem migration pacing itself is centralized in `EcosystemSettings`, including source thresholds, suitability gates, founder sizing, predator establishment/failure thresholds, prey-support requirements, and cooldowns.
 
 ## Year-End Systems
 

@@ -42,6 +42,7 @@ Allow the same stored history to be rendered through different focal filters or 
 Build on hunting pressure, edible discovery, domestication interest, and now-real settlement locality so repeatedly hunted species can become deliberate domestication candidates tied to actual settlement networks.
 Keep tuning early wildlife richness through ecological seeding, herbivore recovery, and recolonization strength rather than by adding new abstract animal resource layers.
 Continue balancing long-run regional fauna migration so frontiers open believably over decades without flattening the world into globally uniform wildlife.
+Current predator tuning assumes founder establishment and collapse are the main levers; future work should prefer prey-web and habitat tuning over reintroducing abstract predator spawning.
 
 6. Discovery/contact visibility refinement
 Replace first-pass generation-era visibility approximations with truer knowledge gating for regions, species, and foreign polities as simulation-side contact systems deepen.
