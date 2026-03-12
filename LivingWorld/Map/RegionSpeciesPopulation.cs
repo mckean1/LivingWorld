@@ -35,15 +35,27 @@ public sealed class RegionSpeciesPopulation
     public double IsolationMutationPressure { get; set; }
     public double CrowdingMutationPressure { get; set; }
     public double DriftMutationPressure { get; set; }
+    public double DivergencePressure { get; set; }
     public double DivergenceScore { get; set; }
     public int IsolationSeasons { get; set; }
     public int MinorMutationCount { get; set; }
     public int MajorMutationCount { get; set; }
     public int LastMutationYear { get; set; } = -1;
     public int LastMajorMutationYear { get; set; } = -1;
+    public int LastSpeciationYear { get; set; } = -1;
     public int LastIsolationEventSeason { get; set; }
     public int LastDivergenceMilestone { get; set; }
     public int LastAdaptationMilestone { get; set; }
+    public bool HasEverExisted { get; set; }
+    public bool LocalExtinctionRecorded { get; set; }
+    public int LastLocalExtinctionYear { get; set; } = -1;
+    public int LastLocalExtinctionMonth { get; set; } = -1;
+    public string? LastPopulationExitReason { get; set; }
+    public int? FounderSourceRegionId { get; set; }
+    public int? FounderSourceSpeciesId { get; set; }
+    public string? FounderKind { get; set; }
+    public int FounderYear { get; set; } = -1;
+    public int FounderMonth { get; set; } = -1;
     public bool RegionAdaptationRecorded
     {
         get => LastAdaptationMilestone > 0;
@@ -60,6 +72,26 @@ public sealed class RegionSpeciesPopulation
     }
 
     public bool IsLocallyExtinct => PopulationCount <= 0;
+
+    public void MarkEstablished(int year, int month, string founderKind, int? sourceRegionId, int? sourceSpeciesId)
+    {
+        HasEverExisted = true;
+        LocalExtinctionRecorded = false;
+        LastPopulationExitReason = null;
+        FounderKind = founderKind;
+        FounderSourceRegionId = sourceRegionId;
+        FounderSourceSpeciesId = sourceSpeciesId;
+        FounderYear = year;
+        FounderMonth = month;
+    }
+
+    public void MarkLocalExtinction(int year, int month, string reason)
+    {
+        LocalExtinctionRecorded = true;
+        LastLocalExtinctionYear = year;
+        LastLocalExtinctionMonth = month;
+        LastPopulationExitReason = reason;
+    }
 
     public double GetTraitOffset(SpeciesTrait trait)
         => trait switch

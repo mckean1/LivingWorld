@@ -15,7 +15,8 @@ public sealed class ChroniclePresentationPolicy
             [WorldEventType.FoodStress] = new ChronicleCooldownRule(15, BuildChronicleScopeKey),
             [WorldEventType.SpeciesPopulationAdaptedToRegion] = new ChronicleCooldownRule(30, BuildAdaptationScopeKey),
             [WorldEventType.SpeciesPopulationMajorMutation] = new ChronicleCooldownRule(24, BuildChronicleScopeKey),
-            [WorldEventType.SpeciesPopulationEvolutionaryTurningPoint] = new ChronicleCooldownRule(30, BuildChronicleScopeKey)
+            [WorldEventType.SpeciesPopulationEvolutionaryTurningPoint] = new ChronicleCooldownRule(30, BuildChronicleScopeKey),
+            [WorldEventType.NewSpeciesAppeared] = new ChronicleCooldownRule(40, BuildChronicleScopeKey)
         };
     }
 
@@ -92,6 +93,7 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.SpeciesPopulationMajorMutation or
             WorldEventType.SpeciesPopulationEvolutionaryTurningPoint or
             WorldEventType.SpeciesPopulationAdaptedToRegion or
+            WorldEventType.NewSpeciesAppeared or
             WorldEventType.FocusHandoffFragmentation or
             WorldEventType.FocusHandoffCollapse or
             WorldEventType.FocusLineageContinued or

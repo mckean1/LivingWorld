@@ -92,6 +92,9 @@ When a trade event includes settlement references, they should describe the actu
   - may also mark wildlife recolonization when a neighboring surviving population returns to an empty suitable region
   - founder-population establishment now also covers slow ecological frontier opening from adjacent fauna-rich regions
   - most predator founder arrivals should remain structured-first unless they grow into a materially important regional shift
+- `species_population_recolonized`
+  - a region regained a species after true local loss
+  - distinct from first-time establishment so extinction and recovery history stay readable
 - `predator_pressure`
   - predator food shortages became historically meaningful
 - `prey_collapse`
@@ -126,6 +129,9 @@ When a trade event includes settlement references, they should describe the actu
   - emitted on adaptation-stage transitions rather than repeated reaffirmation of the same regional condition
 - `species_population_evolutionary_turning_point`
   - divergence milestone that may become chronicle-worthy
+- `new_species_appeared`
+  - a long-isolated viable regional population diverged enough to become a descendant species
+  - usually structured-first unless it lands at `Major` severity inside the focused historical line
 
 ## Current Propagation Chains
 
@@ -206,6 +212,7 @@ Usually visible:
 - `polity_collapsed`
 - rare `species_population_major_mutation`
 - rare `species_population_evolutionary_turning_point`
+- rare `new_species_appeared`
 
 Usually structured-only unless escalated:
 

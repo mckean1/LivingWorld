@@ -237,6 +237,7 @@ public sealed class HuntingSystem
         polity.FoodHuntedThisYear += meatGained;
         polity.RecordSuccessfulHunt(targetSpecies.Id);
         polity.IncreaseDomesticationInterest(targetSpecies.Id, Math.Min(0.30, huntedCount * targetSpecies.DomesticationAffinity * 0.01));
+        EmitUseDiscoveryIfEarned(world, polity, region, targetSpecies);
 
         if (casualties > 0)
         {
@@ -367,6 +368,7 @@ public sealed class HuntingSystem
     {
         if (targetPopulation.PopulationCount <= 0)
         {
+            targetPopulation.MarkLocalExtinction(world.Time.Year, world.Time.Month, "overhunting");
             world.AddEvent(
                 WorldEventType.LocalSpeciesExtinction,
                 WorldEventSeverity.Major,
@@ -422,6 +424,43 @@ public sealed class HuntingSystem
 
         polity.HuntingCasualtiesThisYear += casualties;
         polity.Population = Math.Max(0, polity.Population - casualties);
+    }
+
+    private static void EmitUseDiscoveryIfEarned(World world, Polity polity, Region region, Species targetSpecies)
+    {
+        if (targetSpecies.DomesticationAffinity < 0.45
+            || !polity.DomesticationInterestBySpecies.TryGetValue(targetSpecies.Id, out double interest)
+            || interest < 0.18
+            || polity.HasDiscovery($"species-useful:{targetSpecies.Id}"))
+        {
+            return;
+        }
+
+        polity.AddDiscovery(new CulturalDiscovery(
+            Key: $"species-useful:{targetSpecies.Id}",
+            Summary: $"{targetSpecies.Name} Useful",
+            Category: CulturalDiscoveryCategory.SpeciesUse,
+            SpeciesId: targetSpecies.Id,
+            RegionId: region.Id));
+
+        world.AddEvent(
+            WorldEventType.KnowledgeDiscovered,
+            WorldEventSeverity.Notable,
+            $"{polity.Name} began to see greater use in {targetSpecies.Name}",
+            $"{polity.Name} started treating {targetSpecies.Name} as a useful recurring animal in {region.Name}.",
+            reason: "species_use_discovered",
+            scope: WorldEventScope.Polity,
+            polityId: polity.Id,
+            polityName: polity.Name,
+            speciesId: polity.SpeciesId,
+            regionId: region.Id,
+            regionName: region.Name,
+            metadata: new Dictionary<string, string>
+            {
+                ["targetSpeciesId"] = targetSpecies.Id.ToString(),
+                ["targetSpeciesName"] = targetSpecies.Name,
+                ["domesticationInterest"] = interest.ToString("F2")
+            });
     }
 
     private static int[] AllocateWorkers(int totalWorkers, int settlementCount)

@@ -31,9 +31,20 @@ public sealed class Species
     public double HuntingDanger { get; set; }
     public bool IsToxicToEat { get; set; }
     public double DomesticationAffinity { get; set; }
+    public int? ParentSpeciesId { get; set; }
+    public int RootAncestorSpeciesId { get; set; }
+    public int? OriginRegionId { get; set; }
+    public int OriginYear { get; set; }
+    public int OriginMonth { get; set; }
+    public string? OriginCause { get; set; }
+    public string? OriginPressureSummary { get; set; }
+    public bool IsGloballyExtinct { get; set; }
+    public int? ExtinctionYear { get; set; }
+    public int? ExtinctionMonth { get; set; }
     public List<int> DietSpeciesIds { get; } = [];
     public HashSet<RegionBiome> PreferredBiomes { get; } = [];
     public HashSet<int> InitialRangeRegionIds { get; } = [];
+    public HashSet<int> DescendantSpeciesIds { get; } = [];
 
     public Species(int id, string name, double intelligence, double cooperation)
     {
@@ -61,6 +72,10 @@ public sealed class Species
         HuntingDanger = 0.10;
         IsToxicToEat = false;
         DomesticationAffinity = 0.20;
+        RootAncestorSpeciesId = id;
+        OriginYear = 0;
+        OriginMonth = 1;
+        IsGloballyExtinct = false;
     }
 
     public double GetSeasonalReproductionModifier(Season season)
@@ -71,4 +86,12 @@ public sealed class Species
             Season.Autumn => AutumnReproductionModifier,
             _ => WinterReproductionModifier
         };
+
+    public void RecordDescendant(int descendantSpeciesId)
+    {
+        if (descendantSpeciesId != Id)
+        {
+            DescendantSpeciesIds.Add(descendantSpeciesId);
+        }
+    }
 }

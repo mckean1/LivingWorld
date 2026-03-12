@@ -107,7 +107,7 @@ public static class WatchScreenBuilder
         lines.Add($" Discoveries: {DescribeDiscoveries(polity)}");
         lines.Add($" Learned: {DescribeAdvancements(polity)}");
         lines.Add(string.Empty);
-        lines.Add(" Press Enter for full polity detail.");
+        lines.Add(" Enter keeps this expanded focal view.");
         return lines;
     }
 
@@ -340,6 +340,12 @@ public static class WatchScreenBuilder
         IReadOnlyList<(Region Region, RegionSpeciesPopulation Population)> knownRegionalPopulations = knowledge.GetKnownRegionalPopulations(world, species.Id);
         double maxKnownDivergence = knownRegionalPopulations.Count == 0 ? 0.0 : knownRegionalPopulations.Max(entry => entry.Population.DivergenceScore);
         int adaptedKnownRegions = knownRegionalPopulations.Count(entry => entry.Population.RegionAdaptationRecorded);
+        int divergingKnownRegions = knownRegionalPopulations.Count(entry => entry.Population.DivergenceScore >= 1.10 || entry.Population.IsolationSeasons >= 8);
+        int founderScaleRegions = knownRegionalPopulations.Count(entry => entry.Population.PopulationCount <= Math.Max(4, entry.Population.CarryingCapacity / 12));
+        int visibleMinorMutations = knownRegionalPopulations.Sum(entry => entry.Population.MinorMutationCount);
+        int visibleMajorMutations = knownRegionalPopulations.Sum(entry => entry.Population.MajorMutationCount);
+        int highFitKnownRegions = knownRegionalPopulations.Count(entry => entry.Population.HabitatSuitability >= 0.80);
+        string lineageSummary = BuildSpeciesLineageSummary(knowledge, world, species);
         List<string> knownDietTargets = species.DietSpeciesIds
             .Select(knowledge.TryGetKnownSpecies)
             .Where(target => target is not null)
@@ -366,7 +372,11 @@ public static class WatchScreenBuilder
             $" Hunting: yield {species.MeatYield:F1} | difficulty {species.HuntingDifficulty:F2} | danger {species.HuntingDanger:F2}",
             $" Food Safety: {DescribeFoodSafety(knowledge, species)}",
             $" Domestication Relevance: {DescribeDomesticationRelevance(domesticationInterest, species.DomesticationAffinity)}",
+            $" Lineage: {lineageSummary}",
+            $" Origin: {DescribeSpeciesOrigin(knowledge, world, species)}",
             $" Visible Divergence: max {maxKnownDivergence:F2} | adapted known regions {adaptedKnownRegions}",
+            $" Visible Range: known regions {knownRegionalPopulations.Count} | high-fit known regions {highFitKnownRegions}",
+            $" Mutation Signals: minor {visibleMinorMutations} | major {visibleMajorMutations} | diverging regions {divergingKnownRegions} | founder-scale regions {founderScaleRegions}",
             string.Empty,
             $" Known Diet Targets: {(knownDietTargets.Count == 0 ? "Not yet known" : string.Join(", ", knownDietTargets))}",
             $" Species Discoveries: {DescribeDiscoverySummaries(knowledge.GetSpeciesDiscoveries(species.Id))}",
@@ -382,7 +392,8 @@ public static class WatchScreenBuilder
         {
             foreach ((Region region, RegionSpeciesPopulation population) in knownRegionalPopulations.Take(10))
             {
-                lines.Add($"  {region.Name} - pop {population.PopulationCount} - divergence {population.DivergenceScore:F2}");
+                lines.Add(
+                    $"  {region.Name} - pop {population.PopulationCount} - fit {population.HabitatSuitability:F2} - cap {population.CarryingCapacity} - divergence {population.DivergenceScore:F2}{DescribePopulationFlags(population)}");
             }
         }
 
@@ -546,6 +557,51 @@ public static class WatchScreenBuilder
         => discoveries.Count == 0
             ? "None"
             : string.Join(", ", discoveries.Select(discovery => discovery.Summary));
+
+    private static string BuildSpeciesLineageSummary(WatchKnowledgeSnapshot knowledge, World world, Species species)
+    {
+        string parent = species.ParentSpeciesId.HasValue
+            ? knowledge.TryGetKnownSpecies(species.ParentSpeciesId.Value)?.Name ?? $"Unknown ancestor #{species.ParentSpeciesId.Value}"
+            : "ancestral stock";
+        int knownDescendants = species.DescendantSpeciesIds.Count(descendantId => knowledge.IsSpeciesKnown(descendantId));
+        return $"{parent}; descendants known {knownDescendants}; root #{species.RootAncestorSpeciesId}";
+    }
+
+    private static string DescribeSpeciesOrigin(WatchKnowledgeSnapshot knowledge, World world, Species species)
+    {
+        if (!species.ParentSpeciesId.HasValue || !species.OriginRegionId.HasValue)
+        {
+            return "world generation";
+        }
+
+        string regionName = knowledge.TryGetKnownRegion(species.OriginRegionId.Value)?.Name
+            ?? world.Regions.FirstOrDefault(region => region.Id == species.OriginRegionId.Value)?.Name
+            ?? $"Region {species.OriginRegionId.Value}";
+        return $"{regionName} y{species.OriginYear} m{species.OriginMonth} ({species.OriginCause ?? "regional split"})";
+    }
+
+    private static string DescribePopulationFlags(RegionSpeciesPopulation population)
+    {
+        List<string> flags = [];
+        if (population.FounderKind is not null && population.PopulationCount <= Math.Max(6, population.CarryingCapacity / 10))
+        {
+            flags.Add("founder");
+        }
+
+        if (population.RegionAdaptationRecorded)
+        {
+            flags.Add("adapted");
+        }
+
+        if (population.DivergenceScore >= 1.10)
+        {
+            flags.Add("diverging");
+        }
+
+        return flags.Count == 0
+            ? string.Empty
+            : $" [{string.Join(", ", flags)}]";
+    }
 
     private static string DescribeTrophicRole(TrophicRole role)
         => role switch

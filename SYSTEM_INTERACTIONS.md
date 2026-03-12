@@ -108,6 +108,7 @@ The new ecology phase is shared state for multiple systems:
 - regional animal biomass is synchronized from species populations so migration heuristics, region screens, and advancement weighting still have region-level ecological context without creating a second animal-food resource
 - polity discoveries, hunting knowledge, and domestication interest are stored on the polity for future systems to consume
 - mutation also tracks adaptation milestones on each regional population so adaptation events emit only when a new stage is crossed
+- mutation now also tracks divergence pressure, founder/source lineage metadata, and descendant-species creation from isolated high-divergence populations
 
 Important timing boundary:
 
@@ -116,6 +117,7 @@ Important timing boundary:
 - predator founders then continue through that same seasonal ecology step, where prey-rich colonies can establish and prey-poor colonies can fail without adding special-case spawn logic
 - later monthly polity migration happens in `MigrationSystem` after food resolution
 - mutation inputs such as `EstablishedThisSeason`, `ReceivedMigrantsThisSeason`, and `SentMigrantsThisSeason` refer only to the first category
+- extinction cleanup now marks local extinction once, emits global extinction once per species, and leaves later recovery to the same neighboring founder-migration path
 - chronicle presentation then applies its own scoped cooldown rules, including a dedicated adaptation key for visible adaptation beats
 
 ## Settlement-Grounded Production Layer
@@ -157,6 +159,7 @@ The polity model now separates:
 - learned advancements that grant capability
 
 The watch-mode panel mirrors that split with separate `Discoveries:` and `Learned:` lines.
+Species inspection now reads the same regional-population records directly for fit, capacity, mutation, divergence, founder, and lineage signals instead of inventing UI-only biology summaries.
 
 ## Chronicle Naming Rule
 

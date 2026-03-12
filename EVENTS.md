@@ -109,6 +109,7 @@ Structured-first follow-up types:
 - `species_population_established`
 - can also represent wildlife recolonization into an emptied neighboring region when migration restores a local population
 - can also represent a predator or apex founder successfully opening a new prey-supported ecological frontier when that shift is historically meaningful
+- `species_population_recolonized`
 - `species_population_mutated`
 - `species_population_isolated`
 - `species_population_adapted_to_region`
@@ -123,6 +124,7 @@ Structured-first follow-up types:
 - `overhunting_pressure`
 - `local_species_extinction`
 - `global_species_extinction`
+- `new_species_appeared`
 - `trade_transfer`
 - `trade_relief`
 
@@ -137,6 +139,7 @@ Major biology-turn types that may surface when the focused line is meaningfully 
 
 - `species_population_major_mutation`
 - `species_population_evolutionary_turning_point`
+- `new_species_appeared`
 
 `species_population_adapted_to_region` remains structured-first by default even though it is historically meaningful. It becomes chronicle-worthy only when severity and focal-line relevance justify it.
 When it does surface, chronicle cooldown uses a dedicated scoped key built from species, region, reason, and any adaptation milestone metadata so repeated reaffirmations of the same adaptation state do not reappear as duplicate history beats.
@@ -158,9 +161,11 @@ The main chronicle favors:
 - major hardship transitions such as shortages beginning and recovery
 - memorable hunts and major ecological collapses
 - rare evolutionary turns with strong local historical consequences
+- rare descendant-species appearances tied to the focused historical line
 - fragmentation, collapse, polity founding, and focus handoff beats
 
 Player-facing coloring is intentionally narrower than event semantics. Watch mode colors explicit semantic units such as years, actor names, places, knowledge items, and severe status words, but leaves ordinary descriptive prose uncolored.
+Most recolonization, local extinction, and minor mutation beats remain structured-first even when they now carry richer lineage/source metadata; only unusually consequential descendant-species appearances should surface live.
 
 ## Anti-Spam Rules
 

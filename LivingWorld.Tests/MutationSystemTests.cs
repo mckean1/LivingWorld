@@ -336,6 +336,40 @@ public sealed class MutationSystemTests
         Assert.True(evolvedPolity.FoodStores < baselinePolity.FoodStores);
     }
 
+    [Fact]
+    public void SustainedIsolationAndDivergence_CanCreateADescendantSpecies()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        Region region = world.Regions[0];
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+        MutationSystem mutationSystem = new(seed: 53);
+
+        int startingSpeciesCount = world.Species.Count;
+        population.PopulationCount = 42;
+        population.CarryingCapacity = 80;
+        population.IsolationSeasons = 16;
+        population.DivergencePressure = 1.65;
+        population.DivergenceScore = 3.20;
+        population.MajorMutationCount = 1;
+        population.MinorMutationCount = 2;
+        population.RegionAdaptationRecorded = true;
+        population.ClimateToleranceOffset = 0.18;
+        population.DietFlexibilityOffset = 0.14;
+        population.EnduranceOffset = 0.12;
+        population.IntelligenceOffset = 0.08;
+
+        mutationSystem.UpdateSeason(world);
+
+        Assert.Equal(startingSpeciesCount + 1, world.Species.Count);
+        Species descendant = world.Species.OrderByDescending(species => species.Id).First();
+        RegionSpeciesPopulation descendantPopulation = region.GetSpeciesPopulation(descendant.Id)!;
+
+        Assert.Equal(4, descendant.ParentSpeciesId);
+        Assert.Equal(region.Id, descendant.OriginRegionId);
+        Assert.True(descendantPopulation.PopulationCount > 0);
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.NewSpeciesAppeared && evt.SpeciesId == descendant.Id);
+    }
+
     private static World CreateWorld(bool withConnectedPopulation = true)
     {
         World world = new(new WorldTime(5, 3));

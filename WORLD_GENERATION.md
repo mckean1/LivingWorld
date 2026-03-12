@@ -27,7 +27,7 @@ These values are intentionally centralized so density tuning can happen without 
 5. initialize regional species populations from habitat suitability, carrying capacity, and seeded range limits
 6. generate starting polities from sapient species only
 
-World generation still creates only baseline species definitions. Mutation, divergence, and regional adaptation now begin from those starting populations during simulation rather than being pre-baked into world generation.
+World generation still creates only baseline species definitions. Mutation, divergence, regional adaptation, and descendant-species splitting now begin from those starting populations during simulation rather than being pre-baked into world generation.
 That means regional adaptation later measures how far a local population has moved away from its ancestral fit in that region, not whether the generated species started there fully adapted.
 World generation now gives each starting polity one grounded home settlement anchor in its starting region.
 That anchor is intentionally lightweight: it enables settlement-grounded hunting, trade endpoints, migration locality, and focal inspection from year zero without fabricating extra setup events.
@@ -104,7 +104,7 @@ After generation:
 World generation does not produce a separate player-facing yearly report path.
 
 Regional species populations now exist before the first polity season resolves, so the first hunting and ecology phase has concrete prey, predators, and producers to work with.
-Those starting regional populations also now have clean divergence state slots, so future mutation, speciation, and domestication phases can build historical lineage change forward from generation year zero.
+Those starting regional populations also now have clean divergence and founder/source state slots, so mutation, speciation, recolonization history, and domestication groundwork can build historical lineage change forward from generation year zero.
 The denser seed world is intentionally still range-limited and biome-shaped so early chronicle output gains context without turning into random clutter.
 Starting-polity homeland scoring also now prefers nearby support species coverage, so focal starts are less likely to open in a dead ecological pocket.
 Initial `AnimalBiomass` values are best read as starting ecological context for species seeding and region summaries; once the simulation begins, animal biomass is derived from real consumer populations rather than harvested as an independent food pool.

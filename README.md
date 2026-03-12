@@ -30,6 +30,8 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - regional populations now also accumulate mutation pressure, isolation, divergence, and local trait offsets rather than mutating the global species baseline directly
 - neighboring wildlife populations can now recolonize empty suitable regions through the existing migration system instead of waiting for magical respawns
 - mutation pressure comes from repeated food stress, predation, hunting, ancestral habitat mismatch, seasonal species-exchange shock, crowding near carrying capacity, and prolonged isolation
+- strongly isolated high-divergence regional populations can now produce descendant species with tracked parentage, origin region/time, and inherited local ecological traits
+- local extinction and global extinction are now explicit species-population outcomes with recolonization flowing back through the same neighboring founder-migration path
 - evolved regional traits now feed back into hunting danger and difficulty, predator-prey outcomes, habitat fit, migration capability, and reproduction/survival rates
 - watch mode shows the focal polity species in the fixed status panel
 - watch mode also separates `Discoveries` from `Learned` advancements in that fixed status panel
@@ -141,6 +143,7 @@ These views are observational only. They do not create simulation events or allo
 Foreign polity detail intentionally hides that polity's private discoveries and learned capabilities unless it is the focal polity.
 The focal polity never loses visibility by drilling into detail: `My Polity` retains full player-facing access to discoveries, learned advancements, food, pressure, and settlement information.
 World Overview now summarizes only known regions, known species, known polities, and visible major events inside the focal polity's current horizon.
+`Known Species` detail now also surfaces player-visible lineage/origin context, compact mutation totals, divergence signals, and per-region fit/capacity summaries from the real regional-population records.
 
 Watch-loop responsiveness notes:
 

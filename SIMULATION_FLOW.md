@@ -13,7 +13,7 @@ Those entities are still range-limited and region-grounded before month one begi
 3. seasonal ecosystem predation, founder migration, predator founder establishment/collapse, and regional species exchange on season boundaries
 4. seasonal settlement hunting on season boundaries
    - each settlement hunts in its own region
-5. seasonal mutation and divergence update on season boundaries using the just-resolved species exchange state
+5. seasonal mutation, divergence, and speciation update on season boundaries using the just-resolved species exchange state
 6. seasonal extinction cleanup and biomass sync on season boundaries
 7. wild plant gathering
 8. settlement farming output
@@ -34,6 +34,7 @@ The same opening pass now relies on stronger wildlife seeding and herbivore grow
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
 Seasonal species exchange at items 2-6 is also the main long-run recovery path for locally depleted wildlife, because recolonization now rebuilds real populations rather than refilling a separate animal pool.
+That same seasonal pass is now also where descendant species can appear, only after local pressure, exchange, and persistence state are already known.
 That ecology-side migration is role-specific: herbivores and omnivores can open suitable adjacent frontiers first, while predators and apex populations generally follow only once prey support exists in the destination region.
 Predator founders then pass through a short establishment window where strong prey support lets them grow into real local populations, while weak support makes them collapse back out naturally.
 

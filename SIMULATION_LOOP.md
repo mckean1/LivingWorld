@@ -25,7 +25,7 @@ The seed world entering this loop is now larger by default, but scale tuning rem
 - seasonal ecosystem interactions, founder migration, and species exchange every third month
 - seasonal settlement hunting every third month
 - hunting is resolved per settlement, using that settlement's actual region
-- seasonal mutation and divergence pass every third month using the same season's species exchange flags
+- seasonal mutation, divergence, and speciation pass every third month using the same season's species exchange flags
 - seasonal extinction cleanup and biomass sync every third month
 - plant gathering and farming
 - farming is resolved per settlement, with settlements in the same region competing for the same regional arable capacity
@@ -47,6 +47,7 @@ Instead:
 - plant gathering subtracts from `Region.PlantBiomass`
 - hunting subtracts from actual `RegionSpeciesPopulation` prey counts
 - seasonal ecosystem cleanup derives `Region.AnimalBiomass` back from surviving non-producer populations
+- seasonal cleanup also resolves one-shot local/global extinction bookkeeping after the mutation/speciation pass
 
 At the start of each month, temporary propagation bonuses tick down.
 Ecosystem migration pacing itself is centralized in `EcosystemSettings`, including source thresholds, suitability gates, founder sizing, predator establishment/failure thresholds, prey-support requirements, and cooldowns.

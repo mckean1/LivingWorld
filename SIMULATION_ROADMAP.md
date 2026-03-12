@@ -13,7 +13,7 @@ Implemented core includes:
 - regional species populations and seasonal ecosystem interactions
 - settlement hunting tied to regional wildlife
 - plant gathering separated cleanly from animal food so wildlife is pressured only through the species layer
-- mutation and regional divergence foundations
+- mutation, regional divergence, and first-pass speciation foundations
 - migration, settlement, population, fragmentation
 - advancement and capability effects
 - polity stage progression
@@ -49,7 +49,7 @@ Replace first-pass generation-era visibility approximations with truer knowledge
 Current Phase 8 completion still uses a lightweight horizon model based on settlements, nearby regions, and explicit discoveries; richer diplomacy/contact memory remains intentionally deferred rather than faked in the UI.
 
 5. Speciation follow-through
-Build on regional divergence, isolation, mutation history, ancestral-fit tracking, and regional adaptation milestones so strongly diverged populations can split into named descendant lineages without replacing the current population-level foundation.
+The first descendant-species pipeline now exists. Follow-up work should focus on better naming, richer cultural encounter/discovery around descendant fauna, and deeper long-horizon history tools rather than replacing the regional-population model.
 
 ## Mid-Term Systems
 

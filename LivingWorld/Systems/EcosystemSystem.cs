@@ -25,12 +25,17 @@ public sealed class EcosystemSystem
             foreach (Species species in speciesById.Values)
             {
                 RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
-                population.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, region);
-                population.HabitatSuitability = CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
-                population.CarryingCapacity = CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
+                population.BaseHabitatSuitability = SpeciesEcology.CalculateBaseHabitatSuitability(species, region);
+                population.HabitatSuitability = SpeciesEcology.CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
+                population.CarryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
 
                 if (population.PopulationCount > 0 || population.CarryingCapacity <= 0)
                 {
+                    if (population.PopulationCount > 0 && !population.HasEverExisted)
+                    {
+                        population.MarkEstablished(world.Time.Year, world.Time.Month, "worldgen_seed", region.Id, species.Id);
+                    }
+
                     continue;
                 }
 
@@ -39,7 +44,11 @@ public sealed class EcosystemSystem
                     continue;
                 }
 
-                population.PopulationCount = CalculateInitialPopulation(species, population.CarryingCapacity, population.HabitatSuitability);
+                population.PopulationCount = SpeciesEcology.CalculateInitialPopulation(species, population.CarryingCapacity, population.HabitatSuitability);
+                if (population.PopulationCount > 0)
+                {
+                    population.MarkEstablished(world.Time.Year, world.Time.Month, "worldgen_seed", region.Id, species.Id);
+                }
             }
         }
 
@@ -72,9 +81,9 @@ public sealed class EcosystemSystem
         foreach (Species species in speciesById.Values)
         {
             RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
-            population.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, region);
-            population.HabitatSuitability = CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
-            population.CarryingCapacity = CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
+            population.BaseHabitatSuitability = SpeciesEcology.CalculateBaseHabitatSuitability(species, region);
+            population.HabitatSuitability = SpeciesEcology.CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
+            population.CarryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
             population.EstablishedThisSeason = false;
             population.ReceivedMigrantsThisSeason = false;
             population.SentMigrantsThisSeason = false;
@@ -98,6 +107,10 @@ public sealed class EcosystemSystem
                 population.MigrationCooldownSeasons = Math.Max(0, population.MigrationCooldownSeasons - 1);
                 continue;
             }
+
+            population.HasEverExisted = true;
+            population.LocalExtinctionRecorded = false;
+            population.LastPopulationExitReason = null;
 
             double carryingRatio = population.CarryingCapacity <= 0
                 ? 1.0
@@ -266,6 +279,10 @@ public sealed class EcosystemSystem
                 }
 
                 preyPopulation.PopulationCount = Math.Max(0, preyPopulation.PopulationCount - preyLoss);
+                if (preyPopulation.PopulationCount <= 0)
+                {
+                    preyPopulation.MarkLocalExtinction(world.Time.Year, world.Time.Month, "predation");
+                }
                 preyPopulation.RecentPredationPressure = Math.Clamp(preyPopulation.RecentPredationPressure + ((double)preyLoss / Math.Max(1, preyBefore)), 0.0, 1.0);
 
                 if (ShouldEmitPreyCollapse(preyPopulation, preyBefore))
@@ -335,12 +352,22 @@ public sealed class EcosystemSystem
             {
                 if (population.PopulationCount > 0)
                 {
+                    population.LocalExtinctionRecorded = false;
+                    population.LastPopulationExitReason = null;
                     continue;
                 }
 
                 Species species = speciesById[population.SpeciesId];
-                bool wasPresentBefore = population.RecentPredationPressure > 0 || population.RecentHuntingPressure > 0 || population.SeasonsUnderPressure > 0;
-                if (wasPresentBefore)
+                bool wasPresentBefore = population.HasEverExisted;
+                bool alreadyRecordedThisSeason = world.Events.Any(evt =>
+                    evt.Type == WorldEventType.LocalSpeciesExtinction
+                    && evt.SpeciesId == species.Id
+                    && evt.RegionId == region.Id
+                    && evt.Year == world.Time.Year
+                    && evt.Month == world.Time.Month);
+                bool suppressBecauseSpeciation = string.Equals(population.LastPopulationExitReason, "speciation_split", StringComparison.Ordinal);
+
+                if (wasPresentBefore && !population.LocalExtinctionRecorded && !alreadyRecordedThisSeason && !suppressBecauseSpeciation)
                 {
                     world.AddEvent(
                         WorldEventType.LocalSpeciesExtinction,
@@ -352,7 +379,16 @@ public sealed class EcosystemSystem
                         speciesId: species.Id,
                         speciesName: species.Name,
                         regionId: region.Id,
-                        regionName: region.Name);
+                        regionName: region.Name,
+                        after: new Dictionary<string, string>
+                        {
+                            ["population"] = "0"
+                        });
+                }
+
+                if (wasPresentBefore && !population.LocalExtinctionRecorded)
+                {
+                    population.MarkLocalExtinction(world.Time.Year, world.Time.Month, population.LastPopulationExitReason ?? "local_extinction");
                 }
 
                 population.RecentPredationPressure = 0;
@@ -375,11 +411,14 @@ public sealed class EcosystemSystem
 
             if (!anySurvivors)
             {
-                bool alreadyEmitted = world.Events.Any(evt => evt.Type == WorldEventType.GlobalSpeciesExtinction && evt.SpeciesId == species.Id);
-                if (alreadyEmitted)
+                if (species.IsGloballyExtinct)
                 {
                     continue;
                 }
+
+                species.IsGloballyExtinct = true;
+                species.ExtinctionYear = world.Time.Year;
+                species.ExtinctionMonth = world.Time.Month;
 
                 world.AddEvent(
                     WorldEventType.GlobalSpeciesExtinction,
@@ -390,6 +429,12 @@ public sealed class EcosystemSystem
                     scope: WorldEventScope.World,
                     speciesId: species.Id,
                     speciesName: species.Name);
+            }
+            else
+            {
+                species.IsGloballyExtinct = false;
+                species.ExtinctionYear = null;
+                species.ExtinctionMonth = null;
             }
         }
     }
@@ -452,10 +497,10 @@ public sealed class EcosystemSystem
             ClimateToleranceOffset = sourcePopulation.ClimateToleranceOffset,
             SizeOffset = sourcePopulation.SizeOffset
         };
-        double baseSuitability = CalculateBaseHabitatSuitability(species, target);
-        double suitability = CalculateHabitatSuitability(species, candidatePopulation, baseSuitability);
+        double baseSuitability = SpeciesEcology.CalculateBaseHabitatSuitability(species, target);
+        double suitability = SpeciesEcology.CalculateHabitatSuitability(species, candidatePopulation, baseSuitability);
         int localPopulation = existing?.PopulationCount ?? 0;
-        int carryingCapacity = CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
+        int carryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
         double openness = carryingCapacity <= 0
             ? 0.0
             : Math.Clamp((double)(carryingCapacity - localPopulation) / carryingCapacity, 0.0, 1.0);
@@ -667,10 +712,15 @@ public sealed class EcosystemSystem
         sourcePopulation.MigrationCooldownSeasons = _settings.MigrationCooldownSeasons;
         targetPopulation.ReceivedMigrantsThisSeason = true;
         targetPopulation.MigrationCooldownSeasons = _settings.MigrationCooldownSeasons;
-        targetPopulation.BaseHabitatSuitability = CalculateBaseHabitatSuitability(species, target);
-        targetPopulation.HabitatSuitability = CalculateHabitatSuitability(species, targetPopulation, targetPopulation.BaseHabitatSuitability);
-        targetPopulation.CarryingCapacity = CalculateCarryingCapacity(species, targetPopulation, target, targetPopulation.HabitatSuitability);
+        targetPopulation.BaseHabitatSuitability = SpeciesEcology.CalculateBaseHabitatSuitability(species, target);
+        targetPopulation.HabitatSuitability = SpeciesEcology.CalculateHabitatSuitability(species, targetPopulation, targetPopulation.BaseHabitatSuitability);
+        targetPopulation.CarryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, targetPopulation, target, targetPopulation.HabitatSuitability);
         targetPopulation.EstablishedThisSeason = newlyEstablished;
+        bool recolonization = newlyEstablished && targetPopulation.HasEverExisted && targetPopulation.LocalExtinctionRecorded;
+        if (newlyEstablished)
+        {
+            targetPopulation.MarkEstablished(world.Time.Year, world.Time.Month, candidate.Kind, sourceRegion.Id, species.Id);
+        }
         if (species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex)
         {
             targetPopulation.FounderSeasonsRemaining = _settings.PredatorFounderSeasons;
@@ -682,11 +732,15 @@ public sealed class EcosystemSystem
         }
 
         world.AddEvent(
-            WorldEventType.SpeciesPopulationEstablished,
+            recolonization ? WorldEventType.SpeciesPopulationRecolonized : WorldEventType.SpeciesPopulationEstablished,
             candidate.Severity,
-            $"{species.Name} established a new population in {target.Name}",
-            $"{transfer} {species.Name} migrated from {sourceRegion.Name} into {target.Name}.",
-            reason: "seasonal_species_migration",
+            recolonization
+                ? $"{species.Name} returned to {target.Name}"
+                : $"{species.Name} established a new population in {target.Name}",
+            recolonization
+                ? $"{transfer} {species.Name} recolonized {target.Name} from {sourceRegion.Name}."
+                : $"{transfer} {species.Name} migrated from {sourceRegion.Name} into {target.Name}.",
+            reason: recolonization ? "regional_recolonization" : "seasonal_species_migration",
             scope: WorldEventScope.Regional,
             speciesId: species.Id,
             speciesName: species.Name,
@@ -706,14 +760,17 @@ public sealed class EcosystemSystem
                 ["sourceRegionName"] = sourceRegion.Name,
                 ["migrationKind"] = candidate.Kind,
                 ["sourcePopulationBefore"] = sourceBefore.ToString(),
-                ["founderPopulation"] = transfer.ToString()
+                ["founderPopulation"] = transfer.ToString(),
+                ["founderKind"] = candidate.Kind,
+                ["founderYear"] = world.Time.Year.ToString(),
+                ["founderMonth"] = world.Time.Month.ToString()
             });
     }
 
     private double ResolveTargetSuitability(Species species, Region target, RegionSpeciesPopulation? targetPopulation)
     {
         RegionSpeciesPopulation candidatePopulation = targetPopulation ?? new RegionSpeciesPopulation(species.Id, target.Id, 0);
-        return CalculateHabitatSuitability(species, candidatePopulation, CalculateBaseHabitatSuitability(species, target));
+        return SpeciesEcology.CalculateHabitatSuitability(species, candidatePopulation, SpeciesEcology.CalculateBaseHabitatSuitability(species, target));
     }
 
     private double ResolveOpenness(Species species, Region target, RegionSpeciesPopulation? targetPopulation)
@@ -721,7 +778,7 @@ public sealed class EcosystemSystem
         RegionSpeciesPopulation candidatePopulation = targetPopulation ?? new RegionSpeciesPopulation(species.Id, target.Id, 0);
         double suitability = ResolveTargetSuitability(species, target, targetPopulation);
         int localPopulation = targetPopulation?.PopulationCount ?? 0;
-        int carryingCapacity = CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
+        int carryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
         return carryingCapacity <= 0
             ? 0.0
             : Math.Clamp((double)(carryingCapacity - localPopulation) / carryingCapacity, 0.0, 1.0);
@@ -760,8 +817,8 @@ public sealed class EcosystemSystem
 
         int founderPopulation = Math.Max(minimumFounderPopulation, (int)Math.Round(sourcePopulation.PopulationCount * transferShare));
         RegionSpeciesPopulation candidatePopulation = new(species.Id, target.Id, founderPopulation);
-        double suitability = CalculateHabitatSuitability(species, candidatePopulation, CalculateBaseHabitatSuitability(species, target));
-        int carryingCapacity = CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
+        double suitability = SpeciesEcology.CalculateHabitatSuitability(species, candidatePopulation, SpeciesEcology.CalculateBaseHabitatSuitability(species, target));
+        int carryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
         if (carryingCapacity > 0)
         {
             int carryingCapacityFounderCap = species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex
@@ -854,67 +911,6 @@ public sealed class EcosystemSystem
         string Kind,
         int FounderPopulation,
         WorldEventSeverity Severity);
-
-    private static double CalculateBaseHabitatSuitability(Species species, Region region)
-    {
-        double fertilityFit = 1.0 - Math.Abs(region.Fertility - species.FertilityPreference);
-        double waterFit = 1.0 - Math.Abs(region.WaterAvailability - species.WaterPreference);
-        double biomassFit = Math.Clamp(
-            (region.MaxPlantBiomass / 1000.0 * species.PlantBiomassAffinity) +
-            (region.MaxAnimalBiomass / 400.0 * species.AnimalBiomassAffinity),
-            0.0,
-            1.4);
-        double biomeFit = species.PreferredBiomes.Count == 0
-            ? 1.0
-            : species.PreferredBiomes.Contains(region.Biome) ? 1.05 : 0.45;
-
-        return Math.Clamp((fertilityFit * 0.30) + (waterFit * 0.22) + (biomassFit * 0.33) + (biomeFit * 0.15), 0.03, 1.25);
-    }
-
-    private static double CalculateHabitatSuitability(Species species, RegionSpeciesPopulation population, double baseSuitability)
-    {
-        return PopulationTraitResolver.AdjustHabitatSuitability(species, population, baseSuitability);
-    }
-
-    private static int CalculateCarryingCapacity(Species species, RegionSpeciesPopulation population, Region region, double suitability)
-    {
-        double baseCapacity = species.TrophicRole switch
-        {
-            TrophicRole.Producer => 180 + (region.MaxPlantBiomass * 0.35),
-            TrophicRole.Herbivore => 60 + (region.MaxPlantBiomass * 0.11) + (region.Fertility * 70) + (region.WaterAvailability * 40),
-            TrophicRole.Omnivore => 32 + (region.TotalBiomassCapacity * 0.045),
-            TrophicRole.Predator => 18 + (region.MaxAnimalBiomass * 0.030),
-            TrophicRole.Apex => 9 + (region.MaxAnimalBiomass * 0.018),
-            _ => 24
-        };
-
-        double dietFlexibility = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.DietFlexibility);
-        double climateTolerance = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.ClimateTolerance);
-        double size = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Size);
-        double capacityFactor = 0.84 + (dietFlexibility * 0.16) + (climateTolerance * 0.10) - (size * 0.12);
-        return Math.Max(0, (int)Math.Round(baseCapacity * suitability * species.BaseCarryingCapacityFactor * capacityFactor));
-    }
-
-    private static int CalculateInitialPopulation(Species species, int carryingCapacity, double habitatSuitability)
-    {
-        if (carryingCapacity <= 0 || habitatSuitability < 0.12)
-        {
-            return 0;
-        }
-
-        double startingShare = species.TrophicRole switch
-        {
-            TrophicRole.Producer => 0.72,
-            TrophicRole.Herbivore => 0.62,
-            TrophicRole.Omnivore => 0.44,
-            TrophicRole.Predator => 0.24,
-            TrophicRole.Apex => 0.14,
-            _ => 0.30
-        };
-
-        double establishmentFactor = 0.55 + (habitatSuitability * 0.45);
-        return Math.Max(0, (int)Math.Round(carryingCapacity * startingShare * establishmentFactor));
-    }
 
     private double ResolveEcologicalGrowthModifier(
         Region region,

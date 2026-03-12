@@ -115,6 +115,8 @@ Implemented chain:
 
 `accumulated divergence -> mutation event -> ecological and hunting effects -> possible evolutionary turning point`
 
+`sustained isolation + durable divergence + viable local population -> descendant species appears in one region`
+
 `ancestral mismatch + sustained mismatch pressure + trait-driven fit improvement + persistence -> regional adaptation milestone`
 
 `further fit gain + stronger divergence + stronger persistence -> stronger adaptation milestone`

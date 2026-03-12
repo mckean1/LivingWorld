@@ -32,6 +32,7 @@ public static class WorldEventType
     public const string TradeDependency = "trade_dependency";
     public const string TradeLinkCollapsed = "trade_link_collapsed";
     public const string SpeciesPopulationEstablished = "species_population_established";
+    public const string SpeciesPopulationRecolonized = "species_population_recolonized";
     public const string LocalSpeciesExtinction = "local_species_extinction";
     public const string GlobalSpeciesExtinction = "global_species_extinction";
     public const string PredatorPressure = "predator_pressure";
@@ -49,5 +50,6 @@ public static class WorldEventType
     public const string SpeciesPopulationIsolated = "species_population_isolated";
     public const string SpeciesPopulationAdaptedToRegion = "species_population_adapted_to_region";
     public const string SpeciesPopulationEvolutionaryTurningPoint = "species_population_evolutionary_turning_point";
+    public const string NewSpeciesAppeared = "new_species_appeared";
     public const string WorldEvent = "world_event";
 }

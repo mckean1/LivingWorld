@@ -20,7 +20,7 @@ Major systems:
 - regional species populations
 - ecosystem interactions
 - settlement hunting
-- mutation and divergence foundations
+- mutation, divergence, and early speciation foundations
 - agriculture
 - trade
 - migration
@@ -194,7 +194,7 @@ Monthly:
 - seasonal settlement hunting on season boundaries
 - those seasonal hunts iterate actual settlements in actual regions
 - regional animal biomass is derived during seasonal ecosystem sync from surviving consumer populations and is not harvested directly
-- seasonal mutation and divergence processing after same-season species exchange
+- seasonal mutation, divergence, and speciation processing after same-season species exchange
 - seasonal extinction cleanup and biomass sync after mutation processing
 - plant gathering, farming, trade redistribution, consumption, migration
 - propagation state bonuses tick down
@@ -205,12 +205,13 @@ The food architecture is intentionally asymmetric now:
 
 - `FoodSystem` gathers only plant biomass from regions
 - `HuntingSystem` is the only system that converts wildlife into animal food
-- `EcosystemSystem` owns consumer population seeding, recovery, decline, migration, predator founder establishment/collapse, and derived `AnimalBiomass`
+- `EcosystemSystem` owns consumer population seeding, recovery, decline, migration, predator founder establishment/collapse, recolonization bookkeeping, and derived `AnimalBiomass`
 - `Region.AnimalBiomass` exists for ecology context, watch screens, migration heuristics, and advancement weighting, not as an independent meat store
 - early herbivore establishment now comes from range-limited worldgen plus carrying-capacity-driven initialization and producer-supported growth rather than from any abstract animal stock
 - ongoing fauna spread now also lives in `EcosystemSystem`: adjacent-region founder migration happens after seasonal food-web pressure is known and before mutation consumes same-season exchange markers
 
 The later monthly `MigrationSystem` still handles polity relocation after food resolution. Mutation does not read polity movement directly; it reads seasonal species-exchange state on `RegionSpeciesPopulation`.
+`MutationSystem` now owns the regional evolution pass on those same records: pressure accumulation, local trait drift, divergence pressure, adaptation milestones, and descendant-species creation for long-isolated viable populations.
 When polity migration does occur, settlement records are relocated with the polity so settlement-grounded systems keep a coherent local model until a later phase introduces true cross-region polity settlement networks.
 
 Year-end:
@@ -233,6 +234,6 @@ The architecture continues to prioritize:
 - concise chronicle presentation
 - regional ecology and hunting as shared simulation state rather than isolated subsystems
 - population-level biological divergence layered on regional populations rather than rewritten species definitions
-- future hooks for speciation, lineage naming, domestication variants, and cultural discovery of remarkable fauna
+- the first lineage-aware descendant-species path now exists; later phases can deepen naming, deep-history, and domestication variants without replacing the population-level model
 - future alternate history views without rewriting simulation systems
 - source-side milestone guards plus chronicle cooldown keys so visible history beats stay about transitions rather than repeated reaffirmation

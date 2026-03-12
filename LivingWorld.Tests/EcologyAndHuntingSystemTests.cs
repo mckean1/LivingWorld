@@ -140,16 +140,40 @@ public sealed class EcologyAndHuntingSystemTests
         RegionSpeciesPopulation targetPopulation = targetRegion.GetOrCreateSpeciesPopulation(4);
         sourcePopulation.PopulationCount = Math.Max(60, sourcePopulation.CarryingCapacity / 2);
         targetPopulation.PopulationCount = 0;
+        targetPopulation.HasEverExisted = true;
+        targetPopulation.LocalExtinctionRecorded = true;
 
         ecosystemSystem.UpdateSeason(world);
 
         Assert.True(targetPopulation.PopulationCount > 0);
         Assert.Contains(world.Events, evt =>
-            evt.Type == WorldEventType.SpeciesPopulationEstablished
+            evt.Type == WorldEventType.SpeciesPopulationRecolonized
             && evt.RegionId == targetRegion.Id
             && evt.SpeciesId == 4
             && evt.Metadata.TryGetValue("migrationKind", out string? kind)
             && kind == "recolonization");
+    }
+
+    [Fact]
+    public void EcosystemSystem_EmitsGlobalExtinctionOnce_WhenASpeciesLosesAllRegionalPopulations()
+    {
+        World world = CreateWorld();
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        foreach (Region region in world.Regions)
+        {
+            RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(4);
+            population.PopulationCount = 0;
+            population.HasEverExisted = true;
+        }
+
+        ecosystemSystem.ResolveSeasonalCleanup(world);
+        ecosystemSystem.ResolveSeasonalCleanup(world);
+
+        Assert.True(world.Species.First(species => species.Id == 4).IsGloballyExtinct);
+        Assert.Equal(1, world.Events.Count(evt => evt.Type == WorldEventType.GlobalSpeciesExtinction && evt.SpeciesId == 4));
     }
 
     [Fact]
