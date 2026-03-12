@@ -51,3 +51,12 @@ Breakthrough discoveries such as fire, agriculture, leadership traditions, and c
 This remains separate from biology milestones: mutation and regional adaptation events are ecology-driven population outcomes, not polity `Learned` capability gains.
 Repeated hunting can now also produce species-use discoveries and domestication-interest signals without turning those ecology outcomes into `Learned` capability gains; they remain world `Discoveries`.
 Agriculture is also now consumed by a settlement-grounded farming layer: learned capability unlocks the ability to farm, but actual output depends on real settlements competing for real regional arable capacity.
+
+## Phase 13/14 Discovery Versus Learned Capability
+
+The domestication layer keeps the same terminology boundary:
+
+- discovering that an animal is manageable or a plant is cultivable is still a `Discovery`
+- turning that knowledge into managed herds or cultivated crops requires already learned organizational capability such as planning, storage, or agriculture
+
+This prevents species familiarity from being treated as a free universal technology unlock, and keeps cultural knowledge distinct from polity capability.

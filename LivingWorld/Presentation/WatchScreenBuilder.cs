@@ -80,6 +80,8 @@ public static class WatchScreenBuilder
         string regionName = lookup.GetRequiredRegion(polity.RegionId, "My Polity view").Name;
         string speciesName = lookup.GetRequiredSpecies(polity.SpeciesId, "My Polity view").Name;
         double annualFoodRatio = polity.AnnualFoodNeeded <= 0 ? 1.0 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
+        int managedHerdCount = polity.Settlements.Sum(settlement => settlement.ManagedHerds.Count);
+        int cultivatedCropCount = polity.Settlements.Sum(settlement => settlement.CultivatedCrops.Count);
 
         List<string> lines =
         [
@@ -95,6 +97,8 @@ public static class WatchScreenBuilder
             $" Food Stores: {polity.FoodStores:F0} ({ChronicleTextFormatter.DescribeFoodState(polity)})",
             $" Annual Food Ratio: {annualFoodRatio:F2}",
             $" Food Sources: Wild {polity.AnnualFoodGathered:F0} | Hunt {polity.FoodHuntedThisYear:F0} | Farm {polity.AnnualFoodFarmed:F0} | Trade {polity.AnnualFoodImported:F0}",
+            $" Managed Food This Year: {polity.AnnualFoodManaged:F0}",
+            $" Managed Sources: Herds {managedHerdCount} | Crops {cultivatedCropCount}",
             $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2} | Starvation Months {polity.StarvationMonthsThisYear}",
             $" Trade Links This Year: {polity.TradePartnerCountThisYear}",
             $" Hunting Losses This Year: {polity.HuntingCasualtiesThisYear}",
@@ -259,6 +263,7 @@ public static class WatchScreenBuilder
             $" Environment: {DescribeEnvironment(region)}",
             $" Ecology: Plant {region.PlantBiomass:F0}/{region.MaxPlantBiomass:F0} | Animal {region.AnimalBiomass:F0}/{region.MaxAnimalBiomass:F0}",
             $" Connected Known Regions: {region.ConnectedRegionIds.Count(knowledge.IsRegionKnown)}",
+            $" Managed Food Sources: {DescribeManagedRegionSources(lookup.GetSettlementsInRegion(region.Id), knowledge, world)}",
             string.Empty,
             " Discovered Resources:"
         ];
@@ -355,6 +360,7 @@ public static class WatchScreenBuilder
         double domesticationInterest = knowledge.FocalPolity?.DomesticationInterestBySpecies.TryGetValue(species.Id, out double value) == true
             ? value
             : 0.0;
+        string domesticationStatus = DescribeDomesticationStatus(knowledge, world, species);
 
         List<string> lines =
         [
@@ -372,6 +378,7 @@ public static class WatchScreenBuilder
             $" Hunting: yield {species.MeatYield:F1} | difficulty {species.HuntingDifficulty:F2} | danger {species.HuntingDanger:F2}",
             $" Food Safety: {DescribeFoodSafety(knowledge, species)}",
             $" Domestication Relevance: {DescribeDomesticationRelevance(domesticationInterest, species.DomesticationAffinity)}",
+            $" Domestication Status: {domesticationStatus}",
             $" Lineage: {lineageSummary}",
             $" Origin: {DescribeSpeciesOrigin(knowledge, world, species)}",
             $" Visible Divergence: max {maxKnownDivergence:F2} | adapted known regions {adaptedKnownRegions}",
@@ -415,6 +422,8 @@ public static class WatchScreenBuilder
             ? region.Name
             : "Unknown";
         double annualFoodRatio = polity.AnnualFoodNeeded <= 0 ? 1.0 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
+        int managedHerdCount = polity.Settlements.Sum(settlement => settlement.ManagedHerds.Count);
+        int cultivatedCropCount = polity.Settlements.Sum(settlement => settlement.CultivatedCrops.Count);
 
         List<string> lines =
         [
@@ -428,6 +437,8 @@ public static class WatchScreenBuilder
             $" Current Region: {regionName}",
             $" Settlement Count: {knowledge.GetVisibleSettlementsForPolity(polity).Count}",
             $" Food Situation: {ChronicleTextFormatter.DescribeFoodState(polity)} | stores {polity.FoodStores:F0} | annual ratio {annualFoodRatio:F2}",
+            $" Managed Food This Year: {polity.AnnualFoodManaged:F0}",
+            $" Managed Sources: Herds {managedHerdCount} | Crops {cultivatedCropCount}",
             $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2}",
             string.Empty,
             " Visible Settlements:"
@@ -477,7 +488,7 @@ public static class WatchScreenBuilder
                 ? polity.Name
                 : $"Polity {settlement.PolityId}";
             lines.Add(
-                $"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1} - food {settlement.FoodState} ({settlement.FoodBalance:F1}) - aid ytd {settlement.AidReceivedThisYear:F1}");
+                $"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1} - herds {settlement.ManagedHerds.Count} - crops {settlement.CultivatedCrops.Count} - food {settlement.FoodState} ({settlement.FoodBalance:F1}) - aid ytd {settlement.AidReceivedThisYear:F1}");
         }
     }
 
@@ -537,6 +548,67 @@ public static class WatchScreenBuilder
         return domesticationAffinity >= 0.45
             ? $"promising affinity {domesticationAffinity:F2}"
             : $"low affinity {domesticationAffinity:F2}";
+    }
+
+    private static string DescribeDomesticationStatus(WatchKnowledgeSnapshot knowledge, World world, Species species)
+    {
+        Polity? polity = knowledge.FocalPolity;
+        if (polity is null)
+        {
+            return "Unknown";
+        }
+
+        bool managedHerd = polity.Settlements.Any(settlement => settlement.ManagedHerds.Any(herd => herd.BaseSpeciesId == species.Id));
+        bool cultivatedCrop = polity.Settlements.Any(settlement => settlement.CultivatedCrops.Any(crop => crop.BaseSpeciesId == species.Id));
+        bool candidateKnown = polity.HasDiscovery($"species-domestication-candidate:{species.Id}");
+        bool cropKnown = polity.HasDiscovery($"species-cultivable:{species.Id}");
+
+        if (managedHerd)
+        {
+            return "managed herd";
+        }
+
+        if (cultivatedCrop)
+        {
+            return "cultivated crop";
+        }
+
+        if (candidateKnown)
+        {
+            return "candidate known";
+        }
+
+        if (cropKnown)
+        {
+            return "cultivable plant known";
+        }
+
+        return species.TrophicRole == TrophicRole.Producer ? "wild plant" : "wild";
+    }
+
+    private static string DescribeManagedRegionSources(IEnumerable<Settlement> settlements, WatchKnowledgeSnapshot knowledge, World world)
+    {
+        List<string> parts = [];
+        foreach (Settlement settlement in settlements)
+        {
+            foreach (ManagedHerd herd in settlement.ManagedHerds)
+            {
+                string speciesName = world.Species.FirstOrDefault(species => species.Id == herd.BaseSpeciesId)?.Name ?? $"Species {herd.BaseSpeciesId}";
+                parts.Add($"{speciesName} herds");
+            }
+
+            foreach (CultivatedCrop crop in settlement.CultivatedCrops)
+            {
+                parts.Add(crop.CropName);
+            }
+        }
+
+        if (parts.Count == 0)
+        {
+            return "none visible";
+        }
+
+        return string.Join(", ", parts.Distinct(StringComparer.Ordinal).Take(3));
     }
 
     private static string DescribeDiscoveries(Polity polity)

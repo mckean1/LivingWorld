@@ -31,6 +31,7 @@ public sealed class Species
     public double HuntingDanger { get; set; }
     public bool IsToxicToEat { get; set; }
     public double DomesticationAffinity { get; set; }
+    public double CultivationAffinity { get; set; }
     public int? ParentSpeciesId { get; set; }
     public int RootAncestorSpeciesId { get; set; }
     public int? OriginRegionId { get; set; }
@@ -73,6 +74,7 @@ public sealed class Species
         HuntingDanger = 0.10;
         IsToxicToEat = false;
         DomesticationAffinity = 0.20;
+        CultivationAffinity = 0.0;
         RootAncestorSpeciesId = id;
         OriginYear = 0;
         OriginMonth = 1;

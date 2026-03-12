@@ -177,7 +177,9 @@ The chronicle formatter now also treats some event families as semantic transiti
 - total events per source event are capped
 - chronicle cooldowns still suppress repeated visible beats for the same actor scope
 - visible cooldowns are now semantic and family-specific, so repeated same-state events are suppressed more strongly than changed-state transitions
+- visible families without an explicit semantic key still use a fallback normalized-narrative state key by actor scope, which suppresses exact repeated chronicle lines without hiding distinct turning points
 - source systems may also suppress repeat emissions before they ever reach chronicle presentation when no new milestone has been crossed
+- settlement aid failure follows the same rule: `aid_failed` and starvation recovery only emit when a settlement enters starvation, worsens to a deeper starvation stage, or exits starvation
 - history writing is still append-only, but flushes are now batched so heavy biology years do not force a synchronous disk flush per event
 
 ## Example JSONL Record
@@ -185,3 +187,13 @@ The chronicle formatter now also treats some event families as semantic transiti
 ```json
 {"eventId":42,"rootEventId":40,"parentEventIds":[41],"propagationDepth":2,"year":118,"month":12,"season":"Winter","type":"food_stabilized","severity":"Major","scope":"Polity","narrative":"Red River Clan stabilized after hardship.","polityId":3,"polityName":"Red River Clan","regionId":7,"regionName":"Lower Valley","before":{"hardshipTier":"Famine"},"after":{"hardshipTier":"Stable"},"metadata":{}}
 ```
+
+## Phase 13/14 Event Notes
+
+Domestication and cultivation events follow the same rules:
+
+- they represent state changes, not monthly reminders
+- they carry settlement, polity, region, and target-species context where relevant
+- they remain eligible for propagation through the normal coordinator
+
+New high-signal beats include discovery of manageable animals, discovery of cultivable plants, herd establishment, crop establishment, domestication spread, and the first annual transition into established managed-food stability. That stabilization beat should not repeat while the polity remains in the same established state.

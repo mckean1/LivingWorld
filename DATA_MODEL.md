@@ -238,6 +238,8 @@ It centralizes:
 - known polities from currently known regions
 - discovery-indexed region/species summaries for inspection screens
 
+`ChroniclePresentationPolicy` now carries both family-specific semantic cooldown profiles and a fallback normalized-narrative state key for visible event families that do not yet have a dedicated semantic signature.
+
 ## Propagation Types
 
 - `EventPropagationCoordinator`
@@ -255,3 +257,38 @@ It centralizes:
 - settlement-local execution is intentionally lightweight so later settlement-specialization and cross-region trade can reuse the same records instead of reintroducing polity-level shortcuts
 - cached lookup snapshots plus direct region species-population indexing are intentional infrastructure for both safety and performance in hot paths
 - simulation control may now also keep rolling year-local summaries such as current-year event caches and perf counters so late-game work does not require rescanning full historical storage
+
+## Phase 13/14 Additions
+
+`Settlement` now also carries:
+
+- `ManagedHerds`
+- `CultivatedCrops`
+- `ManagedAnimalFoodThisMonth`
+- `ManagedCropFoodThisMonth`
+- `ManagedFoodThisYear`
+
+`Polity` now also tracks:
+
+- `CultivationFamiliarityBySpecies`
+- `FoodManagedThisMonth`
+- `AnnualFoodManaged`
+
+New lightweight records:
+
+- `ManagedHerd`
+  - base species id
+  - variant name
+  - establishment year/month
+  - herd size
+  - reliability
+  - breeding multiplier
+- `CultivatedCrop`
+  - base species id
+  - crop name
+  - establishment year/month
+  - yield multiplier
+  - stability bonus
+  - seasonal resilience
+
+`Species` also now includes `CultivationAffinity` alongside existing domestication suitability support.

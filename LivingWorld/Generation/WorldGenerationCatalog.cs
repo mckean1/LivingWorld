@@ -52,16 +52,16 @@ internal static class WorldGenerationCatalog
                 [RegionBiome.Wetlands, RegionBiome.Coast, RegionBiome.RiverValley, RegionBiome.Forest],
                 ["River Reed", "Fen Boar", "Reed Crab", "Marsh Grazer"]),
 
-            Producer("River Reed", 0.78, 0.90, 0.92, 0.04, 1.18, [RegionBiome.RiverValley, RegionBiome.Wetlands, RegionBiome.Coast]),
-            Producer("Tallgrass", 0.62, 0.46, 0.88, 0.02, 1.10, [RegionBiome.Plains, RegionBiome.RiverValley]),
-            Producer("Silver Moss", 0.44, 0.70, 0.82, 0.00, 0.98, [RegionBiome.Forest, RegionBiome.Highlands, RegionBiome.Wetlands]),
-            Producer("Sunroot", 0.70, 0.42, 0.80, 0.00, 1.04, [RegionBiome.Plains, RegionBiome.Drylands, RegionBiome.RiverValley]),
-            Producer("Redcap Mushroom", 0.42, 0.80, 0.66, 0.00, 0.82, [RegionBiome.Forest, RegionBiome.Wetlands], isToxicToEat: true),
-            Producer("Salt Kelp", 0.34, 0.96, 0.76, 0.00, 0.96, [RegionBiome.Coast]),
-            Producer("Bitter Brush", 0.26, 0.18, 0.58, 0.00, 0.74, [RegionBiome.Drylands, RegionBiome.Highlands]),
-            Producer("Frost Thistle", 0.24, 0.28, 0.62, 0.00, 0.80, [RegionBiome.Highlands, RegionBiome.Mountains]),
-            Producer("Marsh Bloom", 0.64, 0.84, 0.84, 0.00, 1.02, [RegionBiome.Wetlands, RegionBiome.RiverValley]),
-            Producer("Stonepine Cone", 0.40, 0.52, 0.78, 0.02, 0.88, [RegionBiome.Forest, RegionBiome.Mountains, RegionBiome.Highlands]),
+            Producer("River Reed", 0.78, 0.90, 0.92, 0.04, 1.18, 0.46, [RegionBiome.RiverValley, RegionBiome.Wetlands, RegionBiome.Coast]),
+            Producer("Tallgrass", 0.62, 0.46, 0.88, 0.02, 1.10, 0.78, [RegionBiome.Plains, RegionBiome.RiverValley]),
+            Producer("Silver Moss", 0.44, 0.70, 0.82, 0.00, 0.98, 0.28, [RegionBiome.Forest, RegionBiome.Highlands, RegionBiome.Wetlands]),
+            Producer("Sunroot", 0.70, 0.42, 0.80, 0.00, 1.04, 0.74, [RegionBiome.Plains, RegionBiome.Drylands, RegionBiome.RiverValley]),
+            Producer("Redcap Mushroom", 0.42, 0.80, 0.66, 0.00, 0.82, 0.0, [RegionBiome.Forest, RegionBiome.Wetlands], isToxicToEat: true),
+            Producer("Salt Kelp", 0.34, 0.96, 0.76, 0.00, 0.96, 0.10, [RegionBiome.Coast]),
+            Producer("Bitter Brush", 0.26, 0.18, 0.58, 0.00, 0.74, 0.18, [RegionBiome.Drylands, RegionBiome.Highlands]),
+            Producer("Frost Thistle", 0.24, 0.28, 0.62, 0.00, 0.80, 0.16, [RegionBiome.Highlands, RegionBiome.Mountains]),
+            Producer("Marsh Bloom", 0.64, 0.84, 0.84, 0.00, 1.02, 0.52, [RegionBiome.Wetlands, RegionBiome.RiverValley]),
+            Producer("Stonepine Cone", 0.40, 0.52, 0.78, 0.02, 0.88, 0.34, [RegionBiome.Forest, RegionBiome.Mountains, RegionBiome.Highlands]),
 
             Herbivore("Stonehorn Elk", 0.58, 0.56, 0.76, 0.10, 1.04, 0.22, 0.18, 22, 0.32, 0.24, false, 0.62,
                 [RegionBiome.Forest, RegionBiome.Plains, RegionBiome.RiverValley], ["Tallgrass", "Silver Moss", "Stonepine Cone"]),
@@ -108,13 +108,13 @@ internal static class WorldGenerationCatalog
         => new(name, trophicRole == TrophicRole.Predator ? 0.70 : 0.80, trophicRole == TrophicRole.Herbivore ? 0.78 : 0.72, true,
             trophicRole, fertilityPreference, waterPreference, plantBiomassAffinity, animalBiomassAffinity, carryingCapacityFactor,
             migrationCapability, expansionPressure, 0.07, 0.03, 1.12, 1.02, 0.92, 0.66, meatYield, huntingDifficulty, huntingDanger,
-            isToxicToEat, domesticationAffinity, preferredBiomes, dietSpeciesNames);
+            isToxicToEat, domesticationAffinity, 0.00, preferredBiomes, dietSpeciesNames);
 
     private static SpeciesTemplate Producer(string name, double fertilityPreference, double waterPreference, double plantBiomassAffinity,
-        double animalBiomassAffinity, double carryingCapacityFactor, IReadOnlyList<RegionBiome> preferredBiomes, bool isToxicToEat = false)
+        double animalBiomassAffinity, double carryingCapacityFactor, double cultivationAffinity, IReadOnlyList<RegionBiome> preferredBiomes, bool isToxicToEat = false)
         => new(name, 0.04, 0.02, false, TrophicRole.Producer, fertilityPreference, waterPreference, plantBiomassAffinity,
             animalBiomassAffinity, carryingCapacityFactor, 0.10, 0.20, 0.16, 0.02, 1.34, 1.12, 0.92, 0.58, 0, 0.96, 0.00,
-            isToxicToEat, 0.00, preferredBiomes, []);
+            isToxicToEat, 0.00, cultivationAffinity, preferredBiomes, []);
 
     private static SpeciesTemplate Herbivore(string name, double fertilityPreference, double waterPreference, double plantBiomassAffinity,
         double animalBiomassAffinity, double carryingCapacityFactor, double migrationCapability, double expansionPressure,
@@ -122,7 +122,7 @@ internal static class WorldGenerationCatalog
         IReadOnlyList<RegionBiome> preferredBiomes, IReadOnlyList<string> dietSpeciesNames)
         => new(name, 0.18, 0.28, false, TrophicRole.Herbivore, fertilityPreference, waterPreference, plantBiomassAffinity,
             animalBiomassAffinity, carryingCapacityFactor, migrationCapability, expansionPressure, 0.09, 0.03, 1.24, 1.06, 0.90,
-            0.58, meatYield, huntingDifficulty, huntingDanger, isToxicToEat, domesticationAffinity, preferredBiomes, dietSpeciesNames);
+            0.58, meatYield, huntingDifficulty, huntingDanger, isToxicToEat, domesticationAffinity, 0.00, preferredBiomes, dietSpeciesNames);
 
     private static SpeciesTemplate Omnivore(string name, double fertilityPreference, double waterPreference, double plantBiomassAffinity,
         double animalBiomassAffinity, double carryingCapacityFactor, double migrationCapability, double expansionPressure,
@@ -130,7 +130,7 @@ internal static class WorldGenerationCatalog
         IReadOnlyList<RegionBiome> preferredBiomes, IReadOnlyList<string> dietSpeciesNames)
         => new(name, 0.22, 0.24, false, TrophicRole.Omnivore, fertilityPreference, waterPreference, plantBiomassAffinity,
             animalBiomassAffinity, carryingCapacityFactor, migrationCapability, expansionPressure, 0.08, 0.04, 1.18, 1.04, 0.92,
-            0.62, meatYield, huntingDifficulty, huntingDanger, isToxicToEat, domesticationAffinity, preferredBiomes, dietSpeciesNames);
+            0.62, meatYield, huntingDifficulty, huntingDanger, isToxicToEat, domesticationAffinity, 0.00, preferredBiomes, dietSpeciesNames);
 
     private static SpeciesTemplate Predator(string name, double fertilityPreference, double waterPreference, double plantBiomassAffinity,
         double animalBiomassAffinity, double carryingCapacityFactor, double migrationCapability, double expansionPressure,
@@ -138,7 +138,7 @@ internal static class WorldGenerationCatalog
         IReadOnlyList<string> dietSpeciesNames)
         => new(name, 0.16, 0.34, false, TrophicRole.Predator, fertilityPreference, waterPreference, plantBiomassAffinity,
             animalBiomassAffinity, carryingCapacityFactor, migrationCapability, expansionPressure, 0.07, 0.05, 1.06, 1.00, 0.92,
-            0.68, meatYield, huntingDifficulty, huntingDanger, false, 0.10, preferredBiomes, dietSpeciesNames);
+            0.68, meatYield, huntingDifficulty, huntingDanger, false, 0.10, 0.00, preferredBiomes, dietSpeciesNames);
 
     private static SpeciesTemplate Apex(string name, double fertilityPreference, double waterPreference, double plantBiomassAffinity,
         double animalBiomassAffinity, double carryingCapacityFactor, double migrationCapability, double expansionPressure,
@@ -146,7 +146,7 @@ internal static class WorldGenerationCatalog
         IReadOnlyList<string> dietSpeciesNames)
         => new(name, 0.18, 0.18, false, TrophicRole.Apex, fertilityPreference, waterPreference, plantBiomassAffinity,
             animalBiomassAffinity, carryingCapacityFactor, migrationCapability, expansionPressure, 0.05, 0.05, 1.00, 1.02, 0.94,
-            0.70, meatYield, huntingDifficulty, huntingDanger, false, 0.04, preferredBiomes, dietSpeciesNames);
+            0.70, meatYield, huntingDifficulty, huntingDanger, false, 0.04, 0.00, preferredBiomes, dietSpeciesNames);
 }
 
 internal sealed record SpeciesTemplate(
@@ -173,5 +173,6 @@ internal sealed record SpeciesTemplate(
     double HuntingDanger,
     bool IsToxicToEat,
     double DomesticationAffinity,
+    double CultivationAffinity,
     IReadOnlyList<RegionBiome> PreferredBiomes,
     IReadOnlyList<string> DietSpeciesNames);

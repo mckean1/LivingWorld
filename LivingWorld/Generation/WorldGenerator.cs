@@ -122,7 +122,8 @@ public sealed class WorldGenerator
                 HuntingDifficulty = template.HuntingDifficulty,
                 HuntingDanger = template.HuntingDanger,
                 IsToxicToEat = template.IsToxicToEat,
-                DomesticationAffinity = template.DomesticationAffinity
+                DomesticationAffinity = template.DomesticationAffinity,
+                CultivationAffinity = template.CultivationAffinity
             };
 
             foreach (RegionBiome biome in template.PreferredBiomes)

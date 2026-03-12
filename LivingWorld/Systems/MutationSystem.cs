@@ -1021,6 +1021,7 @@ public sealed class MutationSystem
             HuntingDanger = Math.Clamp(parent.HuntingDanger + (population.AggressionOffset * 0.10) + (population.SocialityOffset * 0.04), 0.0, 0.98),
             IsToxicToEat = parent.IsToxicToEat,
             DomesticationAffinity = Math.Clamp(parent.DomesticationAffinity - (population.AggressionOffset * 0.08) - (population.SizeOffset * 0.04), 0.02, 0.95),
+            CultivationAffinity = parent.CultivationAffinity,
             ParentSpeciesId = parent.Id,
             RootAncestorSpeciesId = parent.RootAncestorSpeciesId,
             OriginRegionId = region.Id,

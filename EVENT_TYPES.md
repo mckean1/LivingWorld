@@ -240,9 +240,33 @@ New structured event types:
 - `famine_relief`: aid prevented a starving settlement from remaining in famine
 - `aid_failed`: a starving settlement remained unaided after redistribution
 
+`aid_failed` is transition-based for settlement hardship. Use it when starvation begins or worsens meaningfully, not as a recurring reminder while the same starving state persists.
+
 Expected severity:
 - `Minor`: ordinary internal aid transfer
 - `Major`: large convoy or starvation prevented
 - `Legendary`: massive famine rescue
 
 Each aid event carries location, actors, cause, distance, transport loss, and settlement food-state metadata so event propagation and structured history preserve the cause-and-effect chain.
+
+## Phase 13/14 Domestication And Cultivation Events
+
+New structured event types:
+
+- `species_domestication_candidate_identified`
+  - discovery that a nearby animal species appears manageable
+- `plant_cultivation_discovered`
+  - discovery that a wild plant can be cultivated
+- `animal_domesticated`
+  - a settlement established a managed herd
+- `crop_established`
+  - a settlement established a cultivated crop
+- `domestication_spread`
+  - the same herd or crop pattern spread across multiple settlements in one polity
+- `agriculture_stabilized_food_supply`
+  - managed food first covered enough yearly consumption to establish a durable managed-food base
+
+Default visibility intent:
+
+- discovery beats may stay structured-first unless they reach `Major`
+- herd establishment, crop establishment, spread, and first-time food stabilization are the main chronicle-facing turning points

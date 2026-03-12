@@ -112,3 +112,13 @@ Initial `AnimalBiomass` values are best read as starting ecological context for 
 Initial consumer populations are now seeded from carrying capacity and habitat fit strongly enough that fertile producer-rich regions can support substantially larger herbivore starts.
 Predator coverage remains narrower, so early worlds usually establish a herbivore foundation before predator suppression becomes a major constraint.
 Predator starts are also intentionally less blanket-wide than herbivores, because later ecology is expected to sort predator founders into successful or failed colonies based on prey support rather than filling every suitable biome immediately.
+
+## Phase 13/14 Generation Support
+
+World generation now also seeds plant cultivation potential more explicitly through species templates.
+
+- producer species can define `CultivationAffinity`
+- animal species still define `DomesticationAffinity`
+- those affinities do not guarantee domestication, but they make later historical outcomes emerge from the seed world rather than from hardcoded event scripts
+
+This means fertile river valleys and mixed grassland regions are more likely to support early cultivation stories, while harsh or low-affinity ecologies remain slower to domesticate.

@@ -217,3 +217,19 @@ It produces:
 - structured aid events for the event pipeline
 
 The chronicle continues to stay high-signal by showing only `Major` and `Legendary` rescue/failure outcomes.
+
+## Phase 13/14 - Domestication Interactions
+
+`DomesticationSystem` now connects:
+
+- `HuntingSystem` familiarity and domestication interest
+- regional species populations and trait resolution
+- settlement continuity and food pressure
+- `AgricultureSystem` yield and winter resilience
+- structured event propagation and chronicle formatting
+
+The result is intentionally asymmetric:
+
+- managed herds supplement hunting rather than replacing it immediately
+- cultivated crops strengthen farming where agriculture already exists
+- both systems remain local to settlements and regions, so remote collapse or regional breadbaskets still emerge from the same underlying food logic

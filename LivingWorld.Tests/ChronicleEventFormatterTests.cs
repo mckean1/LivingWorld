@@ -152,6 +152,42 @@ public sealed class ChronicleEventFormatterTests
     }
 
     [Fact]
+    public void RepeatedExactNarrative_ForDefaultVisibleProfile_IsSuppressed()
+    {
+        WorldEvent firstFragmentation = CreateEvent(
+            WorldEventType.Fragmentation,
+            WorldEventSeverity.Major,
+            year: 131,
+            narrative: "River Clan founded Valley Clan in Red Valley");
+        WorldEvent repeatedFragmentation = CreateEvent(
+            WorldEventType.Fragmentation,
+            WorldEventSeverity.Major,
+            year: 132,
+            narrative: "River Clan founded Valley Clan in Red Valley");
+
+        Assert.True(_formatter.TryFormat(firstFragmentation, _focus, out _));
+        Assert.False(_formatter.TryFormat(repeatedFragmentation, _focus, out _));
+    }
+
+    [Fact]
+    public void DifferentNarratives_ForDefaultVisibleProfile_RemainVisible()
+    {
+        WorldEvent firstFragmentation = CreateEvent(
+            WorldEventType.Fragmentation,
+            WorldEventSeverity.Major,
+            year: 133,
+            narrative: "River Clan founded Valley Clan in Red Valley");
+        WorldEvent differentFragmentation = CreateEvent(
+            WorldEventType.Fragmentation,
+            WorldEventSeverity.Major,
+            year: 134,
+            narrative: "River Clan founded Marsh Clan in Stonewater");
+
+        Assert.True(_formatter.TryFormat(firstFragmentation, _focus, out _));
+        Assert.True(_formatter.TryFormat(differentFragmentation, _focus, out _));
+    }
+
+    [Fact]
     public void AdaptationEvents_WithinCooldown_AreSuppressed_ForSameSpeciesRegionReasonAndMilestone()
     {
         WorldEvent firstAdaptation = CreateAdaptationEvent(
@@ -444,6 +480,97 @@ public sealed class ChronicleEventFormatterTests
         Assert.Equal("Year 230 - Food caravans arrived from Stone Valley, relieving famine in Hill Camp.", chronicleLine);
     }
 
+    [Fact]
+    public void RepeatedAidFailureForSameSettlementState_IsSuppressed()
+    {
+        WorldEvent firstFailure = CreateEvent(
+            WorldEventType.AidFailed,
+            WorldEventSeverity.Major,
+            year: 233,
+            narrative: "No aid arrived. Stonefen Hearth began to starve",
+            reason: "settlement_starvation_began_unaided",
+            settlementId: 7003,
+            settlementName: "Stonefen Hearth");
+        firstFailure.After["foodState"] = "Starving";
+        firstFailure.After["starvationStage"] = "Starving";
+
+        WorldEvent repeatedFailure = CreateEvent(
+            WorldEventType.AidFailed,
+            WorldEventSeverity.Major,
+            year: 234,
+            narrative: "No aid arrived. Stonefen Hearth began to starve",
+            reason: "settlement_starvation_began_unaided",
+            settlementId: 7003,
+            settlementName: "Stonefen Hearth");
+        repeatedFailure.After["foodState"] = "Starving";
+        repeatedFailure.After["starvationStage"] = "Starving";
+
+        Assert.True(_formatter.TryFormat(firstFailure, _focus, out _));
+        Assert.False(_formatter.TryFormat(repeatedFailure, _focus, out _));
+    }
+
+    [Fact]
+    public void WorsenedAidFailureState_RemainsVisible()
+    {
+        WorldEvent firstFailure = CreateEvent(
+            WorldEventType.AidFailed,
+            WorldEventSeverity.Major,
+            year: 235,
+            narrative: "No aid arrived. Stonefen Hearth began to starve",
+            reason: "settlement_starvation_began_unaided",
+            settlementId: 7003,
+            settlementName: "Stonefen Hearth");
+        firstFailure.After["foodState"] = "Starving";
+        firstFailure.After["starvationStage"] = "Starving";
+
+        WorldEvent worsenedFailure = CreateEvent(
+            WorldEventType.AidFailed,
+            WorldEventSeverity.Legendary,
+            year: 238,
+            narrative: "No aid arrived. Starvation worsened in Stonefen Hearth",
+            reason: "settlement_starvation_worsened_unaided",
+            settlementId: 7003,
+            settlementName: "Stonefen Hearth");
+        worsenedFailure.After["foodState"] = "Starving";
+        worsenedFailure.After["starvationStage"] = "Severe";
+
+        Assert.True(_formatter.TryFormat(firstFailure, _focus, out _));
+        Assert.True(_formatter.TryFormat(worsenedFailure, _focus, out string chronicleLine));
+        Assert.Equal("Year 238 - No aid arrived. Starvation worsened in Stonefen Hearth.", chronicleLine);
+    }
+
+    [Fact]
+    public void MajorAnimalDomestication_RemainsVisibleInChronicle()
+    {
+        WorldEvent domesticationEvent = CreateEvent(
+            WorldEventType.AnimalDomesticated,
+            WorldEventSeverity.Major,
+            year: 231,
+            narrative: "Hill Camp established herds of River Goat");
+
+        domesticationEvent.Metadata["targetSpeciesId"] = "2";
+        domesticationEvent.Metadata["targetSpeciesName"] = "River Goat";
+        domesticationEvent.Metadata["managedKind"] = "herd";
+
+        Assert.True(_formatter.TryFormat(domesticationEvent, _focus, out string chronicleLine));
+        Assert.Equal("Year 231 - Hill Camp established herds of River Goat.", chronicleLine);
+    }
+
+    [Fact]
+    public void NotableDomesticationCandidate_RemainsSuppressedFromDefaultChronicle()
+    {
+        WorldEvent candidateEvent = CreateEvent(
+            WorldEventType.SpeciesDomesticationCandidateIdentified,
+            WorldEventSeverity.Notable,
+            year: 232,
+            narrative: "River Clan discovered that River Goat could be kept near camp");
+
+        candidateEvent.Metadata["targetSpeciesId"] = "2";
+        candidateEvent.Metadata["targetSpeciesName"] = "River Goat";
+
+        Assert.False(_formatter.TryFormat(candidateEvent, _focus, out _));
+    }
+
     private static WorldEvent CreateEvent(
         string type,
         WorldEventSeverity severity,
@@ -451,7 +578,9 @@ public sealed class ChronicleEventFormatterTests
         string narrative,
         int polityId = 7,
         int? relatedPolityId = null,
-        string? reason = null)
+        string? reason = null,
+        int? settlementId = null,
+        string? settlementName = null)
     {
         return new WorldEvent
         {
@@ -467,6 +596,8 @@ public sealed class ChronicleEventFormatterTests
             PolityName = polityId == 7 ? "River Clan" : "Hill Clan",
             RelatedPolityId = relatedPolityId,
             RelatedPolityName = relatedPolityId == 7 ? "River Clan" : null,
+            SettlementId = settlementId,
+            SettlementName = settlementName,
             RegionId = 1,
             RegionName = "Red Valley"
         };

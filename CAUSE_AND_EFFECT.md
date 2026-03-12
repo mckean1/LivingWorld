@@ -41,6 +41,12 @@ Implemented chain:
 
 `food_recovery or trade relief -> food_stabilized`
 
+Settlement hardship follows the same pattern at a smaller scale:
+
+`food deficit persists -> starvation stage changes -> aid failure or recovery event`
+
+No chronicle beat should be emitted for a settlement that is merely still starving in the same way it was before. The event belongs to the transition, not the steady state.
+
 ### Settlement Pressure
 
 Learned Agriculture and stable settlement context can now create downstream cultivation and settlement stabilization events.
@@ -189,6 +195,7 @@ Instead it favors:
 - divergence milestones that suggest a future speciation branch
 - adaptation milestone transitions rather than repeated reaffirmation of the same adaptation state
 - chronicle-visible hardship, recovery, migration, and ecology beats only when the tracked visible band actually changes or enough quiet time has passed
+- as a final presentation safeguard, exact repeated visible lines for the same actor are also suppressed even when a family has not been given a custom semantic state key yet
 
 This is why yearly hardship transitions remain important: they summarize meaningful changes without narrating every month of unchanged suffering.
 The fuller-world opening is therefore tuned by improving real local anchors, homeland support, and viability, not by inventing disconnected drama.
@@ -220,3 +227,19 @@ Settlement aid follows a strict causal sequence:
 6. the receiver's post-aid food state determines whether relief succeeded or failed
 
 This keeps stories grounded. Nearby breadbasket settlements can keep a frontier camp alive through winter, while remote camps may still starve if distance friction or insufficient surplus limits what arrives.
+
+## Phase 13/14 Cause and Effect
+
+Domestication and cultivation follow the same grounded chain:
+
+1. settlements repeatedly interact with nearby species through hunting, gathering, and coexistence
+2. only suitable species accumulate enough familiarity to become candidates
+3. discoveries reveal that a species is manageable or cultivable
+4. already learned capability determines whether that knowledge can be organized into herding or cultivation
+5. managed food then changes later settlement food balance, hardship, migration pressure, and stabilization outcomes
+6. the chronicle only records the transition into an established managed-food state, not each later year that state continues unchanged
+
+This preserves the terminology split:
+
+- discovering a useful species is `Discovery`
+- organizing herding or agriculture is `Learned` capability plus local implementation

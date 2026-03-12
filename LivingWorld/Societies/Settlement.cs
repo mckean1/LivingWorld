@@ -17,10 +17,17 @@ public sealed class Settlement
     public double FoodRequired { get; set; }
     public double FoodBalance { get; private set; }
     public FoodState FoodState { get; private set; }
+    public SettlementStarvationStage StarvationStage { get; private set; }
+    public SettlementStarvationStage LastRecordedStarvationStage { get; set; }
     public double LastAidReceived { get; set; }
     public double LastAidSent { get; set; }
     public double AidReceivedThisYear { get; set; }
     public double AidSentThisYear { get; set; }
+    public double ManagedAnimalFoodThisMonth { get; set; }
+    public double ManagedCropFoodThisMonth { get; set; }
+    public double ManagedFoodThisYear { get; set; }
+    public List<ManagedHerd> ManagedHerds { get; } = [];
+    public List<CultivatedCrop> CultivatedCrops { get; } = [];
 
     public Settlement(int id, int polityId, int regionId, string name)
     {
@@ -29,6 +36,8 @@ public sealed class Settlement
         RegionId = regionId;
         Name = name;
         FoodState = FoodState.Stable;
+        StarvationStage = SettlementStarvationStage.None;
+        LastRecordedStarvationStage = SettlementStarvationStage.None;
     }
 
     public FoodState CalculateFoodState()
@@ -45,6 +54,7 @@ public sealed class Settlement
             >= DeficitThreshold => FoodState.Deficit,
             _ => FoodState.Starving
         };
+        StarvationStage = ResolveStarvationStage(ratio, FoodState);
 
         return FoodState;
     }
@@ -54,16 +64,43 @@ public sealed class Settlement
 
     public double SendFoodAid(double amount)
     {
-        double shipped = Math.Min(Math.Max(0, amount), Math.Max(0, FoodStored));
+        double availableProduced = Math.Max(0, FoodProduced);
+        double availableStored = Math.Max(0, FoodStored);
+        double availableToShip = availableProduced + availableStored;
+        double shipped = Math.Min(Math.Max(0, amount), availableToShip);
         if (shipped <= 0)
         {
             return 0;
         }
 
-        FoodStored -= shipped;
+        double shippedFromStored = Math.Min(availableStored, shipped);
+        double shippedFromProduced = shipped - shippedFromStored;
+        FoodStored -= shippedFromStored;
+        FoodProduced -= shippedFromProduced;
         LastAidSent = shipped;
         AidSentThisYear += shipped;
         CalculateFoodState();
         return shipped;
+    }
+
+    public ManagedHerd? GetManagedHerd(int speciesId)
+        => ManagedHerds.FirstOrDefault(herd => herd.BaseSpeciesId == speciesId);
+
+    public CultivatedCrop? GetCultivatedCrop(int speciesId)
+        => CultivatedCrops.FirstOrDefault(crop => crop.BaseSpeciesId == speciesId);
+
+    private static SettlementStarvationStage ResolveStarvationStage(double foodBalanceRatio, FoodState foodState)
+    {
+        if (foodState != FoodState.Starving)
+        {
+            return SettlementStarvationStage.None;
+        }
+
+        return foodBalanceRatio switch
+        {
+            < -0.85 => SettlementStarvationStage.Collapsing,
+            < -0.60 => SettlementStarvationStage.Severe,
+            _ => SettlementStarvationStage.Starving
+        };
     }
 }

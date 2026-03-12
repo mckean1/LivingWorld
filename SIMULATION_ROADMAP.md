@@ -67,3 +67,21 @@ All should continue to emit structured canonical events first.
 - the chronicle is the main game experience
 - players follow a living lineage rather than yearly diagnostics
 - richer history tools and perspectives are layered over the same append-only event foundation
+
+## Phase 13/14 Status
+
+Domestication and early agriculture expansion now fills the missing layer between hunting/foraging and mature settlement growth.
+
+Delivered scope:
+
+- animal domestication candidates from repeated local interaction
+- plant cultivation discoveries from familiarity and settlement pressure
+- settlement-level managed herds and cultivated crops
+- managed-food integration with farming, hardship, propagation, chronicle, and watch inspection views
+
+Natural next steps after this phase:
+
+- differentiated herd uses such as pack, labor, milk, or fiber
+- crop failure and blight tied to ecology and climate pressure
+- managed-food diffusion across polities through contact rather than only internal spread
+- deeper settlement specialization once cross-region polity networks arrive

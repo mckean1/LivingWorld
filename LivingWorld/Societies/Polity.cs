@@ -53,6 +53,7 @@ public sealed class Polity
     public double AnnualFoodShortage { get; set; }
     public double AnnualFoodGathered { get; set; }
     public double AnnualFoodFarmed { get; set; }
+    public double AnnualFoodManaged { get; set; }
     public double AnnualFoodImported { get; set; }
     public double AnnualFoodExported { get; set; }
     public double AnnualFoodImportedInternal { get; set; }
@@ -62,6 +63,7 @@ public sealed class Polity
     public int TradeFullReliefMonthsThisYear { get; set; }
     public int TradePartnerCountThisYear { get; set; }
     public double AnnualTradeNeedMitigated { get; set; }
+    public double FoodManagedThisMonth { get; set; }
 
     // Agriculture tracking
     public double CultivatedLand { get; set; }
@@ -70,6 +72,8 @@ public sealed class Polity
     public double LastYearAverageCultivatedLand { get; set; }
     public int ConsecutiveFarmingYears { get; set; }
     public int AgricultureEventCooldownYears { get; set; }
+    public bool ManagedFoodSupplyEstablished { get; set; }
+    public int? ManagedFoodSupplyEstablishedYear { get; set; }
 
     // Ongoing stress
     public int StarvationMonthsThisYear { get; set; }
@@ -92,6 +96,7 @@ public sealed class Polity
     public Dictionary<int, int> SuccessfulHuntsBySpecies { get; }
     public Dictionary<int, int> FailedHuntsBySpecies { get; }
     public Dictionary<int, double> DomesticationInterestBySpecies { get; }
+    public Dictionary<int, double> CultivationFamiliarityBySpecies { get; }
     public bool HasSettlements => _settlements.Count > 0;
     public IReadOnlyList<Settlement> Settlements => _settlements;
 
@@ -147,6 +152,7 @@ public sealed class Polity
         AnnualFoodShortage = 0;
         AnnualFoodGathered = 0;
         AnnualFoodFarmed = 0;
+        AnnualFoodManaged = 0;
         AnnualFoodImported = 0;
         AnnualFoodExported = 0;
         AnnualFoodImportedInternal = 0;
@@ -156,6 +162,7 @@ public sealed class Polity
         TradeFullReliefMonthsThisYear = 0;
         TradePartnerCountThisYear = 0;
         AnnualTradeNeedMitigated = 0;
+        FoodManagedThisMonth = 0;
         StarvationMonthsThisYear = 0;
 
         CultivatedLand = 0;
@@ -164,6 +171,8 @@ public sealed class Polity
         LastYearAverageCultivatedLand = 0;
         ConsecutiveFarmingYears = 0;
         AgricultureEventCooldownYears = 0;
+        ManagedFoodSupplyEstablished = false;
+        ManagedFoodSupplyEstablishedYear = null;
 
         _nextSettlementSequence = 1;
         _settlements = [];
@@ -181,6 +190,7 @@ public sealed class Polity
         SuccessfulHuntsBySpecies = new Dictionary<int, int>();
         FailedHuntsBySpecies = new Dictionary<int, int>();
         DomesticationInterestBySpecies = new Dictionary<int, double>();
+        CultivationFamiliarityBySpecies = new Dictionary<int, double>();
         _discoveries = new Dictionary<string, CulturalDiscovery>(StringComparer.OrdinalIgnoreCase);
     }
 
@@ -191,6 +201,7 @@ public sealed class Polity
         AnnualFoodShortage = 0;
         AnnualFoodGathered = 0;
         AnnualFoodFarmed = 0;
+        AnnualFoodManaged = 0;
         AnnualFoodImported = 0;
         AnnualFoodExported = 0;
         AnnualFoodImportedInternal = 0;
@@ -200,6 +211,7 @@ public sealed class Polity
         TradeFullReliefMonthsThisYear = 0;
         TradePartnerCountThisYear = 0;
         AnnualTradeNeedMitigated = 0;
+        FoodManagedThisMonth = 0;
         AnnualCultivatedLandTotal = 0;
         FarmingMonthsThisYear = 0;
         StarvationMonthsThisYear = 0;
@@ -215,6 +227,9 @@ public sealed class Polity
             settlement.AidSentThisYear = 0;
             settlement.LastAidReceived = 0;
             settlement.LastAidSent = 0;
+            settlement.ManagedAnimalFoodThisMonth = 0;
+            settlement.ManagedCropFoodThisMonth = 0;
+            settlement.ManagedFoodThisYear = 0;
         }
     }
 
@@ -350,6 +365,14 @@ public sealed class Polity
             ? existing
             : 0.0;
         DomesticationInterestBySpecies[speciesId] = Math.Max(0.0, current + amount);
+    }
+
+    public void IncreaseCultivationFamiliarity(int speciesId, double amount)
+    {
+        double current = CultivationFamiliarityBySpecies.TryGetValue(speciesId, out double existing)
+            ? existing
+            : 0.0;
+        CultivationFamiliarityBySpecies[speciesId] = Math.Max(0.0, current + amount);
     }
 
     private static int GetTrackedValue(IReadOnlyDictionary<int, int> values, int key)

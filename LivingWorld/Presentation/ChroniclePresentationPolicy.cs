@@ -59,6 +59,42 @@ public sealed class ChroniclePresentationPolicy
                 ChangedStateCooldownYears: 0,
                 BuildSettlementAidScopeKey,
                 BuildSettlementAidStateKey),
+            [WorldEventType.SpeciesDomesticationCandidateIdentified] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 16,
+                ChangedStateCooldownYears: 6,
+                BuildManagedFoodScopeKey,
+                BuildManagedFoodStateKey),
+            [WorldEventType.PlantCultivationDiscovered] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 16,
+                ChangedStateCooldownYears: 6,
+                BuildManagedFoodScopeKey,
+                BuildManagedFoodStateKey),
+            [WorldEventType.AnimalDomesticated] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 18,
+                ChangedStateCooldownYears: 0,
+                BuildManagedFoodScopeKey,
+                BuildManagedFoodStateKey),
+            [WorldEventType.CropEstablished] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 18,
+                ChangedStateCooldownYears: 0,
+                BuildManagedFoodScopeKey,
+                BuildManagedFoodStateKey),
+            [WorldEventType.DomesticationSpread] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 12,
+                ChangedStateCooldownYears: 4,
+                BuildManagedFoodScopeKey,
+                BuildManagedFoodStateKey),
+            [WorldEventType.AgricultureStabilizedFoodSupply] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 10,
+                ChangedStateCooldownYears: 0,
+                BuildPrimaryPolityScopeKey,
+                BuildManagedFoodStateKey),
             [WorldEventType.StageChanged] = new ChronicleEventProfile(
                 BasePriority: 5,
                 SameStateCooldownYears: 30,
@@ -93,6 +129,12 @@ public sealed class ChroniclePresentationPolicy
     }
 
     public WorldEventSeverity MinimumChronicleSeverity => WorldEventSeverity.Major;
+
+    public string? ResolveStateKey(WorldEvent worldEvent)
+    {
+        ChronicleEventProfile profile = ResolveProfile(worldEvent);
+        return profile.StateKeyFactory?.Invoke(worldEvent) ?? BuildNarrativeStateKey(worldEvent);
+    }
 
     public bool ShouldPresent(
         WorldEvent worldEvent,
@@ -135,7 +177,7 @@ public sealed class ChroniclePresentationPolicy
         }
 
         presentationKey = $"{worldEvent.Type}:{actorScope}";
-        string? stateKey = profile.StateKeyFactory?.Invoke(worldEvent);
+        string? stateKey = ResolveStateKey(worldEvent);
 
         if (!previouslyPresented.TryGetValue(presentationKey, out ChroniclePresentationRecord? previousRecord))
         {
@@ -168,6 +210,12 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.FoodAidSent or
             WorldEventType.FamineRelief or
             WorldEventType.AidFailed or
+            WorldEventType.SpeciesDomesticationCandidateIdentified or
+            WorldEventType.PlantCultivationDiscovered or
+            WorldEventType.AnimalDomesticated or
+            WorldEventType.CropEstablished or
+            WorldEventType.DomesticationSpread or
+            WorldEventType.AgricultureStabilizedFoodSupply or
             WorldEventType.Fragmentation or
             WorldEventType.PolityFounded or
             WorldEventType.StageChanged or
@@ -187,10 +235,10 @@ public sealed class ChroniclePresentationPolicy
             ? profile
             : new ChronicleEventProfile(
                 BasePriority: 5,
-                SameStateCooldownYears: 0,
+                SameStateCooldownYears: 18,
                 ChangedStateCooldownYears: 0,
                 BuildChronicleScopeKey,
-                StateKeyFactory: null);
+                BuildNarrativeStateKey);
 
     private static bool MeetsVisibilityBar(WorldEvent worldEvent, ChronicleEventProfile profile)
         => profile.BasePriority + ResolveSeverityWeight(worldEvent.Severity) >= MinimumVisibilityScore;
@@ -287,14 +335,14 @@ public sealed class ChroniclePresentationPolicy
     }
 
     private static string? BuildSettlementAidStateKey(WorldEvent worldEvent)
-    {
-        string actorKey = worldEvent.SettlementId?.ToString()
-            ?? TryGetValue(worldEvent.Metadata, "senderSettlementId")
-            ?? worldEvent.RegionId?.ToString()
-            ?? string.Empty;
-        string cause = worldEvent.Reason ?? TryGetValue(worldEvent.Metadata, "cause") ?? string.Empty;
-        return $"{cause}:{actorKey}:{TryGetValue(worldEvent.After, "foodState") ?? string.Empty}";
-    }
+        => string.Join(":", new[]
+        {
+            worldEvent.Reason ?? TryGetValue(worldEvent.Metadata, "cause") ?? string.Empty,
+            worldEvent.SettlementId?.ToString() ?? string.Empty,
+            TryGetValue(worldEvent.Metadata, "senderSettlementId") ?? string.Empty,
+            TryGetValue(worldEvent.After, "foodState") ?? string.Empty,
+            TryGetValue(worldEvent.After, "starvationStage") ?? TryGetValue(worldEvent.Metadata, "starvationStage") ?? string.Empty
+        });
 
     private static string? BuildSettlementAidScopeKey(WorldEvent worldEvent)
     {
@@ -303,6 +351,24 @@ public sealed class ChroniclePresentationPolicy
             ?? string.Empty;
         string senderKey = TryGetValue(worldEvent.Metadata, "senderSettlementId") ?? string.Empty;
         return $"receiver:{receiverKey}:sender:{senderKey}";
+    }
+
+    private static string? BuildManagedFoodStateKey(WorldEvent worldEvent)
+        => string.Join(":", new[]
+        {
+            worldEvent.Reason ?? string.Empty,
+            TryGetValue(worldEvent.Metadata, "targetSpeciesId") ?? string.Empty,
+            TryGetValue(worldEvent.Metadata, "managedKind") ?? string.Empty,
+            TryGetValue(worldEvent.Metadata, "cropName") ?? TryGetValue(worldEvent.Metadata, "variantName") ?? string.Empty
+        });
+
+    private static string? BuildManagedFoodScopeKey(WorldEvent worldEvent)
+    {
+        string settlementKey = worldEvent.SettlementId?.ToString()
+            ?? worldEvent.RegionId?.ToString()
+            ?? string.Empty;
+        string targetSpeciesKey = TryGetValue(worldEvent.Metadata, "targetSpeciesId") ?? string.Empty;
+        return $"settlement:{settlementKey}:species:{targetSpeciesKey}";
     }
 
     private static string? BuildStageStateKey(WorldEvent worldEvent)
@@ -316,6 +382,9 @@ public sealed class ChroniclePresentationPolicy
             ?? string.Empty;
         return $"{worldEvent.Reason ?? string.Empty}:{worldEvent.RegionId?.ToString() ?? string.Empty}:{milestone}";
     }
+
+    private static string? BuildNarrativeStateKey(WorldEvent worldEvent)
+        => $"{worldEvent.Reason ?? string.Empty}:{WorldEvent.NormalizeNarrative(worldEvent.Narrative)}";
 
     private static string? BuildPrimaryPolityScopeKey(WorldEvent worldEvent)
     {

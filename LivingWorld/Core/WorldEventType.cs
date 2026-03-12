@@ -34,6 +34,13 @@ public static class WorldEventType
     public const string FoodAidSent = "food_aid_sent";
     public const string FamineRelief = "famine_relief";
     public const string AidFailed = "aid_failed";
+    public const string SpeciesDomesticationCandidateIdentified = "species_domestication_candidate_identified";
+    public const string AnimalDomesticated = "animal_domesticated";
+    public const string PlantCultivationDiscovered = "plant_cultivation_discovered";
+    public const string CropEstablished = "crop_established";
+    public const string HerdEstablished = "herd_established";
+    public const string AgricultureStabilizedFoodSupply = "agriculture_stabilized_food_supply";
+    public const string DomesticationSpread = "domestication_spread";
     public const string SpeciesPopulationEstablished = "species_population_established";
     public const string SpeciesPopulationRecolonized = "species_population_recolonized";
     public const string LocalSpeciesExtinction = "local_species_extinction";

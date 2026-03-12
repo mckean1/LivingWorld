@@ -19,6 +19,7 @@ public sealed class Simulation : IDisposable
     private readonly EcosystemSystem _ecosystemSystem;
     private readonly HuntingSystem _huntingSystem;
     private readonly MutationSystem _mutationSystem;
+    private readonly DomesticationSystem _domesticationSystem;
     private readonly AgricultureSystem _agricultureSystem;
     private readonly TradeSystem _tradeSystem;
     private readonly SettlementFoodRedistributionSystem _settlementFoodRedistributionSystem;
@@ -53,7 +54,8 @@ public sealed class Simulation : IDisposable
         _ecosystemSystem = new EcosystemSystem();
         _huntingSystem = new HuntingSystem();
         _mutationSystem = new MutationSystem();
-        _agricultureSystem = new AgricultureSystem();
+        _domesticationSystem = new DomesticationSystem();
+        _agricultureSystem = new AgricultureSystem(_domesticationSystem);
         _tradeSystem = new TradeSystem();
         _settlementFoodRedistributionSystem = new SettlementFoodRedistributionSystem();
         _populationSystem = new PopulationSystem();
@@ -85,6 +87,7 @@ public sealed class Simulation : IDisposable
         [
             new FoodStressPropagationHandler(),
             new AgriculturePropagationHandler(),
+            new DomesticationPropagationHandler(),
             new MigrationPropagationHandler(),
             new FragmentationPropagationHandler()
         ]));
@@ -189,7 +192,9 @@ public sealed class Simulation : IDisposable
         _foodSystem.UpdateRegionEcology(_world);
         RunSeasonalBiologyIfNeeded();
         _foodSystem.GatherFood(_world);
+        _domesticationSystem.UpdateMonthlyKnowledgeAndSources(_world);
         _agricultureSystem.ProduceFarmFood(_world);
+        _domesticationSystem.ProduceManagedAnimalFood(_world);
         _tradeSystem.UpdateTrade(_world);
         _foodSystem.ConsumeFood(_world);
         _settlementFoodRedistributionSystem.UpdateMonthlyFoodStatesAndRedistribution(_world);
@@ -233,6 +238,7 @@ public sealed class Simulation : IDisposable
         _fragmentationSystem.UpdateFragmentation(_world);
         _polityStageSystem.UpdatePolityStages(_world);
         _agricultureSystem.UpdateAnnualAgriculture(_world);
+        _domesticationSystem.UpdateAnnualManagedFood(_world);
         _tradeSystem.UpdateAnnualTrade(_world);
 
         AddYearlyFoodStressEvents();

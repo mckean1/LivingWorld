@@ -72,6 +72,7 @@ Sinks:
 Simulation emits and records events before chronicle presentation. The chronicle is not the source of truth.
 Chronicle pacing is now non-blocking: visible-event recording no longer sleeps inside the event path, so input responsiveness does not depend on whether time is paused.
 The chronicle formatter now distinguishes between repeated same-state reminders and real changed-state transitions for noisy event families, which keeps live playback readable during busy eras without thinning structured history.
+That formatter also has a fallback narrative-based state key for visible families without a custom semantic signature, so exact repeated lines are still treated as the same visible state.
 Year-end focus resolution now also consumes the current year's rolling event cache instead of filtering the full historical event list every year.
 
 ## Default Watch Output
@@ -117,3 +118,16 @@ Monthly food resolution now has an extra settlement step:
 5. migration and other downstream pressures see the post-aid settlement state
 
 This keeps cause and effect local: a breadbasket settlement can relieve a nearby shortage, while remote settlements may still remain starving after transport loss.
+
+## Phase 13/14 Monthly Managed-Food Flow
+
+The monthly food layer now includes an earlier domestication and cultivation step:
+
+1. wild gathering updates immediate plant supply
+2. local familiarity with useful nearby plants and animals increases
+3. domestication candidates and cultivable plants can be discovered from repeated interaction
+4. settlement farming resolves with cultivated crops modifying yield and seasonal resilience
+5. managed herds add reliable local food before later hardship effects
+6. trade, aid, consumption, and migration react to that updated food position
+
+This creates a historical transition path instead of a single jump: foraging and hunting -> managed local species -> early agriculture -> more stable settlement life.

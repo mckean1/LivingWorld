@@ -204,6 +204,46 @@ public sealed class WatchNavigationTests
     }
 
     [Fact]
+    public void MyPolity_ShowsManagedFoodSummary()
+    {
+        World world = CreateWorld();
+        Polity polity = world.Polities.First(candidate => candidate.Id == 7);
+        Settlement settlement = polity.Settlements[0];
+        polity.AnnualFoodManaged = 18;
+        settlement.ManagedHerds.Add(new ManagedHerd(2, "Domestic River Elk", 9, 1, 6, 0.72, 1.0, 0.84, 0.18));
+        settlement.CultivatedCrops.Add(new CultivatedCrop(2, "River grain", 9, 1, 0.12, 0.08, 0.06));
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.MyPolity);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(" Managed Food This Year: 18", lines);
+        Assert.Contains(" Managed Sources: Herds 1 | Crops 1", lines);
+    }
+
+    [Fact]
+    public void SpeciesDetail_ShowsCultivationAndManagementStatus()
+    {
+        World world = CreateWorld();
+        Polity polity = world.Polities.First(candidate => candidate.Id == 7);
+        Settlement settlement = polity.Settlements[0];
+        polity.AddDiscovery(new CulturalDiscovery("species-domestication-candidate:2", "River Elk Manageable", CulturalDiscoveryCategory.AnimalBehavior, 2, 0));
+        settlement.ManagedHerds.Add(new ManagedHerd(2, "Domestic River Elk", 9, 1, 6, 0.72, 1.0, 0.84, 0.18));
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.PushDetailView(WatchViewType.SpeciesDetail, entityId: 2);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(lines, line => line.Contains("Domestication Status: managed herd", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void WorldOverview_UsesKnownCountsRatherThanGlobalTotals()
     {
         World world = CreateWorld();

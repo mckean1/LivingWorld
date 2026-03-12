@@ -94,11 +94,13 @@ In watch mode:
 ## Anti-Spam Rules
 
 - emit on state transitions, not every tick
+- settlement starvation and failed-aid logging therefore key off starvation-stage transitions rather than repeating each monthly starving result
 - dedupe identical follow-ups inside a propagation step
 - cap propagation depth
 - cap total follow-up count
 - keep chronicle cooldowns separate from storage
 - chronicle cooldowns now use event-family profiles with actor scope plus semantic state keys, so changed-state turning points can bypass earlier than repeated same-state lines
+- visible families without a custom semantic state key still fall back to normalized narrative-by-actor suppression, which prevents exact repeated chronicle lines from slipping through default presentation paths
 - source systems now also suppress repeated biology status events through milestone guards and year-level cooldowns before those events ever hit storage
 
 ## Focus And Lineage Continuity
@@ -139,3 +141,13 @@ and before:
 - later annual starvation-driven population change
 
 That ordering matters because settlement aid is intended to alter the final local hardship state that downstream systems react to, without introducing a separate market simulation.
+
+## Phase 13/14 Integration Point
+
+The monthly loop now inserts domestication and cultivation support between raw gathering and later hardship resolution.
+
+- after gathering, polities accumulate familiarity with useful nearby animals and plants
+- before downstream hardship consequences, managed herds and cultivated crops can add reliable local food
+- annual review can emit `agriculture_stabilized_food_supply` when managed food covers a meaningful yearly share
+
+Domestication is therefore not a random flavor event. It is a local state transition produced by repeated contact, species suitability, settlement continuity, and already learned capability.

@@ -29,10 +29,7 @@ public sealed class SettlementFoodRedistributionSystem
         {
             foreach (Settlement settlement in polity.Settlements)
             {
-                if (settlement.FoodState == FoodState.Starving && settlement.LastAidReceived <= 0)
-                {
-                    EmitAidFailedEvent(world, lookup, polity, settlement);
-                }
+                EvaluateSettlementStarvationTransition(world, lookup, polity, settlement);
             }
         }
     }
@@ -84,6 +81,9 @@ public sealed class SettlementFoodRedistributionSystem
             .Where(settlement => settlement.FoodState == FoodState.Surplus && settlement.FoodBalance > 0)
             .OrderByDescending(settlement => settlement.FoodBalance)
             .ToList();
+        Dictionary<int, double> senderExportBudget = senders.ToDictionary(
+            settlement => settlement.Id,
+            settlement => Math.Max(0, settlement.FoodBalance) * ExportShareLimitPerMonth);
         List<Settlement> receivers = polity.Settlements
             .Where(settlement => settlement.FoodState is FoodState.Deficit or FoodState.Starving)
             .OrderByDescending(settlement => settlement.FoodState == FoodState.Starving)
@@ -118,7 +118,15 @@ public sealed class SettlementFoodRedistributionSystem
                     continue;
                 }
 
-                double plannedTransfer = Math.Min(senderSurplus * ExportShareLimitPerMonth, deficitNeeded);
+                double remainingExportBudget = senderExportBudget.TryGetValue(sender.Id, out double budget)
+                    ? budget
+                    : 0.0;
+                if (remainingExportBudget <= 0.01)
+                {
+                    continue;
+                }
+
+                double plannedTransfer = Math.Min(Math.Min(senderSurplus, remainingExportBudget), deficitNeeded);
                 if (plannedTransfer <= 0.01)
                 {
                     continue;
@@ -133,6 +141,8 @@ public sealed class SettlementFoodRedistributionSystem
                 {
                     continue;
                 }
+
+                senderExportBudget[sender.Id] = Math.Max(0.0, remainingExportBudget - shippedFood);
 
                 double receivedFood = shippedFood * (1.0 - transportLoss);
                 receiver.FoodStored += receivedFood;
@@ -175,6 +185,55 @@ public sealed class SettlementFoodRedistributionSystem
         bool starvingSettlementReceivedAid = receiverStateBefore == FoodState.Starving && receivedFood > 0;
         bool largeTransfer = receiverNeedShare > SignificantAidShare;
         bool starvationPrevented = receiverStateBefore == FoodState.Starving && receiver.FoodState != FoodState.Starving;
+
+        if (starvingSettlementReceivedAid || largeTransfer)
+        {
+            Region receiverRegion = lookup.GetRequiredRegion(receiver.RegionId, "Settlement food aid");
+            WorldEventSeverity severity = largeTransfer || starvationPrevented
+                ? WorldEventSeverity.Major
+                : WorldEventSeverity.Minor;
+            world.AddEvent(
+                WorldEventType.FoodAidSent,
+                severity,
+                $"{sender.Name} sent grain to {receiver.Name}",
+                $"{sender.Name} shipped {shippedFood:F1} food to {receiver.Name}; {receivedFood:F1} arrived after {transportLoss:P0} loss.",
+                reason: starvationPrevented
+                    ? "starvation_relief_convoy"
+                    : starvingSettlementReceivedAid
+                        ? "starving_settlement_received_aid"
+                        : "large_internal_food_transfer",
+                scope: WorldEventScope.Local,
+                polityId: polity.Id,
+                polityName: polity.Name,
+                speciesId: polity.SpeciesId,
+                speciesName: lookup.GetRequiredSpecies(polity.SpeciesId, "Settlement food aid").Name,
+                regionId: receiverRegion.Id,
+                regionName: receiverRegion.Name,
+                settlementId: receiver.Id,
+                settlementName: receiver.Name,
+                before: new Dictionary<string, string>
+                {
+                    ["foodState"] = receiverStateBefore.ToString(),
+                    ["aidNeed"] = receiverNeedBefore.ToString("F1")
+                },
+                after: new Dictionary<string, string>
+                {
+                    ["foodState"] = receiver.FoodState.ToString(),
+                    ["aidReceived"] = receivedFood.ToString("F1")
+                },
+                metadata: new Dictionary<string, string>
+                {
+                    ["type"] = WorldEventType.FoodAidSent,
+                    ["location"] = receiverRegion.Name,
+                    ["actors"] = $"{sender.Name}|{receiver.Name}",
+                    ["cause"] = "intra_polity_food_redistribution",
+                    ["severity"] = severity.ToString(),
+                    ["senderSettlementId"] = sender.Id.ToString(),
+                    ["senderSettlementName"] = sender.Name,
+                    ["distance"] = distance.ToString(),
+                    ["transportLoss"] = transportLoss.ToString("F2")
+                });
+        }
 
         if (starvationPrevented)
         {
@@ -221,61 +280,96 @@ public sealed class SettlementFoodRedistributionSystem
                     ["transportLoss"] = transportLoss.ToString("F2")
                 });
         }
-        else if (starvingSettlementReceivedAid || largeTransfer)
-        {
-            Region receiverRegion = lookup.GetRequiredRegion(receiver.RegionId, "Settlement food aid");
-            WorldEventSeverity severity = largeTransfer
-                ? WorldEventSeverity.Major
-                : WorldEventSeverity.Minor;
-            world.AddEvent(
-                WorldEventType.FoodAidSent,
-                severity,
-                $"{sender.Name} sent grain to {receiver.Name}",
-                $"{sender.Name} shipped {shippedFood:F1} food to {receiver.Name}; {receivedFood:F1} arrived after {transportLoss:P0} loss.",
-                reason: starvingSettlementReceivedAid ? "starving_settlement_received_aid" : "large_internal_food_transfer",
-                scope: WorldEventScope.Local,
-                polityId: polity.Id,
-                polityName: polity.Name,
-                speciesId: polity.SpeciesId,
-                speciesName: lookup.GetRequiredSpecies(polity.SpeciesId, "Settlement food aid").Name,
-                regionId: receiverRegion.Id,
-                regionName: receiverRegion.Name,
-                settlementId: receiver.Id,
-                settlementName: receiver.Name,
-                before: new Dictionary<string, string>
-                {
-                    ["foodState"] = receiverStateBefore.ToString(),
-                    ["aidNeed"] = receiverNeedBefore.ToString("F1")
-                },
-                after: new Dictionary<string, string>
-                {
-                    ["foodState"] = receiver.FoodState.ToString(),
-                    ["aidReceived"] = receivedFood.ToString("F1")
-                },
-                metadata: new Dictionary<string, string>
-                {
-                    ["type"] = WorldEventType.FoodAidSent,
-                    ["location"] = receiverRegion.Name,
-                    ["actors"] = $"{sender.Name}|{receiver.Name}",
-                    ["cause"] = "intra_polity_food_redistribution",
-                    ["severity"] = severity.ToString(),
-                    ["senderSettlementId"] = sender.Id.ToString(),
-                    ["senderSettlementName"] = sender.Name,
-                    ["distance"] = distance.ToString(),
-                    ["transportLoss"] = transportLoss.ToString("F2")
-                });
-        }
     }
 
     private static void EmitAidFailedEvent(World world, WorldLookup lookup, Polity polity, Settlement settlement)
+        => EmitAidFailedEvent(
+            world,
+            lookup,
+            polity,
+            settlement,
+            settlement.StarvationStage,
+            settlement.LastAidReceived <= 0
+                ? $"No aid arrived. {settlement.Name} began to starve"
+                : $"{settlement.Name} began to starve",
+            settlement.LastAidReceived <= 0
+                ? $"{settlement.Name} entered a starving state after polity redistribution failed to reach it."
+                : $"{settlement.Name} entered a starving state despite receiving only partial relief.",
+            settlement.LastAidReceived <= 0
+                ? "settlement_starvation_began_unaided"
+                : "settlement_starvation_began");
+
+    private static void EvaluateSettlementStarvationTransition(World world, WorldLookup lookup, Polity polity, Settlement settlement)
+    {
+        SettlementStarvationStage previousStage = settlement.LastRecordedStarvationStage;
+        SettlementStarvationStage currentStage = settlement.StarvationStage;
+
+        if (currentStage == previousStage)
+        {
+            return;
+        }
+
+        // Settlement aid failure used to emit on every monthly starving tick.
+        // Track starvation stage explicitly so we only emit on meaningful changes.
+        if (currentStage == SettlementStarvationStage.None)
+        {
+            if (previousStage != SettlementStarvationStage.None && settlement.LastAidReceived <= 0)
+            {
+                EmitStarvationRecoveryEvent(world, lookup, polity, settlement, previousStage);
+            }
+
+            settlement.LastRecordedStarvationStage = currentStage;
+            return;
+        }
+
+        if (previousStage == SettlementStarvationStage.None)
+        {
+            EmitAidFailedEvent(world, lookup, polity, settlement);
+            settlement.LastRecordedStarvationStage = currentStage;
+            return;
+        }
+
+        if (currentStage > previousStage)
+        {
+            EmitAidFailedEvent(
+                world,
+                lookup,
+                polity,
+                settlement,
+                currentStage,
+                settlement.LastAidReceived <= 0
+                    ? $"No aid arrived. Starvation worsened in {settlement.Name}"
+                    : $"Starvation worsened in {settlement.Name}",
+                settlement.LastAidReceived <= 0
+                    ? $"{settlement.Name} fell deeper into starvation after no aid reached it."
+                    : $"{settlement.Name} fell deeper into starvation despite partial relief.",
+                settlement.LastAidReceived <= 0
+                    ? "settlement_starvation_worsened_unaided"
+                    : "settlement_starvation_worsened");
+        }
+
+        settlement.LastRecordedStarvationStage = currentStage;
+    }
+
+    private static void EmitAidFailedEvent(
+        World world,
+        WorldLookup lookup,
+        Polity polity,
+        Settlement settlement,
+        SettlementStarvationStage starvationStage,
+        string narrative,
+        string details,
+        string reason)
     {
         Region region = lookup.GetRequiredRegion(settlement.RegionId, "Settlement aid failure");
         world.AddEvent(
             WorldEventType.AidFailed,
-            WorldEventSeverity.Major,
-            $"No aid arrived. {settlement.Name} began to starve",
-            $"{settlement.Name} remained in a starving state after polity redistribution failed to reach it.",
-            reason: "no_internal_aid_arrived",
+            starvationStage >= SettlementStarvationStage.Severe
+                ? WorldEventSeverity.Legendary
+                : WorldEventSeverity.Major,
+            narrative,
+            details,
+            reason: reason,
             scope: WorldEventScope.Local,
             polityId: polity.Id,
             polityName: polity.Name,
@@ -288,6 +382,7 @@ public sealed class SettlementFoodRedistributionSystem
             after: new Dictionary<string, string>
             {
                 ["foodState"] = settlement.FoodState.ToString(),
+                ["starvationStage"] = starvationStage.ToString(),
                 ["aidReceived"] = settlement.LastAidReceived.ToString("F1")
             },
             metadata: new Dictionary<string, string>
@@ -296,7 +391,57 @@ public sealed class SettlementFoodRedistributionSystem
                 ["location"] = region.Name,
                 ["actors"] = settlement.Name,
                 ["cause"] = "intra_polity_food_redistribution_failed",
-                ["severity"] = WorldEventSeverity.Major.ToString()
+                ["severity"] = starvationStage >= SettlementStarvationStage.Severe
+                    ? WorldEventSeverity.Legendary.ToString()
+                    : WorldEventSeverity.Major.ToString(),
+                ["starvationStage"] = starvationStage.ToString()
+            });
+    }
+
+    private static void EmitStarvationRecoveryEvent(
+        World world,
+        WorldLookup lookup,
+        Polity polity,
+        Settlement settlement,
+        SettlementStarvationStage previousStage)
+    {
+        Region region = lookup.GetRequiredRegion(settlement.RegionId, "Settlement starvation recovery");
+        world.AddEvent(
+            WorldEventType.FamineRelief,
+            previousStage >= SettlementStarvationStage.Severe
+                ? WorldEventSeverity.Legendary
+                : WorldEventSeverity.Major,
+            $"{settlement.Name} recovered from starvation",
+            $"{settlement.Name} moved out of starvation without a new aid convoy in the current month.",
+            reason: "settlement_starvation_recovered",
+            scope: WorldEventScope.Local,
+            polityId: polity.Id,
+            polityName: polity.Name,
+            speciesId: polity.SpeciesId,
+            speciesName: lookup.GetRequiredSpecies(polity.SpeciesId, "Settlement starvation recovery").Name,
+            regionId: region.Id,
+            regionName: region.Name,
+            settlementId: settlement.Id,
+            settlementName: settlement.Name,
+            before: new Dictionary<string, string>
+            {
+                ["foodState"] = FoodState.Starving.ToString(),
+                ["starvationStage"] = previousStage.ToString()
+            },
+            after: new Dictionary<string, string>
+            {
+                ["foodState"] = settlement.FoodState.ToString(),
+                ["starvationStage"] = settlement.StarvationStage.ToString()
+            },
+            metadata: new Dictionary<string, string>
+            {
+                ["type"] = WorldEventType.FamineRelief,
+                ["location"] = region.Name,
+                ["actors"] = settlement.Name,
+                ["cause"] = "settlement_starvation_recovered",
+                ["severity"] = previousStage >= SettlementStarvationStage.Severe
+                    ? WorldEventSeverity.Legendary.ToString()
+                    : WorldEventSeverity.Major.ToString()
             });
     }
 

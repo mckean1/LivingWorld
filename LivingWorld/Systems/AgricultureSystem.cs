@@ -9,6 +9,12 @@ public sealed class AgricultureSystem
 {
     private const double BaseRegionalArableFactor = 0.60;
     private const double BaseYieldPerCultivatedLand = 1.35;
+    private readonly DomesticationSystem? _domesticationSystem;
+
+    public AgricultureSystem(DomesticationSystem? domesticationSystem = null)
+    {
+        _domesticationSystem = domesticationSystem;
+    }
 
     public void ProduceFarmFood(World world)
     {
@@ -58,17 +64,22 @@ public sealed class AgricultureSystem
 
                 UpdateCultivation(polity, settlement, allocatedLand);
 
-                double monthlyYield = CalculateSeasonalYield(polity, region, settlement.CultivatedLand, world.Time.Season);
+                double monthlyYield = CalculateSeasonalYield(polity, region, settlement, world.Time.Season, _domesticationSystem);
                 if (monthlyYield <= 0)
                 {
                     continue;
                 }
 
+                double managedCropBonus = _domesticationSystem?.GetCropManagedFoodBonus(settlement, monthlyYield) ?? 0.0;
                 polity.FoodFarmedThisMonth += monthlyYield;
                 polity.AnnualFoodFarmed += monthlyYield;
+                polity.FoodManagedThisMonth += managedCropBonus;
+                polity.AnnualFoodManaged += managedCropBonus;
                 polity.AnnualCultivatedLandTotal += settlement.CultivatedLand;
                 polity.FarmingMonthsThisYear++;
-                polity.FoodStores += monthlyYield;
+                polity.FoodStores += monthlyYield + managedCropBonus;
+                settlement.ManagedCropFoodThisMonth += managedCropBonus;
+                settlement.ManagedFoodThisYear += managedCropBonus;
             }
         }
 
@@ -276,8 +287,9 @@ public sealed class AgricultureSystem
         settlement.CultivatedLand = Math.Max(0, settlement.CultivatedLand);
     }
 
-    private static double CalculateSeasonalYield(Polity polity, Region region, double cultivatedLand, Season season)
+    private static double CalculateSeasonalYield(Polity polity, Region region, Settlement settlement, Season season, DomesticationSystem? domesticationSystem)
     {
+        double cultivatedLand = settlement.CultivatedLand;
         if (cultivatedLand <= 0)
         {
             return 0;
@@ -286,7 +298,7 @@ public sealed class AgricultureSystem
         double soilWaterQuality = (region.Fertility * 0.72) + (region.WaterAvailability * 0.28);
         double seasonalFactor = season switch
         {
-            Season.Winter => 0.12,
+            Season.Winter => 0.12 + (domesticationSystem?.GetCropSeasonalResilience(settlement) ?? 0.0),
             Season.Spring => 0.82,
             Season.Summer => 1.36,
             _ => 1.02

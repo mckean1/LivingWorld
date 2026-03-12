@@ -1,6 +1,7 @@
 using LivingWorld.Core;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
+using LivingWorld.Systems;
 using Xunit;
 
 namespace LivingWorld.Tests;
@@ -89,6 +90,38 @@ public sealed class EventPropagationTests
 
         Assert.Equal(3, world.Events.Count);
         Assert.Equal(new[] { 0, 1, 2 }, world.Events.Select(evt => evt.PropagationDepth).ToArray());
+    }
+
+    [Fact]
+    public void DomesticationPropagation_CanStabilizeSettlementAndFood()
+    {
+        World world = CreateWorld();
+        Polity polity = new(7, "River Clan", 1, 0, 80)
+        {
+            EventDrivenMigrationPressureBonus = 0.24
+        };
+        polity.EstablishFirstSettlement(0, "Coast Hearth");
+        world.Polities.Add(polity);
+        world.ConfigureEventPropagation(new EventPropagationCoordinator(
+            [new DomesticationPropagationHandler()],
+            maxDepth: 4,
+            maxEventsPerStep: 20));
+
+        world.AddEvent(
+            WorldEventType.AgricultureStabilizedFoodSupply,
+            WorldEventSeverity.Major,
+            "River Clan drew stable food from managed crops and herds",
+            reason: "managed_food_supply_stabilized",
+            scope: WorldEventScope.Polity,
+            polityId: polity.Id,
+            polityName: polity.Name,
+            speciesId: polity.SpeciesId,
+            speciesName: "People",
+            regionId: 0,
+            regionName: "Coast");
+
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.FoodStabilized && evt.Reason == "managed_food_stabilized_supply");
+        Assert.True(polity.EventDrivenMigrationPressureBonus < 0.24);
     }
 
     private static World CreateWorld()

@@ -217,6 +217,79 @@ public sealed class SettlementGroundedSystemsTests
     }
 
     [Fact]
+    public void SettlementRedistribution_AidFailure_IsOnlyEmittedWhenStarvationBegins()
+    {
+        World world = CreateWorld();
+        Polity polity = CreateSettledPolity(world, 82, "Stonefen Kin", 140, world.Regions[0].Id);
+        Settlement sender = polity.Settlements[0];
+        sender.CultivatedLand = 18;
+        Settlement starvingReceiver = polity.AddSettlement(world.Regions[1].Id, "Stonefen Hearth");
+
+        polity.FoodNeededThisMonth = 140;
+        polity.FoodFarmedThisMonth = 80;
+        polity.FoodGatheredThisMonth = 0;
+        polity.FoodStores = 0;
+        world.Polities.Add(polity);
+
+        SettlementFoodRedistributionSystem system = new();
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        Assert.Equal(1, world.Events.Count(evt => evt.Type == WorldEventType.AidFailed && evt.SettlementId == starvingReceiver.Id));
+    }
+
+    [Fact]
+    public void SettlementRedistribution_AidFailure_CanEscalateWhenStarvationWorsens()
+    {
+        World world = CreateWorld();
+        Polity polity = CreateSettledPolity(world, 83, "Stonefen Kin", 140, world.Regions[1].Id);
+        Settlement starvingSettlement = polity.Settlements[0];
+        world.Polities.Add(polity);
+
+        polity.FoodNeededThisMonth = 140;
+        polity.FoodFarmedThisMonth = 70;
+        polity.FoodGatheredThisMonth = 0;
+        polity.FoodStores = 0;
+
+        SettlementFoodRedistributionSystem system = new();
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        polity.FoodFarmedThisMonth = 10;
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        Assert.Contains(world.Events, evt =>
+            evt.Type == WorldEventType.AidFailed
+            && evt.SettlementId == starvingSettlement.Id
+            && evt.Reason == "settlement_starvation_worsened_unaided");
+    }
+
+    [Fact]
+    public void SettlementRedistribution_EmitsRecovery_WhenSettlementLeavesStarvationWithoutNewAid()
+    {
+        World world = CreateWorld();
+        Polity polity = CreateSettledPolity(world, 84, "Stonefen Kin", 140, world.Regions[1].Id);
+        Settlement starvingSettlement = polity.Settlements[0];
+        world.Polities.Add(polity);
+
+        polity.FoodNeededThisMonth = 140;
+        polity.FoodFarmedThisMonth = 70;
+        polity.FoodGatheredThisMonth = 0;
+        polity.FoodStores = 0;
+
+        SettlementFoodRedistributionSystem system = new();
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        polity.FoodFarmedThisMonth = 180;
+        starvingSettlement.FoodStored = 0;
+        system.UpdateMonthlyFoodStatesAndRedistribution(world);
+
+        Assert.Contains(world.Events, evt =>
+            evt.Type == WorldEventType.FamineRelief
+            && evt.SettlementId == starvingSettlement.Id
+            && evt.Reason == "settlement_starvation_recovered");
+    }
+
+    [Fact]
     public void Migration_RelocatesSettlementNetworkWithThePolity()
     {
         World world = CreateWorld();

@@ -152,6 +152,7 @@ Important traits:
 - only `Major+` turning points are shown in normal player mode
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
 - chronicle presentation now uses per-family visibility profiles with semantic scope keys, state signatures, and separate same-state versus changed-state cooldown gaps
+- when a visible event family has no custom state signature yet, chronicle presentation falls back to actor scope plus normalized narrative so exact repeated lines are still suppressed
 - the fixed top panel shows focal polity context such as species
 - the fixed top panel now also shows `RUNNING` / `PAUSED` and the active watch view
 - the fixed top panel separates discoveries from learned advancements
@@ -255,3 +256,20 @@ This layer does not introduce markets, prices, currency, or diplomacy. It is a l
 - move food along region-aware routes inside a polity
 - apply transport loss by regional distance
 - emit high-signal aid and famine-relief events through the normal world event pipeline
+
+## Phase 13/14 - Managed Food Architecture
+
+Domestication and cultivation now extend the same settlement-grounded architecture rather than creating a disconnected economy layer.
+
+- `DomesticationSystem` evaluates local animal and plant familiarity after gathering
+- `AgricultureSystem` still owns cultivated land and farm output, while cultivated crops now modify that output
+- settlement-managed food remains local first, gradual, and event-driven
+- `DomesticationPropagationHandler` turns meaningful domestication success into later stabilization follow-ups through the normal event pipeline
+- annual managed-food stabilization is now a polity state transition, not a yearly steady-state reminder
+
+The new managed-food entities stay population-level:
+
+- `ManagedHerd` tracks a domesticated animal variant, reliability, growth, and managed yield for one settlement
+- `CultivatedCrop` tracks a cultivated plant variant, yield multiplier, resilience, and stability effect for one settlement
+
+This keeps the model cheap, explicit, and extensible for later pack animals, labor animals, milk/fiber outputs, and selective breeding without replacing the current architecture.

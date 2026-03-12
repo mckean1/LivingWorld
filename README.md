@@ -118,6 +118,7 @@ Mutation reacts to same-season regional species exchange from the ecology pipeli
 Polity migration still relocates the whole polity network for now, but it now relocates the polity's actual settlement records too so settlement-grounded systems stay coherent.
 Regional adaptation events now emit on meaningful adaptation milestones rather than on repeated reaffirmation of the same condition, and chronicle presentation applies a dedicated adaptation cooldown key so the same species-region adaptation beat does not spam the live feed.
 Chronicle presentation now also uses semantic state signatures for noisy families such as hardship, recovery, migration, settlement stabilization, and regional ecology turns. The live feed can surface a changed state sooner than a repeated same-state reminder, while identical or near-identical beats remain in structured history only.
+Visible families that do not yet have a custom semantic profile still pass through a fallback chronicle state key built from actor scope plus normalized narrative, so exact repeated lines do not leak into the player feed year after year.
 
 ## Watch Controls
 
@@ -208,3 +209,16 @@ Phase 12 adds the first settlement-level logistics layer. Each monthly tick now 
 Settlements inside the same polity can redistribute food before downstream hardship systems react. Aid routes prioritize the same region first, then neighboring regions, then the closest reachable regions by hop distance. A sender can export at most 25% of its current surplus in a month, and each regional hop removes 5% of the shipment as transport loss.
 
 Large convoys, starvation relief, and failed aid attempts are recorded as structured events. Only `Major` and `Legendary` famine-relief outcomes surface in the chronicle; smaller transfers remain in structured history and inspection views.
+
+Settlement starvation beats are transition-based. The chronicle records when starvation begins, worsens meaningfully, or ends; it does not repeat the same unresolved hardship every tick or year.
+
+## Phase 13/14 - Domestication And Early Agriculture Expansion
+
+Phase 13/14 adds a managed-food layer between hunting/foraging and mature agricultural stability.
+
+- repeated hunting, prolonged local coexistence, and suitable traits can reveal animal domestication candidates
+- repeated plant use, settlement food pressure, fertile regions, and planning capability can reveal cultivable wild plants
+- `Discovery` still means learning that a species is useful or manageable
+- `Learned` still means gaining organized capability such as `SeasonalPlanning`, `FoodStorage`, or `Agriculture`
+
+Successful domestication creates lightweight settlement-level `ManagedHerd` and `CultivatedCrop` records. These do not simulate individual genetics, but they do improve food reliability, feed into settlement food state resolution, and create high-signal chronicle moments such as herd establishment, crop establishment, domestication spread, and the first transition into an established managed-food economy.
