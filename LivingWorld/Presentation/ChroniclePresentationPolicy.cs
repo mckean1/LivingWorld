@@ -12,7 +12,9 @@ public sealed class ChroniclePresentationPolicy
         {
             [WorldEventType.Migration] = new ChronicleCooldownRule(20, BuildChronicleScopeKey),
             [WorldEventType.SettlementConsolidated] = new ChronicleCooldownRule(25, BuildChronicleScopeKey),
-            [WorldEventType.FoodStress] = new ChronicleCooldownRule(15, BuildChronicleScopeKey)
+            [WorldEventType.FoodStress] = new ChronicleCooldownRule(15, BuildChronicleScopeKey),
+            [WorldEventType.SpeciesPopulationMajorMutation] = new ChronicleCooldownRule(24, BuildChronicleScopeKey),
+            [WorldEventType.SpeciesPopulationEvolutionaryTurningPoint] = new ChronicleCooldownRule(30, BuildChronicleScopeKey)
         };
     }
 
@@ -86,6 +88,9 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.PolityFounded or
             WorldEventType.StageChanged or
             WorldEventType.PolityCollapsed or
+            WorldEventType.SpeciesPopulationMajorMutation or
+            WorldEventType.SpeciesPopulationEvolutionaryTurningPoint or
+            WorldEventType.SpeciesPopulationAdaptedToRegion or
             WorldEventType.FocusHandoffFragmentation or
             WorldEventType.FocusHandoffCollapse or
             WorldEventType.FocusLineageContinued or

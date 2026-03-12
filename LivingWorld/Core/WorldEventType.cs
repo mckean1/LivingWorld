@@ -44,5 +44,10 @@ public static class WorldEventType
     public const string OverhuntingPressure = "overhunting_pressure";
     public const string EcosystemCollapse = "ecosystem_collapse";
     public const string LegendaryHunt = "legendary_hunt";
+    public const string SpeciesPopulationMutated = "species_population_mutated";
+    public const string SpeciesPopulationMajorMutation = "species_population_major_mutation";
+    public const string SpeciesPopulationIsolated = "species_population_isolated";
+    public const string SpeciesPopulationAdaptedToRegion = "species_population_adapted_to_region";
+    public const string SpeciesPopulationEvolutionaryTurningPoint = "species_population_evolutionary_turning_point";
     public const string WorldEvent = "world_event";
 }

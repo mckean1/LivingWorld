@@ -116,8 +116,13 @@ Selected fields:
 - `MigrationPressure`
 - recent predation, hunting, and food-stress markers
 - `SeasonsUnderPressure`
+- per-population trait offsets for Intelligence, Sociality, Aggression, Endurance, Fertility, DietFlexibility, ClimateTolerance, and Size
+- accumulated mutation pressure by cause: food stress, predation, hunting, habitat mismatch, isolation, crowding, and low-pressure drift
+- divergence tracking: `DivergenceScore`, `IsolationSeasons`, mutation counts, and milestone markers
+- seasonal exchange markers so isolation and migration shock can be resolved cleanly
 
 These entries are population-level only. LivingWorld still does not simulate individual animals or genetics.
+The global `Species` definition remains the ancestral baseline. Mutation and divergence now happen on `RegionSpeciesPopulation` so one regional lineage can adapt without rewriting the parent species everywhere else.
 
 ## Presentation And Persistence Types
 
@@ -144,3 +149,4 @@ These entries are population-level only. LivingWorld still does not simulate ind
 - propagation extends the same event stream instead of replacing it
 - storage order and display order are intentionally different
 - lower-severity and chronicle-suppressed events remain structured even when hidden from the live chronicle
+- divergence state is intentionally lightweight so future speciation or domesticated variants can promote an existing regional population instead of replacing the architecture

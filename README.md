@@ -9,6 +9,9 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - regions track explicit per-species populations with carrying capacity, suitability, migration pressure, and recent ecological pressure
 - seasonal ecosystem processing runs food-web interactions between producers, herbivores, omnivores, predators, and apex species
 - settlement hunting draws food from those same regional populations, can discover edible or toxic prey, and can create overhunting or legendary hunts
+- regional populations now also accumulate mutation pressure, isolation, divergence, and local trait offsets rather than mutating the global species baseline directly
+- mutation pressure comes from repeated food stress, predation, hunting, habitat mismatch, crowding near carrying capacity, migration shock, and prolonged isolation
+- evolved regional traits now feed back into hunting danger and difficulty, predator-prey outcomes, habitat fit, migration capability, and reproduction/survival rates
 - watch mode shows the focal polity species in the fixed status panel
 - watch mode also separates `Discoveries` from `Learned` advancements in that fixed status panel
 - visible chronicle lines keep polity names short and do not append species by default
@@ -74,9 +77,10 @@ The main chronicle continues to favor:
 - settlement founding and durable consolidation
 - food hardship entry, escalation, and recovery
 - legendary hunts, major overhunting, and severe ecosystem collapses
+- rare major mutation lineages, strong regional adaptation, and true evolutionary turning points when they matter to the focused historical line
 - fragmentation, collapse, and focus handoff events
 
-Internal follow-up events such as migration pressure, starvation risk, cultivation growth, and local tension remain structured-first unless they rise to the level of a true historical turning point.
+Internal follow-up events such as migration pressure, starvation risk, cultivation growth, local tension, minor mutation drift, and isolation milestones remain structured-first unless they rise to the level of a true historical turning point.
 
 ## Propagation Safeguards
 

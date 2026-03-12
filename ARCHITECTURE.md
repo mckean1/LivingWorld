@@ -18,6 +18,7 @@ Major systems:
 - regional species populations
 - ecosystem interactions
 - settlement hunting
+- mutation and divergence foundations
 - agriculture
 - trade
 - migration
@@ -135,6 +136,8 @@ Monthly:
 - seasonal regional species population update on season boundaries
 - seasonal ecosystem food-web processing on season boundaries
 - seasonal settlement hunting on season boundaries
+- seasonal mutation and divergence processing on season boundaries
+- seasonal extinction cleanup and biomass sync after mutation processing
 - gathering, farming, trade redistribution, consumption, migration
 - propagation state bonuses tick down
 - systems emit canonical events on meaningful transitions
@@ -159,4 +162,6 @@ The architecture continues to prioritize:
 - explainable cause-and-effect
 - concise chronicle presentation
 - regional ecology and hunting as shared simulation state rather than isolated subsystems
+- population-level biological divergence layered on regional populations rather than rewritten species definitions
+- future hooks for speciation, lineage naming, domestication variants, and cultural discovery of remarkable fauna
 - future alternate history views without rewriting simulation systems

@@ -8,13 +8,15 @@ LivingWorld runs the full world in monthly ticks. Player-facing output is live c
 2. seasonal regional species population update on season boundaries
 3. seasonal ecosystem predation and migration on season boundaries
 4. seasonal settlement hunting on season boundaries
-5. wild food gathering
-6. settlement farming output
-7. trade evaluation and food redistribution
-8. food consumption and starvation tracking
-9. migration evaluation and relocation
-10. structured events emitted immediately into the canonical event pipeline
-11. watch mode formats and displays qualifying focal-polity chronicle entries
+5. seasonal mutation and divergence update on season boundaries
+6. seasonal extinction cleanup and biomass sync on season boundaries
+7. wild food gathering
+8. settlement farming output
+9. trade evaluation and food redistribution
+10. food consumption and starvation tracking
+11. migration evaluation and relocation
+12. structured events emitted immediately into the canonical event pipeline
+13. watch mode formats and displays qualifying focal-polity chronicle entries
 
 ## Year-End Flow
 
@@ -67,6 +69,7 @@ It does not show:
 - routine monthly bookkeeping
 - most trade and telemetry internals
 - most ecosystem and hunting bookkeeping
+- most mutation pressure accumulation, isolation tracking, and minor trait drift
 - repeated status reminders that do not mark a new historical transition
 
 ## Debug Output

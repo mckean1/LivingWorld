@@ -17,8 +17,8 @@ public sealed class EcosystemSystem
             foreach (Species species in world.Species)
             {
                 RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
-                population.HabitatSuitability = CalculateHabitatSuitability(species, region);
-                population.CarryingCapacity = CalculateCarryingCapacity(species, region, population.HabitatSuitability);
+                population.HabitatSuitability = CalculateHabitatSuitability(species, population, region);
+                population.CarryingCapacity = CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
 
                 if (population.PopulationCount > 0 || population.CarryingCapacity <= 0)
                 {
@@ -42,6 +42,10 @@ public sealed class EcosystemSystem
         }
 
         ProcessMigration(world);
+    }
+
+    public void ResolveSeasonalCleanup(World world)
+    {
         ResolveExtinctions(world);
         SyncBiomeBiomass(world);
     }
@@ -51,9 +55,11 @@ public sealed class EcosystemSystem
         foreach (Species species in world.Species)
         {
             RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(species.Id);
-            population.HabitatSuitability = CalculateHabitatSuitability(species, region);
-            population.CarryingCapacity = CalculateCarryingCapacity(species, region, population.HabitatSuitability);
+            population.HabitatSuitability = CalculateHabitatSuitability(species, population, region);
+            population.CarryingCapacity = CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
             population.EstablishedThisSeason = false;
+            population.ReceivedMigrantsThisSeason = false;
+            population.SentMigrantsThisSeason = false;
         }
     }
 
@@ -78,12 +84,14 @@ public sealed class EcosystemSystem
                 : (double)previousPopulation / population.CarryingCapacity;
             double reproductionRate = species.BaseReproductionRate
                 * species.GetSeasonalReproductionModifier(world.Time.Season)
-                * population.HabitatSuitability;
+                * population.HabitatSuitability
+                * PopulationTraitResolver.ResolveReproductionModifier(species, population);
             double declineRate = species.BaseDeclineRate
                 + Math.Max(0.0, carryingRatio - 1.0) * 0.10
                 + (population.RecentFoodStress * 0.08)
                 + (population.RecentPredationPressure * 0.05)
                 + (population.RecentHuntingPressure * 0.06);
+            declineRate *= PopulationTraitResolver.ResolveDeclineModifier(species, population, population.HabitatSuitability);
 
             int births = (int)Math.Round(previousPopulation * Math.Max(0.0, reproductionRate) * Math.Max(0.15, 1.0 - Math.Clamp(carryingRatio, 0.0, 1.35)));
             int naturalLosses = (int)Math.Round(previousPopulation * Math.Max(0.0, declineRate));
@@ -92,7 +100,8 @@ public sealed class EcosystemSystem
             population.MigrationPressure = Math.Clamp(
                 (species.ExpansionPressure * 0.45) +
                 (Math.Max(0.0, carryingRatio - 0.85) * 0.65) +
-                (population.RecentFoodStress * 0.35),
+                (population.RecentFoodStress * 0.35) +
+                (Math.Max(0.0, 0.78 - population.HabitatSuitability) * 0.30),
                 0.0,
                 1.0);
 
@@ -157,8 +166,10 @@ public sealed class EcosystemSystem
                 Species preySpecies = world.Species.First(species => species.Id == preyPopulation.SpeciesId);
                 int preyBefore = preyPopulation.PopulationCount;
                 double demandShare = availableFood <= 0 ? 0.0 : preyBefore / availableFood;
-                double predationIntensity = predatorPopulation.PopulationCount * ResolvePredationFactor(predatorSpecies) * demandShare;
-                int preyLoss = (int)Math.Round(Math.Min(preyBefore * 0.18, predationIntensity));
+                double offense = ResolvePredationFactor(predatorSpecies) * PopulationTraitResolver.ResolvePredationOffense(predatorSpecies, predatorPopulation);
+                double defense = PopulationTraitResolver.ResolvePreyDefense(preySpecies, preyPopulation);
+                double predationIntensity = predatorPopulation.PopulationCount * offense * demandShare;
+                int preyLoss = (int)Math.Round(Math.Min(preyBefore * 0.18, predationIntensity / Math.Max(0.70, defense)));
                 if (preyLoss <= 0)
                 {
                     continue;
@@ -194,7 +205,7 @@ public sealed class EcosystemSystem
 
                 Region? target = world.Regions
                     .Where(candidate => region.ConnectedRegionIds.Contains(candidate.Id))
-                    .OrderByDescending(candidate => ScoreMigrationTarget(world, species, candidate))
+                    .OrderByDescending(candidate => ScoreMigrationTarget(world, species, sourcePopulation, candidate))
                     .FirstOrDefault();
 
                 if (target is null)
@@ -204,7 +215,8 @@ public sealed class EcosystemSystem
 
                 RegionSpeciesPopulation targetPopulation = target.GetOrCreateSpeciesPopulation(species.Id);
                 int sourceBefore = sourcePopulation.PopulationCount;
-                int transfer = (int)Math.Round(sourceBefore * Math.Min(0.16, (species.MigrationCapability * 0.10) + (sourcePopulation.MigrationPressure * 0.08)));
+                double migrationCapability = PopulationTraitResolver.GetEffectiveMigrationCapability(species, sourcePopulation);
+                int transfer = (int)Math.Round(sourceBefore * Math.Min(0.16, (migrationCapability * 0.10) + (sourcePopulation.MigrationPressure * 0.08)));
                 transfer = Math.Min(transfer, Math.Max(0, sourcePopulation.PopulationCount - 1));
                 if (transfer <= 0)
                 {
@@ -214,8 +226,10 @@ public sealed class EcosystemSystem
                 bool newlyEstablished = targetPopulation.PopulationCount == 0;
                 sourcePopulation.PopulationCount -= transfer;
                 targetPopulation.PopulationCount += transfer;
-                targetPopulation.HabitatSuitability = CalculateHabitatSuitability(species, target);
-                targetPopulation.CarryingCapacity = CalculateCarryingCapacity(species, target, targetPopulation.HabitatSuitability);
+                sourcePopulation.SentMigrantsThisSeason = true;
+                targetPopulation.ReceivedMigrantsThisSeason = true;
+                targetPopulation.HabitatSuitability = CalculateHabitatSuitability(species, targetPopulation, target);
+                targetPopulation.CarryingCapacity = CalculateCarryingCapacity(species, targetPopulation, target, targetPopulation.HabitatSuitability);
                 targetPopulation.EstablishedThisSeason = newlyEstablished;
 
                 if (newlyEstablished)
@@ -338,10 +352,10 @@ public sealed class EcosystemSystem
     private static double ResolveFoodNeedFactor(Species species)
         => species.TrophicRole switch
         {
-            TrophicRole.Herbivore => 0.80,
-            TrophicRole.Omnivore => 0.65,
-            TrophicRole.Predator => 0.48,
-            TrophicRole.Apex => 0.42,
+            TrophicRole.Herbivore => 0.76,
+            TrophicRole.Omnivore => 0.64,
+            TrophicRole.Predator => 0.50,
+            TrophicRole.Apex => 0.44,
             _ => 0.55
         };
 
@@ -354,12 +368,23 @@ public sealed class EcosystemSystem
             _ => 0.10
         };
 
-    private static double ScoreMigrationTarget(World world, Species species, Region target)
+    private static double ScoreMigrationTarget(World world, Species species, RegionSpeciesPopulation sourcePopulation, Region target)
     {
         RegionSpeciesPopulation? existing = target.GetSpeciesPopulation(species.Id);
-        double suitability = CalculateHabitatSuitability(species, target);
+        RegionSpeciesPopulation candidatePopulation = existing ?? new RegionSpeciesPopulation(species.Id, target.Id, 0)
+        {
+            IntelligenceOffset = sourcePopulation.IntelligenceOffset,
+            SocialityOffset = sourcePopulation.SocialityOffset,
+            AggressionOffset = sourcePopulation.AggressionOffset,
+            EnduranceOffset = sourcePopulation.EnduranceOffset,
+            FertilityOffset = sourcePopulation.FertilityOffset,
+            DietFlexibilityOffset = sourcePopulation.DietFlexibilityOffset,
+            ClimateToleranceOffset = sourcePopulation.ClimateToleranceOffset,
+            SizeOffset = sourcePopulation.SizeOffset
+        };
+        double suitability = CalculateHabitatSuitability(species, candidatePopulation, target);
         int localPopulation = existing?.PopulationCount ?? 0;
-        int carryingCapacity = CalculateCarryingCapacity(species, target, suitability);
+        int carryingCapacity = CalculateCarryingCapacity(species, candidatePopulation, target, suitability);
         double openness = carryingCapacity <= 0
             ? 0.0
             : Math.Clamp((double)(carryingCapacity - localPopulation) / carryingCapacity, 0.0, 1.0);
@@ -388,7 +413,7 @@ public sealed class EcosystemSystem
         return Math.Clamp(predatorPopulation / 250.0, 0.0, 1.0);
     }
 
-    private static double CalculateHabitatSuitability(Species species, Region region)
+    private static double CalculateHabitatSuitability(Species species, RegionSpeciesPopulation population, Region region)
     {
         double fertilityFit = 1.0 - Math.Abs(region.Fertility - species.FertilityPreference);
         double waterFit = 1.0 - Math.Abs(region.WaterAvailability - species.WaterPreference);
@@ -398,10 +423,11 @@ public sealed class EcosystemSystem
             0.0,
             1.4);
 
-        return Math.Clamp((fertilityFit * 0.35) + (waterFit * 0.25) + (biomassFit * 0.40), 0.05, 1.25);
+        double baseSuitability = Math.Clamp((fertilityFit * 0.35) + (waterFit * 0.25) + (biomassFit * 0.40), 0.05, 1.25);
+        return PopulationTraitResolver.AdjustHabitatSuitability(species, population, baseSuitability);
     }
 
-    private static int CalculateCarryingCapacity(Species species, Region region, double suitability)
+    private static int CalculateCarryingCapacity(Species species, RegionSpeciesPopulation population, Region region, double suitability)
     {
         double baseCapacity = species.TrophicRole switch
         {
@@ -413,7 +439,11 @@ public sealed class EcosystemSystem
             _ => 24
         };
 
-        return Math.Max(0, (int)Math.Round(baseCapacity * suitability * species.BaseCarryingCapacityFactor));
+        double dietFlexibility = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.DietFlexibility);
+        double climateTolerance = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.ClimateTolerance);
+        double size = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Size);
+        double capacityFactor = 0.84 + (dietFlexibility * 0.16) + (climateTolerance * 0.10) - (size * 0.12);
+        return Math.Max(0, (int)Math.Round(baseCapacity * suitability * species.BaseCarryingCapacityFactor * capacityFactor));
     }
 
     private static int CalculateInitialPopulation(Species species, int carryingCapacity, double habitatSuitability)

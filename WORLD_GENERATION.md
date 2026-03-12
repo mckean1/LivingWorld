@@ -10,6 +10,8 @@ World generation creates the starting simulation state: regions, species, and in
 4. initialize regional species populations from habitat suitability and carrying capacity
 5. generate starting polities from sapient species only
 
+World generation still creates only baseline species definitions. Mutation, divergence, and regional adaptation now begin from those starting populations during simulation rather than being pre-baked into world generation.
+
 ## Starting Chronicle Focus
 
 Watch mode begins by selecting one focal polity.
@@ -32,3 +34,4 @@ After generation:
 World generation does not produce a separate player-facing yearly report path.
 
 Regional species populations now exist before the first polity season resolves, so the first hunting and ecology phase has concrete prey, predators, and producers to work with.
+Those starting regional populations also now have clean divergence state slots, so future mutation, speciation, and domestication phases can build historical lineage change forward from generation year zero.

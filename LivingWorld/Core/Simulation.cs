@@ -11,6 +11,7 @@ public sealed class Simulation : IDisposable
     private readonly FoodSystem _foodSystem;
     private readonly EcosystemSystem _ecosystemSystem;
     private readonly HuntingSystem _huntingSystem;
+    private readonly MutationSystem _mutationSystem;
     private readonly AgricultureSystem _agricultureSystem;
     private readonly TradeSystem _tradeSystem;
     private readonly PopulationSystem _populationSystem;
@@ -34,6 +35,7 @@ public sealed class Simulation : IDisposable
         _foodSystem = new FoodSystem();
         _ecosystemSystem = new EcosystemSystem();
         _huntingSystem = new HuntingSystem();
+        _mutationSystem = new MutationSystem();
         _agricultureSystem = new AgricultureSystem();
         _tradeSystem = new TradeSystem();
         _populationSystem = new PopulationSystem();
@@ -109,6 +111,8 @@ public sealed class Simulation : IDisposable
         {
             _ecosystemSystem.UpdateSeason(_world);
             _huntingSystem.UpdateSeason(_world);
+            _mutationSystem.UpdateSeason(_world);
+            _ecosystemSystem.ResolveSeasonalCleanup(_world);
         }
         _foodSystem.GatherFood(_world);
         _agricultureSystem.ProduceFarmFood(_world);

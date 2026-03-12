@@ -10,6 +10,7 @@ Implemented core includes:
 - ecology and food systems
 - regional species populations and seasonal ecosystem interactions
 - settlement hunting tied to regional wildlife
+- mutation and regional divergence foundations
 - migration, settlement, population, fragmentation
 - advancement and capability effects
 - polity stage progression
@@ -33,6 +34,9 @@ Allow the same stored history to be rendered through different focal filters or 
 
 4. Domestication and ecology follow-through
 Build on hunting pressure, edible discovery, and domestication interest so repeatedly hunted species can become deliberate domestication candidates.
+
+5. Speciation follow-through
+Build on regional divergence, isolation, and mutation history so strongly diverged populations can split into named descendant lineages without replacing the current population-level foundation.
 
 ## Mid-Term Systems
 

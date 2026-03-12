@@ -77,6 +77,26 @@ Implemented chains:
 
 `all local populations gone -> global extinction`
 
+### Evolutionary Pressure
+
+Mutation and divergence now grow out of repeated simulation pressure rather than flavor-only randomness.
+
+Implemented chain:
+
+`repeated food stress -> mutation pressure toward diet flexibility, endurance, or smaller size`
+
+`repeated predation pressure -> mutation pressure toward endurance, aggression, or sociality`
+
+`repeated hunting pressure -> mutation pressure toward harder, more dangerous, or leaner prey populations`
+
+`migration shock + habitat mismatch -> mutation pressure toward climate tolerance and broader diet`
+
+`prolonged isolation -> higher divergence pressure and rare low-pressure drift`
+
+`crowding near carrying capacity -> mutation pressure toward smaller size, lower fertility, or broader resource use`
+
+`accumulated divergence -> mutation event -> ecological and hunting effects -> possible evolutionary turning point`
+
 ### Hunting Pressure
 
 Settlement hunting is now driven by regional species populations rather than abstract animal biomass.
@@ -130,6 +150,8 @@ Instead it favors:
 - condition worsening
 - condition improvement
 - durable recovery
+- accumulated pressure crossing mutation thresholds
+- divergence milestones that suggest a future speciation branch
 
 This is why yearly hardship transitions remain important: they summarize meaningful changes without narrating every month of unchanged suffering.
 

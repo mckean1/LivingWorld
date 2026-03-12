@@ -53,12 +53,12 @@ public sealed class HuntingSystem
             .OrderByDescending(population =>
             {
                 Species species = world.Species.First(candidate => candidate.Id == population.SpeciesId);
-                double expectedYield = species.MeatYield * Math.Min(population.PopulationCount, 20);
+                double expectedYield = PopulationTraitResolver.GetEffectiveMeatYield(species, population) * Math.Min(population.PopulationCount, 20);
                 double familiarity = polity.SuccessfulHuntsBySpecies.TryGetValue(species.Id, out int successes)
                     ? successes * 6.0
                     : 0.0;
-                double safetyPenalty = species.HuntingDanger * 45.0;
-                double difficultyPenalty = species.HuntingDifficulty * 35.0;
+                double safetyPenalty = PopulationTraitResolver.GetEffectiveHuntingDanger(species, population) * 45.0;
+                double difficultyPenalty = PopulationTraitResolver.GetEffectiveHuntingDifficulty(species, population) * 35.0;
                 double toxicPenalty = polity.KnownToxicSpeciesIds.Contains(species.Id) ? 90.0 : 0.0;
                 double knowledgeBonus = polity.KnownEdibleSpeciesIds.Contains(species.Id) ? 15.0 : 0.0;
                 double scarcityPenalty = population.CarryingCapacity <= 0
@@ -82,20 +82,23 @@ public sealed class HuntingSystem
             return;
         }
 
+        double effectiveDanger = PopulationTraitResolver.GetEffectiveHuntingDanger(targetSpecies, targetPopulation);
+        double effectiveDifficulty = PopulationTraitResolver.GetEffectiveHuntingDifficulty(targetSpecies, targetPopulation);
+        double effectiveYield = PopulationTraitResolver.GetEffectiveMeatYield(targetSpecies, targetPopulation);
         double knownEdibleBonus = polity.KnownEdibleSpeciesIds.Contains(targetSpecies.Id) ? 0.15 : 0.0;
         double priorSuccessBonus = polity.SuccessfulHuntsBySpecies.TryGetValue(targetSpecies.Id, out int successes)
             ? Math.Min(0.22, successes * 0.03)
             : 0.0;
-        double dangerPenalty = targetSpecies.HuntingDanger * 0.22;
-        double difficultyPenalty = targetSpecies.HuntingDifficulty * 0.28;
+        double dangerPenalty = effectiveDanger * 0.22;
+        double difficultyPenalty = effectiveDifficulty * 0.28;
         double accessibilityPenalty = (1.0 - targetPopulation.HabitatSuitability) * 0.18;
         double successChance = Math.Clamp(0.48 + knownEdibleBonus + priorSuccessBonus - dangerPenalty - difficultyPenalty - accessibilityPenalty, 0.12, 0.88);
 
         double huntPower = huntersCommitted * successChance;
         int harvestCap = Math.Max(1, (int)Math.Round(targetBefore * 0.16));
-        int huntedCount = Math.Min(harvestCap, Math.Max(0, (int)Math.Round(huntPower / Math.Max(1.0, 1.0 + targetSpecies.HuntingDifficulty * 2.5))));
-        double meatGained = huntedCount * targetSpecies.MeatYield;
-        int casualties = (int)Math.Round(huntersCommitted * targetSpecies.HuntingDanger * (successChance < 0.45 ? 0.12 : 0.05));
+        int huntedCount = Math.Min(harvestCap, Math.Max(0, (int)Math.Round(huntPower / Math.Max(1.0, 1.0 + effectiveDifficulty * 2.5))));
+        double meatGained = huntedCount * effectiveYield;
+        int casualties = (int)Math.Round(huntersCommitted * effectiveDanger * (successChance < 0.45 ? 0.12 : 0.05));
 
         if (targetSpecies.IsToxicToEat && !polity.KnownToxicSpeciesIds.Contains(targetSpecies.Id))
         {
@@ -247,8 +250,8 @@ public sealed class HuntingSystem
         double meatGained,
         int casualties)
     {
-        bool legendary = targetSpecies.HuntingDanger >= 0.60
-            && targetSpecies.MeatYield >= 20
+        bool legendary = PopulationTraitResolver.GetEffectiveHuntingDanger(targetSpecies, targetPopulation) >= 0.60
+            && PopulationTraitResolver.GetEffectiveMeatYield(targetSpecies, targetPopulation) >= 20
             && huntedCount >= Math.Max(2, targetBefore / 8);
 
         if (legendary)

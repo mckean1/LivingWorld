@@ -102,6 +102,9 @@ Structured-first follow-up types:
 - `schism_risk`
 - `local_tension`
 - `species_population_established`
+- `species_population_mutated`
+- `species_population_isolated`
+- `species_population_adapted_to_region`
 - `predator_pressure`
 - `prey_collapse`
 - `hunting_success`
@@ -114,6 +117,11 @@ Structured-first follow-up types:
 - `global_species_extinction`
 - `trade_transfer`
 - `trade_relief`
+
+Major biology-turn types that may surface when the focused line is meaningfully affected:
+
+- `species_population_major_mutation`
+- `species_population_evolutionary_turning_point`
 
 ## Chronicle Filtering Rules
 
@@ -131,6 +139,7 @@ The main chronicle favors:
 - learned capability breakthroughs such as agriculture
 - major hardship transitions such as shortages beginning and recovery
 - memorable hunts and major ecological collapses
+- rare evolutionary turns with strong local historical consequences
 - fragmentation, collapse, polity founding, and focus handoff beats
 
 ## Anti-Spam Rules

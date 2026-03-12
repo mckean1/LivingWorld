@@ -12,7 +12,7 @@ At year-end, for each polity:
 4. on success:
    - add advancement
    - refresh capabilities
-   - emit a `knowledge_discovered` `WorldEvent`
+   - emit a `learned_advancement` `WorldEvent`
 
 ## Inputs to Discovery Probability
 
@@ -38,6 +38,6 @@ Advancement events are not written directly to the console.
 
 They flow through:
 
-`AdvancementSystem -> World.AddEvent(knowledge_discovered) -> ChronicleEventFormatter / HistoryJsonlWriter`
+`AdvancementSystem -> World.AddEvent(learned_advancement) -> ChronicleEventFormatter / HistoryJsonlWriter`
 
 Breakthrough discoveries such as fire, agriculture, leadership traditions, and craft specialization are classified as `Major`, so they can appear in the default chronicle. Lower-level discoveries remain in structured history even when they do not surface live.

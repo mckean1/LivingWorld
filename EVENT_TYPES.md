@@ -107,6 +107,16 @@ Trade events are often structured-first, while their consequences may surface la
   - regional food-web instability became severe
 - `legendary_hunt`
   - rare high-risk major-prey hunt worthy of the main chronicle
+- `species_population_mutated`
+  - minor regional trait drift; usually structured/debug-first
+- `species_population_major_mutation`
+  - rare major lineage-level change with stronger ecological consequences
+- `species_population_isolated`
+  - prolonged separation without meaningful exchange
+- `species_population_adapted_to_region`
+  - regional lineage overcame sustained habitat mismatch
+- `species_population_evolutionary_turning_point`
+  - divergence milestone that may become chronicle-worthy
 
 ## Current Propagation Chains
 
@@ -171,6 +181,8 @@ Usually visible:
 - `polity_founded`
 - `stage_changed`
 - `polity_collapsed`
+- rare `species_population_major_mutation`
+- rare `species_population_evolutionary_turning_point`
 
 Usually structured-only unless escalated:
 
@@ -181,3 +193,6 @@ Usually structured-only unless escalated:
 - `schism_risk`
 - `local_tension`
 - most trade bookkeeping
+- `species_population_mutated`
+- `species_population_isolated`
+- most `species_population_adapted_to_region`
