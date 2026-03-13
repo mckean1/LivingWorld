@@ -236,3 +236,12 @@ Phase 17 adds a first-pass physical economy without introducing money, prices, m
 - repeated output plus geographic fit now create emergent specialization tags such as timber work, pottery, preservation, or toolmaking
 
 The main chronicle still stays high-signal. Routine extraction, per-material shortage churn, and convoy bookkeeping remain in structured history and inspection views. The visible chronicle now prefers grouped settlement-level material turns such as a broader material crisis beginning, worsening, or easing, alongside major milestones such as preservation established, sustained toolmaking, and settlement craft specialization.
+
+The canonical roadmap now points next to:
+
+- Phase 18 - Economy Interactions & Market Behavior
+- Phase 19 - External Trade, Trade Routes, and Inter-Polity Exchange
+- Phase 20 - Settlement Infrastructure & Construction
+- Phase 21 - Diplomacy, Raiding, and Conflict Foundations
+
+Those phases build directly on the existing settlement stockpile, redistribution, and specialization foundation. Chronicle dedupe tuning and later `Discoveries` / `Learned` full-list cleanup remain secondary UI follow-up work rather than replacing that next core simulation sequence.

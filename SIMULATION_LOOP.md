@@ -169,3 +169,12 @@ and before:
 
 That ordering matters because tools, pottery, preserved food, and convoy relief are meant to change the same month's later food and hardship outcomes.
 At the presentation layer, the material pass now also emits grouped settlement-level material-crisis beats after per-material pressure transitions are known, so the chronicle sees one historical turn instead of a burst of same-tick shortage lines.
+
+The next planned loop-facing expansions follow the canonical roadmap order:
+
+- Phase 18 adds stronger economic response behavior so shortages, surpluses, and need shift later production decisions
+- Phase 19 extends route logic into inter-polity exchange, imports, exports, and dependency pressure
+- Phase 20 adds infrastructure and construction sinks that turn repeated surplus into durable settlement capability
+- Phase 21 lets supply routes, scarcity, and cross-polity pressure generate diplomacy, raiding, and early conflict chains
+
+Further chronicle dedupe tuning and later `Discoveries` / `Learned` presentation cleanup remain secondary follow-up work around the same loop, not replacements for those next core systems.

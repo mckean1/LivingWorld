@@ -228,10 +228,57 @@ Implemented:
 
 ---
 
-# Next Feature To Implement
-**Phase 18 — To Be Decided**
+# Next Planned Phases
+
+## Phase 18 — Economy Interactions & Market Behavior
+**Status:** Planned
+
+Planned:
+- Demand pressure and consumption-pull behavior layered on top of existing settlement stockpiles and production chains
+- Scarcity-versus-surplus responses that create stronger material cause-and-effect across settlement decisions
+- Early value and price-signal foundations without requiring a full money simulation
+- Settlement production shifting toward local need and visible opportunity instead of staying mostly static
+- Stronger economy feedback loops so shortages, surpluses, and production choices shape later outcomes more clearly
 
 ---
 
-# Not Yet Implemented
-- Any later phases after Phase 17 must be decided from this list once the next roadmap pass is defined and synced
+## Phase 19 — External Trade, Trade Routes, and Inter-Polity Exchange
+**Status:** Planned
+
+Planned:
+- Trade behavior that extends beyond same-polity redistribution into foreign exchange
+- External trade links between polities with region-route consequences instead of abstract global access
+- Import and export behavior for settlements and polities with uneven local resource positions
+- Trade dependency pressures where important external goods can stabilize or expose a polity
+- Route-level exchange outcomes and event hooks that can feed chronicle, diplomacy, and disruption systems
+
+---
+
+## Phase 20 — Settlement Infrastructure & Construction
+**Status:** Planned
+
+Planned:
+- Long-term material sinks for settlement development so stockpiles convert into durable capability
+- Construction of infrastructure such as warehouses, workshops, roads, irrigation, mines, defenses, and docks
+- Settlement investment choices that shape storage, production reliability, logistics, extraction, and resilience
+- Stronger ties between geography, construction, and long-horizon settlement specialization
+- Foundations for later transport, defense, and economic scaling systems
+
+---
+
+## Phase 21 — Diplomacy, Raiding, and Conflict Foundations
+**Status:** Planned
+
+Planned:
+- Early diplomacy and conflict systems grounded in economy, logistics, and inter-polity pressure
+- Coercive resource competition between neighboring or connected polities
+- Raids, border pressure, and supply disruption as material and trade consequences rather than isolated combat abstractions
+- Conflict event chains that emerge from scarcity, dependency, convoy pressure, and territorial friction
+- Foundations for later political negotiation, retaliation, and broader warfare systems
+
+---
+
+# Later Follow-Up Areas
+- Continue player-facing chronicle dedupe tuning and visible major-event cleanup as more event families come online
+- Continue watch UI cleanup around `Discoveries` / `Learned`, including later fuller list and detail presentation improvements
+- Additional later phases should be added here only after the canonical roadmap is intentionally extended and synced across docs

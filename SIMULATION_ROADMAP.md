@@ -55,10 +55,11 @@ The first descendant-species pipeline now exists with explicit stabilization and
 
 ## Mid-Term Systems
 
-- knowledge diffusion
-- broader trade networks and specialization
-- cultural divergence
-- warfare and territorial conflict
+- Phase 18 - economy interactions and market behavior
+- Phase 19 - external trade, trade routes, and inter-polity exchange
+- Phase 20 - settlement infrastructure and construction
+- Phase 21 - diplomacy, raiding, and conflict foundations
+- later follow-through such as knowledge diffusion, cultural divergence, and richer history-view tooling
 
 All should continue to emit structured canonical events first.
 
@@ -102,7 +103,12 @@ Delivered scope:
 
 Natural next steps after this phase:
 
-- construction and building prerequisites using lumber and stone blocks
-- deeper metallurgy beyond simple tool tiers
-- contact-driven knowledge diffusion about foreign resource centers
-- infrastructure and transport improvements that reduce convoy loss
+- Phase 18 - economy interactions and market behavior so settlement need, scarcity, surplus, and opportunity alter production choices
+- Phase 19 - external trade, trade routes, and inter-polity exchange beyond same-polity redistribution
+- Phase 20 - settlement infrastructure and construction using materials as long-term development sinks
+- Phase 21 - diplomacy, raiding, and conflict foundations grounded in logistics, dependency, and supply disruption
+
+Secondary follow-up around the same roadmap:
+
+- continue chronicle dedupe and event-weight tuning as new high-signal families come online
+- continue later `Discoveries` / `Learned` UI cleanup and fuller list/history views without promoting them ahead of the next core simulation phases

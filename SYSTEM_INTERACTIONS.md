@@ -256,3 +256,12 @@ The result is still concrete and local:
 - major visible events only appear when the material state changes meaningfully, usually as one grouped settlement crisis beat rather than several same-tick per-material lines
 
 More broadly, player-facing major-event summaries now reuse the same visible dedupe identity as the live chronicle. That means a settlement recovery, famine turn, or grouped material crisis that already represents one visible historical outcome will not be repeated in summary views just because equivalent events exist underneath in canonical history.
+
+The canonical next interaction-focused phases now proceed in this order:
+
+- Phase 18 - economy interactions and market behavior deepen how settlement need, scarcity, and surplus alter production behavior
+- Phase 19 - external trade and inter-polity exchange add foreign links, imports, exports, route consequences, and dependency
+- Phase 20 - infrastructure and construction turn materials into long-term settlement capability, resilience, and logistics improvements
+- Phase 21 - diplomacy, raiding, and conflict foundations let those economic and route interactions create coercion, disruption, and border pressure
+
+Chronicle dedupe follow-through and later `Discoveries` / `Learned` list-view cleanup still matter, but they remain secondary player-facing follow-up work beside the next core system interactions.

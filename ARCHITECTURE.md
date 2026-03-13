@@ -292,3 +292,12 @@ This preserves LivingWorld's existing architecture rules:
 - routine operational state remains inspectable without spamming the chronicle
 - later construction, infrastructure, and inter-polity trade can build on the same stockpile model
 - player-facing major-event views now share a common dedupe identity so the live chronicle and visible-major-event summaries do not diverge on duplicate suppression
+
+The canonical next planned sequence after this material-economy foundation is:
+
+- Phase 18 - economy interactions and market behavior on top of current stockpiles, shortages, and specialization
+- Phase 19 - external trade, trade routes, and inter-polity exchange beyond same-polity redistribution
+- Phase 20 - settlement infrastructure and construction as durable material sinks and capability multipliers
+- Phase 21 - diplomacy, raiding, and conflict foundations grounded in logistics, dependency, and supply disruption
+
+Chronicle dedupe polish and later `Discoveries` / `Learned` list cleanup remain supporting presentation follow-through, not the primary next architecture phases.

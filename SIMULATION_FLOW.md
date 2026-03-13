@@ -151,3 +151,12 @@ The monthly material layer now follows this order inside a polity:
 This keeps the physical economy legible:
 
 `Regional Abundance -> Extraction -> Local Stockpile -> Production -> Consumption / Bonuses -> Pressure Classification -> Redistribution`
+
+From that flow, the canonical next roadmap sequence is:
+
+- Phase 18 - add stronger demand pull, scarcity response, and production shifting behavior
+- Phase 19 - extend exchange across polity boundaries through explicit trade routes and dependencies
+- Phase 20 - convert material output into lasting settlement infrastructure and construction sinks
+- Phase 21 - let those routes, dependencies, and shortages feed diplomacy, raiding, and conflict events
+
+Player-facing chronicle dedupe cleanup and later `Discoveries` / `Learned` full-list cleanup remain secondary UI follow-up work alongside those deeper simulation phases.
