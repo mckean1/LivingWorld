@@ -162,6 +162,20 @@ public sealed class SimulationBootstrapTests
         Assert.Equal("Year 0 - Green Hearth recovered from a broader material crisis.", recoveryLine);
     }
 
+    [Fact]
+    public void PauseBeforeStart_SeedsSimulationWatchStateAsPaused()
+    {
+        World world = CreateBootstrapWorld();
+
+        using Simulation simulation = new(world, new SimulationOptions
+        {
+            PauseBeforeStart = true
+        });
+
+        Assert.True(simulation.IsWatchPaused);
+        Assert.Equal(WorldSimulationPhase.Active, world.SimulationPhase);
+    }
+
     private static World CreateBootstrapWorld()
     {
         World world = new(new WorldTime(0, 1));

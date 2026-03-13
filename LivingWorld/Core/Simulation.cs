@@ -73,7 +73,7 @@ public sealed class Simulation : IDisposable
         _chronicleWatchRenderer = new ChronicleWatchRenderer(_options, _chronicleColorWriter, _chronicleEventFormatter);
 
         _chronicleFocus = new ChronicleFocus();
-        _watchUiState = new WatchUiState();
+        _watchUiState = new WatchUiState(_options.PauseBeforeStart);
         _watchInputController = new WatchInputController(_watchUiState);
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
         _performanceTracker = new SimulationPerformanceTracker(_options.EnablePerformanceInstrumentation);
@@ -174,6 +174,9 @@ public sealed class Simulation : IDisposable
 
         _chronicleWatchRenderer.Dispose();
     }
+
+    internal bool IsWatchPaused
+        => _watchUiState.IsPaused;
 
     private void RunTick()
     {

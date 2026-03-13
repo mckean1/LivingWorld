@@ -24,7 +24,7 @@ class Program
         SimulationOptions options = CreateSimulationOptions(programOptions);
         using Simulation simulation = new(world, options);
 
-        if (options.PauseBeforeStart)
+        if (ShouldPromptBeforeStart(options))
         {
             Console.WriteLine("Press any key to start simulation.");
             Console.ReadKey();
@@ -63,6 +63,9 @@ class Program
             EnablePerformanceInstrumentation = programOptions.EnablePerformanceInstrumentation
         };
     }
+
+    internal static bool ShouldPromptBeforeStart(SimulationOptions options)
+        => options.PauseBeforeStart && options.OutputMode != OutputMode.Watch;
 
     private static void PrintUsage()
     {

@@ -6,6 +6,11 @@ public sealed class WatchUiState
     private readonly Dictionary<WatchViewType, int> _scrollOffsets = [];
     private readonly Stack<WatchUiSnapshot> _backStack = [];
 
+    public WatchUiState(bool isPaused = false)
+    {
+        IsPaused = isPaused;
+    }
+
     public WatchViewType ActiveView { get; private set; } = WatchViewType.Chronicle;
 
     public bool IsPaused { get; private set; }
@@ -22,6 +27,9 @@ public sealed class WatchUiState
 
     public void TogglePaused()
         => IsPaused = !IsPaused;
+
+    public void SetPaused(bool isPaused)
+        => IsPaused = isPaused;
 
     public void SetActiveMainView(WatchViewType view)
     {
