@@ -295,7 +295,15 @@ This preserves LivingWorld's existing architecture rules:
 
 The canonical next planned sequence after this material-economy foundation is:
 
-- Phase 18 - economy interactions and market behavior on top of current stockpiles, shortages, and specialization
+Phase 18 is now implemented on top of that stockpile model:
+
+- the economy remains hybrid and pressure-based internally rather than becoming a player-facing price screen
+- settlements now keep smoothed need, value, opportunity, production-focus, and external-pull readiness signals
+- those signals feed extraction, recipe choice, redistribution priority, bottleneck handling, and specialization drift
+- player-facing summaries stay label-based and readable instead of exposing raw market math
+
+The canonical next planned sequence is now:
+
 - Phase 19 - external trade, trade routes, and inter-polity exchange beyond same-polity redistribution
 - Phase 20 - settlement infrastructure and construction as durable material sinks and capability multipliers
 - Phase 21 - diplomacy, raiding, and conflict foundations grounded in logistics, dependency, and supply disruption

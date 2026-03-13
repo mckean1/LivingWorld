@@ -257,9 +257,15 @@ The result is still concrete and local:
 
 More broadly, player-facing major-event summaries now reuse the same visible dedupe identity as the live chronicle. That means a settlement recovery, famine turn, or grouped material crisis that already represents one visible historical outcome will not be repeated in summary views just because equivalent events exist underneath in canonical history.
 
+Phase 18 now deepens those interactions internally:
+
+- settlement need, scarcity, and surplus feed hidden value and opportunity signals
+- those signals alter extraction, production focus, convoy priority, and specialization drift
+- persistent surplus can produce trade-good identity, while bottlenecks can suppress favored output and create explainable downstream weakness
+- the watch UI reads those interactions through small readable labels rather than exposing raw market equations
+
 The canonical next interaction-focused phases now proceed in this order:
 
-- Phase 18 - economy interactions and market behavior deepen how settlement need, scarcity, and surplus alter production behavior
 - Phase 19 - external trade and inter-polity exchange add foreign links, imports, exports, route consequences, and dependency
 - Phase 20 - infrastructure and construction turn materials into long-term settlement capability, resilience, and logistics improvements
 - Phase 21 - diplomacy, raiding, and conflict foundations let those economic and route interactions create coercion, disruption, and border pressure

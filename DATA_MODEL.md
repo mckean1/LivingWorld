@@ -332,3 +332,33 @@ New economy types:
 - `SettlementSpecializationTag`
 
 These remain lightweight settlement-level records rather than a full market model. Regions provide abundance, settlements convert that capacity into stockpiled materials, and the event stream records major material transitions.
+
+## Phase 18 Additions
+
+`Settlement` now also carries lightweight economy-signal state for each `MaterialType`:
+
+- `MaterialNeedPressures`
+- `MaterialAvailabilityScores`
+- `MaterialValueScores`
+- `MaterialOpportunityScores`
+- `MaterialExternalPullReadiness`
+- `MaterialProductionFocusScores`
+- `LastRecordedHighlyValuedBands`
+- `LastRecordedTradeGoodStates`
+- `HighlyValuedMaterials`
+- `TradeGoodMaterials`
+- `LocallyCommonMaterials`
+- `DominantProductionFocusMaterial`
+- `CandidateProductionFocusMaterial`
+- `CandidateProductionFocusMonths`
+- `ProductionFocusShiftCooldownMonths`
+
+New economy type:
+
+- `EconomySummaryLabel`
+
+These additions keep the model hybrid:
+
+- internal numeric pressure stays simulation-side
+- player-facing screens consume readable labels built from those signals
+- no currency, coin inventory, or explicit buy/sell market table is added in this phase

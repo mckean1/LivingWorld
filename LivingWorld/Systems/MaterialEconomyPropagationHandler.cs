@@ -11,7 +11,9 @@ public sealed class MaterialEconomyPropagationHandler : IWorldEventHandler
             WorldEventType.PreservationEstablished or
             WorldEventType.ToolmakingEstablished or
             WorldEventType.MaterialConvoySent or
-            WorldEventType.SettlementSpecialized;
+            WorldEventType.SettlementSpecialized or
+            WorldEventType.TradeGoodEstablished or
+            WorldEventType.ProductionBottleneckHit;
 
     public IEnumerable<WorldEvent> Handle(World world, WorldEvent worldEvent)
     {
@@ -123,6 +125,20 @@ public sealed class MaterialEconomyPropagationHandler : IWorldEventHandler
         {
             polity.EventDrivenSettlementChanceBonus = Math.Max(polity.EventDrivenSettlementChanceBonus, 0.03);
             polity.SettlementChanceBonusMonthsRemaining = Math.Max(polity.SettlementChanceBonusMonthsRemaining, 8);
+            yield break;
+        }
+
+        if (worldEvent.Type == WorldEventType.TradeGoodEstablished)
+        {
+            polity.EventDrivenSettlementChanceBonus = Math.Max(polity.EventDrivenSettlementChanceBonus, 0.04);
+            polity.SettlementChanceBonusMonthsRemaining = Math.Max(polity.SettlementChanceBonusMonthsRemaining, 10);
+            yield break;
+        }
+
+        if (worldEvent.Type == WorldEventType.ProductionBottleneckHit)
+        {
+            polity.EventDrivenMigrationPressureBonus = Math.Max(polity.EventDrivenMigrationPressureBonus, 0.03);
+            polity.MigrationPressureBonusMonthsRemaining = Math.Max(polity.MigrationPressureBonusMonthsRemaining, 4);
         }
     }
 }

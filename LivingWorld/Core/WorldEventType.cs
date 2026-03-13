@@ -56,6 +56,10 @@ public static class WorldEventType
     public const string SettlementSpecialized = "settlement_specialized";
     public const string PreservationEstablished = "preservation_established";
     public const string ToolmakingEstablished = "toolmaking_established";
+    public const string MaterialHighlyValued = "material_highly_valued";
+    public const string ProductionFocusShifted = "production_focus_shifted";
+    public const string ProductionBottleneckHit = "production_bottleneck_hit";
+    public const string TradeGoodEstablished = "trade_good_established";
     public const string SpeciesPopulationEstablished = "species_population_established";
     public const string SpeciesPopulationRecolonized = "species_population_recolonized";
     public const string LocalSpeciesExtinction = "local_species_extinction";

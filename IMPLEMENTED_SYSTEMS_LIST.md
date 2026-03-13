@@ -1,4 +1,4 @@
-# LivingWorld — Implemented Systems List
+# LivingWorld - Implemented Systems List
 
 This document is the canonical source of truth for:
 - what has been implemented
@@ -13,20 +13,20 @@ A feature is not fully complete until:
 
 ---
 
-## Phase 1 — Core World Simulation Foundations
+## Phase 1 - Core World Simulation Foundations
 **Status:** Complete
 
 Implemented:
 - Core simulation loop foundation
 - Monthly tick-based simulation structure with seasonal logic layered on top
-- Society → civilization progression foundation
+- Society -> civilization progression foundation
 - Aggregated population model
 - Early polity/society lifecycle foundations
 - Single-continent world generation baseline
 
 ---
 
-## Phase 2 — Settlement, Food, and Survival Foundations
+## Phase 2 - Settlement, Food, and Survival Foundations
 **Status:** Complete
 
 Implemented:
@@ -38,12 +38,12 @@ Implemented:
 
 ---
 
-## Phase 3 — Knowledge, Advancement, and Discovery Foundations
+## Phase 3 - Knowledge, Advancement, and Discovery Foundations
 **Status:** Complete
 
 Implemented:
 - Capability-based advancement system foundation
-- “Learned” capability model
+- "Learned" capability model
 - Discovery model distinct from advancements
 - Cultural knowledge vs polity knowledge distinction
 - Discovery terminology and log wording direction
@@ -51,7 +51,7 @@ Implemented:
 
 ---
 
-## Phase 4 — Chronicle and Player-Facing History Foundations
+## Phase 4 - Chronicle and Player-Facing History Foundations
 **Status:** Complete
 
 Implemented:
@@ -62,7 +62,7 @@ Implemented:
 
 ---
 
-## Phase 5 — Event Architecture and Cause-and-Effect Systems
+## Phase 5 - Event Architecture and Cause-and-Effect Systems
 **Status:** Complete
 
 Implemented:
@@ -75,7 +75,7 @@ Implemented:
 
 ---
 
-## Phase 6 — Chronicle Filtering and Focus Systems
+## Phase 6 - Chronicle Filtering and Focus Systems
 **Status:** Complete
 
 Implemented:
@@ -87,7 +87,7 @@ Implemented:
 
 ---
 
-## Phase 7 — Watch Mode and Chronicle UI Foundations
+## Phase 7 - Watch Mode and Chronicle UI Foundations
 **Status:** Complete
 
 Implemented:
@@ -101,7 +101,7 @@ Implemented:
 
 ---
 
-## Phase 8 — Regional Resource System
+## Phase 8 - Regional Resource System
 **Status:** Complete
 
 Implemented:
@@ -112,7 +112,7 @@ Implemented:
 
 ---
 
-## Phase 9 — Regional Species Population and Ecology System
+## Phase 9 - Regional Species Population and Ecology System
 **Status:** Complete
 
 Implemented:
@@ -126,7 +126,7 @@ Implemented:
 
 ---
 
-## Phase 10 — Hunting and Settlement-Grounded Food Interaction
+## Phase 10 - Hunting and Settlement-Grounded Food Interaction
 **Status:** Complete
 
 Implemented:
@@ -141,7 +141,7 @@ Implemented:
 
 ---
 
-## Phase 11 — Mutation, Divergence, and Speciation
+## Phase 11 - Mutation, Divergence, and Speciation
 **Status:** Complete
 
 Implemented:
@@ -155,7 +155,7 @@ Implemented:
 
 ---
 
-## Phase 12 — Predator Ecology Improvements
+## Phase 12 - Predator Ecology Improvements
 **Status:** Complete
 
 Implemented:
@@ -166,7 +166,7 @@ Implemented:
 
 ---
 
-## Phase 13 — World Visibility and Navigation UI
+## Phase 13 - World Visibility and Navigation UI
 **Status:** Complete
 
 Implemented:
@@ -179,7 +179,7 @@ Implemented:
 
 ---
 
-## Phase 14 — Focal Polity UI and Routing Corrections
+## Phase 14 - Focal Polity UI and Routing Corrections
 **Status:** Complete
 
 Implemented:
@@ -190,7 +190,7 @@ Implemented:
 
 ---
 
-## Phase 15 — Regional Trade and Resource Exchange
+## Phase 15 - Regional Trade and Resource Exchange
 **Status:** Complete
 
 Implemented:
@@ -201,7 +201,7 @@ Implemented:
 
 ---
 
-## Phase 16 — Domestication and Early Agriculture Expansion
+## Phase 16 - Domestication and Early Agriculture Expansion
 **Status:** Complete
 
 Implemented:
@@ -213,7 +213,7 @@ Implemented:
 
 ---
 
-## Phase 17 — Material Economy & Production Chains
+## Phase 17 - Material Economy & Production Chains
 **Status:** Complete
 
 Implemented:
@@ -228,21 +228,25 @@ Implemented:
 
 ---
 
-# Next Planned Phases
+## Phase 18 - Economy Interactions & Market Behavior
+**Status:** Complete
 
-## Phase 18 — Economy Interactions & Market Behavior
-**Status:** Planned
-
-Planned:
-- Demand pressure and consumption-pull behavior layered on top of existing settlement stockpiles and production chains
-- Scarcity-versus-surplus responses that create stronger material cause-and-effect across settlement decisions
-- Early value and price-signal foundations without requiring a full money simulation
-- Settlement production shifting toward local need and visible opportunity instead of staying mostly static
-- Stronger economy feedback loops so shortages, surpluses, and production choices shape later outcomes more clearly
+Implemented:
+- Hybrid economy behavior with hidden internal pressure and value scoring instead of an exposed money or price dashboard
+- Settlement-level economy signals for need pressure, availability, value, production focus, surplus opportunity, and later external-pull readiness
+- Scarcity-versus-surplus behavior that now shifts extraction, production, redistribution priority, and specialization drift
+- Production focus smoothing and anti-thrashing safeguards so settlements adapt over time without unrealistic monthly flip-flopping
+- High-value and trade-good identity emergence for goods that remain strategically useful or repeatedly exceed local need
+- Bottleneck-aware cause-and-effect where constrained inputs can stall favored output and explain why a settlement changed direction
+- Player-facing economy summaries using readable labels such as `Shortage`, `Stable`, `Surplus`, `Highly Valued`, `Trade Good`, and `Locally Common`
+- New structured economy-interaction event families for highly valued materials, production-focus shifts, bottlenecks, and trade-good emergence
+- Chronicle-safe handling where only true major economy turns surface live while lower-level market-like pressure remains in structured history
 
 ---
 
-## Phase 19 — External Trade, Trade Routes, and Inter-Polity Exchange
+# Next Planned Phases
+
+## Phase 19 - External Trade, Trade Routes, and Inter-Polity Exchange
 **Status:** Planned
 
 Planned:
@@ -254,7 +258,7 @@ Planned:
 
 ---
 
-## Phase 20 — Settlement Infrastructure & Construction
+## Phase 20 - Settlement Infrastructure & Construction
 **Status:** Planned
 
 Planned:
@@ -266,7 +270,7 @@ Planned:
 
 ---
 
-## Phase 21 — Diplomacy, Raiding, and Conflict Foundations
+## Phase 21 - Diplomacy, Raiding, and Conflict Foundations
 **Status:** Planned
 
 Planned:

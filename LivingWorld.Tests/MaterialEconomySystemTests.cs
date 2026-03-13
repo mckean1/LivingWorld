@@ -149,6 +149,98 @@ public sealed class MaterialEconomySystemTests
         Assert.Equal(1, world.Events.Count(evt => evt.Type == WorldEventType.MaterialCrisisStarted && evt.SettlementId == settlement.Id));
     }
 
+    [Fact]
+    public void MonthlyMaterialUpdate_BuildsNeedValueAndOpportunitySignals()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        region.ClayAbundance = 0.92;
+        region.FiberAbundance = 0.35;
+        region.SaltAbundance = 0.74;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 42;
+        polity.FoodStores = 10;
+        polity.FoodNeededThisMonth = 42;
+
+        MaterialEconomySystem system = new();
+        system.UpdateMonthlyMaterials(world);
+
+        Assert.True(settlement.MaterialNeedPressures[MaterialType.PreservedFood] > 0.50);
+        Assert.True(settlement.MaterialValueScores[MaterialType.PreservedFood] > settlement.MaterialValueScores[MaterialType.Wood]);
+        Assert.True(settlement.MaterialOpportunityScores[MaterialType.Pottery] > settlement.MaterialOpportunityScores[MaterialType.Textiles]);
+    }
+
+    [Fact]
+    public void DemandAndOpportunityShiftProductionTowardSupportedGoods()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        region.ClayAbundance = 0.95;
+        region.FiberAbundance = 0.28;
+        region.SaltAbundance = 0.82;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 40;
+        polity.FoodStores = 90;
+        polity.FoodNeededThisMonth = 40;
+
+        MaterialEconomySystem system = new();
+        for (int month = 0; month < 4; month++)
+        {
+            system.UpdateMonthlyMaterials(world);
+        }
+
+        Assert.True(settlement.MaterialProducedThisYear[MaterialType.Pottery] > settlement.MaterialProducedThisYear[MaterialType.Textiles]);
+        Assert.True(settlement.MaterialProductionFocusScores[MaterialType.Pottery] > settlement.MaterialProductionFocusScores[MaterialType.Textiles]);
+    }
+
+    [Fact]
+    public void SingleMonthPressureSpike_DoesNotImmediatelyThrashProductionFocus()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        region.ClayAbundance = 0.94;
+        region.FiberAbundance = 0.20;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 34;
+        settlement.DominantProductionFocusMaterial = MaterialType.SimpleTools;
+
+        MaterialEconomySystem system = new();
+        system.UpdateMonthlyMaterials(world);
+
+        Assert.Equal(MaterialType.SimpleTools, settlement.DominantProductionFocusMaterial);
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.ProductionFocusShifted);
+    }
+
+    [Fact]
+    public void EconomyTransitions_EmitHighValueAndTradeGoodSignals()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        region.ClayAbundance = 0.96;
+        region.SaltAbundance = 0.88;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 48;
+        polity.FoodStores = 8;
+        polity.FoodNeededThisMonth = 48;
+
+        MaterialEconomySystem system = new();
+        for (int month = 0; month < 8; month++)
+        {
+            system.UpdateMonthlyMaterials(world);
+        }
+
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.MaterialHighlyValued && evt.SettlementId == settlement.Id);
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.TradeGoodEstablished && evt.SettlementId == settlement.Id);
+    }
+
     private static World CreateWorld()
     {
         World world = new(new WorldTime(120, 6));

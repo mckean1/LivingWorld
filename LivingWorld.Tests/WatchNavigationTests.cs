@@ -250,6 +250,33 @@ public sealed class WatchNavigationTests
     }
 
     [Fact]
+    public void MyPolity_ShowsEconomySignalLabels()
+    {
+        World world = CreateWorld();
+        Polity polity = world.Polities.First(candidate => candidate.Id == 7);
+        Settlement settlement = polity.Settlements[0];
+        settlement.MaterialPressureStates[MaterialType.Pottery] = MaterialPressureState.Deficit;
+        settlement.HighlyValuedMaterials.Add(MaterialType.Pottery);
+        settlement.TradeGoodMaterials.Add(MaterialType.Textiles);
+        settlement.LocallyCommonMaterials.Add(MaterialType.Wood);
+        settlement.DominantProductionFocusMaterial = MaterialType.Pottery;
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.MyPolity);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, focus, uiState);
+
+        Assert.Contains(lines, line => line.Contains("Economy Needs: ", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Trade Goods: ", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Locally Common: ", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Highly Valued", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Trade Good", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Locally Common", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void RegionDetail_ShowsExtractableResources_AndLocalProduction()
     {
         World world = CreateWorld();
@@ -394,6 +421,41 @@ public sealed class WatchNavigationTests
 
         Assert.Contains(visibleEvents, evt => evt.Narrative.Contains("Gloam Fen Hearth recovered from starvation", StringComparison.Ordinal));
         Assert.Contains(visibleEvents, evt => evt.Narrative.Contains("Gloam Fen Hearth recovered from a broader material crisis", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void VisibleMajorEvents_DedupesDuplicateTradeGoodTurns()
+    {
+        World world = CreateWorld();
+        for (int index = 0; index < 2; index++)
+        {
+            world.AddEvent(
+                WorldEventType.TradeGoodEstablished,
+                WorldEventSeverity.Major,
+                "Green Hearth became known for pottery as a trade good",
+                reason: "trade_good_established",
+                scope: WorldEventScope.Local,
+                polityId: 7,
+                polityName: "Deepfield Tribe",
+                speciesId: 1,
+                speciesName: "Humans",
+                regionId: 0,
+                regionName: "Green Barrow",
+                settlementId: 7001,
+                settlementName: "Green Hearth",
+                metadata: new Dictionary<string, string>
+                {
+                    ["materialType"] = "Pottery"
+                });
+        }
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchKnowledgeSnapshot snapshot = WatchInspectionData.CreateSnapshot(world, focus);
+
+        IReadOnlyList<WorldEvent> visibleEvents = snapshot.GetVisibleMajorEvents(world, limit: 10);
+
+        Assert.Equal(1, visibleEvents.Count(evt => evt.Type == WorldEventType.TradeGoodEstablished));
     }
 
     private static World CreateWorld()

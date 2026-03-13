@@ -14,6 +14,11 @@ public sealed class MaterialEconomySystem
     private const double MaterialExportShareLimitPerMonth = 0.30;
     private const double TransportLossPerHop = 0.05;
     private const double SignificantConvoyShare = 0.35;
+    private const double SignalSmoothing = 0.35;
+    private const double TradeGoodScoreThreshold = 1.15;
+    private const double HighlyValuedScoreThreshold = 1.35;
+    private const double FocusShiftScoreThreshold = 1.05;
+    private const int FocusShiftConfirmationMonths = 3;
 
     private static readonly MaterialType[] RawMaterials =
     [
@@ -24,6 +29,17 @@ public sealed class MaterialEconomySystem
         MaterialType.Salt,
         MaterialType.CopperOre,
         MaterialType.IronOre
+    ];
+
+    private static readonly MaterialType[] ProducedMaterials =
+    [
+        MaterialType.Lumber,
+        MaterialType.StoneBlocks,
+        MaterialType.Pottery,
+        MaterialType.Rope,
+        MaterialType.Textiles,
+        MaterialType.SimpleTools,
+        MaterialType.PreservedFood
     ];
 
     private static readonly MaterialType[] RedistributionPriority =
@@ -68,9 +84,19 @@ public sealed class MaterialEconomySystem
             {
                 settlement.ResetMonthlyMaterialStats();
                 SetTargetReserves(polity, settlement);
+            }
+
+            UpdateSettlementMaterialPressure(polity.Settlements);
+            UpdateEconomySignals(polity, lookup);
+
+            foreach (Settlement settlement in polity.Settlements)
+            {
                 DiscoverRegionalMaterials(world, lookup, polity, settlement);
                 ExtractMaterials(world, lookup, polity, settlement);
             }
+
+            UpdateSettlementMaterialPressure(polity.Settlements);
+            UpdateEconomySignals(polity, lookup);
 
             foreach (Settlement settlement in polity.Settlements)
             {
@@ -79,12 +105,15 @@ public sealed class MaterialEconomySystem
             }
 
             UpdateSettlementMaterialPressure(polity.Settlements);
+            UpdateEconomySignals(polity, lookup);
             RedistributeMaterialsWithinPolity(world, lookup, polity);
             UpdateSettlementMaterialPressure(polity.Settlements);
+            UpdateEconomySignals(polity, lookup);
 
             foreach (Settlement settlement in polity.Settlements)
             {
                 EmitMaterialPressureTransitions(world, lookup, polity, settlement);
+                EmitEconomyTransitions(world, lookup, polity, settlement);
                 UpdateSpecialization(world, lookup, polity, settlement);
             }
         }
@@ -151,6 +180,14 @@ public sealed class MaterialEconomySystem
         };
         double extractionModifier = settlement.ResolveToolEffectiveness() * hardshipPenalty;
         bool extractionStarted = false;
+        Dictionary<MaterialType, double> extractionWeights = RawMaterials
+            .Where(materialType => region.GetMaterialAbundance(materialType) > 0.15 && CanExtract(polity, materialType, region))
+            .ToDictionary(
+                materialType => materialType,
+                materialType => ResolveExtractionWeight(settlement, region, materialType));
+        double averageWeight = extractionWeights.Count == 0
+            ? 1.0
+            : Math.Max(0.10, extractionWeights.Values.Average());
 
         foreach (MaterialType materialType in RawMaterials)
         {
@@ -160,7 +197,10 @@ public sealed class MaterialEconomySystem
                 continue;
             }
 
-            double output = ResolveExtractionOutput(materialType, extractionLabor, abundance, extractionModifier, polity);
+            double focusMultiplier = extractionWeights.TryGetValue(materialType, out double weight)
+                ? Math.Clamp(weight / averageWeight, 0.45, 1.70)
+                : 1.0;
+            double output = ResolveExtractionOutput(materialType, extractionLabor, abundance, extractionModifier, polity) * focusMultiplier;
             if (output <= 0.05)
             {
                 continue;
@@ -194,17 +234,22 @@ public sealed class MaterialEconomySystem
     {
         Region region = lookup.GetRequiredRegion(settlement.RegionId, "Material production");
         double localPopulationShare = polity.Settlements.Count == 0 ? 0.0 : polity.Population / (double)polity.Settlements.Count;
-        double craftLabor = Math.Max(1.0, localPopulationShare * CraftLaborShare);
+        double totalCraftLabor = Math.Max(1.0, localPopulationShare * CraftLaborShare);
         double craftEfficiency = settlement.ResolveToolEffectiveness() * (polity.HasAdvancement(AdvancementId.CraftSpecialization) ? 1.20 : 1.0);
+        List<(ProductionRecipe Recipe, double Score)> scoredRecipes = Recipes
+            .Where(recipe => recipe.IsAvailable(polity.Advancements))
+            .Select(recipe => (Recipe: recipe, Score: ResolveRecipePriority(settlement, region, recipe)))
+            .Where(entry => entry.Score > 0.12)
+            .OrderByDescending(entry => entry.Score)
+            .ToList();
+        double averageRecipeScore = scoredRecipes.Count == 0
+            ? 1.0
+            : Math.Max(0.10, scoredRecipes.Average(entry => entry.Score));
 
-        foreach (ProductionRecipe recipe in Recipes)
+        foreach ((ProductionRecipe recipe, double score) in scoredRecipes)
         {
-            if (!recipe.IsAvailable(polity.Advancements))
-            {
-                continue;
-            }
-
-            double maxByLabor = craftLabor * craftEfficiency * ResolveRecipeLaborRate(recipe.Output);
+            double focusMultiplier = Math.Clamp(score / averageRecipeScore, 0.40, 1.85);
+            double maxByLabor = totalCraftLabor * craftEfficiency * ResolveRecipeLaborRate(recipe.Output) * focusMultiplier;
             double maxByInputs = recipe.Inputs.Min(input => settlement.GetMaterialStockpile(input.Key) / input.Value);
             double cycles = Math.Min(maxByLabor, maxByInputs);
             if (cycles < 0.75)
@@ -247,7 +292,7 @@ public sealed class MaterialEconomySystem
             EmitProductionMilestoneIfNeeded(world, lookup, polity, settlement, region, recipe.Output, output);
         }
 
-        ProducePreservedFood(world, lookup, polity, settlement, region, craftLabor * craftEfficiency);
+        ProducePreservedFood(world, lookup, polity, settlement, region, totalCraftLabor * craftEfficiency);
         UpgradeToolmakingTierIfPossible(world, lookup, polity, settlement, region);
     }
 
@@ -260,8 +305,9 @@ public sealed class MaterialEconomySystem
             return;
         }
 
+        double preservationFocus = Math.Max(0.40, settlement.MaterialProductionFocusScores[MaterialType.PreservedFood]);
         double foodAvailableForPreservation = Math.Max(0.0, polity.FoodStores - (polity.FoodNeededThisMonth * 0.75));
-        double potentialCycles = Math.Min(capacity * 0.40, foodAvailableForPreservation / 6.0);
+        double potentialCycles = Math.Min(capacity * 0.40 * preservationFocus, foodAvailableForPreservation / 6.0);
         if (potentialCycles < 1.0)
         {
             return;
@@ -311,14 +357,17 @@ public sealed class MaterialEconomySystem
         }
 
         int previousTier = settlement.ToolProductionTier;
-        if (polity.HasAdvancement(AdvancementId.CraftSpecialization)
+        bool stronglyValuesTools = settlement.MaterialValueScores[MaterialType.SimpleTools] >= 0.95;
+        if (stronglyValuesTools
+            && polity.HasAdvancement(AdvancementId.CraftSpecialization)
             && polity.HasAdvancement(AdvancementId.BasicConstruction)
             && settlement.GetMaterialStockpile(MaterialType.IronOre) >= 1.0)
         {
             settlement.ConsumeMaterial(MaterialType.IronOre, 1.0);
             settlement.ToolProductionTier = 2;
         }
-        else if (polity.HasAdvancement(AdvancementId.CraftSpecialization)
+        else if (stronglyValuesTools
+                 && polity.HasAdvancement(AdvancementId.CraftSpecialization)
                  && settlement.GetMaterialStockpile(MaterialType.CopperOre) >= 1.0)
         {
             settlement.ConsumeMaterial(MaterialType.CopperOre, 1.0);
@@ -375,6 +424,255 @@ public sealed class MaterialEconomySystem
         }
     }
 
+    private static void UpdateEconomySignals(Polity polity, WorldLookup lookup)
+    {
+        foreach (Settlement settlement in polity.Settlements)
+        {
+            Region region = lookup.GetRequiredRegion(settlement.RegionId, "Economy signal update");
+            Dictionary<MaterialType, double> dependencyPressure = BuildDependencyPressure(polity, settlement);
+
+            settlement.HighlyValuedMaterials.Clear();
+            settlement.TradeGoodMaterials.Clear();
+            settlement.LocallyCommonMaterials.Clear();
+
+            foreach (MaterialType materialType in RedistributionPriority)
+            {
+                double desiredNeed = ResolveDesiredNeedPressure(polity, settlement, materialType, dependencyPressure);
+                double desiredAvailability = ResolveAvailabilityScore(settlement, region, materialType);
+                double desiredOpportunity = ResolveOpportunityScore(settlement, region, materialType);
+                double desiredValue = ResolveValueScore(settlement, materialType, desiredNeed, desiredAvailability, desiredOpportunity, dependencyPressure[materialType]);
+                double desiredExternalPull = ResolveExternalPullReadiness(settlement, region, materialType, desiredOpportunity);
+                double desiredProductionFocus = ResolveProductionFocusScore(settlement, materialType, desiredNeed, desiredOpportunity, desiredValue, desiredExternalPull);
+
+                settlement.SetMaterialEconomySignals(
+                    materialType,
+                    SmoothSignal(settlement.MaterialNeedPressures[materialType], desiredNeed),
+                    SmoothSignal(settlement.MaterialAvailabilityScores[materialType], desiredAvailability),
+                    SmoothSignal(settlement.MaterialValueScores[materialType], desiredValue),
+                    SmoothSignal(settlement.MaterialOpportunityScores[materialType], desiredOpportunity),
+                    SmoothSignal(settlement.MaterialExternalPullReadiness[materialType], desiredExternalPull),
+                    SmoothSignal(settlement.MaterialProductionFocusScores[materialType], desiredProductionFocus));
+
+                if (settlement.MaterialValueScores[materialType] >= HighlyValuedScoreThreshold)
+                {
+                    settlement.HighlyValuedMaterials.Add(materialType);
+                }
+
+                if (IsTradeGoodCandidate(settlement, materialType))
+                {
+                    settlement.TradeGoodMaterials.Add(materialType);
+                }
+
+                if (IsLocallyCommonCandidate(settlement, region, materialType))
+                {
+                    settlement.LocallyCommonMaterials.Add(materialType);
+                }
+            }
+        }
+    }
+
+    private static Dictionary<MaterialType, double> BuildDependencyPressure(Polity polity, Settlement settlement)
+    {
+        Dictionary<MaterialType, double> dependencyPressure = Enum.GetValues<MaterialType>()
+            .ToDictionary(materialType => materialType, _ => 0.0);
+
+        foreach (ProductionRecipe recipe in Recipes.Where(recipe => recipe.IsAvailable(polity.Advancements)))
+        {
+            double outputNeed = ResolveMaterialNeedShare(settlement, recipe.Output);
+            double outputValue = ResolveStrategicUsefulness(recipe.Output) + settlement.MaterialValueScores[recipe.Output];
+            foreach ((MaterialType materialType, double amount) in recipe.Inputs)
+            {
+                dependencyPressure[materialType] += outputNeed * (0.60 + (outputValue * 0.12)) * Math.Max(0.75, amount);
+            }
+        }
+
+        double preservationNeed = ResolvePreservationNeed(polity, settlement);
+        dependencyPressure[MaterialType.Salt] += preservationNeed * 0.90;
+        dependencyPressure[MaterialType.Pottery] += preservationNeed * 0.30;
+        dependencyPressure[MaterialType.SimpleTools] += Math.Clamp(settlement.CultivatedLand / 12.0, 0.0, 1.0) * 0.55;
+        dependencyPressure[MaterialType.Rope] += Math.Clamp(settlement.CultivatedLand / 16.0, 0.0, 1.0) * 0.35;
+        dependencyPressure[MaterialType.Textiles] += Math.Clamp(settlement.CultivatedLand / 18.0, 0.0, 1.0) * 0.25;
+        dependencyPressure[MaterialType.Lumber] += Math.Clamp(settlement.YearsEstablished / 12.0, 0.0, 1.0) * 0.35;
+        dependencyPressure[MaterialType.StoneBlocks] += Math.Clamp(settlement.YearsEstablished / 18.0, 0.0, 1.0) * 0.25;
+        return dependencyPressure;
+    }
+
+    private static double ResolveDesiredNeedPressure(
+        Polity polity,
+        Settlement settlement,
+        MaterialType materialType,
+        IReadOnlyDictionary<MaterialType, double> dependencyPressure)
+    {
+        double shortage = ResolveMaterialNeedShare(settlement, materialType);
+        double strategicUse = ResolveStrategicUsefulness(materialType);
+        double foodStress = polity.FoodNeededThisMonth <= 0
+            ? 0.0
+            : Math.Clamp((polity.FoodNeededThisMonth - polity.FoodStores) / polity.FoodNeededThisMonth, 0.0, 1.5);
+
+        double pressure = shortage * 1.35;
+        pressure += dependencyPressure[materialType] * 0.55;
+        pressure += strategicUse * 0.24;
+
+        if (materialType is MaterialType.PreservedFood or MaterialType.Salt or MaterialType.Pottery)
+        {
+            pressure += foodStress * 0.55;
+        }
+
+        if (materialType == MaterialType.SimpleTools)
+        {
+            pressure += Math.Clamp(settlement.CultivatedLand / 10.0, 0.0, 1.2) * 0.55;
+        }
+
+        return pressure;
+    }
+
+    private static double ResolveAvailabilityScore(Settlement settlement, Region region, MaterialType materialType)
+    {
+        double target = Math.Max(1.0, settlement.MaterialTargetReserves[materialType]);
+        double stockpileCoverage = Math.Clamp(settlement.GetMaterialStockpile(materialType) / target, 0.0, 2.5);
+        double localAbundance = materialType switch
+        {
+            MaterialType.Wood or MaterialType.Stone or MaterialType.Clay or MaterialType.Fiber or MaterialType.Salt or MaterialType.CopperOre or MaterialType.IronOre
+                => region.GetMaterialAbundance(materialType),
+            MaterialType.Lumber => region.WoodAbundance,
+            MaterialType.StoneBlocks => region.StoneAbundance,
+            MaterialType.Pottery => region.ClayAbundance,
+            MaterialType.Rope or MaterialType.Textiles => region.FiberAbundance,
+            MaterialType.PreservedFood => region.SaltAbundance,
+            MaterialType.SimpleTools => Math.Max(region.StoneAbundance, Math.Max(region.CopperOreAbundance, region.IronOreAbundance)),
+            _ => 0.0
+        };
+
+        return (stockpileCoverage * 0.72) + (localAbundance * 0.68);
+    }
+
+    private static double ResolveOpportunityScore(Settlement settlement, Region region, MaterialType materialType)
+    {
+        double localMatch = materialType switch
+        {
+            MaterialType.Wood or MaterialType.Lumber => region.WoodAbundance,
+            MaterialType.Stone or MaterialType.StoneBlocks => region.StoneAbundance,
+            MaterialType.Clay or MaterialType.Pottery => region.ClayAbundance,
+            MaterialType.Fiber or MaterialType.Rope or MaterialType.Textiles => region.FiberAbundance,
+            MaterialType.Salt or MaterialType.PreservedFood => region.SaltAbundance,
+            MaterialType.CopperOre or MaterialType.IronOre or MaterialType.SimpleTools => Math.Max(region.CopperOreAbundance, Math.Max(region.IronOreAbundance, region.StoneAbundance)),
+            _ => 0.0
+        };
+        double annualOutput = settlement.MaterialProducedThisYear[materialType] + settlement.MaterialProducedThisMonth[materialType];
+        double outputSignal = Math.Clamp(annualOutput / Math.Max(2.0, settlement.FoodRequired * 0.08), 0.0, 1.5);
+        double oversupplyPenalty = settlement.MaterialPressureStates[materialType] == MaterialPressureState.Surplus ? 0.40 : 0.0;
+        return Math.Max(0.0, (localMatch * 1.10) + (outputSignal * 0.45) - oversupplyPenalty);
+    }
+
+    private static double ResolveValueScore(
+        Settlement settlement,
+        MaterialType materialType,
+        double needPressure,
+        double availabilityScore,
+        double opportunityScore,
+        double dependencyPressure)
+    {
+        double scarcity = settlement.MaterialPressureStates[materialType] == MaterialPressureState.Deficit ? 0.55 : 0.0;
+        double surplusPenalty = settlement.MaterialPressureStates[materialType] == MaterialPressureState.Surplus ? 0.35 : 0.0;
+        return Math.Max(
+            0.0,
+            (needPressure * 0.95)
+            + (dependencyPressure * 0.50)
+            + (ResolveStrategicUsefulness(materialType) * 0.65)
+            + scarcity
+            + (opportunityScore * 0.18)
+            - (availabilityScore * 0.12)
+            - surplusPenalty);
+    }
+
+    private static double ResolveExternalPullReadiness(Settlement settlement, Region region, MaterialType materialType, double opportunityScore)
+    {
+        double target = Math.Max(1.0, settlement.MaterialTargetReserves[materialType]);
+        double surplus = Math.Max(0.0, settlement.GetMaterialStockpile(materialType) - target) / target;
+        double annualOutput = settlement.MaterialProducedThisYear[materialType] + settlement.MaterialProducedThisMonth[materialType];
+        double sustainedOutput = Math.Clamp(annualOutput / Math.Max(2.0, target), 0.0, 2.0);
+        double localMatch = region.GetMaterialAbundance(materialType);
+        if (localMatch <= 0.0)
+        {
+            localMatch = opportunityScore;
+        }
+
+        return Math.Max(0.0, (surplus * 0.85) + (sustainedOutput * 0.55) + (localMatch * 0.35) - (settlement.MaterialNeedPressures[materialType] * 0.30));
+    }
+
+    private static double ResolveProductionFocusScore(
+        Settlement settlement,
+        MaterialType materialType,
+        double needPressure,
+        double opportunityScore,
+        double valueScore,
+        double externalPullReadiness)
+    {
+        double oversupplyPenalty = settlement.MaterialPressureStates[materialType] == MaterialPressureState.Surplus
+            && externalPullReadiness < 0.85
+            ? 0.60
+            : 0.0;
+        return Math.Max(
+            0.0,
+            (needPressure * 0.60)
+            + (opportunityScore * 0.75)
+            + (valueScore * 0.55)
+            + (externalPullReadiness * 0.25)
+            - oversupplyPenalty);
+    }
+
+    private static double ResolvePreservationNeed(Polity polity, Settlement settlement)
+    {
+        double storageNeed = polity.FoodNeededThisMonth <= 0
+            ? 0.0
+            : Math.Clamp((polity.FoodNeededThisMonth - polity.FoodStores) / polity.FoodNeededThisMonth, 0.0, 1.25);
+        double seasonalNeed = Math.Clamp(settlement.FoodRequired / 24.0, 0.0, 1.0);
+        return storageNeed + seasonalNeed;
+    }
+
+    private static double ResolveStrategicUsefulness(MaterialType materialType)
+        => materialType switch
+        {
+            MaterialType.SimpleTools => 1.00,
+            MaterialType.PreservedFood => 0.95,
+            MaterialType.Pottery => 0.85,
+            MaterialType.Salt => 0.82,
+            MaterialType.Rope => 0.62,
+            MaterialType.Textiles => 0.56,
+            MaterialType.Lumber => 0.48,
+            MaterialType.StoneBlocks => 0.42,
+            MaterialType.CopperOre or MaterialType.IronOre => 0.44,
+            _ => 0.28
+        };
+
+    private static double SmoothSignal(double current, double desired)
+        => current + ((desired - current) * SignalSmoothing);
+
+    private static bool IsTradeGoodCandidate(Settlement settlement, MaterialType materialType)
+    {
+        if (!ProducedMaterials.Contains(materialType))
+        {
+            return false;
+        }
+
+        double annualOutput = settlement.MaterialProducedThisYear[materialType] + settlement.MaterialProducedThisMonth[materialType];
+        return annualOutput >= Math.Max(2.0, settlement.MaterialTargetReserves[materialType] * 0.60)
+               && settlement.MaterialExternalPullReadiness[materialType] >= TradeGoodScoreThreshold
+               && settlement.MaterialPressureStates[materialType] != MaterialPressureState.Deficit;
+    }
+
+    private static bool IsLocallyCommonCandidate(Settlement settlement, Region region, MaterialType materialType)
+    {
+        if (!RawMaterials.Contains(materialType))
+        {
+            return false;
+        }
+
+        return region.GetMaterialAbundance(materialType) >= 0.72
+               && settlement.MaterialPressureStates[materialType] != MaterialPressureState.Deficit
+               && settlement.MaterialValueScores[materialType] < HighlyValuedScoreThreshold;
+    }
+
     private static void RedistributeMaterialsWithinPolity(World world, WorldLookup lookup, Polity polity)
     {
         if (polity.SettlementCount <= 1)
@@ -389,7 +687,7 @@ public sealed class MaterialEconomySystem
                 .ToList();
             List<Settlement> receivers = polity.Settlements
                 .Where(settlement => settlement.MaterialPressureStates[materialType] == MaterialPressureState.Deficit)
-                .OrderByDescending(settlement => ResolveMaterialNeedShare(settlement, materialType))
+                .OrderByDescending(settlement => ResolveMaterialNeedShare(settlement, materialType) + (settlement.MaterialValueScores[materialType] * 0.35))
                 .ThenByDescending(_ => IsCriticalMaterial(materialType))
                 .ToList();
 
@@ -418,6 +716,7 @@ public sealed class MaterialEconomySystem
                     .Where(sender => sender.Id != receiver.Id && senderExportBudget[sender.Id] > 0.05)
                     .OrderBy(sender => ResolvePriorityBucket(lookup, sender.RegionId, receiver.RegionId))
                     .ThenBy(sender => ResolveRegionDistance(lookup, sender.RegionId, receiver.RegionId))
+                    .ThenByDescending(sender => sender.MaterialExternalPullReadiness[materialType])
                     .ThenByDescending(sender => sender.GetMaterialStockpile(materialType))
                     .ToList();
 
@@ -626,6 +925,159 @@ public sealed class MaterialEconomySystem
             convoyFailureMaterials);
     }
 
+    private static void EmitEconomyTransitions(World world, WorldLookup lookup, Polity polity, Settlement settlement)
+    {
+        Region region = lookup.GetRequiredRegion(settlement.RegionId, "Economy transitions");
+        Species species = lookup.GetRequiredSpecies(polity.SpeciesId, "Economy transitions");
+
+        foreach (MaterialType materialType in RedistributionPriority)
+        {
+            int currentHighlyValuedBand = settlement.MaterialValueScores[materialType] switch
+            {
+                >= 1.80 => 2,
+                >= HighlyValuedScoreThreshold => 1,
+                _ => 0
+            };
+            int previousHighlyValuedBand = settlement.LastRecordedHighlyValuedBands[materialType];
+            if (currentHighlyValuedBand > previousHighlyValuedBand && currentHighlyValuedBand >= 2)
+            {
+                world.AddEvent(
+                    WorldEventType.MaterialHighlyValued,
+                    WorldEventSeverity.Major,
+                    $"{GetMaterialLabel(materialType)} became highly valued in {settlement.Name}",
+                    $"{GetMaterialLabel(materialType)} became highly valued in {settlement.Name} because {DescribeValueDrivers(settlement, region, materialType)}.",
+                    reason: "material_became_highly_valued",
+                    scope: WorldEventScope.Local,
+                    polityId: polity.Id,
+                    polityName: polity.Name,
+                    speciesId: polity.SpeciesId,
+                    speciesName: species.Name,
+                    regionId: region.Id,
+                    regionName: region.Name,
+                    settlementId: settlement.Id,
+                    settlementName: settlement.Name,
+                    metadata: new Dictionary<string, string>
+                    {
+                        ["materialType"] = materialType.ToString(),
+                        ["valueBand"] = currentHighlyValuedBand.ToString()
+                    });
+            }
+
+            bool currentTradeGoodState = settlement.TradeGoodMaterials.Contains(materialType);
+            bool previousTradeGoodState = settlement.LastRecordedTradeGoodStates[materialType];
+            if (currentTradeGoodState && !previousTradeGoodState)
+            {
+                world.AddEvent(
+                    WorldEventType.TradeGoodEstablished,
+                    WorldEventSeverity.Major,
+                    $"{settlement.Name} became known for {GetMaterialLabel(materialType).ToLowerInvariant()} as a trade good",
+                    $"{settlement.Name} held sustained surplus in {GetMaterialLabel(materialType).ToLowerInvariant()} because {DescribeTradeGoodDrivers(settlement, region, materialType)}.",
+                    reason: "trade_good_established",
+                    scope: WorldEventScope.Local,
+                    polityId: polity.Id,
+                    polityName: polity.Name,
+                    speciesId: polity.SpeciesId,
+                    speciesName: species.Name,
+                    regionId: region.Id,
+                    regionName: region.Name,
+                    settlementId: settlement.Id,
+                    settlementName: settlement.Name,
+                    metadata: new Dictionary<string, string>
+                    {
+                        ["materialType"] = materialType.ToString()
+                    });
+            }
+
+            settlement.LastRecordedHighlyValuedBands[materialType] = currentHighlyValuedBand;
+            settlement.LastRecordedTradeGoodStates[materialType] = currentTradeGoodState;
+        }
+
+        MaterialType? dominantFocus = ResolveDominantProductionFocus(settlement);
+        if (dominantFocus.HasValue)
+        {
+            if (settlement.DominantProductionFocusMaterial == dominantFocus)
+            {
+                settlement.CandidateProductionFocusMaterial = null;
+                settlement.CandidateProductionFocusMonths = 0;
+            }
+            else if (settlement.CandidateProductionFocusMaterial == dominantFocus)
+            {
+                settlement.CandidateProductionFocusMonths++;
+            }
+            else
+            {
+                settlement.CandidateProductionFocusMaterial = dominantFocus;
+                settlement.CandidateProductionFocusMonths = 1;
+            }
+
+            if (settlement.DominantProductionFocusMaterial != dominantFocus
+                && settlement.CandidateProductionFocusMaterial == dominantFocus
+                && settlement.CandidateProductionFocusMonths >= FocusShiftConfirmationMonths
+                && settlement.ProductionFocusShiftCooldownMonths == 0
+                && settlement.MaterialProductionFocusScores[dominantFocus.Value] >= FocusShiftScoreThreshold)
+            {
+                MaterialType? previousFocus = settlement.DominantProductionFocusMaterial;
+                settlement.DominantProductionFocusMaterial = dominantFocus;
+                settlement.CandidateProductionFocusMaterial = null;
+                settlement.CandidateProductionFocusMonths = 0;
+                settlement.ProductionFocusShiftCooldownMonths = 6;
+
+                world.AddEvent(
+                    WorldEventType.ProductionFocusShifted,
+                    WorldEventSeverity.Notable,
+                    previousFocus.HasValue
+                        ? $"{settlement.Name} shifted work toward {GetMaterialLabel(dominantFocus.Value).ToLowerInvariant()}"
+                        : $"{settlement.Name} began focusing on {GetMaterialLabel(dominantFocus.Value).ToLowerInvariant()}",
+                    previousFocus.HasValue
+                        ? $"{settlement.Name} shifted work from {GetMaterialLabel(previousFocus.Value).ToLowerInvariant()} toward {GetMaterialLabel(dominantFocus.Value).ToLowerInvariant()} because {DescribeFocusDrivers(settlement, region, dominantFocus.Value)}."
+                        : $"{settlement.Name} began focusing on {GetMaterialLabel(dominantFocus.Value).ToLowerInvariant()} because {DescribeFocusDrivers(settlement, region, dominantFocus.Value)}.",
+                    reason: "production_focus_shifted",
+                    scope: WorldEventScope.Local,
+                    polityId: polity.Id,
+                    polityName: polity.Name,
+                    speciesId: polity.SpeciesId,
+                    speciesName: species.Name,
+                    regionId: region.Id,
+                    regionName: region.Name,
+                    settlementId: settlement.Id,
+                    settlementName: settlement.Name,
+                    metadata: new Dictionary<string, string>
+                    {
+                        ["materialType"] = dominantFocus.Value.ToString(),
+                        ["previousMaterialType"] = previousFocus?.ToString() ?? string.Empty
+                    });
+            }
+        }
+
+        if (settlement.DominantProductionFocusMaterial is MaterialType focusedMaterial
+            && settlement.MaterialProducedThisMonth[focusedMaterial] <= 0.05
+            && settlement.MaterialValueScores[focusedMaterial] >= 1.05
+            && TryResolvePrimaryBottleneckInput(settlement, focusedMaterial, out MaterialType bottleneckInput)
+            && settlement.MaterialMilestonesRecorded.Add($"bottleneck:{focusedMaterial}:{world.Time.Year}"))
+        {
+            world.AddEvent(
+                WorldEventType.ProductionBottleneckHit,
+                WorldEventSeverity.Notable,
+                $"{settlement.Name}'s {GetMaterialLabel(focusedMaterial).ToLowerInvariant()} output faltered",
+                $"{settlement.Name}'s {GetMaterialLabel(focusedMaterial).ToLowerInvariant()} output faltered because {GetMaterialLabel(bottleneckInput).ToLowerInvariant()} ran short.",
+                reason: "production_bottleneck_hit",
+                scope: WorldEventScope.Local,
+                polityId: polity.Id,
+                polityName: polity.Name,
+                speciesId: polity.SpeciesId,
+                speciesName: species.Name,
+                regionId: region.Id,
+                regionName: region.Name,
+                settlementId: settlement.Id,
+                settlementName: settlement.Name,
+                metadata: new Dictionary<string, string>
+                {
+                    ["materialType"] = focusedMaterial.ToString(),
+                    ["inputMaterialType"] = bottleneckInput.ToString()
+                });
+        }
+    }
+
     private static void UpdateSpecialization(World world, WorldLookup lookup, Polity polity, Settlement settlement)
     {
         Region region = lookup.GetRequiredRegion(settlement.RegionId, "Settlement specialization");
@@ -637,8 +1089,8 @@ public sealed class MaterialEconomySystem
             }
 
             double updatedScore = settlement.SpecializationScores.TryGetValue(tag, out double current)
-                ? current + (monthlyOutput * (0.60 + localMatch))
-                : monthlyOutput * (0.60 + localMatch);
+                ? current + (monthlyOutput * (0.45 + localMatch + (settlement.MaterialOpportunityScores[output] * 0.18) + (settlement.MaterialExternalPullReadiness[output] * 0.15)))
+                : monthlyOutput * (0.45 + localMatch + (settlement.MaterialOpportunityScores[output] * 0.18) + (settlement.MaterialExternalPullReadiness[output] * 0.15));
             settlement.SpecializationScores[tag] = updatedScore;
 
             if (updatedScore < 18.0 || !settlement.SpecializationTags.Add(tag))
@@ -815,6 +1267,163 @@ public sealed class MaterialEconomySystem
         yield return (SettlementSpecializationTag.OreWorks, MaterialType.IronOre, settlement.MaterialProducedThisMonth[MaterialType.IronOre] + settlement.MaterialProducedThisMonth[MaterialType.CopperOre], Math.Max(region.CopperOreAbundance, region.IronOreAbundance));
     }
 
+    private static double ResolveExtractionWeight(Settlement settlement, Region region, MaterialType materialType)
+    {
+        double abundance = region.GetMaterialAbundance(materialType);
+        double need = settlement.MaterialNeedPressures[materialType];
+        double value = settlement.MaterialValueScores[materialType];
+        double opportunity = settlement.MaterialOpportunityScores[materialType];
+        double oversupplyPenalty = settlement.MaterialPressureStates[materialType] == MaterialPressureState.Surplus ? 0.30 : 0.0;
+        return Math.Max(0.12, 0.30 + abundance + (need * 0.45) + (value * 0.25) + (opportunity * 0.35) - oversupplyPenalty);
+    }
+
+    private static double ResolveRecipePriority(Settlement settlement, Region region, ProductionRecipe recipe)
+    {
+        double outputNeed = settlement.MaterialNeedPressures[recipe.Output];
+        double outputValue = settlement.MaterialValueScores[recipe.Output];
+        double opportunity = settlement.MaterialOpportunityScores[recipe.Output];
+        double externalPull = settlement.MaterialExternalPullReadiness[recipe.Output];
+        double localMatch = recipe.Output switch
+        {
+            MaterialType.Pottery => region.ClayAbundance,
+            MaterialType.Rope or MaterialType.Textiles => region.FiberAbundance,
+            MaterialType.Lumber => region.WoodAbundance,
+            MaterialType.StoneBlocks => region.StoneAbundance,
+            MaterialType.SimpleTools => Math.Max(region.StoneAbundance, Math.Max(region.CopperOreAbundance, region.IronOreAbundance)),
+            MaterialType.PreservedFood => region.SaltAbundance,
+            _ => 0.0
+        };
+        double inputConstraintPenalty = recipe.Inputs.Sum(input =>
+            settlement.MaterialPressureStates[input.Key] == MaterialPressureState.Deficit
+                ? 0.45
+                : 0.0);
+        double oversupplyPenalty = settlement.MaterialPressureStates[recipe.Output] == MaterialPressureState.Surplus
+            && externalPull < TradeGoodScoreThreshold
+            ? 0.85
+            : 0.0;
+        return Math.Max(0.0, 0.15 + (outputNeed * 0.80) + (outputValue * 0.75) + (opportunity * 0.55) + (externalPull * 0.25) + (localMatch * 0.25) - inputConstraintPenalty - oversupplyPenalty);
+    }
+
+    private static MaterialType? ResolveDominantProductionFocus(Settlement settlement)
+    {
+        KeyValuePair<MaterialType, double> topFocus = settlement.MaterialProductionFocusScores
+            .Where(entry => ProducedMaterials.Contains(entry.Key) || RawMaterials.Contains(entry.Key))
+            .OrderByDescending(entry => entry.Value)
+            .ThenBy(entry => entry.Key.ToString(), StringComparer.Ordinal)
+            .FirstOrDefault();
+
+        return topFocus.Value >= FocusShiftScoreThreshold
+            ? topFocus.Key
+            : null;
+    }
+
+    private static bool TryResolvePrimaryBottleneckInput(Settlement settlement, MaterialType outputMaterialType, out MaterialType bottleneckInput)
+    {
+        ProductionRecipe? recipe = Recipes.FirstOrDefault(candidate => candidate.Output == outputMaterialType);
+        if (recipe is not null)
+        {
+            KeyValuePair<MaterialType, double> constrainedInput = recipe.Inputs
+                .OrderByDescending(input => settlement.MaterialNeedPressures[input.Key] + (settlement.MaterialPressureStates[input.Key] == MaterialPressureState.Deficit ? 0.5 : 0.0))
+                .ThenByDescending(input => input.Value)
+                .FirstOrDefault();
+            if (!EqualityComparer<KeyValuePair<MaterialType, double>>.Default.Equals(constrainedInput, default)
+                && settlement.MaterialPressureStates[constrainedInput.Key] == MaterialPressureState.Deficit)
+            {
+                bottleneckInput = constrainedInput.Key;
+                return true;
+            }
+        }
+
+        if (outputMaterialType == MaterialType.PreservedFood && settlement.MaterialPressureStates[MaterialType.Salt] == MaterialPressureState.Deficit)
+        {
+            bottleneckInput = MaterialType.Salt;
+            return true;
+        }
+
+        bottleneckInput = default;
+        return false;
+    }
+
+    private static string DescribeValueDrivers(Settlement settlement, Region region, MaterialType materialType)
+    {
+        List<string> parts = [];
+        if (settlement.MaterialPressureStates[materialType] == MaterialPressureState.Deficit)
+        {
+            parts.Add("local reserves ran thin");
+        }
+
+        if (settlement.MaterialNeedPressures[materialType] >= 1.0)
+        {
+            parts.Add("downstream need stayed strong");
+        }
+
+        if (ResolveStrategicUsefulness(materialType) >= 0.80)
+        {
+            parts.Add("it supported resilience and productivity");
+        }
+
+        if (parts.Count == 0)
+        {
+            parts.Add($"it mattered more than the local surplus of {DescribeMaterialRegionFit(region, materialType)} could satisfy");
+        }
+
+        return string.Join(", ", parts.Take(3));
+    }
+
+    private static string DescribeTradeGoodDrivers(Settlement settlement, Region region, MaterialType materialType)
+    {
+        List<string> parts = [];
+        if (settlement.MaterialPressureStates[materialType] == MaterialPressureState.Surplus)
+        {
+            parts.Add("local output outpaced local need");
+        }
+
+        if (settlement.MaterialOpportunityScores[materialType] >= 0.95)
+        {
+            parts.Add($"{DescribeMaterialRegionFit(region, materialType)} was favorable");
+        }
+
+        if (settlement.MaterialExternalPullReadiness[materialType] >= TradeGoodScoreThreshold)
+        {
+            parts.Add("surplus remained useful beyond one settlement");
+        }
+
+        return string.Join(", ", parts.Take(3));
+    }
+
+    private static string DescribeFocusDrivers(Settlement settlement, Region region, MaterialType materialType)
+    {
+        List<string> parts = [];
+        if (settlement.MaterialNeedPressures[materialType] >= 0.90)
+        {
+            parts.Add("need stayed high");
+        }
+
+        if (settlement.MaterialOpportunityScores[materialType] >= 0.90)
+        {
+            parts.Add($"{DescribeMaterialRegionFit(region, materialType)} offered a clear advantage");
+        }
+
+        if (settlement.MaterialExternalPullReadiness[materialType] >= TradeGoodScoreThreshold)
+        {
+            parts.Add("surplus promised wider value");
+        }
+
+        return string.Join(", ", parts.Take(3));
+    }
+
+    private static string DescribeMaterialRegionFit(Region region, MaterialType materialType)
+        => materialType switch
+        {
+            MaterialType.Wood or MaterialType.Lumber => region.WoodAbundance >= 0.72 ? "timber abundance" : "local timber",
+            MaterialType.Stone or MaterialType.StoneBlocks => region.StoneAbundance >= 0.68 ? "strong stone access" : "workable stone",
+            MaterialType.Clay or MaterialType.Pottery => region.ClayAbundance >= 0.70 ? "good clay beds" : "usable clay",
+            MaterialType.Fiber or MaterialType.Rope or MaterialType.Textiles => region.FiberAbundance >= 0.70 ? "abundant fiber" : "steady fiber",
+            MaterialType.Salt or MaterialType.PreservedFood => region.SaltAbundance >= 0.64 ? "salt access" : "limited salt access",
+            MaterialType.CopperOre or MaterialType.IronOre or MaterialType.SimpleTools => Math.Max(region.CopperOreAbundance, region.IronOreAbundance) >= 0.56 ? "ore access" : "tool inputs",
+            _ => "local conditions"
+        };
+
     private static void SetTargetReserves(Polity polity, Settlement settlement)
     {
         settlement.SetMaterialTargetReserve(MaterialType.Wood, Math.Max(4.0, settlement.FoodRequired * 0.08));
@@ -900,6 +1509,51 @@ public sealed class MaterialEconomySystem
 
     private static string BuildMaterialDiscoveryKey(int regionId, MaterialType materialType)
         => $"region-material:{regionId}:{materialType}";
+
+    public static IReadOnlyList<EconomySummaryLabel> GetSummaryLabels(Settlement settlement, MaterialType materialType)
+    {
+        List<EconomySummaryLabel> labels =
+        [
+            settlement.MaterialPressureStates[materialType] switch
+            {
+                MaterialPressureState.Deficit => EconomySummaryLabel.Shortage,
+                MaterialPressureState.Surplus => EconomySummaryLabel.Surplus,
+                _ => EconomySummaryLabel.Stable
+            }
+        ];
+
+        if (settlement.IsHighlyValued(materialType))
+        {
+            labels.Add(EconomySummaryLabel.HighlyValued);
+        }
+
+        if (settlement.IsTradeGood(materialType))
+        {
+            labels.Add(EconomySummaryLabel.TradeGood);
+        }
+
+        if (settlement.IsLocallyCommon(materialType))
+        {
+            labels.Add(EconomySummaryLabel.LocallyCommon);
+        }
+
+        return labels;
+    }
+
+    public static string DescribeSummaryLabels(Settlement settlement, MaterialType materialType)
+        => string.Join(", ", GetSummaryLabels(settlement, materialType).Select(DescribeSummaryLabel));
+
+    public static string DescribeSummaryLabel(EconomySummaryLabel label)
+        => label switch
+        {
+            EconomySummaryLabel.Shortage => "Shortage",
+            EconomySummaryLabel.Stable => "Stable",
+            EconomySummaryLabel.Surplus => "Surplus",
+            EconomySummaryLabel.HighlyValued => "Highly Valued",
+            EconomySummaryLabel.TradeGood => "Trade Good",
+            EconomySummaryLabel.LocallyCommon => "Locally Common",
+            _ => label.ToString()
+        };
 
     public static string GetMaterialLabel(MaterialType materialType)
         => materialType switch

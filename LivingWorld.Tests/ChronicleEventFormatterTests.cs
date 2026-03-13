@@ -658,6 +658,32 @@ public sealed class ChronicleEventFormatterTests
     }
 
     [Fact]
+    public void TradeGoodEstablished_RemainsVisible_AndDedupesForSameSettlement()
+    {
+        WorldEvent firstEvent = CreateEvent(
+            WorldEventType.TradeGoodEstablished,
+            WorldEventSeverity.Major,
+            year: 243,
+            narrative: "Stonefen became known for pottery as a trade good",
+            settlementId: 7004,
+            settlementName: "Stonefen");
+        firstEvent.Metadata["materialType"] = "Pottery";
+
+        WorldEvent repeatedEvent = CreateEvent(
+            WorldEventType.TradeGoodEstablished,
+            WorldEventSeverity.Major,
+            year: 244,
+            narrative: "Stonefen became known for pottery as a trade good",
+            settlementId: 7004,
+            settlementName: "Stonefen");
+        repeatedEvent.Metadata["materialType"] = "Pottery";
+
+        Assert.True(_formatter.TryFormat(firstEvent, _focus, out string chronicleLine));
+        Assert.Equal("Year 243 - Stonefen became known for pottery as a trade good.", chronicleLine);
+        Assert.False(_formatter.TryFormat(repeatedEvent, _focus, out _));
+    }
+
+    [Fact]
     public void ExactDuplicateVisibleRecoveryLine_InSameYear_IsSuppressedBySafetyNet()
     {
         WorldEvent firstRecovery = CreateEvent(

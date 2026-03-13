@@ -152,9 +152,15 @@ This keeps the physical economy legible:
 
 `Regional Abundance -> Extraction -> Local Stockpile -> Production -> Consumption / Bonuses -> Pressure Classification -> Redistribution`
 
-From that flow, the canonical next roadmap sequence is:
+Phase 18 now extends that flow with a hybrid economy layer:
 
-- Phase 18 - add stronger demand pull, scarcity response, and production shifting behavior
+- internal pressure scoring evaluates need, availability, value, opportunity, and export-readiness after stockpile targets are known
+- extraction and recipe choice use those smoothed signals so settlements react to scarcity, surplus, and local opportunity without thrashing every month
+- redistribution still moves real material stockpiles, but receiver priority now reflects economic value pressure as well as reserve deficit
+- player-facing screens summarize the result through readable labels rather than raw price numbers
+
+The canonical next roadmap sequence is:
+
 - Phase 19 - extend exchange across polity boundaries through explicit trade routes and dependencies
 - Phase 20 - convert material output into lasting settlement infrastructure and construction sinks
 - Phase 21 - let those routes, dependencies, and shortages feed diplomacy, raiding, and conflict events

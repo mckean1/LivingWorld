@@ -55,7 +55,6 @@ The first descendant-species pipeline now exists with explicit stabilization and
 
 ## Mid-Term Systems
 
-- Phase 18 - economy interactions and market behavior
 - Phase 19 - external trade, trade routes, and inter-polity exchange
 - Phase 20 - settlement infrastructure and construction
 - Phase 21 - diplomacy, raiding, and conflict foundations
@@ -112,3 +111,21 @@ Secondary follow-up around the same roadmap:
 
 - continue chronicle dedupe and event-weight tuning as new high-signal families come online
 - continue later `Discoveries` / `Learned` UI cleanup and fuller list/history views without promoting them ahead of the next core simulation phases
+
+## Phase 18 Status
+
+Economy interactions and market behavior now sit on top of the material stockpile model without introducing coin, raw prices, or a player-facing market screen.
+
+Delivered scope:
+
+- hidden settlement-level need, availability, value, opportunity, and production-focus signals
+- scarcity- and surplus-driven production shifts with smoothing to avoid unrealistic thrashing
+- stronger redistribution and specialization behavior driven by value pressure and local fit
+- trade-good and highly valued identity emergence as structured economy outcomes
+- player-facing watch summaries built from readable labels such as `Shortage`, `Highly Valued`, and `Trade Good`
+
+Natural next steps after this phase:
+
+- Phase 19 - inter-polity exchange, foreign routes, imports, exports, and dependency
+- Phase 20 - infrastructure and construction as long-term sinks for the now-more-reactive economy
+- Phase 21 - diplomacy, raiding, and conflict built on route pressure, supply disruption, and dependency

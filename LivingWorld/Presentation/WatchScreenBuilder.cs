@@ -88,6 +88,9 @@ public static class WatchScreenBuilder
         string materialShortages = DescribeTopMaterialStates(polity.Settlements, MaterialPressureState.Deficit);
         string leadingProduction = DescribeLeadingProductionSettlements(polity.Settlements);
         string materialStatus = DescribeMaterialCapabilityStatus(polity.Settlements);
+        string economyNeeds = DescribeEconomyNeeds(polity.Settlements);
+        string tradeGoods = DescribeEconomySignals(polity.Settlements, EconomySummaryLabel.TradeGood);
+        string locallyCommon = DescribeEconomySignals(polity.Settlements, EconomySummaryLabel.LocallyCommon);
 
         List<string> lines =
         [
@@ -108,6 +111,9 @@ public static class WatchScreenBuilder
             $" Material Surpluses: {materialSurpluses}",
             $" Critical Shortages: {materialShortages}",
             $" Leading Production: {leadingProduction}",
+            $" Economy Needs: {economyNeeds}",
+            $" Trade Goods: {tradeGoods}",
+            $" Locally Common: {locallyCommon}",
             $" Tool / Storage / Preservation: {materialStatus}",
             $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2} | Starvation Months {polity.StarvationMonthsThisYear}",
             $" Trade Links This Year: {polity.TradePartnerCountThisYear}",
@@ -455,6 +461,7 @@ public static class WatchScreenBuilder
         int managedHerdCount = polity.Settlements.Sum(settlement => settlement.ManagedHerds.Count);
         int cultivatedCropCount = polity.Settlements.Sum(settlement => settlement.CultivatedCrops.Count);
         string visibleSpecialization = DescribeLeadingProductionSettlements(knowledge.GetVisibleSettlementsForPolity(polity));
+        IReadOnlyList<Settlement> visibleSettlements = knowledge.GetVisibleSettlementsForPolity(polity);
 
         List<string> lines =
         [
@@ -471,12 +478,15 @@ public static class WatchScreenBuilder
             $" Managed Food This Year: {polity.AnnualFoodManaged:F0}",
             $" Managed Sources: Herds {managedHerdCount} | Crops {cultivatedCropCount}",
             $" Visible Material Strength: {visibleSpecialization}",
+            $" Economy Needs: {DescribeEconomyNeeds(visibleSettlements)}",
+            $" Trade Goods: {DescribeEconomySignals(visibleSettlements, EconomySummaryLabel.TradeGood)}",
+            $" Locally Common: {DescribeEconomySignals(visibleSettlements, EconomySummaryLabel.LocallyCommon)}",
             $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2}",
             string.Empty,
             " Visible Settlements:"
         ];
 
-        AppendSettlementLines(lines, knowledge.GetVisibleSettlementsForPolity(polity), lookup);
+        AppendSettlementLines(lines, visibleSettlements, lookup);
         lines.Add(string.Empty);
 
         if (isFocalPolity)
@@ -520,7 +530,7 @@ public static class WatchScreenBuilder
                 ? polity.Name
                 : $"Polity {settlement.PolityId}";
             lines.Add(
-                $"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1} - herds {settlement.ManagedHerds.Count} - crops {settlement.CultivatedCrops.Count} - food {settlement.FoodState} ({settlement.FoodBalance:F1}) - aid ytd {settlement.AidReceivedThisYear:F1} - mats {DescribeSettlementMaterialFocus(settlement)}");
+                $"  {settlement.Name} - {ownerName} - {settlementRegion} - age {settlement.YearsEstablished} - cultivated {settlement.CultivatedLand:F1} - herds {settlement.ManagedHerds.Count} - crops {settlement.CultivatedCrops.Count} - food {settlement.FoodState} ({settlement.FoodBalance:F1}) - aid ytd {settlement.AidReceivedThisYear:F1} - mats {DescribeSettlementMaterialFocus(settlement)} - econ {DescribeSettlementEconomyStatus(settlement)}");
         }
     }
 
@@ -591,6 +601,53 @@ public static class WatchScreenBuilder
         return materialStates.Count == 0 ? "none" : string.Join(", ", materialStates);
     }
 
+    private static string DescribeEconomyNeeds(IEnumerable<Settlement> settlements)
+    {
+        List<string> needs = Enum.GetValues<MaterialType>()
+            .Select(materialType => new
+            {
+                Material = materialType,
+                Score = settlements.Sum(settlement =>
+                    (settlement.MaterialPressureStates[materialType] == MaterialPressureState.Deficit ? 1.0 : 0.0)
+                    + (settlement.IsHighlyValued(materialType) ? 0.8 : 0.0)
+                    + settlement.MaterialValueScores[materialType])
+            })
+            .Where(entry => entry.Score >= 1.2)
+            .OrderByDescending(entry => entry.Score)
+            .ThenBy(entry => entry.Material.ToString(), StringComparer.Ordinal)
+            .Select(entry =>
+            {
+                Settlement? settlement = settlements
+                    .OrderByDescending(candidate => candidate.MaterialValueScores[entry.Material])
+                    .FirstOrDefault();
+                return settlement is null
+                    ? MaterialEconomySystem.GetMaterialLabel(entry.Material)
+                    : $"{MaterialEconomySystem.GetMaterialLabel(entry.Material)} ({MaterialEconomySystem.DescribeSummaryLabels(settlement, entry.Material)})";
+            })
+            .Take(3)
+            .ToList();
+
+        return needs.Count == 0 ? "none urgent" : string.Join(", ", needs);
+    }
+
+    private static string DescribeEconomySignals(IEnumerable<Settlement> settlements, EconomySummaryLabel label)
+    {
+        List<string> signals = Enum.GetValues<MaterialType>()
+            .Select(materialType => new
+            {
+                Material = materialType,
+                Count = settlements.Count(settlement => MaterialEconomySystem.GetSummaryLabels(settlement, materialType).Contains(label))
+            })
+            .Where(entry => entry.Count > 0)
+            .OrderByDescending(entry => entry.Count)
+            .ThenBy(entry => entry.Material.ToString(), StringComparer.Ordinal)
+            .Select(entry => $"{MaterialEconomySystem.GetMaterialLabel(entry.Material)} {entry.Count}")
+            .Take(3)
+            .ToList();
+
+        return signals.Count == 0 ? "none" : string.Join(", ", signals);
+    }
+
     private static string DescribeLeadingProductionSettlements(IEnumerable<Settlement> settlements)
     {
         List<string> leaders = settlements
@@ -659,6 +716,31 @@ public static class WatchScreenBuilder
         }
 
         return MaterialEconomySystem.GetMaterialLabel(dominantOutput.Key);
+    }
+
+    private static string DescribeSettlementEconomyStatus(Settlement settlement)
+    {
+        MaterialType? highlightedMaterial = settlement.DominantProductionFocusMaterial;
+        if (!highlightedMaterial.HasValue && settlement.HighlyValuedMaterials.Count > 0)
+        {
+            highlightedMaterial = settlement.HighlyValuedMaterials
+                .OrderByDescending(materialType => settlement.MaterialValueScores[materialType])
+                .First();
+        }
+
+        if (!highlightedMaterial.HasValue && settlement.TradeGoodMaterials.Count > 0)
+        {
+            highlightedMaterial = settlement.TradeGoodMaterials
+                .OrderByDescending(materialType => settlement.MaterialExternalPullReadiness[materialType])
+                .First();
+        }
+
+        if (!highlightedMaterial.HasValue)
+        {
+            return "Stable";
+        }
+
+        return $"{MaterialEconomySystem.GetMaterialLabel(highlightedMaterial.Value)} ({MaterialEconomySystem.DescribeSummaryLabels(settlement, highlightedMaterial.Value)})";
     }
 
     private static string DescribeEnvironment(Region region)

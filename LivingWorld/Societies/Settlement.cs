@@ -38,6 +38,21 @@ public sealed class Settlement
     public Dictionary<MaterialType, double> MaterialTargetReserves { get; } = [];
     public Dictionary<MaterialType, MaterialPressureState> MaterialPressureStates { get; } = [];
     public Dictionary<MaterialType, int> LastRecordedMaterialShortageBands { get; } = [];
+    public Dictionary<MaterialType, double> MaterialNeedPressures { get; } = [];
+    public Dictionary<MaterialType, double> MaterialAvailabilityScores { get; } = [];
+    public Dictionary<MaterialType, double> MaterialValueScores { get; } = [];
+    public Dictionary<MaterialType, double> MaterialOpportunityScores { get; } = [];
+    public Dictionary<MaterialType, double> MaterialExternalPullReadiness { get; } = [];
+    public Dictionary<MaterialType, double> MaterialProductionFocusScores { get; } = [];
+    public Dictionary<MaterialType, int> LastRecordedHighlyValuedBands { get; } = [];
+    public Dictionary<MaterialType, bool> LastRecordedTradeGoodStates { get; } = [];
+    public HashSet<MaterialType> HighlyValuedMaterials { get; } = [];
+    public HashSet<MaterialType> TradeGoodMaterials { get; } = [];
+    public HashSet<MaterialType> LocallyCommonMaterials { get; } = [];
+    public MaterialType? DominantProductionFocusMaterial { get; set; }
+    public MaterialType? CandidateProductionFocusMaterial { get; set; }
+    public int CandidateProductionFocusMonths { get; set; }
+    public int ProductionFocusShiftCooldownMonths { get; set; }
     public Dictionary<SettlementSpecializationTag, double> SpecializationScores { get; } = [];
     public HashSet<SettlementSpecializationTag> SpecializationTags { get; } = [];
     public HashSet<string> MaterialMilestonesRecorded { get; } = [];
@@ -65,6 +80,14 @@ public sealed class Settlement
             MaterialTargetReserves[materialType] = 0.0;
             MaterialPressureStates[materialType] = MaterialPressureState.Stable;
             LastRecordedMaterialShortageBands[materialType] = 0;
+            MaterialNeedPressures[materialType] = 0.0;
+            MaterialAvailabilityScores[materialType] = 0.0;
+            MaterialValueScores[materialType] = 0.0;
+            MaterialOpportunityScores[materialType] = 0.0;
+            MaterialExternalPullReadiness[materialType] = 0.0;
+            MaterialProductionFocusScores[materialType] = 0.0;
+            LastRecordedHighlyValuedBands[materialType] = 0;
+            LastRecordedTradeGoodStates[materialType] = false;
         }
     }
 
@@ -124,6 +147,15 @@ public sealed class Settlement
             MaterialProducedThisMonth[materialType] = 0.0;
             MaterialConsumedThisMonth[materialType] = 0.0;
         }
+
+        HighlyValuedMaterials.Clear();
+        TradeGoodMaterials.Clear();
+        LocallyCommonMaterials.Clear();
+
+        if (ProductionFocusShiftCooldownMonths > 0)
+        {
+            ProductionFocusShiftCooldownMonths--;
+        }
     }
 
     public void ResetAnnualMaterialStats()
@@ -138,6 +170,32 @@ public sealed class Settlement
 
         SpecializationScores.Clear();
     }
+
+    public void SetMaterialEconomySignals(
+        MaterialType materialType,
+        double needPressure,
+        double availabilityScore,
+        double valueScore,
+        double opportunityScore,
+        double externalPullReadiness,
+        double productionFocusScore)
+    {
+        MaterialNeedPressures[materialType] = Math.Max(0.0, needPressure);
+        MaterialAvailabilityScores[materialType] = Math.Max(0.0, availabilityScore);
+        MaterialValueScores[materialType] = Math.Max(0.0, valueScore);
+        MaterialOpportunityScores[materialType] = Math.Max(0.0, opportunityScore);
+        MaterialExternalPullReadiness[materialType] = Math.Max(0.0, externalPullReadiness);
+        MaterialProductionFocusScores[materialType] = Math.Max(0.0, productionFocusScore);
+    }
+
+    public bool IsHighlyValued(MaterialType materialType)
+        => HighlyValuedMaterials.Contains(materialType);
+
+    public bool IsTradeGood(MaterialType materialType)
+        => TradeGoodMaterials.Contains(materialType);
+
+    public bool IsLocallyCommon(MaterialType materialType)
+        => LocallyCommonMaterials.Contains(materialType);
 
     public double GetMaterialStockpile(MaterialType materialType)
         => MaterialStockpiles.TryGetValue(materialType, out double value)

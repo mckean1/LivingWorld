@@ -237,11 +237,20 @@ Phase 17 adds a first-pass physical economy without introducing money, prices, m
 
 The main chronicle still stays high-signal. Routine extraction, per-material shortage churn, and convoy bookkeeping remain in structured history and inspection views. The visible chronicle now prefers grouped settlement-level material turns such as a broader material crisis beginning, worsening, or easing, alongside major milestones such as preservation established, sustained toolmaking, and settlement craft specialization.
 
+## Phase 18 - Economy Interactions And Market Behavior
+
+Phase 18 keeps the economy simulation internal and pressure-based rather than exposing raw numeric prices to the player.
+
+- settlements now track hidden need, availability, value, opportunity, external-pull, and production-focus signals per material
+- production and extraction no longer stay mostly static: settlements now lean toward goods they need, goods they can support locally, and goods that keep proving valuable
+- scarcity and surplus now do more than label stockpiles; they push redistribution priority, bottleneck behavior, specialization drift, and trade-good identity
+- player-facing watch screens stay readable through compact summaries such as `Shortage`, `Stable`, `Surplus`, `Highly Valued`, `Trade Good`, and `Locally Common`
+- new economy-turn event families remain structured-first unless they become true major historical beats such as a material becoming highly valued or a settlement becoming known for a trade good
+
 The canonical roadmap now points next to:
 
-- Phase 18 - Economy Interactions & Market Behavior
 - Phase 19 - External Trade, Trade Routes, and Inter-Polity Exchange
 - Phase 20 - Settlement Infrastructure & Construction
 - Phase 21 - Diplomacy, Raiding, and Conflict Foundations
 
-Those phases build directly on the existing settlement stockpile, redistribution, and specialization foundation. Chronicle dedupe tuning and later `Discoveries` / `Learned` full-list cleanup remain secondary UI follow-up work rather than replacing that next core simulation sequence.
+Chronicle dedupe tuning and later `Discoveries` / `Learned` full-list cleanup remain secondary UI follow-up work rather than replacing that next core simulation sequence.

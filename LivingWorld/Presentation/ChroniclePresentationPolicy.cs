@@ -173,6 +173,30 @@ public sealed class ChroniclePresentationPolicy
                 ChangedStateCooldownYears: 0,
                 BuildMaterialScopeKey,
                 BuildMaterialStateKey),
+            [WorldEventType.MaterialHighlyValued] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 12,
+                ChangedStateCooldownYears: 4,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.ProductionFocusShifted] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 8,
+                ChangedStateCooldownYears: 2,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.ProductionBottleneckHit] = new ChronicleEventProfile(
+                BasePriority: 4,
+                SameStateCooldownYears: 10,
+                ChangedStateCooldownYears: 2,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
+            [WorldEventType.TradeGoodEstablished] = new ChronicleEventProfile(
+                BasePriority: 5,
+                SameStateCooldownYears: 20,
+                ChangedStateCooldownYears: 0,
+                BuildMaterialScopeKey,
+                BuildMaterialStateKey),
             [WorldEventType.StageChanged] = new ChronicleEventProfile(
                 BasePriority: 5,
                 SameStateCooldownYears: 30,
@@ -326,6 +350,10 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.SettlementSpecialized or
             WorldEventType.PreservationEstablished or
             WorldEventType.ToolmakingEstablished or
+            WorldEventType.MaterialHighlyValued or
+            WorldEventType.ProductionFocusShifted or
+            WorldEventType.ProductionBottleneckHit or
+            WorldEventType.TradeGoodEstablished or
             WorldEventType.Fragmentation or
             WorldEventType.PolityFounded or
             WorldEventType.StageChanged or

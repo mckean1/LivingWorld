@@ -210,3 +210,28 @@ Material events follow the same transition-first rules:
 - when several material shortages shift together for one settlement in the same tick, the player-facing chronicle now prefers one grouped `material_crisis_*` beat while the underlying per-material events remain in structured history
 
 Material follow-up events can still propagate through the canonical coordinator. Preservation and critical material relief can support later food stabilization, while toolmaking and specialization can strengthen settlement stability without bypassing the event pipeline.
+
+## Phase 18 Event Notes
+
+Economy-interaction events keep the same hybrid rule:
+
+- internal pressure, value, and opportunity math stays simulation-side
+- player-facing output uses readable labels and rare historical turns rather than price telemetry
+- structured detail still records why a material became important, why output shifted, or what bottleneck constrained it
+
+New structured event types:
+
+- `material_highly_valued`
+  - a material crossed into a true high-value state for one settlement
+- `production_focus_shifted`
+  - a settlement's smoothed production focus moved toward a different good
+- `production_bottleneck_hit`
+  - an important output faltered because a key input stayed constrained
+- `trade_good_established`
+  - one settlement developed sustained surplus in a good that remained valuable beyond immediate local use
+
+Default visibility intent:
+
+- `production_focus_shifted` and `production_bottleneck_hit` are usually structured-first unless a later pass intentionally escalates them
+- `material_highly_valued` and `trade_good_established` can surface when they become real major historical turns for the focused line
+- duplicate-safe major-event presentation still applies, so the live chronicle and recent-major-event views should not repeat the same settlement-material turn in one year

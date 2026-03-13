@@ -310,3 +310,23 @@ Default visibility intent:
 
 - routine discovery, extraction, production, and per-material shortage bookkeeping remain mostly structured-first
 - grouped `material_crisis_*` events, preservation, sustained toolmaking, and specialization turns are the main chronicle-facing material beats
+
+## Phase 18 Economy Interaction Events
+
+New structured event types:
+
+- `material_highly_valued`
+  - a good became unusually important in one settlement's economy because need, scarcity, and downstream usefulness stayed high
+- `production_focus_shifted`
+  - a settlement shifted work toward a different material because smoothed need/opportunity pressure changed
+- `production_bottleneck_hit`
+  - a favored output chain stalled because an input stayed constrained
+- `trade_good_established`
+  - a settlement built sustained surplus in a good that remained broadly valuable
+
+Intent:
+
+- keep the real economy pressure model internal
+- surface only the major historical turns
+- preserve cause metadata such as `materialType`, bottleneck input, or prior focus in structured history
+- avoid duplicate major-event presentation for the same settlement-material turn in one year

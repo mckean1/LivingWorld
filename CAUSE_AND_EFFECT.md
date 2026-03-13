@@ -262,3 +262,20 @@ This keeps the simulation concrete:
 - no merchant actor is invented to explain movement
 - convoy relief, craft emergence, and shortage pressure all come from stockpiles, capability, geography, and distance
 - player-facing major-event views may collapse equivalent same-year outcomes into one visible beat, but the underlying structured event chain remains intact for debugging and history tools
+
+## Phase 18 Cause and Effect
+
+Economy interactions now follow the same grounded chain:
+
+1. settlement stockpiles, reserve targets, and recent usage establish hidden need and availability pressure
+2. local abundance, downstream usefulness, and sustained surplus build internal value and opportunity signals
+3. those signals shift extraction, recipe choice, and convoy priority without introducing money or explicit market screens
+4. smoothing and confirmation rules prevent one noisy month from fully flipping a settlement's production identity
+5. persistent value or surplus can create major turns such as a material becoming highly valued or a settlement becoming known for a trade good
+6. missing inputs can bottleneck favored output, leaving a visible explanation for why later resilience or productivity weakened
+
+This preserves LivingWorld's core rule:
+
+- the simulation remains concrete and pressure-based
+- the UI shows readable summaries rather than modern-market dashboards
+- every major economy turn still traces back to stockpiles, need, geography, capability, and logistics
