@@ -18,6 +18,7 @@ The same watch renderer applies conservative syntax coloring after formatting: s
 The watch loop now also maintains a small UI state machine for top-level views, detail screens, pause state, and selection memory.
 The seed world entering this loop is now larger by default, but scale tuning remains centralized in `WorldGenerationSettings` rather than spread across systems.
 Before active play, simulation now runs an explicit bootstrap seeding step for baseline local state such as settlement economy pressure and starvation tracking. Those bootstrap events remain canonical/internal but are filtered from player-facing chronicle surfaces.
+That bootstrap seeding also initializes prior material and reputation comparisons so the first active month is measured against real baseline state instead of empty history trackers.
 
 ## Monthly Systems
 

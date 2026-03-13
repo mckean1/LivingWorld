@@ -175,6 +175,7 @@ The chronicle formatter now also treats some event families as semantic transiti
 
 - systems emit events on state transitions, not repeated unchanged conditions
 - bootstrap setup is not itself a player-facing historical transition; baseline seeding can emit canonical events, but those events are filtered from live chronicle surfaces by simulation phase
+- prior-state trackers should be seeded during bootstrap so the first active comparison does not turn established specialization, trade-good identity, or crisis normalization into fake new history
 - the propagation coordinator dedupes identical follow-up events inside one step
 - propagation depth is capped
 - total events per source event are capped

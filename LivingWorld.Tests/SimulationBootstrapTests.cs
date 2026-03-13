@@ -27,8 +27,12 @@ public sealed class SimulationBootstrapTests
         ChronicleFocus focus = new();
         focus.SetFocus(polityId: 7, lineageId: 7);
         WatchKnowledgeSnapshot snapshot = WatchInspectionData.CreateSnapshot(world, focus);
+        IReadOnlyList<WorldEvent> visibleEvents = snapshot.GetVisibleMajorEvents(world, limit: 20);
 
-        Assert.DoesNotContain(snapshot.GetVisibleMajorEvents(world, limit: 20), evt => evt.IsBootstrapEvent);
+        Assert.DoesNotContain(visibleEvents, evt => evt.IsBootstrapEvent);
+        Assert.DoesNotContain(visibleEvents, evt => evt.Type == WorldEventType.SettlementSpecialized);
+        Assert.DoesNotContain(visibleEvents, evt => evt.Type == WorldEventType.TradeGoodEstablished);
+        Assert.DoesNotContain(visibleEvents, evt => evt.Type == WorldEventType.MaterialCrisisResolved);
     }
 
     [Fact]
@@ -68,6 +72,92 @@ public sealed class SimulationBootstrapTests
 
         Assert.True(formatter.TryFormat(liveEvent, focus, out string chronicleLine));
         Assert.Equal("Year 0 - Simple Tools became highly valued in Green Hearth.", chronicleLine);
+    }
+
+    [Fact]
+    public void LiveYearZeroKnownForTradeGoodAndRecoveryEvents_RemainVisibleAfterBootstrap()
+    {
+        World world = CreateBootstrapWorld();
+
+        using Simulation simulation = new(world, new SimulationOptions());
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        ChronicleEventFormatter formatter = new();
+
+        WorldEvent specializationEvent = new()
+        {
+            Type = WorldEventType.SettlementSpecialized,
+            Severity = WorldEventSeverity.Major,
+            Narrative = "Green Hearth became known for timber work",
+            Reason = "settlement_specialized",
+            Scope = WorldEventScope.Local,
+            PolityId = 7,
+            PolityName = "Deepfield Tribe",
+            SpeciesId = 1,
+            SpeciesName = "Humans",
+            RegionId = 0,
+            RegionName = "Green Barrow",
+            SettlementId = 7001,
+            SettlementName = "Green Hearth",
+            Metadata = new Dictionary<string, string>
+            {
+                ["specializationTag"] = "LumberCenter",
+                ["materialType"] = "Lumber"
+            }
+        };
+        WorldEvent tradeGoodEvent = new()
+        {
+            Type = WorldEventType.TradeGoodEstablished,
+            Severity = WorldEventSeverity.Major,
+            Narrative = "Green Hearth became known for lumber as a trade good",
+            Reason = "trade_good_established",
+            Scope = WorldEventScope.Local,
+            PolityId = 7,
+            PolityName = "Deepfield Tribe",
+            SpeciesId = 1,
+            SpeciesName = "Humans",
+            RegionId = 0,
+            RegionName = "Green Barrow",
+            SettlementId = 7001,
+            SettlementName = "Green Hearth",
+            Metadata = new Dictionary<string, string>
+            {
+                ["materialType"] = "Lumber"
+            }
+        };
+        WorldEvent recoveryEvent = new()
+        {
+            Type = WorldEventType.MaterialCrisisResolved,
+            Severity = WorldEventSeverity.Major,
+            Narrative = "Green Hearth recovered from a broader material crisis",
+            Reason = "grouped_material_crisis_resolved",
+            Scope = WorldEventScope.Local,
+            PolityId = 7,
+            PolityName = "Deepfield Tribe",
+            SpeciesId = 1,
+            SpeciesName = "Humans",
+            RegionId = 0,
+            RegionName = "Green Barrow",
+            SettlementId = 7001,
+            SettlementName = "Green Hearth",
+            Metadata = new Dictionary<string, string>
+            {
+                ["groupedMaterials"] = "Lumber,SimpleTools",
+                ["groupedCount"] = "2"
+            }
+        };
+
+        world.AddEvent(specializationEvent);
+        world.AddEvent(tradeGoodEvent);
+        world.AddEvent(recoveryEvent);
+
+        Assert.True(formatter.TryFormat(Assert.Single(world.Events, evt => evt.Type == WorldEventType.SettlementSpecialized && !evt.IsBootstrapEvent), focus, out string specializationLine));
+        Assert.Equal("Year 0 - Green Hearth became known for timber work.", specializationLine);
+        Assert.True(formatter.TryFormat(Assert.Single(world.Events, evt => evt.Type == WorldEventType.TradeGoodEstablished && !evt.IsBootstrapEvent), focus, out string tradeGoodLine));
+        Assert.Equal("Year 0 - Green Hearth became known for lumber as a trade good.", tradeGoodLine);
+        Assert.True(formatter.TryFormat(Assert.Single(world.Events, evt => evt.Type == WorldEventType.MaterialCrisisResolved && !evt.IsBootstrapEvent), focus, out string recoveryLine));
+        Assert.Equal("Year 0 - Green Hearth recovered from a broader material crisis.", recoveryLine);
     }
 
     private static World CreateBootstrapWorld()

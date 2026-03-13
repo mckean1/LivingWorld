@@ -299,10 +299,16 @@ public sealed class Simulation : IDisposable
 
     private void RunBootstrapInitialization()
     {
-        _settlementFoodRedistributionSystem.InitializeBootstrapStates(_world);
-        _materialEconomySystem.UpdateMonthlyMaterials(_world);
-        _settlementFoodRedistributionSystem.InitializeBootstrapStates(_world);
+        int bootstrapMaterialWarmupMonths = ResolveBootstrapMaterialWarmupMonths();
+        for (int month = 0; month < bootstrapMaterialWarmupMonths; month++)
+        {
+            _settlementFoodRedistributionSystem.InitializeBootstrapStates(_world);
+            _materialEconomySystem.UpdateMonthlyMaterials(_world);
+            _settlementFoodRedistributionSystem.InitializeBootstrapStates(_world);
+        }
+
         SeedBootstrapHardshipStates();
+        ResetBootstrapRuntimeCounters();
         _world.BeginActiveSimulation();
     }
 
@@ -312,6 +318,27 @@ public sealed class Simulation : IDisposable
         {
             HardshipTier currentTier = ResolveHardshipTier(polity);
             _hardshipStates[polity.Id] = HardshipChronicleState.Initial.WithObservedTier(currentTier, _world.Time.Year);
+        }
+    }
+
+    private int ResolveBootstrapMaterialWarmupMonths()
+    {
+        int oldestSettlement = _world.Polities
+            .SelectMany(polity => polity.Settlements)
+            .Select(settlement => settlement.YearsEstablished)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        return oldestSettlement <= 0
+            ? 1
+            : Math.Clamp(oldestSettlement, 1, 6);
+    }
+
+    private void ResetBootstrapRuntimeCounters()
+    {
+        foreach (Polity polity in _world.Polities)
+        {
+            polity.ResetAnnualFoodStats();
         }
     }
 

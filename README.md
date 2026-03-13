@@ -123,6 +123,7 @@ Chronicle presentation now also uses semantic state signatures for noisy familie
 Visible families that do not yet have a custom semantic profile still pass through a fallback chronicle state key built from actor scope plus normalized narrative, so exact repeated lines do not leak into the player feed year after year.
 Visible major-event summaries now apply the same player-facing dedupe identity as the live chronicle, so recent-event panels do not repeat the same settlement recovery or crisis beat multiple times in one year unless the visible state is meaningfully different.
 Chronicle presentation now also ignores bootstrap-tagged baseline events. Initialization can establish shortage, trade-good, specialization, convoy-failure, or hardship state internally, but only post-bootstrap transitions are eligible for the live chronicle and recent major-event summaries.
+Bootstrap seeding also initializes prior economy/material identity deeply enough that the first active comparison is against seeded baseline state, not against an empty tracker that would mistake old conditions for new history.
 
 ## Watch Controls
 

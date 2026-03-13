@@ -237,6 +237,7 @@ Implemented:
 - Pressure-driven extraction, production, redistribution priority, bottleneck handling, and specialization drift with smoothing to reduce thrashing
 - New economy-turn event families for highly valued goods, trade-good identity, production-focus shifts, and bottlenecks
 - Explicit bootstrap-aware chronicle handling so initialization-created economy baselines remain internal state and setup history instead of appearing as live Year 0 narrative
+- Bootstrap baseline seeding now initializes older settlements' economy and material-reputation state deeply enough that the first live tick compares against an established baseline instead of inventing new `known for`, trade-good, or false recovery history
 - Shared visible-event dedupe and chronicle filtering that still allow real post-bootstrap transitions, including legitimate Year 0 changes, to surface normally
 
 ---
