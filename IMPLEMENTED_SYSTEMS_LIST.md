@@ -281,7 +281,171 @@ Planned:
 
 ---
 
-# Later Follow-Up Areas
-- Continue player-facing chronicle dedupe tuning and visible major-event cleanup as more event families come online
-- Continue watch UI cleanup around `Discoveries` and `Learned`, including later fuller list and detail presentation improvements
+## Phase 22 - Traditions
+**Status:** Planned
+
+Planned:
+- Tradition system for recurring customs, rites, feast practices, burial customs, taboos, sacred foods, and sacred species
+- Traditions that emerge from environment, food sources, migration, disasters, survival pressures, and prior history
+- Regionally distinct traditions that help differentiate otherwise similar polities
+- Tradition-linked chronicle hooks for cultural turning points, continuity, and loss
+- Tradition pressure and continuity tracking so customs can persist, adapt, weaken, or be abandoned over time
+
+---
+
+## Phase 23 - Historical Memory
+**Status:** Planned
+
+Planned:
+- Historical memory system for remembered famines, migrations, betrayals, foundings, collapses, disasters, and golden ages
+- Memory records derived from real simulation events rather than arbitrary flavor generation
+- Behavioral consequences where remembered events influence storage behavior, diplomacy, migration, expansion, and risk tolerance
+- Intergenerational memory retention and fading over time
+- Chronicle-visible memory callbacks that make current decisions feel rooted in lived history
+
+---
+
+## Phase 24 - Dynamic Religion
+**Status:** Planned
+
+Planned:
+- Religion system distinct from generic culture and distinct from mythology
+- Early religions that are fluid, local, reactive, and highly shaped by environment and major events
+- Gradual stabilization over time as doctrine, institutions, sacred sites, and orthodoxy harden
+- Emergent reform, schism, syncretism, local cult behavior, and sacred geography
+- Religious behavior influencing food rules, diplomacy, legitimacy, ritual life, and conflict pressures
+
+---
+
+## Phase 25 - Mythology
+**Status:** Planned
+
+Planned:
+- Mythology system separate from formal religion
+- Origin stories, heroic tales, ancestor legends, sacred beasts, migration stories, and disaster narratives
+- Myth-making fed by real simulation events, famous figures, species encounters, ruins, and environmental shocks
+- Mythology that can persist across regime change and even outlast shifts in formal religion
+- Mythology acting as a storytelling and identity layer that informs traditions, religion, and polity self-understanding
+
+---
+
+## Phase 26 - Named Great People
+**Status:** Planned
+
+Planned:
+- Lightweight named major figures without shifting the simulation into full individual-level character modeling
+- Founders, prophets, reformers, explorers, architects, war leaders, lawgivers, and beast tamers
+- Great people emerging from real pressure contexts and major turning points
+- Chronicle anchors that make eras easier for the player to remember
+- Post-death legacy support through memory, mythology, tradition, and legitimacy effects
+
+---
+
+## Phase 27 - Internal Politics and Factions
+**Status:** Planned
+
+Planned:
+- Internal faction pressures such as elders, warriors, traders, priests, settlers, regional elites, and core-versus-frontier blocs
+- Reform resistance, policy disputes, succession friction, and competing internal priorities
+- More believable fragmentation, instability, and state-direction changes
+- Internal pressure tied to economy, religion, legitimacy, memory, and external threat
+- Political event chains that remain grounded in LivingWorld's cause-and-effect simulation rules
+
+---
+
+## Phase 28 - Diplomatic Identity
+**Status:** Planned
+
+Planned:
+- Diplomatic identity layer beyond simple relationships or trade links
+- Emergent identities such as ally, rival, kin-polity, trusted trade partner, tributary, old enemy, or feared raider
+- Relationship identity formed through repeated interaction, shared history, conflict, religion, and trade dependency
+- Diplomatic memory and identity feeding into later negotiation, retaliation, trust, and alliance systems
+- Chronicle hooks for long-running interstate narratives
+
+---
+
+## Phase 29 - Exploration Expeditions
+**Status:** Planned
+
+Planned:
+- Organized scouting and exploratory expeditions into less-known or unknown regions
+- Route-finding, distant-contact, species-reporting, ruin-finding, and fossil-finding hooks
+- Risk of failure, loss, disappearance, or misleading reports
+- Exploration outcomes that directly expand map knowledge, species knowledge, and cultural knowledge
+- Foundations for deeper frontier stories, contact stories, and discovery-driven myth-making
+
+---
+
+## Phase 30 - Species Reputation
+**Status:** Planned
+
+Planned:
+- Reputation layer for species beyond simple edibility, danger, or domestication suitability
+- Species becoming sacred, cursed, noble prey, vermin, famine food, omen-bringers, prestige animals, or taboo creatures
+- Reputation formation shaped by hunting history, religion, mythology, ecological impact, and rare events
+- Behavioral consequences for hunting, domestication, diplomacy, ritual, and cultural identity
+- Chronicle and UI summaries that help the player understand why a species matters beyond raw utility
+
+---
+
+## Phase 31 - Ruins, Fossils, and Archaeology
+**Status:** Planned
+
+Planned:
+- Persistent ruin sites from collapsed settlements, destroyed infrastructure, abandoned roads, burial grounds, and lost projects
+- Fossil and extinct-species traces that preserve deep-time world history
+- Archaeological discovery of real prior simulation events, extinct species, and fallen civilizations
+- Reuse, scavenging, rediscovery, legitimacy claims, and myth distortion around old remains
+- Strong ties into exploration, mythology, memory, religion, and deep-history storytelling
+
+---
+
+## Phase 32 - Functional Wonders
+**Status:** Planned
+
+Planned:
+- Multi-year prestige and infrastructure projects such as temples, monuments, observatories, canals, roads, granaries, and fortresses
+- Wonders with real simulation consequences rather than cosmetic prestige only
+- Wonder construction as a major polity commitment shaped by material capacity, religion, legitimacy, ambition, and geography
+- Chronicle-defining long projects with interruption, completion, inheritance, and ruin outcomes
+- Late-game historical landmarks that anchor memory, diplomacy, religion, and archaeology
+
+---
+
+# Design Rules and Roadmap Notes
+
+## Canonical Planning Rules
+- This file is both the canonical implementation ledger and the canonical forward-looking phase plan.
+- Future implementation prompts should always review this file first.
+- No feature is fully complete until this file and relevant documentation are updated.
+
+## Chronicle and Initialization Rules
+- If an event exists because the simulation was initialized, do not chronicle it.
+- If an event exists because the world changed after initialization, chronicle it.
+- Player-facing chronicle output should remain focused on meaningful state changes rather than setup state.
+
+## Knowledge and Terminology Rules
+- Use `Discovery` for revealing resources, geography, species knowledge, or understanding what exists in the world.
+- Use `Learned` for advancements that grant capability.
+- Cultural knowledge and polity capability remain separate systems.
+
+## Economy Presentation Rules
+- Internal economy logic should remain simulation-facing and pressure-based.
+- Player-facing UI should prefer compact human-readable summaries rather than raw market-number presentation.
+
+## Culture, Religion, and Storytelling Rules
+- Traditions are the formal system name for recurring customs, rites, taboos, and cultural practices.
+- Religion and mythology are separate systems.
+- Religion should be dynamic and fluid early, then become more stable and institutional over time.
+- Mythology should be able to outlast formal religious change more easily than doctrine-bound religion.
+- Great People, traditions, religion, mythology, and historical memory should all emerge from simulation cause-and-effect rather than arbitrary flavor generation.
+
+## UI Follow-Up Notes
+- Continue player-facing chronicle dedupe tuning and visible major-event cleanup as more event families come online.
+- Continue watch UI cleanup around `Discoveries` and `Learned`, including later fuller list and detail presentation improvements.
+- Future UI work should explicitly decide and document sorting rules for compact summaries and full-list views.
+- A dedicated place in My Polity and inspect/drill-in views should later expose the full `Discoveries` and full `Learned` lists.
+
+## Additional Later Follow-Up Areas
 - Additional later phases should be added here only after the canonical roadmap is intentionally extended and synced across docs
