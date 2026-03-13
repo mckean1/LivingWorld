@@ -239,6 +239,49 @@ public sealed class Polity
         MaterialMovedThisYear.Clear();
     }
 
+    public void ResetBootstrapRuntimeState()
+    {
+        FoodGatheredThisMonth = 0;
+        FoodFarmedThisMonth = 0;
+        FoodConsumedThisMonth = 0;
+        FoodNeededThisMonth = 0;
+        FoodShortageThisMonth = 0;
+        FoodSurplusThisMonth = 0;
+        FoodSatisfactionThisMonth = 1.0;
+
+        AnnualFoodNeeded = 0;
+        AnnualFoodConsumed = 0;
+        AnnualFoodShortage = 0;
+        AnnualFoodGathered = 0;
+        AnnualFoodFarmed = 0;
+        AnnualFoodManaged = 0;
+        AnnualFoodImported = 0;
+        AnnualFoodExported = 0;
+        AnnualFoodImportedInternal = 0;
+        AnnualFoodImportedExternal = 0;
+        TradeReliefMonthsThisYear = 0;
+        TradePartialReliefMonthsThisYear = 0;
+        TradeFullReliefMonthsThisYear = 0;
+        TradePartnerCountThisYear = 0;
+        AnnualTradeNeedMitigated = 0;
+        FoodManagedThisMonth = 0;
+        AnnualCultivatedLandTotal = 0;
+        FarmingMonthsThisYear = 0;
+        StarvationMonthsThisYear = 0;
+        MovedThisYear = false;
+        MovesThisYear = 0;
+        FoodHuntedThisYear = 0;
+        HuntingCasualtiesThisYear = 0;
+        LegendaryHuntsThisYear = 0;
+
+        foreach (Settlement settlement in _settlements)
+        {
+            settlement.ResetBootstrapRuntimeState();
+        }
+
+        MaterialMovedThisYear.Clear();
+    }
+
     public bool HasAdvancement(AdvancementId advancementId)
         => Advancements.Contains(advancementId);
 

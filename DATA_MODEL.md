@@ -106,6 +106,7 @@ It includes:
 
 - time: `EventId`, `Year`, `Month`, `Season`
 - phase: `SimulationPhase`
+- origin: `Origin`
 - causal ancestry: `RootEventId`, `ParentEventIds`, `PropagationDepth`
 - classification: `Type`, `Severity`, `Scope`
 - narrative fields: `Narrative`, `Details`, `Reason`

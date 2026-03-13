@@ -737,6 +737,25 @@ public sealed class ChronicleEventFormatterTests
         Assert.Equal("Year 0 - Simple Tools became highly valued in Stonefen.", chronicleLine);
     }
 
+    [Fact]
+    public void BootstrapOriginSafetyNet_SuppressesNonLiveEconomyEvents_EvenOutsideBootstrapPhase()
+    {
+        WorldEvent seededBaselineEvent = CreateEvent(
+            WorldEventType.TradeGoodEstablished,
+            WorldEventSeverity.Major,
+            year: 0,
+            narrative: "Stonefen became known for pottery as a trade good",
+            settlementId: 7004,
+            settlementName: "Stonefen") with
+        {
+            SimulationPhase = WorldSimulationPhase.Active,
+            Origin = WorldEventOrigin.BootstrapBaseline
+        };
+        seededBaselineEvent.Metadata["materialType"] = "Pottery";
+
+        Assert.False(_formatter.TryFormat(seededBaselineEvent, _focus, out _));
+    }
+
     private static WorldEvent CreateEvent(
         string type,
         WorldEventSeverity severity,

@@ -11,6 +11,7 @@ Core fields:
 - `parentEventIds`
 - `propagationDepth`
 - `simulationPhase`
+- `origin`
 - `year`, `month`, `season`
 - `type`, `severity`, `scope`
 - `narrative`, `details`, `reason`
@@ -69,6 +70,7 @@ The same rule applies to starting home settlements: they exist as initial world 
 
 Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
 That includes bootstrap-created baseline events: initialization may register canonical setup transitions internally, but player-facing chronicle views treat them as setup context rather than as live history.
+`origin` now makes that distinction explicit: bootstrap baseline/setup events are not the same thing as post-bootstrap live transitions.
 
 ## Causal Links
 

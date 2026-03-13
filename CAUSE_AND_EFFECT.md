@@ -47,6 +47,7 @@ Settlement hardship follows the same pattern at a smaller scale:
 
 No chronicle beat should be emitted for a settlement that is merely still starving in the same way it was before. The event belongs to the transition, not the steady state.
 The same rule now applies one step earlier in time: initialization-created baseline state is not chronicle history. Bootstrap can seed settlement pressure, shortage, trade-good, specialization, and starvation baselines internally, and only later world change should narrate those conditions as history.
+Event origin is now explicit as well, so the chronicle can distinguish setup/baseline context from a true live transition even when the event family is the same.
 
 ### Settlement Pressure
 

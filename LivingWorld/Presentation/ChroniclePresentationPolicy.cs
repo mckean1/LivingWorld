@@ -240,7 +240,7 @@ public sealed class ChroniclePresentationPolicy
 
     public string? BuildPlayerFacingDedupKey(WorldEvent worldEvent)
     {
-        if (worldEvent.IsBootstrapEvent || worldEvent.Severity < MinimumChronicleSeverity || !IsPlayerFacingChronicleEvent(worldEvent))
+        if (ShouldSuppressFromChronicle(worldEvent) || worldEvent.Severity < MinimumChronicleSeverity || !IsPlayerFacingChronicleEvent(worldEvent))
         {
             return null;
         }
@@ -265,7 +265,7 @@ public sealed class ChroniclePresentationPolicy
     {
         presentationKey = null;
 
-        if (worldEvent.IsBootstrapEvent)
+        if (ShouldSuppressFromChronicle(worldEvent))
         {
             return false;
         }
@@ -372,6 +372,9 @@ public sealed class ChroniclePresentationPolicy
             WorldEventType.FocusLineageContinued or
             WorldEventType.FocusLineageExtinctFallback;
     }
+
+    private static bool ShouldSuppressFromChronicle(WorldEvent worldEvent)
+        => worldEvent.IsBootstrapEvent || !worldEvent.IsLiveTransition;
 
     private ChronicleEventProfile ResolveProfile(WorldEvent worldEvent)
         => _profiles.TryGetValue(worldEvent.Type, out ChronicleEventProfile? profile)

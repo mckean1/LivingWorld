@@ -119,6 +119,22 @@ public sealed class MaterialEconomySystem
         }
     }
 
+    public void SeedBootstrapBaseline(World world)
+    {
+        WorldLookup lookup = new(world);
+
+        foreach (Polity polity in world.Polities.Where(candidate => candidate.Population > 0 && candidate.HasSettlements))
+        {
+            UpdateSettlementMaterialPressure(polity.Settlements);
+            UpdateEconomySignals(polity, lookup);
+
+            foreach (Settlement settlement in polity.Settlements)
+            {
+                SeedSettlementTransitionBaseline(lookup, polity, settlement);
+            }
+        }
+    }
+
     private static void DiscoverRegionalMaterials(World world, WorldLookup lookup, Polity polity, Settlement settlement)
     {
         Region region = lookup.GetRequiredRegion(settlement.RegionId, "Material discovery");
@@ -1134,6 +1150,11 @@ public sealed class MaterialEconomySystem
     {
         if (ShouldEmitGroupedMaterialCrisisStarted(startedMaterials, convoyFailureMaterials))
         {
+            if (!world.IsBootstrapping)
+            {
+                settlement.LiveMaterialCrisisActive = true;
+            }
+
             bool convoyFailure = convoyFailureMaterials.Count > 0;
             IReadOnlyList<MaterialType> groupedMaterials = convoyFailure ? convoyFailureMaterials : startedMaterials;
             world.AddEvent(
@@ -1162,6 +1183,11 @@ public sealed class MaterialEconomySystem
 
         if (ShouldEmitGroupedMaterialCrisisWorsened(worsenedMaterials, convoyFailureMaterials))
         {
+            if (!world.IsBootstrapping)
+            {
+                settlement.LiveMaterialCrisisActive = true;
+            }
+
             bool convoyFailure = convoyFailureMaterials.Intersect(worsenedMaterials).Any();
             IReadOnlyList<MaterialType> groupedMaterials = convoyFailure
                 ? worsenedMaterials.Where(convoyFailureMaterials.Contains).ToList()
@@ -1188,6 +1214,12 @@ public sealed class MaterialEconomySystem
 
         if (ShouldEmitGroupedMaterialCrisisResolved(resolvedMaterials))
         {
+            if (!settlement.LiveMaterialCrisisActive)
+            {
+                return;
+            }
+
+            settlement.LiveMaterialCrisisActive = false;
             world.AddEvent(
                 WorldEventType.MaterialCrisisResolved,
                 WorldEventSeverity.Major,
@@ -1219,6 +1251,51 @@ public sealed class MaterialEconomySystem
 
     private static bool ShouldEmitGroupedMaterialCrisisResolved(IReadOnlyList<MaterialType> resolvedMaterials)
         => resolvedMaterials.Count > 1;
+
+    private static void SeedSettlementTransitionBaseline(WorldLookup lookup, Polity polity, Settlement settlement)
+    {
+        Region region = lookup.GetRequiredRegion(settlement.RegionId, "Bootstrap material baseline");
+
+        foreach (MaterialType materialType in RedistributionPriority)
+        {
+            settlement.LastRecordedMaterialShortageBands[materialType] = settlement.ResolveMaterialShortageBand(materialType);
+            settlement.LastRecordedHighlyValuedBands[materialType] = settlement.MaterialValueScores[materialType] switch
+            {
+                >= 1.80 => 2,
+                >= HighlyValuedScoreThreshold => 1,
+                _ => 0
+            };
+            settlement.LastRecordedTradeGoodStates[materialType] = settlement.TradeGoodMaterials.Contains(materialType);
+        }
+
+        settlement.DominantProductionFocusMaterial = ResolveDominantProductionFocus(settlement);
+        settlement.CandidateProductionFocusMaterial = null;
+        settlement.CandidateProductionFocusMonths = 0;
+        settlement.ProductionFocusShiftCooldownMonths = 0;
+        settlement.LiveMaterialCrisisActive = false;
+
+        int ageWeight = Math.Clamp(Math.Max(1, settlement.YearsEstablished), 1, 12);
+        foreach ((SettlementSpecializationTag tag, MaterialType output, double monthlyOutput, double localMatch) in ResolveSpecializationSignals(region, settlement))
+        {
+            if (monthlyOutput <= 0.05)
+            {
+                continue;
+            }
+
+            double seededScore = monthlyOutput
+                * (0.45 + localMatch + (settlement.MaterialOpportunityScores[output] * 0.18) + (settlement.MaterialExternalPullReadiness[output] * 0.15))
+                * ageWeight;
+            double existingScore = settlement.SpecializationScores.TryGetValue(tag, out double current)
+                ? current
+                : 0.0;
+            double resolvedScore = Math.Max(existingScore, seededScore);
+            settlement.SpecializationScores[tag] = resolvedScore;
+            if (resolvedScore >= 18.0)
+            {
+                settlement.SpecializationTags.Add(tag);
+            }
+        }
+    }
 
     private static Dictionary<string, string> BuildGroupedMaterialMetadata(
         IReadOnlyList<MaterialType> materials,

@@ -119,6 +119,7 @@ Current default limits:
 - `parentEventIds`
 - `propagationDepth`
 - `simulationPhase`
+- `origin`
 - `year`, `month`, `season`
 - `type`, `severity`, `scope`
 - `narrative`, `details`, `reason`
@@ -155,6 +156,7 @@ Important traits:
 - only `Major+` turning points are shown in normal player mode
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
 - bootstrap-created baseline events remain canonical/internal but are not eligible for the player chronicle or recent-major-event summaries
+- event origin now distinguishes bootstrap baseline/setup context from true live transitions, which gives the chronicle pipeline a final safety guard against bootstrap-derived leaks
 - chronicle presentation now uses per-family visibility profiles with semantic scope keys, state signatures, and separate same-state versus changed-state cooldown gaps
 - when a visible event family has no custom state signature yet, chronicle presentation falls back to actor scope plus normalized narrative so exact repeated lines are still suppressed
 - the fixed top panel shows focal polity context such as species

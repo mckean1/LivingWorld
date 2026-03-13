@@ -59,8 +59,14 @@ public sealed class World
         WorldSimulationPhase resolvedPhase = worldEvent.SimulationPhase == WorldSimulationPhase.Bootstrap || IsBootstrapping
             ? WorldSimulationPhase.Bootstrap
             : WorldSimulationPhase.Active;
+        WorldEventOrigin resolvedOrigin = worldEvent.Origin != WorldEventOrigin.LiveTransition
+            ? worldEvent.Origin
+            : resolvedPhase == WorldSimulationPhase.Bootstrap
+                ? WorldEventOrigin.BootstrapBaseline
+                : WorldEventOrigin.LiveTransition;
         Dictionary<string, string> metadata = CopyMap(worldEvent.Metadata);
         metadata["simulationPhase"] = resolvedPhase.ToString();
+        metadata["eventOrigin"] = resolvedOrigin.ToString();
 
         WorldEvent enriched = new()
         {
@@ -69,6 +75,7 @@ public sealed class World
             Month = Time.Month,
             Season = Time.Season,
             SimulationPhase = resolvedPhase,
+            Origin = resolvedOrigin,
             Type = worldEvent.Type,
             Severity = worldEvent.Severity,
             Scope = worldEvent.Scope,

@@ -14,6 +14,7 @@ Each major system:
 
 Bootstrap seeding is an explicit exception in presentation only: systems may emit canonical setup events while the world is in `Bootstrap`, but those baseline events do not enter player-facing chronicle surfaces until later live transitions occur in `Active` simulation.
 That bootstrap pass should also seed prior-state trackers so the first active material and reputation comparisons do not reinterpret old settlement identity as fresh chronicle news.
+Canonical events now also carry origin metadata, which lets chronicle admission reject non-live setup-derived economy/material/reputation events as a final safety guard.
 
 ## Current Major Systems
 

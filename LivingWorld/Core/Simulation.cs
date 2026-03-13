@@ -307,6 +307,7 @@ public sealed class Simulation : IDisposable
             _settlementFoodRedistributionSystem.InitializeBootstrapStates(_world);
         }
 
+        _materialEconomySystem.SeedBootstrapBaseline(_world);
         SeedBootstrapHardshipStates();
         ResetBootstrapRuntimeCounters();
         _world.BeginActiveSimulation();
@@ -338,7 +339,7 @@ public sealed class Simulation : IDisposable
     {
         foreach (Polity polity in _world.Polities)
         {
-            polity.ResetAnnualFoodStats();
+            polity.ResetBootstrapRuntimeState();
         }
     }
 

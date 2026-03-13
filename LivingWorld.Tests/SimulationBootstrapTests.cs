@@ -33,6 +33,8 @@ public sealed class SimulationBootstrapTests
         Assert.DoesNotContain(visibleEvents, evt => evt.Type == WorldEventType.SettlementSpecialized);
         Assert.DoesNotContain(visibleEvents, evt => evt.Type == WorldEventType.TradeGoodEstablished);
         Assert.DoesNotContain(visibleEvents, evt => evt.Type == WorldEventType.MaterialCrisisResolved);
+        Assert.DoesNotContain(visibleEvents, evt => evt.Type == WorldEventType.MaterialHighlyValued);
+        Assert.All(world.Events.Where(evt => evt.IsBootstrapEvent), evt => Assert.Equal(WorldEventOrigin.BootstrapBaseline, evt.Origin));
     }
 
     [Fact]

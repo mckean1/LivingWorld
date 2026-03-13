@@ -238,6 +238,7 @@ Implemented:
 - New economy-turn event families for highly valued goods, trade-good identity, production-focus shifts, and bottlenecks
 - Explicit bootstrap-aware chronicle handling so initialization-created economy baselines remain internal state and setup history instead of appearing as live Year 0 narrative
 - Bootstrap baseline seeding now initializes older settlements' economy and material-reputation state deeply enough that the first live tick compares against an established baseline instead of inventing new `known for`, trade-good, or false recovery history
+- Event origin metadata now distinguishes bootstrap baseline setup from true live transitions, and the visible chronicle applies a final non-live-origin safety guard for these families
 - Shared visible-event dedupe and chronicle filtering that still allow real post-bootstrap transitions, including legitimate Year 0 changes, to surface normally
 
 ---

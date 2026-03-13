@@ -71,6 +71,7 @@ LivingWorld now uses a propagation-aware event pipeline:
 - `parentEventIds`
 - `propagationDepth`
 - `simulationPhase`
+- `origin`
 - `type`
 - `severity`
 - `scope`
@@ -80,7 +81,7 @@ LivingWorld now uses a propagation-aware event pipeline:
 - `before`, `after`, `metadata`
 
 This keeps causal ancestry visible in structured history without forcing every follow-up event into the player chronicle.
-Bootstrap-created baseline events are explicitly tagged as `Bootstrap` phase state, which keeps startup seeding available to internal history/debugging without narrating it as live chronicle history.
+Bootstrap-created baseline events are explicitly tagged as `Bootstrap` phase state, and events now also carry an `origin` that distinguishes bootstrap baseline setup from true live transitions. That keeps startup seeding available to internal history/debugging without narrating it as live chronicle history.
 
 ## Current Propagation Examples
 
@@ -124,6 +125,7 @@ Visible families that do not yet have a custom semantic profile still pass throu
 Visible major-event summaries now apply the same player-facing dedupe identity as the live chronicle, so recent-event panels do not repeat the same settlement recovery or crisis beat multiple times in one year unless the visible state is meaningfully different.
 Chronicle presentation now also ignores bootstrap-tagged baseline events. Initialization can establish shortage, trade-good, specialization, convoy-failure, or hardship state internally, but only post-bootstrap transitions are eligible for the live chronicle and recent major-event summaries.
 Bootstrap seeding also initializes prior economy/material identity deeply enough that the first active comparison is against seeded baseline state, not against an empty tracker that would mistake old conditions for new history.
+As a final safety net, non-live event origins are also refused by player-facing chronicle admission so bootstrap-derived economy/material/reputation lines cannot leak through grouped or summary presentation even if an upstream producer misbehaves.
 
 ## Watch Controls
 

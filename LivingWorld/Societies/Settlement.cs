@@ -53,6 +53,7 @@ public sealed class Settlement
     public MaterialType? CandidateProductionFocusMaterial { get; set; }
     public int CandidateProductionFocusMonths { get; set; }
     public int ProductionFocusShiftCooldownMonths { get; set; }
+    public bool LiveMaterialCrisisActive { get; set; }
     public Dictionary<SettlementSpecializationTag, double> SpecializationScores { get; } = [];
     public HashSet<SettlementSpecializationTag> SpecializationTags { get; } = [];
     public HashSet<string> MaterialMilestonesRecorded { get; } = [];
@@ -169,6 +170,25 @@ public sealed class Settlement
         }
 
         SpecializationScores.Clear();
+    }
+
+    public void ResetBootstrapRuntimeState()
+    {
+        AidReceivedThisYear = 0;
+        AidSentThisYear = 0;
+        LastAidReceived = 0;
+        LastAidSent = 0;
+        ManagedAnimalFoodThisMonth = 0;
+        ManagedCropFoodThisMonth = 0;
+        ManagedFoodThisYear = 0;
+
+        foreach (MaterialType materialType in Enum.GetValues<MaterialType>())
+        {
+            MaterialProducedThisYear[materialType] = 0.0;
+            MaterialConsumedThisYear[materialType] = 0.0;
+            MaterialProducedThisMonth[materialType] = 0.0;
+            MaterialConsumedThisMonth[materialType] = 0.0;
+        }
     }
 
     public void SetMaterialEconomySignals(
