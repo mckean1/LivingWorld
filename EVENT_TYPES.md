@@ -190,6 +190,7 @@ The same is true for watch-loop pacing changes: responsive input and timed stepp
 The fuller seed world also does not introduce generation-only spam event types; denser starting state should surface through ordinary ecology, migration, settlement, and polity history.
 Predator founder failure and success are expected to be common structured ecology outcomes, but only unusually consequential arrivals or collapses should surface to the main chronicle.
 Anchored starting settlements are also generation state, not synthetic `settlement_founded` events. Chronicle-visible settlement beats still come from later real transitions such as consolidation.
+The same rule now applies to bootstrap-tagged baseline economy and hardship events: initialization may create canonical setup events internally, but only post-bootstrap transitions are eligible for player-facing chronicle history.
 The completed watch inspection UI does not introduce event types for pausing, paging, screen switching, or other presentation-only actions.
 
 Watch mode also separates:

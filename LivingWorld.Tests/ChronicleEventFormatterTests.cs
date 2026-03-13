@@ -708,6 +708,35 @@ public sealed class ChronicleEventFormatterTests
         Assert.False(_formatter.TryFormat(duplicateRecovery, _focus, out _));
     }
 
+    [Fact]
+    public void BootstrapEvents_AreSuppressed_ButLiveYearZeroTransitionsRemainVisible()
+    {
+        WorldEvent bootstrapEvent = CreateEvent(
+            WorldEventType.MaterialHighlyValued,
+            WorldEventSeverity.Major,
+            year: 0,
+            narrative: "Simple Tools became highly valued in Stonefen",
+            settlementId: 7006,
+            settlementName: "Stonefen") with
+        {
+            SimulationPhase = WorldSimulationPhase.Bootstrap
+        };
+        bootstrapEvent.Metadata["materialType"] = "SimpleTools";
+
+        WorldEvent liveYearZeroEvent = CreateEvent(
+            WorldEventType.MaterialHighlyValued,
+            WorldEventSeverity.Major,
+            year: 0,
+            narrative: "Simple Tools became highly valued in Stonefen",
+            settlementId: 7006,
+            settlementName: "Stonefen");
+        liveYearZeroEvent.Metadata["materialType"] = "SimpleTools";
+
+        Assert.False(_formatter.TryFormat(bootstrapEvent, _focus, out _));
+        Assert.True(_formatter.TryFormat(liveYearZeroEvent, _focus, out string chronicleLine));
+        Assert.Equal("Year 0 - Simple Tools became highly valued in Stonefen.", chronicleLine);
+    }
+
     private static WorldEvent CreateEvent(
         string type,
         WorldEventSeverity severity,

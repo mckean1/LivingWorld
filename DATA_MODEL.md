@@ -28,6 +28,7 @@ Key properties:
 - `Polities`
 - `Events`
 - `Time`
+- `SimulationPhase`
 
 Event responsibilities:
 
@@ -104,6 +105,7 @@ Discoveries can exist without any advancement, and advancements do not replace t
 It includes:
 
 - time: `EventId`, `Year`, `Month`, `Season`
+- phase: `SimulationPhase`
 - causal ancestry: `RootEventId`, `ParentEventIds`, `PropagationDepth`
 - classification: `Type`, `Severity`, `Scope`
 - narrative fields: `Narrative`, `Details`, `Reason`
@@ -239,6 +241,7 @@ It centralizes:
 - discovery-indexed region/species summaries for inspection screens
 
 `ChroniclePresentationPolicy` now carries both family-specific semantic cooldown profiles and a fallback normalized-narrative state key for visible event families that do not yet have a dedicated semantic signature.
+It also treats bootstrap-tagged events as canonical-but-non-player-facing setup history, so initialization baselines do not appear in the live chronicle or recent major-event summaries.
 
 ## Propagation Types
 

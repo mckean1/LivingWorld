@@ -46,6 +46,7 @@ Settlement hardship follows the same pattern at a smaller scale:
 `food deficit persists -> starvation stage changes -> aid failure or recovery event`
 
 No chronicle beat should be emitted for a settlement that is merely still starving in the same way it was before. The event belongs to the transition, not the steady state.
+The same rule now applies one step earlier in time: initialization-created baseline state is not chronicle history. Bootstrap can seed settlement pressure, shortage, trade-good, and starvation baselines internally, and only later world change should narrate those conditions as history.
 
 ### Settlement Pressure
 
@@ -207,6 +208,7 @@ The fuller-world opening is therefore tuned by improving real local anchors, hom
 - propagation is capped by event count per source event
 - identical follow-ups within a step are deduped
 - chronicle presentation still filters and cools down repeated visible beats
+- bootstrap-tagged setup events are filtered from player-facing chronicle surfaces even when they remain part of canonical/internal history
 - hot-path systems now prefer cached lookup snapshots and clearer invariant failures so broken ids surface as explicit simulation problems rather than generic LINQ crashes
 - sparse ecology storage, buffered history writes, and current-year event caches are now also explicit performance safeguards so long-run cause-and-effect remains traceable without late-game quadratic overhead
 
@@ -273,6 +275,7 @@ Economy interactions now follow the same grounded chain:
 4. smoothing and confirmation rules prevent one noisy month from fully flipping a settlement's production identity
 5. persistent value or surplus can create major turns such as a material becoming highly valued or a settlement becoming known for a trade good
 6. missing inputs can bottleneck favored output, leaving a visible explanation for why later resilience or productivity weakened
+7. bootstrap seeding establishes baseline economy identity without treating initial computed state as a historical turning point
 
 This preserves LivingWorld's core rule:
 

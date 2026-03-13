@@ -51,6 +51,7 @@ public sealed class Simulation : IDisposable
     public Simulation(World world, SimulationOptions? options = null, IPolityFocusSelector? focusSelector = null)
     {
         _world = world;
+        _world.EnterBootstrapPhase();
         _foodSystem = new FoodSystem();
         _ecosystemSystem = new EcosystemSystem();
         _huntingSystem = new HuntingSystem();
@@ -95,6 +96,8 @@ public sealed class Simulation : IDisposable
             new FragmentationPropagationHandler()
         ]));
 
+        RunBootstrapInitialization();
+
         if (_options.WriteStructuredHistory)
         {
             _historyWriter = new HistoryJsonlWriter(_options.HistoryFilePath);
@@ -105,7 +108,7 @@ public sealed class Simulation : IDisposable
             _world.EventRecorded += OnWorldEventRecorded;
         }
 
-        _eventsThisYear.AddRange(_world.Events.Where(evt => evt.Year == _world.Time.Year));
+        _eventsThisYear.AddRange(_world.Events.Where(evt => evt.Year == _world.Time.Year && !evt.IsBootstrapEvent));
 
         _chronicleWatchRenderer.Render(_world, _chronicleFocus, _watchUiState);
     }
@@ -275,6 +278,11 @@ public sealed class Simulation : IDisposable
     private void OnWorldEventRecorded(WorldEvent worldEvent)
     {
         _historyWriter?.Write(worldEvent);
+        if (worldEvent.IsBootstrapEvent)
+        {
+            return;
+        }
+
         _eventsThisYear.Add(worldEvent);
         _performanceTracker.AddEvent(worldEvent);
 
@@ -286,6 +294,24 @@ public sealed class Simulation : IDisposable
         if (_chronicleWatchRenderer.Record(_world, _chronicleFocus, _watchUiState, worldEvent))
         {
             _renderInvalidated = true;
+        }
+    }
+
+    private void RunBootstrapInitialization()
+    {
+        _settlementFoodRedistributionSystem.InitializeBootstrapStates(_world);
+        _materialEconomySystem.UpdateMonthlyMaterials(_world);
+        _settlementFoodRedistributionSystem.InitializeBootstrapStates(_world);
+        SeedBootstrapHardshipStates();
+        _world.BeginActiveSimulation();
+    }
+
+    private void SeedBootstrapHardshipStates()
+    {
+        foreach (Polity polity in _world.Polities.Where(candidate => candidate.Population > 0))
+        {
+            HardshipTier currentTier = ResolveHardshipTier(polity);
+            _hardshipStates[polity.Id] = HardshipChronicleState.Initial.WithObservedTier(currentTier, _world.Time.Year);
         }
     }
 

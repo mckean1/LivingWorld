@@ -30,7 +30,7 @@ public sealed class WorldGenerator
     {
         ValidateSettings();
 
-        World world = new(new WorldTime());
+        World world = new(new WorldTime(), WorldSimulationPhase.Bootstrap);
         GenerateRegions(world);
         ConnectRegions(world);
         _regionsById = world.Regions.ToDictionary(region => region.Id);

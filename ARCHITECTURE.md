@@ -11,6 +11,7 @@ LivingWorld keeps simulation logic, event storage, propagation, formatting, and 
 - polities
 - polity-owned settlements
 - time
+- current simulation phase (`Bootstrap` vs `Active`)
 - canonical world events
 
 Major systems:
@@ -70,6 +71,7 @@ The canonical flow is now:
 
 - assigning event ids
 - stamping time
+- stamping the current simulation phase so setup and live history remain distinguishable
 - copying structured payloads
 - recording chronological history
 - invoking the propagation coordinator
@@ -116,6 +118,7 @@ Current default limits:
 - `rootEventId`
 - `parentEventIds`
 - `propagationDepth`
+- `simulationPhase`
 - `year`, `month`, `season`
 - `type`, `severity`, `scope`
 - `narrative`, `details`, `reason`
@@ -151,6 +154,7 @@ Important traits:
 - the visible chronicle buffer is rendered newest-first
 - only `Major+` turning points are shown in normal player mode
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
+- bootstrap-created baseline events remain canonical/internal but are not eligible for the player chronicle or recent-major-event summaries
 - chronicle presentation now uses per-family visibility profiles with semantic scope keys, state signatures, and separate same-state versus changed-state cooldown gaps
 - when a visible event family has no custom state signature yet, chronicle presentation falls back to actor scope plus normalized narrative so exact repeated lines are still suppressed
 - the fixed top panel shows focal polity context such as species
@@ -176,6 +180,7 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
 Left/Right paging is view-agnostic now: list screens page selection, while chronicle and detail screens page scroll offsets.
 `My Polity` is also a special focal-polity view rather than just a shortcut into generic polity detail. `Enter` intentionally leaves the player there so focal-only information cannot be downgraded by a foreign-polity-safe renderer path.
+Simulation now also performs an explicit bootstrap seeding pass before active play begins. That pass can establish baseline economy and starvation state for older starting settlements without narrating those setup results as history.
 
 ## Focus And Continuity
 

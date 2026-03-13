@@ -2,6 +2,7 @@ using LivingWorld.Core;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
+using System.Text.Json;
 using Xunit;
 
 namespace LivingWorld.Tests;
@@ -53,14 +54,18 @@ public sealed class EventPropagationTests
             }
 
             string[] lines = File.ReadAllLines(historyPath);
+            JsonElement foodStressEvent = lines
+                .Select(line => JsonDocument.Parse(line).RootElement.Clone())
+                .First(element => element.GetProperty("type").GetString() == WorldEventType.FoodStress);
+            int rootEventId = foodStressEvent.GetProperty("eventId").GetInt32();
 
             Assert.Contains(lines, line => line.Contains("\"type\":\"food_stress\"", StringComparison.Ordinal));
             Assert.Contains(lines, line => line.Contains("\"type\":\"migration_pressure\"", StringComparison.Ordinal));
             Assert.Contains(
                 lines,
                 line => line.Contains("\"type\":\"migration_pressure\"", StringComparison.Ordinal)
-                    && line.Contains("\"parentEventIds\":[1]", StringComparison.Ordinal)
-                    && line.Contains("\"rootEventId\":1", StringComparison.Ordinal));
+                    && line.Contains($"\"parentEventIds\":[{rootEventId}]", StringComparison.Ordinal)
+                    && line.Contains($"\"rootEventId\":{rootEventId}", StringComparison.Ordinal));
         }
         finally
         {

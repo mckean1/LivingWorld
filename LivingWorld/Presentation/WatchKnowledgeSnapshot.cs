@@ -198,6 +198,7 @@ public sealed class WatchKnowledgeSnapshot
         HashSet<string> seenDedupKeys = new(StringComparer.Ordinal);
 
         return world.Events
+            .Where(worldEvent => !worldEvent.IsBootstrapEvent)
             .Where(worldEvent => worldEvent.Severity is WorldEventSeverity.Major or WorldEventSeverity.Legendary)
             .Where(worldEvent =>
                 (worldEvent.PolityId.HasValue && knownPolityIds.Contains(worldEvent.PolityId.Value))

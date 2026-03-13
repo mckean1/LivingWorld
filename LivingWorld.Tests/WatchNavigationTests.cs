@@ -458,9 +458,64 @@ public sealed class WatchNavigationTests
         Assert.Equal(1, visibleEvents.Count(evt => evt.Type == WorldEventType.TradeGoodEstablished));
     }
 
-    private static World CreateWorld()
+    [Fact]
+    public void VisibleMajorEvents_SkipBootstrapEntries_ButKeepLiveYearZeroEvents()
     {
-        World world = new(new WorldTime(10, 6));
+        World world = CreateWorld(startingYear: 0);
+        world.AddEvent(new WorldEvent
+        {
+            Type = WorldEventType.TradeGoodEstablished,
+            Severity = WorldEventSeverity.Major,
+            Narrative = "Green Hearth became known for pottery as a trade good",
+            Reason = "trade_good_established",
+            Scope = WorldEventScope.Local,
+            SimulationPhase = WorldSimulationPhase.Bootstrap,
+            PolityId = 7,
+            PolityName = "Deepfield Tribe",
+            SpeciesId = 1,
+            SpeciesName = "Humans",
+            RegionId = 0,
+            RegionName = "Green Barrow",
+            SettlementId = 7001,
+            SettlementName = "Green Hearth",
+            Metadata = new Dictionary<string, string>
+            {
+                ["materialType"] = "Pottery"
+            }
+        });
+        world.AddEvent(
+            WorldEventType.TradeGoodEstablished,
+            WorldEventSeverity.Major,
+            "Green Hearth became known for pottery as a trade good",
+            reason: "trade_good_established",
+            scope: WorldEventScope.Local,
+            polityId: 7,
+            polityName: "Deepfield Tribe",
+            speciesId: 1,
+            speciesName: "Humans",
+            regionId: 0,
+            regionName: "Green Barrow",
+            settlementId: 7001,
+            settlementName: "Green Hearth",
+            metadata: new Dictionary<string, string>
+            {
+                ["materialType"] = "Pottery"
+            });
+
+        ChronicleFocus focus = new();
+        focus.SetFocus(polityId: 7, lineageId: 7);
+        WatchKnowledgeSnapshot snapshot = WatchInspectionData.CreateSnapshot(world, focus);
+
+        IReadOnlyList<WorldEvent> visibleEvents = snapshot.GetVisibleMajorEvents(world, limit: 10);
+
+        Assert.Single(visibleEvents);
+        Assert.False(visibleEvents[0].IsBootstrapEvent);
+        Assert.Equal(0, visibleEvents[0].Year);
+    }
+
+    private static World CreateWorld(int startingYear = 10)
+    {
+        World world = new(new WorldTime(startingYear, 6));
         Region greenBarrow = new(0, "Green Barrow") { Fertility = 0.6, WaterAvailability = 0.5 };
         Region redValley = new(1, "Red Valley") { Fertility = 0.8, WaterAvailability = 0.7 };
         Region amberReach = new(2, "Amber Reach") { Fertility = 0.4, WaterAvailability = 0.3 };

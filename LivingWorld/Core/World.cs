@@ -10,6 +10,7 @@ public sealed class World
     private EventPropagationCoordinator? _eventPropagationCoordinator;
 
     public WorldTime Time { get; }
+    public WorldSimulationPhase SimulationPhase { get; private set; }
 
     public List<Region> Regions { get; } = new();
     public List<Species> Species { get; } = new();
@@ -19,9 +20,22 @@ public sealed class World
 
     public event Action<WorldEvent>? EventRecorded;
 
-    public World(WorldTime time)
+    public World(WorldTime time, WorldSimulationPhase simulationPhase = WorldSimulationPhase.Active)
     {
         Time = time;
+        SimulationPhase = simulationPhase;
+    }
+
+    public bool IsBootstrapping => SimulationPhase == WorldSimulationPhase.Bootstrap;
+
+    public void EnterBootstrapPhase()
+    {
+        SimulationPhase = WorldSimulationPhase.Bootstrap;
+    }
+
+    public void BeginActiveSimulation()
+    {
+        SimulationPhase = WorldSimulationPhase.Active;
     }
 
     public void ConfigureEventPropagation(EventPropagationCoordinator coordinator)
@@ -42,12 +56,19 @@ public sealed class World
 
     private WorldEvent RecordEvent(WorldEvent worldEvent)
     {
+        WorldSimulationPhase resolvedPhase = worldEvent.SimulationPhase == WorldSimulationPhase.Bootstrap || IsBootstrapping
+            ? WorldSimulationPhase.Bootstrap
+            : WorldSimulationPhase.Active;
+        Dictionary<string, string> metadata = CopyMap(worldEvent.Metadata);
+        metadata["simulationPhase"] = resolvedPhase.ToString();
+
         WorldEvent enriched = new()
         {
             EventId = ++_nextEventId,
             Year = Time.Year,
             Month = Time.Month,
             Season = Time.Season,
+            SimulationPhase = resolvedPhase,
             Type = worldEvent.Type,
             Severity = worldEvent.Severity,
             Scope = worldEvent.Scope,
@@ -71,7 +92,7 @@ public sealed class World
             ParentEventIds = worldEvent.ParentEventIds.ToList(),
             Before = CopyMap(worldEvent.Before),
             After = CopyMap(worldEvent.After),
-            Metadata = CopyMap(worldEvent.Metadata)
+            Metadata = metadata
         };
 
         Events.Add(enriched);

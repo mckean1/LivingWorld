@@ -6,6 +6,7 @@ public sealed record WorldEvent
     public int Year { get; init; }
     public int Month { get; init; }
     public Season Season { get; init; }
+    public WorldSimulationPhase SimulationPhase { get; init; } = WorldSimulationPhase.Active;
     public string Type { get; init; } = WorldEventType.WorldEvent;
     public WorldEventSeverity Severity { get; init; } = WorldEventSeverity.Minor;
     public WorldEventScope Scope { get; init; } = WorldEventScope.Polity;
@@ -30,6 +31,7 @@ public sealed record WorldEvent
     public Dictionary<string, string> Before { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> After { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string> Metadata { get; init; } = new(StringComparer.OrdinalIgnoreCase);
+    public bool IsBootstrapEvent => SimulationPhase == WorldSimulationPhase.Bootstrap;
 
     public string HistoricalText => FormatHistoricalEvent(Year, Narrative);
 

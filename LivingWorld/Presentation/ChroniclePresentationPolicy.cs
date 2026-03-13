@@ -240,7 +240,7 @@ public sealed class ChroniclePresentationPolicy
 
     public string? BuildPlayerFacingDedupKey(WorldEvent worldEvent)
     {
-        if (worldEvent.Severity < MinimumChronicleSeverity || !IsPlayerFacingChronicleEvent(worldEvent))
+        if (worldEvent.IsBootstrapEvent || worldEvent.Severity < MinimumChronicleSeverity || !IsPlayerFacingChronicleEvent(worldEvent))
         {
             return null;
         }
@@ -264,6 +264,11 @@ public sealed class ChroniclePresentationPolicy
         out string? presentationKey)
     {
         presentationKey = null;
+
+        if (worldEvent.IsBootstrapEvent)
+        {
+            return false;
+        }
 
         if (worldEvent.Severity < MinimumChronicleSeverity)
         {

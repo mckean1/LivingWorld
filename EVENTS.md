@@ -10,6 +10,7 @@ Core fields:
 - `rootEventId`
 - `parentEventIds`
 - `propagationDepth`
+- `simulationPhase`
 - `year`, `month`, `season`
 - `type`, `severity`, `scope`
 - `narrative`, `details`, `reason`
@@ -67,6 +68,7 @@ Likewise, the denser default seed world does not emit synthetic setup events jus
 The same rule applies to starting home settlements: they exist as initial world state so early locality systems can function, but they do not backfill fake founding events.
 
 Suppressed chronicle events still remain available in structured history with their metadata and causal ancestry.
+That includes bootstrap-created baseline events: initialization may register canonical setup transitions internally, but player-facing chronicle views treat them as setup context rather than as live history.
 
 ## Causal Links
 
@@ -172,6 +174,7 @@ The chronicle formatter now also treats some event families as semantic transiti
 ## Anti-Spam Rules
 
 - systems emit events on state transitions, not repeated unchanged conditions
+- bootstrap setup is not itself a player-facing historical transition; baseline seeding can emit canonical events, but those events are filtered from live chronicle surfaces by simulation phase
 - the propagation coordinator dedupes identical follow-up events inside one step
 - propagation depth is capped
 - total events per source event are capped
@@ -235,3 +238,4 @@ Default visibility intent:
 - `production_focus_shifted` and `production_bottleneck_hit` are usually structured-first unless a later pass intentionally escalates them
 - `material_highly_valued` and `trade_good_established` can surface when they become real major historical turns for the focused line
 - duplicate-safe major-event presentation still applies, so the live chronicle and recent-major-event views should not repeat the same settlement-material turn in one year
+- those same economy-turn families are now bootstrap-aware, so initial shortage, trade-good, highly valued, specialization, or convoy-failure state can be recorded internally without creating a startup chronicle dump

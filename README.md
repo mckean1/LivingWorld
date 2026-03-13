@@ -70,6 +70,7 @@ LivingWorld now uses a propagation-aware event pipeline:
 - `rootEventId`
 - `parentEventIds`
 - `propagationDepth`
+- `simulationPhase`
 - `type`
 - `severity`
 - `scope`
@@ -79,6 +80,7 @@ LivingWorld now uses a propagation-aware event pipeline:
 - `before`, `after`, `metadata`
 
 This keeps causal ancestry visible in structured history without forcing every follow-up event into the player chronicle.
+Bootstrap-created baseline events are explicitly tagged as `Bootstrap` phase state, which keeps startup seeding available to internal history/debugging without narrating it as live chronicle history.
 
 ## Current Propagation Examples
 
@@ -120,6 +122,7 @@ Regional adaptation events now emit on meaningful adaptation milestones rather t
 Chronicle presentation now also uses semantic state signatures for noisy families such as hardship, recovery, migration, settlement stabilization, and regional ecology turns. The live feed can surface a changed state sooner than a repeated same-state reminder, while identical or near-identical beats remain in structured history only.
 Visible families that do not yet have a custom semantic profile still pass through a fallback chronicle state key built from actor scope plus normalized narrative, so exact repeated lines do not leak into the player feed year after year.
 Visible major-event summaries now apply the same player-facing dedupe identity as the live chronicle, so recent-event panels do not repeat the same settlement recovery or crisis beat multiple times in one year unless the visible state is meaningfully different.
+Chronicle presentation now also ignores bootstrap-tagged baseline events. Initialization can establish shortage, trade-good, specialization, convoy-failure, or hardship state internally, but only post-bootstrap transitions are eligible for the live chronicle and recent major-event summaries.
 
 ## Watch Controls
 
@@ -246,6 +249,7 @@ Phase 18 keeps the economy simulation internal and pressure-based rather than ex
 - scarcity and surplus now do more than label stockpiles; they push redistribution priority, bottleneck behavior, specialization drift, and trade-good identity
 - player-facing watch screens stay readable through compact summaries such as `Shortage`, `Stable`, `Surplus`, `Highly Valued`, `Trade Good`, and `Locally Common`
 - new economy-turn event families remain structured-first unless they become true major historical beats such as a material becoming highly valued or a settlement becoming known for a trade good
+- startup baseline economy passes now seed those states during explicit bootstrap, so the live chronicle begins from world change rather than narrating initialization output
 
 The canonical roadmap now points next to:
 

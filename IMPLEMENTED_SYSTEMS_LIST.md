@@ -1,4 +1,4 @@
-# LivingWorld — Implemented Systems List
+# LivingWorld - Implemented Systems List
 
 This document is the canonical source of truth for:
 - what has been implemented
@@ -7,51 +7,51 @@ This document is the canonical source of truth for:
 
 A feature is not fully complete until:
 1. the code is implemented
-2. tests are updated/passing
+2. tests are updated and passing
 3. this list is updated
 4. relevant documentation is updated
 
 ---
 
-## Phase 1 — Core World Simulation Foundations
+## Phase 1 - Core World Simulation Foundations
 **Status:** Complete
 
 Implemented:
 - Core simulation loop foundation
 - Monthly tick-based simulation structure with seasonal logic layered on top
-- Society → civilization progression foundation
+- Society-to-civilization progression foundation
 - Aggregated population model
-- Early polity/society lifecycle foundations
+- Early polity and society lifecycle foundations
 - Single-continent world generation baseline
 
 ---
 
-## Phase 2 — Settlement, Food, and Survival Foundations
+## Phase 2 - Settlement, Food, and Survival Foundations
 **Status:** Complete
 
 Implemented:
 - Settlement-centered simulation foundation
-- Food production/consumption basics
+- Food production and consumption basics
 - Storage, shortage, and survival pressure foundations
 - Seasonal food behavior groundwork
-- Early migration/survival pressure integration
+- Early migration and survival pressure integration
 
 ---
 
-## Phase 3 — Knowledge, Advancement, and Discovery Foundations
+## Phase 3 - Knowledge, Advancement, and Discovery Foundations
 **Status:** Complete
 
 Implemented:
 - Capability-based advancement system foundation
-- “Learned” capability model
+- `Learned` capability model
 - Discovery model distinct from advancements
-- Cultural knowledge vs polity knowledge distinction
+- Cultural knowledge versus polity knowledge distinction
 - Discovery terminology and log wording direction
-- Resource/species/world knowledge foundations
+- Resource, species, and world knowledge foundations
 
 ---
 
-## Phase 4 — Chronicle and Player-Facing History Foundations
+## Phase 4 - Chronicle and Player-Facing History Foundations
 **Status:** Complete
 
 Implemented:
@@ -62,7 +62,7 @@ Implemented:
 
 ---
 
-## Phase 5 — Event Architecture and Cause-and-Effect Systems
+## Phase 5 - Event Architecture and Cause-and-Effect Systems
 **Status:** Complete
 
 Implemented:
@@ -71,23 +71,23 @@ Implemented:
 - Event scopes and subscription model
 - Event propagation coordinator and propagation handlers
 - Causal ancestry support and safeguards
-- Structured background debug/history record separate from player chronicle
+- Structured background debug and history record separate from player chronicle
 
 ---
 
-## Phase 6 — Chronicle Filtering and Focus Systems
+## Phase 6 - Chronicle Filtering and Focus Systems
 **Status:** Complete
 
 Implemented:
-- Major/Legendary emphasis for player-facing chronicle
-- Reduced chronicle spam through filtering/cooldowns
+- Major and Legendary emphasis for player-facing chronicle
+- Reduced chronicle spam through filtering and cooldowns
 - State-transition-style chronicle behavior
 - Player lineage focus system
 - Chronicle-first historical presentation direction
 
 ---
 
-## Phase 7 — Watch Mode and Chronicle UI Foundations
+## Phase 7 - Watch Mode and Chronicle UI Foundations
 **Status:** Complete
 
 Implemented:
@@ -95,13 +95,13 @@ Implemented:
 - Fixed top status panel
 - Chronicle viewport below status panel
 - Newest chronicle entries shown at the top
-- Reduced flicker / partial redraw direction
+- Reduced flicker and partial redraw direction
 - Playback pacing improvements
 - Focal polity status integration into the watch experience
 
 ---
 
-## Phase 8 — Regional Resource System
+## Phase 8 - Regional Resource System
 **Status:** Complete
 
 Implemented:
@@ -112,21 +112,21 @@ Implemented:
 
 ---
 
-## Phase 9 — Regional Species Population and Ecology System
+## Phase 9 - Regional Species Population and Ecology System
 **Status:** Complete
 
 Implemented:
 - Species as a core simulation pillar
 - Regional per-species population tracking
-- Habitat suitability / species range logic
-- Food web / ecological niche foundation
+- Habitat suitability and species-range logic
+- Food web and ecological niche foundation
 - Producer, herbivore, predator, and apex ecosystem relationships
-- Regional extinction/global extinction support
+- Regional extinction and global extinction support
 - Seasonal ecology simulation basis
 
 ---
 
-## Phase 10 — Hunting and Settlement-Grounded Food Interaction
+## Phase 10 - Hunting and Settlement-Grounded Food Interaction
 **Status:** Complete
 
 Implemented:
@@ -137,11 +137,11 @@ Implemented:
 - Dangerous-animal hunting risk
 - Hunting-based cultural discoveries
 - Overhunting pressure support
-- Legendary/major hunt storytelling hooks
+- Legendary and major hunt storytelling hooks
 
 ---
 
-## Phase 11 — Mutation, Divergence, and Speciation
+## Phase 11 - Mutation, Divergence, and Speciation
 **Status:** Complete
 
 Implemented:
@@ -151,11 +151,11 @@ Implemented:
 - Speciation from long-term isolated divergence
 - Species lineage tracking direction
 - Founder-population-based evolutionary spread
-- Anti-cascade / cooldown safeguards for speciation behavior
+- Anti-cascade and cooldown safeguards for speciation behavior
 
 ---
 
-## Phase 12 — Predator Ecology Improvements
+## Phase 12 - Predator Ecology Improvements
 **Status:** Complete
 
 Implemented:
@@ -166,20 +166,20 @@ Implemented:
 
 ---
 
-## Phase 13 — World Visibility and Navigation UI
+## Phase 13 - World Visibility and Navigation UI
 **Status:** Complete
 
 Implemented:
 - Live keypress-based screen navigation while simulation runs
-- Pause/unpause support
-- Direct screen switching / cycling behavior
+- Pause and unpause support
+- Direct screen switching and cycling behavior
 - Views for Chronicle, My Polity, Current Region, Known Regions, Known Species, Known Polities, and World Overview
 - Visibility-aware world data presentation
 - Shared knowledge visibility rules foundation
 
 ---
 
-## Phase 14 — Focal Polity UI and Routing Corrections
+## Phase 14 - Focal Polity UI and Routing Corrections
 **Status:** Complete
 
 Implemented:
@@ -190,30 +190,30 @@ Implemented:
 
 ---
 
-## Phase 15 — Regional Trade and Resource Exchange
+## Phase 15 - Regional Trade and Resource Exchange
 **Status:** Complete
 
 Implemented:
-- Inter-settlement food surplus/deficit detection
-- Monthly transfer/resource-exchange groundwork
+- Inter-settlement food surplus and deficit detection
+- Monthly transfer and resource-exchange groundwork
 - Early internal logistics between settlements
-- Trade/resource exchange foundation for broader economy systems
+- Trade and resource-exchange foundation for broader economy systems
 
 ---
 
-## Phase 16 — Domestication and Early Agriculture Expansion
+## Phase 16 - Domestication and Early Agriculture Expansion
 **Status:** Complete
 
 Implemented:
 - Domestication candidates and domestication foundations
 - Managed herds
 - Cultivated crop foundations
-- Managed food integration into the economy/survival loop
-- Early agriculture expansion beyond simple foraging/hunting
+- Managed food integration into the economy and survival loop
+- Early agriculture expansion beyond simple foraging and hunting
 
 ---
 
-## Phase 17 — Material Economy & Production Chains
+## Phase 17 - Material Economy and Production Chains
 **Status:** Complete
 
 Implemented:
@@ -224,25 +224,26 @@ Implemented:
 - Same-polity material redistribution with distance loss, critical-priority routing, and convoy events
 - Emergent settlement specialization from sustained output and regional fit
 - Structured material event families plus grouped chronicle-safe material crisis milestones
-- Watch/UI summaries for material surpluses, shortages, production centers, and resource hotspots
+- Watch and UI summaries for material surpluses, shortages, production centers, and resource hotspots
+
+---
+
+## Phase 18 - Economy Interactions and Market Behavior
+**Status:** Complete
+
+Implemented:
+- Internal settlement-level economy pressure using need, availability, value, opportunity, production-focus, and external-pull signals
+- Hybrid presentation model where internal pressure math stays hidden while player-facing watch screens use compact labels such as `Shortage`, `Stable`, `Surplus`, `Highly Valued`, `Trade Good`, and `Locally Common`
+- Pressure-driven extraction, production, redistribution priority, bottleneck handling, and specialization drift with smoothing to reduce thrashing
+- New economy-turn event families for highly valued goods, trade-good identity, production-focus shifts, and bottlenecks
+- Explicit bootstrap-aware chronicle handling so initialization-created economy baselines remain internal state and setup history instead of appearing as live Year 0 narrative
+- Shared visible-event dedupe and chronicle filtering that still allow real post-bootstrap transitions, including legitimate Year 0 changes, to surface normally
 
 ---
 
 # Next Planned Phases
 
-## Phase 18 — Economy Interactions & Market Behavio
-**Status:** Planned
-
-Planned:
-- Demand pressure and consumption-pull behavior layered on top of existing settlement stockpiles and production chains
-- Scarcity-versus-surplus responses that create stronger material cause-and-effect across settlement decisions
-- Early value and price-signal foundations without requiring a full money simulation
-- Settlement production shifting toward local need and visible opportunity instead of staying mostly static
-- Stronger economy feedback loops so shortages, surpluses, and production choices shape later outcomes more clearly
-
----
-
-## Phase 19 — External Trade, Trade Routes, and Inter-Polity Exchange
+## Phase 19 - External Trade, Trade Routes, and Inter-Polity Exchange
 **Status:** Planned
 
 Planned:
@@ -254,7 +255,7 @@ Planned:
 
 ---
 
-## Phase 20 — Settlement Infrastructure & Construction
+## Phase 20 - Settlement Infrastructure and Construction
 **Status:** Planned
 
 Planned:
@@ -266,7 +267,7 @@ Planned:
 
 ---
 
-## Phase 21 — Diplomacy, Raiding, and Conflict Foundations
+## Phase 21 - Diplomacy, Raiding, and Conflict Foundations
 **Status:** Planned
 
 Planned:
@@ -280,5 +281,5 @@ Planned:
 
 # Later Follow-Up Areas
 - Continue player-facing chronicle dedupe tuning and visible major-event cleanup as more event families come online
-- Continue watch UI cleanup around `Discoveries` / `Learned`, including later fuller list and detail presentation improvements
+- Continue watch UI cleanup around `Discoveries` and `Learned`, including later fuller list and detail presentation improvements
 - Additional later phases should be added here only after the canonical roadmap is intentionally extended and synced across docs

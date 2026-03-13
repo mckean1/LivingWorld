@@ -34,6 +34,25 @@ public sealed class SettlementFoodRedistributionSystem
         }
     }
 
+    public void InitializeBootstrapStates(World world)
+    {
+        WorldLookup lookup = new(world);
+
+        foreach (Polity polity in world.Polities)
+        {
+            if (polity.FoodNeededThisMonth <= 0)
+            {
+                polity.FoodNeededThisMonth = polity.Population * polity.Capabilities.FoodNeedMultiplier;
+            }
+
+            PrepareSettlementFoodStates(lookup, polity);
+            foreach (Settlement settlement in polity.Settlements)
+            {
+                settlement.LastRecordedStarvationStage = settlement.StarvationStage;
+            }
+        }
+    }
+
     private static void PrepareSettlementFoodStates(WorldLookup lookup, Polity polity)
     {
         if (polity.SettlementCount == 0)

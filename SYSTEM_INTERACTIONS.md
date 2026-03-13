@@ -12,6 +12,8 @@ Each major system:
 - emits canonical events on meaningful transitions
 - lets propagation handlers and sinks react afterward
 
+Bootstrap seeding is an explicit exception in presentation only: systems may emit canonical setup events while the world is in `Bootstrap`, but those baseline events do not enter player-facing chronicle surfaces until later live transitions occur in `Active` simulation.
+
 ## Current Major Systems
 
 - food and ecology
@@ -217,6 +219,7 @@ It produces:
 - structured aid events for the event pipeline
 
 The chronicle continues to stay high-signal by showing only `Major` and `Legendary` rescue/failure outcomes.
+Bootstrap-created rescue or failure baselines are treated as setup context and stay out of the live chronicle for the same reason.
 
 ## Phase 13/14 - Domestication Interactions
 
@@ -263,6 +266,7 @@ Phase 18 now deepens those interactions internally:
 - those signals alter extraction, production focus, convoy priority, and specialization drift
 - persistent surplus can produce trade-good identity, while bottlenecks can suppress favored output and create explainable downstream weakness
 - the watch UI reads those interactions through small readable labels rather than exposing raw market equations
+- explicit bootstrap seeding now establishes those internal economy identities before live play, so Year 0 begins from coherent baseline state rather than a narrated startup dump
 
 The canonical next interaction-focused phases now proceed in this order:
 

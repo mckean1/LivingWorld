@@ -17,6 +17,7 @@ Watch mode keeps species in the fixed status panel, separates discoveries from l
 The same watch renderer applies conservative syntax coloring after formatting: structured status lines color only their value segments, while narrative chronicle lines color only boundary-safe semantic units.
 The watch loop now also maintains a small UI state machine for top-level views, detail screens, pause state, and selection memory.
 The seed world entering this loop is now larger by default, but scale tuning remains centralized in `WorldGenerationSettings` rather than spread across systems.
+Before active play, simulation now runs an explicit bootstrap seeding step for baseline local state such as settlement economy pressure and starvation tracking. Those bootstrap events remain canonical/internal but are filtered from player-facing chronicle surfaces.
 
 ## Monthly Systems
 
@@ -94,6 +95,7 @@ In watch mode:
 ## Anti-Spam Rules
 
 - emit on state transitions, not every tick
+- do not narrate bootstrap-created baseline state as live history
 - settlement starvation and failed-aid logging therefore key off starvation-stage transitions rather than repeating each monthly starving result
 - dedupe identical follow-ups inside a propagation step
 - cap propagation depth
@@ -102,6 +104,7 @@ In watch mode:
 - chronicle cooldowns now use event-family profiles with actor scope plus semantic state keys, so changed-state turning points can bypass earlier than repeated same-state lines
 - visible families without a custom semantic state key still fall back to normalized narrative-by-actor suppression, which prevents exact repeated chronicle lines from slipping through default presentation paths
 - source systems now also suppress repeated biology status events through milestone guards and year-level cooldowns before those events ever hit storage
+- explicit bootstrap state seeding initializes previous-state trackers so the first active month does not misread baseline conditions as a fresh historical transition
 
 ## Focus And Lineage Continuity
 

@@ -38,7 +38,7 @@ public sealed class SimulationOptions
 
     private static string BuildDefaultHistoryFilePath()
     {
-        string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-        return Path.Combine("logs", $"history-{timestamp}.jsonl");
+        string timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss-fff");
+        return Path.Combine("logs", $"history-{timestamp}-{Guid.NewGuid():N}.jsonl");
     }
 }
