@@ -1,20 +1,17 @@
-# LivingWorld System Interactions
+# LivingWorld - Implemented Systems List
 
-LivingWorld systems interact through shared state and the structured event pipeline rather than by writing directly to the chronicle.
+This document is the canonical source of truth for:
+- what has been implemented
+- what is currently in progress
+- what comes next
 
-## Standard Pattern
+A feature is not fully complete until:
+1. the code is implemented
+2. tests are updated and passing
+3. this list is updated
+4. relevant documentation is updated
 
-Each major system:
-
-- reads world state
-- detects pressure or opportunity
-- updates its own domain state
-- emits canonical events on meaningful transitions
-- lets propagation handlers and sinks react afterward
-
-Bootstrap seeding is an explicit exception in presentation only: systems may emit canonical setup events while the world is in `Bootstrap`, but those baseline events do not enter player-facing chronicle surfaces until later live transitions occur in `Active` simulation.
-That bootstrap pass should also seed prior-state trackers so the first active material and reputation comparisons do not reinterpret old settlement identity as fresh chronicle news.
-Canonical events now also carry origin metadata, which lets chronicle admission reject non-live setup-derived economy/material/reputation events as a final safety guard.
+---
 
 ## Current Major Systems
 
@@ -32,248 +29,366 @@ Canonical events now also carry origin metadata, which lets chronicle admission 
 - polity stage progression
 - advancement
 
-## Current Propagation Subscriptions
-
-### FoodStressPropagationHandler
-
-Subscribes to:
-
-- `food_stress`
-- `trade_relief`
-
-Reacts by:
-
-- raising migration pressure bonuses
-- raising starvation risk events
-- easing pressure when hardship recovers or trade relief stabilizes food
-
-### AgriculturePropagationHandler
-
-Subscribes to:
-
-- `learned_advancement`
-- `cultivation_expanded`
-
-Reacts by:
-
-- remembering the causal agriculture event
-- creating field-preparation follow-ups
-- improving settlement momentum
-- creating settlement stabilization events when cultivation becomes meaningful
-
-### MigrationPropagationHandler
-
-Subscribes to:
-
-- `migration_pressure`
-- `migration`
-
-Reacts by:
-
-- surfacing schism risk when migration pressure overlaps with internal strain
-- adding settlement momentum after relocation
-- emitting local tension when crowded destinations are stressed
-
-### FragmentationPropagationHandler
-
-Subscribes to:
-
-- `fragmentation`
-
-Reacts by:
-
-- emitting `polity_founded` for the child polity
-
-## Shared-State Reactions
-
-Some handlers do more than emit follow-up events. They can also update temporary polity pressure bonuses that later systems consume:
-
-- migration pressure bonus
-- fragmentation pressure bonus
-- settlement chance bonus
-
-## Shared Ecology Layer
-
-The new ecology phase is shared state for multiple systems:
-
-- `Region.SpeciesPopulations` feeds ecosystem predation and prey support
-- `FoodSystem` now gathers only plant biomass, so it no longer depletes wildlife outside the hunting layer
-- world generation seeds those populations only inside each species' initial viable range instead of treating the world as globally occupied
-- world generation now seeds herbivores and omnivores more broadly than predators, so fertile regions usually start with `2-4` meaningful consumer populations where biome fit supports them
-- if a fertile region would otherwise be fauna-empty, world generation now attaches it to the nearest plausible herbivore cluster instead of leaving hunting and prey chains with no local foothold
-- hunting reads the same regional populations and writes pressure back into them
-- mutation reads those same pressure markers plus same-season species-exchange flags, stores accumulated evolutionary pressure on each regional population, and writes trait offsets back into the same records
-- mutation now also builds speciation readiness gradually and requires descendant-species stabilization before a new lineage can branch again
-- mutation also enforces regional root-lineage cooldowns and crowding penalties so chronically isolated basins cannot recursively spawn unlimited same-ancestor descendants
-- ecosystem growth, migration scoring, and carrying capacity now consume those evolved trait offsets
-- ecosystem initialization and seasonal growth now let healthy producer biomass translate into stronger herbivore establishment and earlier wildlife expansion
-- seasonal fauna migration now turns that pressure into real founder populations in neighboring regions, so empty but suitable regions can join the food web without any separate spawn system
-- predator follow migration is now stricter than herbivore spread: prey support, suitability, source stability, and local predator competition all shape whether a new predator colony is attempted
-- hunting difficulty, danger, and yield now also consume regional trait divergence instead of using only species baselines
-- neighboring wildlife populations can re-establish empty suitable regions through seasonal species migration, which gives local ecology a non-magical recovery path
-- regional animal biomass is synchronized from species populations so migration heuristics, region screens, and advancement weighting still have region-level ecological context without creating a second animal-food resource
-- polity discoveries, hunting knowledge, and domestication interest are stored on the polity for future systems to consume
-- mutation also tracks adaptation milestones on each regional population so adaptation events emit only when a new stage is crossed
-- mutation now also tracks divergence pressure, founder/source lineage metadata, and descendant-species creation from isolated high-divergence populations
-- sparse regional-population storage means those mutation and migration rules now operate primarily on active populations plus explicit founder targets, not on dormant region-species placeholders everywhere
-
-Important timing boundary:
-
-- seasonal species exchange happens inside `EcosystemSystem` before mutation runs
-- role-specific founder migration is part of that same seasonal ecology step, after local pressure is known and before mutation reads exchange flags
-- predator founders then continue through that same seasonal ecology step, where prey-rich colonies can establish and prey-poor colonies can fail without adding special-case spawn logic
-- later monthly polity migration happens in `MigrationSystem` after food resolution
-- mutation inputs such as `EstablishedThisSeason`, `ReceivedMigrantsThisSeason`, and `SentMigrantsThisSeason` refer only to the first category
-- extinction cleanup now marks local extinction once, emits global extinction once per species, and leaves later recovery to the same neighboring founder-migration path
-- repeated biology status events such as isolation and minor mutation are now source-throttled more aggressively so the event pipeline preserves causality without late-game spam
-- chronicle presentation then applies its own scoped cooldown rules, including a dedicated adaptation key for visible adaptation beats
-
-## Settlement-Grounded Production Layer
-
-Hunting, farming, and settlement-aware trade now share the same locality layer:
-
-- `Polity.Settlements` are the concrete execution points
-- hunting reads wildlife from each settlement's region
-- agriculture allocates each region's arable capacity across all settlements in that region
-- trade prefers real settlement endpoints when settlements exist and falls back to camps/hearth labels only when necessary
-- starting polities now usually enter the world with one home settlement anchor so those systems can act immediately
-
-This keeps cause-and-effect local:
-
-- local prey decline comes from the settlements that hunted there
-- animal food gains come from the species those settlements actually hunted
-- farm output comes from settlements actually occupying fertile land
-- migration relocates settlement records so later systems do not read stale locality state
-
-## Generation To Simulation Handoff
-
-The fuller starting world is still intentionally constrained at handoff time:
-
-- region biome profiles shape baseline fertility, water, and biomass
-- species start in clustered biome-suitable ranges rather than universal placement
-- fertile biomes now more reliably hand off a real prey base into the first decade instead of abundant producers paired with token herbivores
-- predator seeding now remains subordinate to herbivore support, so predator-only range islands are trimmed out during worldgen
-- default world generation now also includes the full built-in predator and apex roster so regional predator variety is not lost before simulation even starts
-- starting polities are seeded into viable, spaced regions rather than random stacking
-- homeland scoring also prefers nearby support species and connected corridors so early settlement-grounded interaction is more likely
-
-That means early hunting, food stress, migration, and contact pressures begin from a richer world, but they still emerge from regional conditions instead of arbitrary clutter.
-
-## Knowledge Split
-
-The polity model now separates:
-
-- cultural discoveries about the world
-- learned advancements that grant capability
-
-The watch-mode panel mirrors that split with separate `Discoveries:` and `Learned:` lines.
-Species inspection now reads the same regional-population records directly for fit, capacity, mutation, divergence, founder, and lineage signals instead of inventing UI-only biology summaries.
-
-## Chronicle Naming Rule
-
-Presentation now splits polity naming context by UI surface:
-
-- fixed watch-mode status panel shows the focal polity species
-- chronicle lines show only the polity name
-
-This keeps species visible without weighing down every visible history line. Debug details, structured history, and internal ids remain unchanged.
-
-These bonuses decay over time, so the propagation effects stay lightweight and deterministic.
-
-## Chronicle Separation
-
-Simulation and propagation may create many structured events in one year, but only `Major` and `Legendary` turning points are shown in the default chronicle.
-
-That separation keeps the architecture clean:
-
-- simulation systems stay honest about causality
-- structured history preserves the full chain
-- chronicle presentation stays readable
-- watch-mode coloring remains token-aware so semantic highlights do not bleed into unrelated prose
-- chronicle presentation can now suppress same-state repeats for one actor while still allowing distinct actors, regions, or changed-state milestones through
-
-## Watch Inspection Layer
-
-The new inspection UI is a read-only observer layer on top of those systems:
-
-- `WatchInspectionData` derives what the focal polity currently knows from existing simulation state
-- `WatchKnowledgeSnapshot` centralizes that knowledge horizon for one render/input pass
-- `WatchScreenBuilder` formats that filtered state into chronicle-adjacent inspection screens
-- `WatchInputController` changes UI state only; it does not call simulation systems
-- pausing stops monthly advancement but does not mutate domain state or generate events
-- the simulation loop now schedules month advancement on a timed cadence and uses render invalidation so input polling stays responsive during live play
-- foreign-polity detail intentionally hides that polity's private discoveries and learned capabilities unless it is the current focal polity
-- focal-polity inspection is intentionally separate: `My Polity` is treated as the already-expanded self-view, so `Enter` there does not fall through to the generic polity-detail renderer
-## Phase 12 - Food Redistribution Interactions
-
-`FoodSystem` and `AgricultureSystem` still generate polity-level food totals, but those totals are now projected back onto settlements each month so settlement inspection and aid routing can operate on concrete local states.
-
-`SettlementFoodRedistributionSystem` consumes:
-- monthly food gathered
-- monthly food farmed
-- current polity food stores
-- regional connectivity
-- settlement cultivated land and location
-
-It produces:
-- settlement food pressure classifications
-- settlement aid totals for UI visibility
-- structured aid events for the event pipeline
-
-The chronicle continues to stay high-signal by showing only `Major` and `Legendary` rescue/failure outcomes.
-Bootstrap-created rescue or failure baselines are treated as setup context and stay out of the live chronicle for the same reason.
-
-## Phase 13/14 - Domestication Interactions
-
-`DomesticationSystem` now connects:
-
-- `HuntingSystem` familiarity and domestication interest
-- regional species populations and trait resolution
-- settlement continuity and food pressure
-- `AgricultureSystem` yield and winter resilience
-- structured event propagation and chronicle formatting
-
-The result is intentionally asymmetric:
-
-- managed herds supplement hunting rather than replacing it immediately
-- cultivated crops strengthen farming where agriculture already exists
-- both systems remain local to settlements and regions, so remote collapse or regional breadbaskets still emerge from the same underlying food logic
-
-## Phase 17 - Material Economy Interactions
-
-`MaterialEconomySystem` now connects:
-
-- regional abundance on `Region`
-- settlement labor, hardship state, and reserve targets
-- learned capability gates such as `StoneTools`, `FoodStorage`, `BasicConstruction`, and `CraftSpecialization`
-- `AgricultureSystem` through tool effectiveness
-- `HuntingSystem` through better hunting reliability
-- `FoodSystem` through pottery-backed storage and preserved-food buffering
-- same-polity logistics through route-prioritized material convoys
-- watch-mode inspection through settlement, region, polity, and world-overview summaries
-
-The result is still concrete and local:
-
-- geography creates raw-material advantages
-- settlements convert those advantages into visible craft roles
-- convoys move physical surplus rather than abstract trade value
-- lower-level shortage and convoy detail remains available in structured history
-- major visible events only appear when the material state changes meaningfully, usually as one grouped settlement crisis beat rather than several same-tick per-material lines
-
-More broadly, player-facing major-event summaries now reuse the same visible dedupe identity as the live chronicle. That means a settlement recovery, famine turn, or grouped material crisis that already represents one visible historical outcome will not be repeated in summary views just because equivalent events exist underneath in canonical history.
-
-Phase 18 now deepens those interactions internally:
-
-- settlement need, scarcity, and surplus feed hidden value and opportunity signals
-- those signals alter extraction, production focus, convoy priority, and specialization drift
-- persistent surplus can produce trade-good identity, while bottlenecks can suppress favored output and create explainable downstream weakness
-- the watch UI reads those interactions through small readable labels rather than exposing raw market equations
-- explicit bootstrap seeding now establishes those internal economy identities before live play, so Year 0 begins from coherent baseline state rather than a narrated startup dump
-
-The canonical next interaction-focused phases now proceed in this order:
-
-- Phase 19 - external trade and inter-polity exchange add foreign links, imports, exports, route consequences, and dependency
-- Phase 20 - infrastructure and construction turn materials into long-term settlement capability, resilience, and logistics improvements
-- Phase 21 - diplomacy, raiding, and conflict foundations let those economic and route interactions create coercion, disruption, and border pressure
-
-Chronicle dedupe follow-through and later `Discoveries` / `Learned` list-view cleanup still matter, but they remain secondary player-facing follow-up work beside the next core system interactions.
+---
+
+## Phase 1 - Core World Simulation Foundations
+**Status:** Complete
+
+Bootstrap seeding is an explicit exception in presentation only: systems may emit canonical setup events while the world is in `Bootstrap`, but those baseline events do not enter player-facing chronicle surfaces until later live transitions occur in `Active` simulation.
+That bootstrap pass should also seed prior-state trackers so the first active material and reputation comparisons do not reinterpret old settlement identity as fresh chronicle news.
+Canonical events now also carry origin metadata, which lets chronicle admission reject non-live setup-derived economy/material/reputation events as a final safety guard.
+Implemented:
+- Core simulation loop foundation
+- Monthly tick-based simulation structure with seasonal logic layered on top
+- Society-to-civilization progression foundation
+- Aggregated population model
+- Early polity and society lifecycle foundations
+- Single-continent world generation baseline
+
+## Current Major Systems
+
+## Phase 2 - Settlement, Food, and Survival Foundations
+**Status:** Complete
+
+Implemented:
+- Settlement-centered simulation foundation
+- Food production and consumption basics
+- Storage, shortage, and survival pressure foundations
+- Seasonal food behavior groundwork
+- Early migration and survival pressure integration
+
+---
+
+## Phase 3 - Knowledge, Advancement, and Discovery Foundations
+**Status:** Complete
+
+Implemented:
+- Capability-based advancement system foundation
+- `Learned` capability model
+- Discovery model distinct from advancements
+- Cultural knowledge versus polity knowledge distinction
+- Discovery terminology and log wording direction
+- Resource, species, and world knowledge foundations
+
+---
+
+## Phase 4 - Chronicle and Player-Facing History Foundations
+**Status:** Complete
+
+Implemented:
+- Chronicle-style simulation output replacing generic yearly-report feel
+- Short, player-facing historical event phrasing
+- Focus on readable historical storytelling output
+- Main chronicle as the primary player-facing simulation view
+
+---
+
+## Phase 5 - Event Architecture and Cause-and-Effect Systems
+**Status:** Complete
+
+Implemented:
+- Structured event objects and metadata pipeline
+- Cause-and-effect event architecture
+- Event scopes and subscription model
+- Event propagation coordinator and propagation handlers
+- Causal ancestry support and safeguards
+- Structured background debug and history record separate from player chronicle
+
+---
+
+## Phase 6 - Chronicle Filtering and Focus Systems
+**Status:** Complete
+
+Implemented:
+- Major and Legendary emphasis for player-facing chronicle
+- Reduced chronicle spam through filtering and cooldowns
+- State-transition-style chronicle behavior
+- Player lineage focus system
+- Chronicle-first historical presentation direction
+
+---
+
+## Phase 7 - Watch Mode and Chronicle UI Foundations
+**Status:** Complete
+
+Implemented:
+- Watch mode presentation improvements
+- Fixed top status panel
+- Chronicle viewport below status panel
+- Newest chronicle entries shown at the top
+- Reduced flicker and partial redraw direction
+- Playback pacing improvements
+- Focal polity status integration into the watch experience
+
+---
+
+## Phase 8 - Regional Resource System
+**Status:** Complete
+
+Implemented:
+- Regional resource abundance model
+- Resource categories such as wood, stone, clay, copper, iron, and salt
+- Resources modeled as environmental capacity rather than simple inventories
+- Discovery-aligned resource knowledge direction
+
+---
+
+## Phase 9 - Regional Species Population and Ecology System
+**Status:** Complete
+
+Implemented:
+- Species as a core simulation pillar
+- Regional per-species population tracking
+- Habitat suitability and species-range logic
+- Food web and ecological niche foundation
+- Producer, herbivore, predator, and apex ecosystem relationships
+- Regional extinction and global extinction support
+- Seasonal ecology simulation basis
+
+---
+
+## Phase 10 - Hunting and Settlement-Grounded Food Interaction
+**Status:** Complete
+
+Implemented:
+- Settlement-based hunting system
+- Preferred prey targeting
+- Hunting success affected by species traits
+- Species population reduction from hunting
+- Dangerous-animal hunting risk
+- Hunting-based cultural discoveries
+- Overhunting pressure support
+- Legendary and major hunt storytelling hooks
+
+---
+
+## Phase 11 - Mutation, Divergence, and Speciation
+**Status:** Complete
+
+Implemented:
+- Population-level mutation model
+- Minor and major mutation tiers
+- Regional divergence support
+- Speciation from long-term isolated divergence
+- Species lineage tracking direction
+- Founder-population-based evolutionary spread
+- Anti-cascade and cooldown safeguards for speciation behavior
+
+---
+
+## Phase 12 - Predator Ecology Improvements
+**Status:** Complete
+
+Implemented:
+- Predator establishment improvements
+- Predator growth tied to prey support
+- Founder predator failure dynamics
+- Ecology balancing improvements to avoid weak persistent predator remnants
+
+---
+
+## Phase 13 - World Visibility and Navigation UI
+**Status:** Complete
+
+Implemented:
+- Live keypress-based screen navigation while simulation runs
+- Pause and unpause support
+- Direct screen switching and cycling behavior
+- Views for Chronicle, My Polity, Current Region, Known Regions, Known Species, Known Polities, and World Overview
+- Visibility-aware world data presentation
+- Shared knowledge visibility rules foundation
+
+---
+
+## Phase 14 - Focal Polity UI and Routing Corrections
+**Status:** Complete
+
+Implemented:
+- My Polity as focal-only player-facing screen
+- Enter key no longer drills into generic polity detail from My Polity
+- Focal-only fields preserved on My Polity
+- Navigation behavior fixes and related tests
+
+---
+
+## Phase 15 - Regional Trade and Resource Exchange
+**Status:** Complete
+
+Implemented:
+- Inter-settlement food surplus and deficit detection
+- Monthly transfer and resource-exchange groundwork
+- Early internal logistics between settlements
+- Trade and resource-exchange foundation for broader economy systems
+
+---
+
+## Phase 16 - Domestication and Early Agriculture Expansion
+**Status:** Complete
+
+Implemented:
+- Domestication candidates and domestication foundations
+- Managed herds
+- Cultivated crop foundations
+- Managed food integration into the economy and survival loop
+- Early agriculture expansion beyond simple foraging and hunting
+
+---
+
+## Phase 17 - Material Economy and Production Chains
+**Status:** Complete
+
+Implemented:
+- Settlement material stockpiles and pressure states
+- Regional abundance-driven extraction for wood, stone, clay, fiber, salt, copper ore, and iron ore
+- Lightweight production chains for lumber, stone blocks, pottery, rope, textiles, simple tools, and preserved food
+- Tool tiers and material bonuses feeding back into farming, hunting, spoilage, and seasonal resilience
+- Same-polity material redistribution with distance loss, critical-priority routing, and convoy events
+- Emergent settlement specialization from sustained output and regional fit
+- Structured material event families plus grouped chronicle-safe material crisis milestones
+- Watch and UI summaries for material surpluses, shortages, production centers, and resource hotspots
+
+---
+
+## Phase 18 - Economy Interactions and Market Behavior
+**Status:** Complete
+
+Implemented:
+- Internal settlement-level economy pressure using need, availability, value, opportunity, production-focus, and external-pull signals
+- Hybrid presentation model where internal pressure math stays hidden while player-facing watch screens use compact labels such as `Shortage`, `Stable`, `Surplus`, `Highly Valued`, `Trade Good`, and `Locally Common`
+- Pressure-driven extraction, production, redistribution priority, bottleneck handling, and specialization drift with smoothing to reduce thrashing
+- New economy-turn event families for highly valued goods, trade-good identity, production-focus shifts, and bottlenecks
+- Explicit bootstrap-aware chronicle handling so initialization-created economy baselines remain internal state and setup history instead of appearing as live Year 0 narrative
+- Bootstrap baseline seeding now initializes older settlements' economy and material-reputation state deeply enough that the first live tick compares against an established baseline instead of inventing new `known for`, trade-good, or false recovery history
+- Shared visible-event dedupe and chronicle filtering that still allow real post-bootstrap transitions, including legitimate Year 0 changes, to surface normally
+
+---
+
+# Next Planned Phases
+
+## Phase 19 - External Trade, Trade Routes, and Inter-Polity Exchange
+**Status:** Planned
+
+Planned:
+- Trade behavior that extends beyond same-polity redistribution into foreign exchange
+- External trade links between polities with region-route consequences instead of abstract global access
+- Import and export behavior for settlements and polities with uneven local resource positions
+- Trade dependency pressures where important external goods can stabilize or expose a polity
+- Route-level exchange outcomes and event hooks that can feed chronicle, diplomacy, and disruption systems
+
+---
+
+## Phase 20 - Settlement Infrastructure and Construction
+**Status:** Planned
+
+Planned:
+- Long-term material sinks for settlement development so stockpiles convert into durable capability
+- Construction of infrastructure such as warehouses, workshops, roads, irrigation, mines, defenses, and docks
+- Settlement investment choices that shape storage, production reliability, logistics, extraction, and resilience
+- Stronger ties between geography, construction, and long-horizon settlement specialization
+- Foundations for later transport, defense, and economic scaling systems
+
+---
+
+## Phase 21 - Diplomacy, Raiding, and Conflict Foundations
+**Status:** Planned
+
+Planned:
+- Early diplomacy and conflict systems grounded in economy, logistics, and inter-polity pressure
+- Coercive resource competition between neighboring or connected polities
+- Raids, border pressure, and supply disruption as material and trade consequences rather than isolated combat abstractions
+- Conflict event chains that emerge from scarcity, dependency, convoy pressure, and territorial friction
+- Foundations for later political negotiation, retaliation, and broader warfare systems
+
+---
+
+## Phase 22 - Internal Politics, Leadership, and Player Directives
+**Status:** Planned
+
+Planned:
+- Player interaction layer that goes beyond watch-only simulation
+- High-level player directives that influence priorities without turning the game into micro-management
+- Leadership, pressure, and governance hooks that can respond to scarcity, trade, conflict, and expansion
+- Policy-style guidance over settlement growth, military posture, economic focus, exploration, and stability
+- Strong cause-and-effect integration so player directives shape pressures rather than force arbitrary outcomes
+
+---
+
+## Phase 23 - Historical Memory and Narrative Consequence Systems
+**Status:** Planned
+
+Planned:
+- Historical Memory System where major events become lasting cultural memory
+- Narrative event chaining so major events create logical downstream consequence events
+- Memories of famine, migration, war, prosperity, and foundation that influence later choices
+- Greater long-range storytelling continuity across generations
+- Deeper causal continuity between chronicle events and polity behavior
+
+---
+
+## Phase 24 - Chronicle Expansion and History Views
+**Status:** Planned
+
+Planned:
+- Dedicated Civilization History view built from chronicle and structured event history
+- Multiple chronicle perspectives such as focal polity, foreign polity, and world-event views
+- Better player-facing access to structured history without exposing internal debug noise
+- Continued major-event deduplication and visible-event cleanup
+- Preservation of concise chronicle style while allowing deeper drill-down
+
+---
+
+## Phase 25 - Knowledge and Discovery UI Expansion
+**Status:** Planned
+
+Planned:
+- Dedicated full-list views for Discoveries and Learned items in My Polity and related screens
+- Explicit sorting rules for compact summaries and full-list displays
+- Better presentation of cultural knowledge versus polity capability
+- Cleaner top-panel summaries following the agreed compact formatting rules
+- More discoverability of what a polity knows about species, regions, resources, and practices
+
+---
+
+## Phase 26 - Monumental Projects and Prestige Works
+**Status:** Planned
+
+Planned:
+- Civilization Wonder Project system for multi-year prestige megaprojects
+- Wonders such as temples, monuments, observatories, canals, and other landmark constructions
+- Large material, labor, and political commitments with long-horizon payoffs
+- Chronicle-worthy world and polity events tied to construction milestones and completion
+- Strong integration with economy, infrastructure, diplomacy, and cultural identity
+
+---
+
+## Phase 27 - Deep History, Fossils, and Ancient World Layer
+**Status:** Planned
+
+Planned:
+- Prehistoric deep-history layer with ancient extinct species records
+- Fossil sites and fossil discovery systems
+- Ancient ecological and evolutionary traces discoverable by later civilizations
+- Deeper world identity through visible forgotten natural history
+- Long-range storytelling links between world generation, extinction, discovery, and culture
+
+---
+
+## Phase 28 - Advanced State Development and Large-Scale Civilization Systems
+**Status:** Planned
+
+Planned:
+- Stronger nation/empire-scale governance and administration pressures
+- Larger territorial coordination problems across regions and settlements
+- Advanced logistics, political cohesion, and imperial overstretch pressures
+- More mature late-game interactions between economy, conflict, memory, and identity
+- Foundations for truly large-scale civilization arcs
+
+---
+
+# Ongoing Cross-Phase Cleanup
+
+- Continue player-facing chronicle dedupe tuning and visible major-event cleanup as more event families come online
+- Continue validating that bootstrap and initialization state never appears as false live chronicle history
+- Continue UI readability cleanup for compact summaries, labels, and drill-in screens
+- Continue reviewing chronicle output to ensure there are no duplicated or redundant player-facing chronicle messages
+- Continue syncing roadmap and documentation whenever a design decision is made so planning stays aligned with agreed direction
