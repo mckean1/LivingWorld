@@ -18,7 +18,8 @@ class Program
             return;
         }
 
-        WorldGenerator generator = new(programOptions.Seed);
+        int seed = ResolveSeed(programOptions.Seed);
+        WorldGenerator generator = new(seed);
         World world = generator.Generate();
 
         SimulationOptions options = CreateSimulationOptions(programOptions);
@@ -67,11 +68,14 @@ class Program
     internal static bool ShouldPromptBeforeStart(SimulationOptions options)
         => options.PauseBeforeStart && options.OutputMode != OutputMode.Watch;
 
+    internal static int ResolveSeed(int? requestedSeed)
+        => requestedSeed ?? Random.Shared.Next(1, int.MaxValue);
+
     private static void PrintUsage()
     {
         Console.WriteLine("LivingWorld");
         Console.WriteLine("  --years <n>         Years to simulate (default: 120)");
-        Console.WriteLine("  --seed <n>          World seed (default: 1)");
+        Console.WriteLine("  --seed <n>          World seed (default: random)");
         Console.WriteLine("  --debug             Use developer/debug output");
         Console.WriteLine("  --delay-ms <n>      Chronicle playback delay in watch mode");
         Console.WriteLine("  --fast              Alias for --delay-ms 0");
@@ -87,7 +91,7 @@ class Program
 
     private sealed class ProgramOptions
     {
-        public int Seed { get; private set; } = 1;
+        public int? Seed { get; private set; }
         public int YearsToSimulate { get; private set; } = 120;
         public bool DebugOutput { get; private set; }
         public int ChroniclePlaybackDelayMilliseconds { get; private set; } = 500;
