@@ -20,6 +20,7 @@ public sealed class Polity
     public PolityStage Stage { get; set; }
     public string? IdentitySeed { get; set; }
     public string? CurrentPressureSummary { get; set; }
+    public bool IsFallbackCreated { get; set; }
 
     public int YearsSinceFounded { get; set; }
     public int YearsInCurrentRegion { get; set; }
@@ -126,6 +127,7 @@ public sealed class Polity
         Stage = stage;
         IdentitySeed = null;
         CurrentPressureSummary = null;
+        IsFallbackCreated = false;
 
         YearsSinceFounded = 0;
         YearsInCurrentRegion = 0;

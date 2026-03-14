@@ -37,7 +37,7 @@ Intentionally deferred to later startup passes:
 - active-play chronicle boundary changes
 
 ### Pass 2 - Evolution and Divergence
-**Status:** Implemented foundation slice
+**Status:** Implemented foundation slice plus startup-richness stabilization pass
 
 Implemented:
 - explicit `EvolutionaryLineage` records with ancestry, origin, extinction, lineage stage, trait/adaptation summaries, and sentience-capability state
@@ -46,6 +46,10 @@ Implemented:
 - structured evolutionary history events for mutation, divergence milestones, speciation, adaptation, local extinction, global extinction, and sentience-capability milestones
 - lineage adaptation summaries and a rare sentience-capability progression that can produce pre-social `Capable` branches without creating societies yet
 - `PhaseBReadinessReport` so startup handoff to later social emergence is based on branching history, divergence maturity, extinction history, and sentience-capable potential rather than time alone
+- richer founder-isolation payoff, ecology-distance divergence pressure, descendant momentum retention, and partial-contact damping so weak seed families accumulate deeper branching biological history without turning into speciation spam
+- local-extinction opening bonuses and related-lineage replacement pressure so biological turnover leaves visible recolonization/replacement texture instead of flat survivor-only ecology
+- `PhaseBDiagnostics` with ancestry depth, branching counts, divergence maturity, adapted-biome spread, extinction/replacement texture, sentience-capable root breadth, and weakness reasons for shallow-seed inspection
+- sentience-capability progression and bootstrap handoff now prefer broader root-branch coverage and adapted-biome novelty before repeating the same lineage branch
 
 Intentionally deferred to later startup passes:
 - full sentient societies, settlements, and polity creation from capable lineages
@@ -53,7 +57,7 @@ Intentionally deferred to later startup passes:
 - active-play chronicle changes for bootstrap biological history
 
 ### Pass 3 - Sentience and Social Formation
-**Status:** Implemented foundation slice
+**Status:** Implemented corrective stabilization pass
 
 Implemented:
 - activation of actual sentient population groups from viable sentience-capable lineages
@@ -65,6 +69,12 @@ Implemented:
 - continuity-preserving group and society fragmentation plus collapse history
 - focal-candidate viability tracking for later player starts
 - `PhaseCReadinessReport` so startup handoff is based on actual social/political maturity rather than time alone
+- grounded annual population growth, stagnation, decline, and collapse for sentient groups, societies, settlement populations, and early polities
+- latent settlement support, storage support, ecological carrying support, and subsistence mode now feed first-settlement founding so viable societies are not trapped below polity formation forever
+- polity expansion now adds grounded secondary settlements and uses settlement-distributed fragmentation pressure instead of treating raw total population as an automatic instability trap
+- same-lineage social emergence now allows multiple regionally separated trajectories when support and continuity justify them, while still capping lineage spam
+- bootstrap sentience handoff can preserve multiple viable sentience-capable branches instead of funneling the whole world through one lineage
+- fallback-origin continuity is now explicit on groups, societies, settlements, and polities so downstream startup logic can distinguish rescued paths from organic ones
 
 Intentionally deferred to Pass 4:
 - final focal polity selection UI
@@ -72,7 +82,7 @@ Intentionally deferred to Pass 4:
 - active-play chronicle boundary changes for bootstrap history
 
 ### Pass 4 - Polity Start and Player Entry
-**Status:** Implemented foundation slice
+**Status:** Implemented corrective stabilization pass plus startup-richness/differentiation follow-up
 
 Implemented:
 - startup world-age presets with variable prehistory duration, target age as a soft centerpoint, and readiness strictness / candidate-count tuning
@@ -85,13 +95,24 @@ Implemented:
 - strict chronicle boundary enforcement so prehistory remains structured history and summary material instead of leaking into the live chronicle buffer
 - stricter weak-world handling so max-age / fallback-only / biologically weak outcomes are rejected more often and rerolled instead of being surfaced as normal starts
 - selection-screen cleanup plus chronicle viewport sanitation so player-facing startup text is narrative-first and stale status/summary fragments cannot leak into the chronicle pane
+- candidate fallback labeling now tracks fallback-created origins and emergency admissions directly instead of relying on one narrow score condition
+- Phase C and Pass 4 readiness now agree on organic social/political depth: fallback-only polities, fallback-only candidate pools, and zero-organic-polity worlds no longer count as healthy starts
+- normal startup now expects multiple organic candidates; single-candidate and fallback-only worlds bias toward honest regeneration instead of silent acceptance
+- startup diagnostics now expose organic/fallback counts, emergency candidate admissions, candidate rejection reasons, startup bottlenecks, and regeneration causes
+- startup reroll seed derivation is now deterministic, so repeated startup sweeps and tests measure stable organic-vs-fallback outcomes instead of process-randomized retries
+- candidate summaries now classify starts from current polity state instead of founder-origin labels, so subsistence, settlement-network shape, and present pressure reflect what the polity actually became by player entry
+- polity settlement expansion now respects subsistence mode, network age, and fragmentation pressure so healthy starts stop flattening into oversized late-bootstrap settlement spreads
+- diversity trimming now works on richer current-polity summaries, making lineage/root breadth and regional differentiation more likely to survive the final candidate cut
 
 Intentionally deferred after Pass 4:
 - richer player-entry presets and custom world-age editing
 - deeper focal-candidate inspection UI and compare views
 - dedicated civilization/species/world history screens built on the preserved structured prehistory
 
-This completes the intended primitive-life-first startup path end to end: Pass 1 creates a living ecology, Pass 2 creates branching biological history, Pass 3 creates early social/political actors, and Pass 4 now stops prehistory on readiness, offers simulated focal starts, and hands the chosen polity into active play.
+This completes the intended primitive-life-first startup path end to end: Pass 1 creates a living ecology, Pass 2 creates branching biological history, Pass 3 creates early social/political actors with real maturation pressure, and Pass 4 now expects normal starts to come from organic simulated outcomes rather than repeated fallback-polity rescue behavior.
+
+Post-Pass-4 startup-richness validation now also has a compact deterministic sweep (`YoungWorld`, `4x4`, reduced bootstrap caps) for seeds `31, 32, 33, 34, 35, 7, 11, 13, 43`.
+During this pass that sweep improved from `5/9` accepted worlds to `7/9`, weak seeds `31` and `11` moved from rejection into organic acceptance, accepted worlds kept `0` fallback candidates, and sentience-capable root breadth improved from mostly `1` root to `2-3` roots in most accepted runs.
 
 ---
 

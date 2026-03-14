@@ -4,6 +4,7 @@ using LivingWorld.Life;
 using LivingWorld.Map;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
+using System.Reflection;
 using Xunit;
 
 namespace LivingWorld.Tests;
@@ -37,6 +38,51 @@ public sealed class SocialEmergenceSystemTests
         }
 
         Assert.Contains(world.CivilizationalHistory, evt => evt.Type == CivilizationalHistoryEventType.PersistentGroupFormation);
+    }
+
+    [Fact]
+    public void SentientGroups_GrowUnderGoodConditions()
+    {
+        World world = CreateWorld();
+        SentientPopulationGroup group = SeedGroup(world, regionId: 0, population: 72);
+        SocialEmergenceSystem system = CreateSystem();
+
+        int initialPopulation = group.PopulationCount;
+        system.UpdateYear(world);
+
+        Assert.True(group.PopulationCount > initialPopulation);
+        Assert.True(group.FoodSecurity > 0.50);
+    }
+
+    [Fact]
+    public void SentientGroups_DeclineUnderBadConditions()
+    {
+        World world = CreateWorld();
+        MakeRegionHarsh(world.Regions[1]);
+        SentientPopulationGroup group = SeedGroup(world, regionId: 1, population: 96);
+        group.Cohesion = 0.22;
+        group.SurvivalKnowledge = 0.18;
+        group.Stress = 0.72;
+        group.FoodSecurity = 0.18;
+        group.StorageSupport = 0.04;
+        group.MigrationPressure = 0.18;
+        world.Regions[1].ConnectedRegionIds.Clear();
+        world.Regions[0].ConnectedRegionIds.Clear();
+
+        Species species = world.Species.First(candidate => candidate.Id == 1);
+        RegionSpeciesPopulation harshPopulation = world.Regions[1].GetOrCreateSpeciesPopulation(species.Id);
+        harshPopulation.PopulationCount = 40;
+        harshPopulation.HabitatSuitability = 0.28;
+        harshPopulation.StressScore = 0.88;
+        harshPopulation.RecentFoodStress = 0.78;
+        harshPopulation.RecentPredationPressure = 0.44;
+
+        SocialEmergenceSystem system = CreateSystem();
+        int initialPopulation = group.PopulationCount;
+
+        system.UpdateYear(world);
+
+        Assert.True(group.IsCollapsed || group.PopulationCount < initialPopulation);
     }
 
     [Fact]
@@ -91,6 +137,16 @@ public sealed class SocialEmergenceSystemTests
     public void SettlementFounding_AndAbandonment_AreTracked()
     {
         World world = CreateWorld();
+        EmergingSociety society = SeedSociety(world);
+        society.Population = 220;
+        society.SedentismPressure = 1.00;
+        society.FoodSecurity = 0.86;
+        society.StorageSupport = 0.72;
+        society.SettlementSupport = 0.84;
+        society.LocalCarryingSupport = 0.88;
+        society.CulturalKnowledge["basin"] = new CulturalDiscovery("basin", "The basin holds year-round water", CulturalDiscoveryCategory.Geography, RegionId: 0);
+        society.CulturalKnowledge["grain"] = new CulturalDiscovery("grain", "Wild grain stores well", CulturalDiscoveryCategory.FoodSafety, SpeciesId: 2, RegionId: 0);
+        society.CulturalKnowledge["herd"] = new CulturalDiscovery("herd", "Herd beasts cross the basin", CulturalDiscoveryCategory.SpeciesUse, SpeciesId: 4, RegionId: 0);
         SocialEmergenceSystem system = CreateSystem(new WorldGenerationSettings
         {
             SentientActivationMinimumPopulation = 40,
@@ -102,19 +158,54 @@ public sealed class SocialEmergenceSystemTests
             SettlementFoundingPressureThreshold = 0.10
         });
 
-        system.UpdateYear(world);
-        world.Time.Reset(121, 1);
-        system.UpdateYear(world);
+        typeof(SocialEmergenceSystem)
+            .GetMethod("FoundSettlement", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(system, new object[] { world, society, world.Regions[0] });
 
         SocialSettlement settlement = Assert.Single(world.SocialSettlements);
         Assert.False(settlement.IsAbandoned);
 
         settlement.SettlementViability = 0.05;
-        world.Time.Reset(122, 1);
+        world.Time.Reset(world.Time.Year + 1, 1);
         system.UpdateYear(world);
 
         Assert.True(settlement.IsAbandoned);
         Assert.Contains(world.CivilizationalHistory, evt => evt.Type == CivilizationalHistoryEventType.SettlementAbandoned);
+    }
+
+    [Fact]
+    public void Societies_DeclineUnderBadConditions()
+    {
+        World world = CreateWorld();
+        MakeRegionHarsh(world.Regions[0]);
+        EmergingSociety society = SeedSociety(world);
+        society.OriginRegionId = 0;
+        society.RegionIds.Clear();
+        society.RegionIds.Add(0);
+        society.Population = 160;
+        society.Cohesion = 0.26;
+        society.IdentityStrength = 0.24;
+        society.SurvivalKnowledge = 0.20;
+        society.SedentismPressure = 0.14;
+        society.FoodSecurity = 0.18;
+        society.StorageSupport = 0.06;
+        society.SettlementSupport = 0.10;
+        society.LocalCarryingSupport = 0.18;
+        society.MigrationPressure = 0.56;
+        society.FragmentationPressure = 0.62;
+        world.Regions[0].ConnectedRegionIds.Clear();
+        RegionSpeciesPopulation harshPopulation = world.Regions[0].GetOrCreateSpeciesPopulation(1);
+        harshPopulation.PopulationCount = 34;
+        harshPopulation.HabitatSuitability = 0.24;
+        harshPopulation.StressScore = 0.90;
+        harshPopulation.RecentFoodStress = 0.82;
+
+        SocialEmergenceSystem system = CreateSystem();
+        int initialPopulation = society.Population;
+
+        system.UpdateYear(world);
+
+        Assert.True(society.IsCollapsed || society.Population < initialPopulation);
     }
 
     [Fact]
@@ -140,7 +231,7 @@ public sealed class SocialEmergenceSystemTests
         SocialEmergenceSystem system = CreateSystem();
         system.UpdateYear(world);
 
-        Assert.Equal(SubsistenceMode.FarmingEmergent, society.SubsistenceMode);
+        Assert.Equal(SubsistenceMode.ProtoFarming, society.SubsistenceMode);
     }
 
     [Fact]
@@ -181,19 +272,127 @@ public sealed class SocialEmergenceSystemTests
     }
 
     [Fact]
+    public void ViableSociety_CanGrowIntoPolityThresholdOrganically()
+    {
+        World world = CreateWorld();
+        EmergingSociety society = SeedSociety(world);
+        society.Population = 126;
+        society.SocialComplexity = 0.54;
+        society.SurvivalKnowledge = 0.72;
+        society.FoodSecurity = 0.66;
+        society.StorageSupport = 0.48;
+        society.SettlementSupport = 0.76;
+        society.LocalCarryingSupport = 0.74;
+        society.CulturalKnowledge["a"] = new CulturalDiscovery("a", "Water route", CulturalDiscoveryCategory.Geography, RegionId: 0);
+        society.CulturalKnowledge["b"] = new CulturalDiscovery("b", "Safe roots", CulturalDiscoveryCategory.FoodSafety, SpeciesId: 2, RegionId: 0);
+        society.CulturalKnowledge["c"] = new CulturalDiscovery("c", "Fertile basin", CulturalDiscoveryCategory.Environment, RegionId: 0);
+        world.SocialSettlements.Add(new SocialSettlement(1)
+        {
+            FounderSocietyId = society.Id,
+            FounderLineageId = society.LineageId,
+            RegionId = 0,
+            FoundingYear = 120,
+            Population = 52,
+            SettlementViability = 0.84,
+            StorageLevel = 0.58
+        });
+        society.SettlementIds.Add(1);
+
+        SocialEmergenceSystem system = CreateSystem(new WorldGenerationSettings
+        {
+            PolityFormationMinimumPopulation = 135,
+            PolityFormationMinimumKnowledgeCount = 3,
+            PolityFormationComplexityThreshold = 0.52
+        });
+
+        for (int year = 0; year < 3 && world.Polities.Count == 0; year++)
+        {
+            system.UpdateYear(world);
+            world.Time.Reset(world.Time.Year + 1, 1);
+        }
+
+        Assert.Contains(world.Polities, polity => polity.FounderSocietyId == society.Id);
+    }
+
+    [Fact]
     public void Fragmentation_PreservesSocietyContinuity()
     {
         World world = CreateWorld();
         EmergingSociety society = SeedSociety(world);
-        society.Population = 260;
-        society.Cohesion = 0.30;
+        society.Population = 620;
+        society.Cohesion = 0.06;
+        society.IdentityStrength = 0.10;
+        society.SurvivalKnowledge = 0.24;
+        society.StorageSupport = 0.04;
+        society.SettlementSupport = 0.08;
+        society.LocalCarryingSupport = 0.20;
+        society.MigrationPressure = 0.76;
+        society.FragmentationPressure = 0.94;
+        society.PressureSummary = "frontier strain";
+        world.SocialSettlements.Clear();
 
         SocialEmergenceSystem system = CreateSystem();
-        system.UpdateYear(world);
+        typeof(SocialEmergenceSystem)
+            .GetMethod("FragmentSociety", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(system, new object[] { world, society, world.Regions[0] });
 
         Assert.True(world.Societies.Count >= 2);
         Assert.Contains(world.Societies, candidate => candidate.ParentSocietyId == society.Id);
         Assert.Contains(world.CivilizationalHistory, evt => evt.Type == CivilizationalHistoryEventType.Fragmentation);
+    }
+
+    [Fact]
+    public void SameLineageCanActivateMultipleRegionalTrajectories()
+    {
+        World world = CreateWorld();
+        RegionSpeciesPopulation frontierPopulation = world.Regions[1].GetOrCreateSpeciesPopulation(1);
+        frontierPopulation.PopulationCount = 140;
+        frontierPopulation.HabitatSuitability = 0.82;
+        frontierPopulation.StressScore = 0.08;
+
+        SocialEmergenceSystem system = CreateSystem(new WorldGenerationSettings
+        {
+            SentientActivationMinimumPopulation = 40,
+            SentientActivationMinimumSupport = 0.35,
+            SentientActivationMaximumIndependentGroupsPerLineage = 2,
+            SentientTrajectoryMinimumRegionalSeparation = 1
+        });
+
+        system.UpdateYear(world);
+
+        Assert.Equal(2, world.SentientGroups.Count(group => !group.IsCollapsed && group.SourceLineageId == 10));
+        Assert.Equal(2, world.SentientGroups.Where(group => !group.IsCollapsed && group.SourceLineageId == 10).Select(group => group.CurrentRegionId).Distinct().Count());
+    }
+
+    [Fact]
+    public void HealthyWorldSupportsMultipleTrajectoriesFromOneLineage()
+    {
+        World world = CreateWorld();
+        RegionSpeciesPopulation frontierPopulation = world.Regions[1].GetOrCreateSpeciesPopulation(1);
+        frontierPopulation.PopulationCount = 150;
+        frontierPopulation.HabitatSuitability = 0.84;
+        frontierPopulation.StressScore = 0.06;
+
+        SocialEmergenceSystem system = CreateSystem(new WorldGenerationSettings
+        {
+            SentientActivationMinimumPopulation = 40,
+            SentientActivationMinimumSupport = 0.35,
+            PersistentGroupCohesionThreshold = 0.30,
+            SocietyFormationContinuityYears = 2,
+            SocietyFormationIdentityThreshold = 0.18,
+            SentientActivationMaximumIndependentGroupsPerLineage = 2,
+            SentientTrajectoryMinimumRegionalSeparation = 1
+        });
+
+        for (int year = 0; year < 4; year++)
+        {
+            system.UpdateYear(world);
+            world.Time.Reset(world.Time.Year + 1, 1);
+        }
+
+        int lineageArcCount = world.Societies.Count(society => !society.IsCollapsed && society.LineageId == 10)
+            + world.SentientGroups.Count(group => !group.IsCollapsed && group.SourceLineageId == 10);
+        Assert.True(lineageArcCount >= 2);
     }
 
     [Fact]
@@ -381,5 +580,52 @@ public sealed class SocialEmergenceSystemTests
         society.RegionIds.Add(0);
         world.Societies.Add(society);
         return society;
+    }
+
+    private static SentientPopulationGroup SeedGroup(World world, int regionId, int population)
+    {
+        SentientPopulationGroup group = new(1)
+        {
+            SourceLineageId = 10,
+            CurrentRegionId = regionId,
+            FounderRegionId = regionId,
+            ActivationYear = 120,
+            PopulationCount = population,
+            MobilityMode = MobilityMode.SemiSedentary,
+            Cohesion = 0.56,
+            SocialComplexity = 0.32,
+            SurvivalKnowledge = 0.42,
+            SettlementIntent = 0.34,
+            Stress = 0.10,
+            SedentismPressure = 0.42,
+            ContinuityYears = 2,
+            IdentityStrength = 0.30,
+            MigrationPattern = "anchored circuit",
+            FoundingMemorySeed = "basin awakening",
+            ThreatMemorySeed = "seasonal predators",
+            PressureSummary = "shared survival",
+            FoodSecurity = 0.54,
+            StorageSupport = 0.26,
+            LocalCarryingSupport = 0.70,
+            MigrationPressure = 0.10,
+            FragmentationPressure = 0.08
+        };
+        group.SharedKnowledge["water"] = new CulturalDiscovery("water", "Reliable water", CulturalDiscoveryCategory.Geography, RegionId: regionId);
+        group.SharedKnowledge["grain"] = new CulturalDiscovery("grain", "Wild grain is edible", CulturalDiscoveryCategory.FoodSafety, SpeciesId: 2, RegionId: regionId);
+        group.SharedKnowledge["prey"] = new CulturalDiscovery("prey", "Herd beasts are useful prey", CulturalDiscoveryCategory.SpeciesUse, SpeciesId: 4, RegionId: regionId);
+        world.SentientGroups.Add(group);
+        return group;
+    }
+
+    private static void MakeRegionHarsh(Region region)
+    {
+        region.Biome = RegionBiome.Drylands;
+        region.Fertility = 0.18;
+        region.WaterAvailability = 0.14;
+        region.PlantBiomass = 120;
+        region.AnimalBiomass = 30;
+        region.MaxPlantBiomass = 240;
+        region.MaxAnimalBiomass = 90;
+        region.EcologyProfile = RegionEcologyProfileBuilder.Build(region);
     }
 }

@@ -29,7 +29,10 @@ The current startup targets live in `LivingWorld/Generation/WorldGenerationSetti
 - `PhaseCMaximumBootstrapYears = 480`
 - readiness thresholds for occupied regions, producer coverage, consumer coverage, and predator coverage
 - readiness thresholds for mature lineage count, speciation count, ancestry depth, divergence maturity, sentience-capable count, and stable regions
-- readiness thresholds for sentient groups, societies, settlements, polities, viable focal candidates, historical density, and final player-entry candidate filtering/diversity
+- readiness thresholds for organic social trajectories, societies, settlements, polities, viable focal candidates, historical density, and final player-entry candidate filtering/diversity
+- social-maturation knobs for bootstrap sentience-capable branch count, per-lineage social trajectory limits, growth/decline rates, polity-emergence thresholds, and candidate diversity weighting
+- Phase B richness knobs for mutation-potential pressure, founder-isolation bonus, ecology-distance divergence, descendant-retention carry-over, and sentience-complexity/root-breadth progression
+- startup-selection knobs for healthy-candidate score, emergency fallback labeling, and startup regeneration attempts
 
 These values are intentionally centralized so density tuning can happen without rewriting generation logic.
 
@@ -45,9 +48,10 @@ These values are intentionally centralized so density tuning can happen without 
 8. initialize explicit evolutionary lineage records from the surviving primitive carriers
 9. run an internal Phase B evolutionary bootstrap loop with mutation, divergence, speciation, extinction, and sentience-capability progression until readiness is achieved or the bootstrap year cap is reached
 10. run an internal Phase C social bootstrap loop with sentient activation, society formation, settlement pressure, polity formation, and candidate tracking until readiness is achieved or the bootstrap year cap is reached
-11. run an internal Phase D player-entry evaluation loop using startup age presets, periodic readiness checks, and focal-candidate generation until readiness passes or max age forces a stop
+11. run an internal Phase D player-entry evaluation loop using startup age presets, periodic readiness checks, organic-vs-fallback candidate labeling, and weak-world regeneration until readiness passes or max age forces a stop
 12. store `PhaseAReadinessReport`, `PhaseBReadinessReport`, `PhaseCReadinessReport`, and `WorldReadinessReport` for inspection
-13. freeze the world in `FocalSelection` with compact candidate summaries ready for player choice
+13. store startup outcome diagnostics for organic/fallback counts, candidate rejections, bottlenecks, and regeneration causes
+14. freeze the world in `FocalSelection` with compact candidate summaries ready for player choice
 
 The default startup now intentionally reaches a playable prehistory handoff rather than stopping before player-entry logic exists.
 
@@ -125,11 +129,14 @@ That layer adds:
 
 - ancestry-preserving `EvolutionaryLineage` records
 - regional mutation and divergence accumulation
-- contact moderation so connected sibling populations diverge more slowly
+- founder-isolation payoff and ecology-distance pressure so partially isolated populations in different ecological pockets diverge more legibly over long timescales
+- contact moderation so connected sibling populations diverge more slowly without collapsing all partial-contact branches into one flat lineage
 - founder-driven speciation only after sustained isolation, viability, and persistence
 - local and global extinction history retention
+- extinction-opening replacement pressure so nearby/related lineages can recolonize or replace locally vanished populations
 - emergent habitat/trait adaptation summaries
-- rare sentience-capability progression from ecological pressure plus continuity
+- rare sentience-capability progression from ecological pressure plus continuity, with bootstrap handoff that prefers broader root-branch coverage before repeating the same biological root
+- `PhaseBDiagnostics` for ancestry depth, branch count, divergence maturity, adapted-biome spread, extinction/replacement texture, and sentience-capable root breadth
 
 `PhaseBReadinessReport` currently tracks:
 
@@ -149,21 +156,27 @@ After Phase B succeeds, startup now activates viable sentience-capable branches 
 That layer adds:
 
 - sentient group activation from viable sentience-capable lineage populations
-- persistent group continuity with cohesion, continuity years, identity strength, and shared knowledge
-- society formation with mobility and subsistence identity
-- pressure-based settlement founding plus abandonment/failure handling
-- first polity formation from only the strongest settlement-backed societies
+- persistent group continuity with cohesion, continuity years, identity strength, shared knowledge, and real annual population growth/decline pressure
+- society formation with mobility and subsistence identity plus ecology/storage/carrying-support-driven maturation
+- pressure-based settlement founding plus abandonment/failure handling, including latent support for first-settlement creation so viable societies do not stall forever below polity formation
+- first polity formation from only the strongest settlement-backed societies, plus early multi-settlement polity spread when population pressure and local support justify it
+- multiple regionally separated social trajectories per lineage when continuity, support, and spatial separation justify them
 - focal-candidate viability tracking for later player-entry selection
-- a narrow fallback safeguard so startup does not end in a socially dead world if every otherwise-viable branch narrowly misses polity formation
+- explicit fallback-origin tracking on groups, societies, settlements, and polities so rescued paths stay inspectable instead of blending into organic history
 
 `PhaseCReadinessReport` currently tracks:
 
 - sentient group count
+- organic versus fallback group counts
 - persistent society count
+- organic versus fallback society counts
 - settlement count
+- organic versus fallback settlement counts
 - viable settlement count
 - polity count
+- organic versus fallback polity counts
 - viable focal-candidate count
+- organic versus fallback focal-candidate counts
 - average polity age
 - historical event density
 - failure reasons
@@ -180,7 +193,12 @@ Pass 4 adds:
 - `PrehistoryRuntimeStatus` / `PrehistoryRuntimeState` so startup state is explicit instead of inferred from active play assumptions
 - `WorldReadinessReport` that combines biological continuity, social maturity, civilizational maturity, candidate quality, and stability sanity
 - `PlayerEntryCandidateGenerator` that filters, ranks, and diversity-trims real simulated polities into a compact player-facing pool
-- strict fallback order: normal readiness stop, final candidate search at max age, weaker but still simulated emergency candidates, and generation failure if the world still produces nobody worth starting as
+- current-polity candidate profiling so subsistence, settlement-network shape, and current condition come from what the polity actually became by startup stop, not only from its founder society
+- moderated polity settlement expansion so healthy starts stop converging into identical late-bootstrap settlement spam before candidate selection
+- strict fallback order: normal readiness stop, final candidate search at max age, weaker but still simulated emergency candidates with explicit fallback labels, and generation failure if the world still produces nobody worth starting as
+- alignment between `PhaseCReadinessReport` and `WorldReadinessReport` so fallback-only polities or candidate pools do not pass one layer while failing another
+- startup regeneration preference for biology-weak, fallback-only, or one-candidate weak worlds instead of silently surfacing them as ordinary starts
+- `StartupOutcomeDiagnostics` for organic/fallback counts, emergency admissions, candidate rejection reasons, bottlenecks, and regeneration causes
 - preservation of prehistory as structured history only; the live chronicle begins after focal selection and player binding
 
 ## Output Model After Generation
@@ -195,8 +213,11 @@ World generation does not produce a separate player-facing yearly report path.
 
 Regional primitive populations now exist before any later-stage society logic could run.
 Those populations now also carry founder/contact/divergence state, so mutation/speciation and sentience-capability progression grow from real ecological history rather than replacing the startup model.
-Pass 3 then turns only viable sentience-capable branches into social actors, accumulates early cultural discoveries, forms durable societies, founds early settlements, and promotes only the strongest societies into pre-player polities.
-Pass 4 then evaluates whether that world is mature enough for player entry, ranks distinct simulated starts, and preserves prehistory as summary/history context rather than as live chronicle noise.
+Pass 3 then turns only viable sentience-capable branches into social actors, lets those actors actually grow or decline under pressure, accumulates early cultural discoveries, forms durable societies, founds early settlements, and promotes only the strongest organically maturing societies into pre-player polities.
+Pass 4 then evaluates whether that world is mature enough for player entry, ranks distinct simulated starts, rejects fallback-only or one-candidate weak worlds more aggressively, and preserves prehistory as summary/history context rather than as live chronicle noise.
+
+For repeated-run startup validation, the repo now keeps a compact deterministic sweep profile (`YoungWorld`, `4x4`, reduced bootstrap caps) for representative seed families.
+During this pass that sweep improved from `5/9` accepted worlds to `7/9`, accepted worlds kept `0` fallback candidates, and sentience-capable root breadth in accepted runs moved from mostly `1` root to `2-3` roots.
 
 ## Phase 13/14 Generation Support
 

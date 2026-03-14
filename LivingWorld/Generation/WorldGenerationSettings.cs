@@ -66,6 +66,18 @@ public sealed class WorldGenerationSettings
 
     public double SentientActivationMinimumSupport { get; init; } = 0.40;
 
+    public int BootstrapSentienceCapableLineageTarget { get; init; } = 3;
+
+    public int SentientActivationMaximumIndependentGroupsPerLineage { get; init; } = 3;
+
+    public int SentientTrajectoryMinimumRegionalSeparation { get; init; } = 2;
+
+    public double SocialNeutralGrowthPoint { get; init; } = 0.46;
+
+    public double SocialMaximumAnnualGrowthRate { get; init; } = 0.16;
+
+    public double SocialMaximumAnnualDeclineRate { get; init; } = 0.26;
+
     public double PersistentGroupCohesionThreshold { get; init; } = 0.35;
 
     public int PersistentGroupContinuityYears { get; init; } = 4;
@@ -78,11 +90,11 @@ public sealed class WorldGenerationSettings
 
     public double SettlementFoundingPressureThreshold { get; init; } = 0.48;
 
-    public int PolityFormationMinimumPopulation { get; init; } = 120;
+    public int PolityFormationMinimumPopulation { get; init; } = 135;
 
-    public int PolityFormationMinimumKnowledgeCount { get; init; } = 3;
+    public int PolityFormationMinimumKnowledgeCount { get; init; } = 4;
 
-    public double PolityFormationComplexityThreshold { get; init; } = 0.42;
+    public double PolityFormationComplexityThreshold { get; init; } = 0.46;
 
     public int MinimumPhaseCSentientGroupCount { get; init; } = 2;
 
@@ -90,13 +102,13 @@ public sealed class WorldGenerationSettings
 
     public int MinimumPhaseCSettlementCount { get; init; } = 2;
 
-    public int MinimumPhaseCViableSettlementCount { get; init; } = 1;
+    public int MinimumPhaseCViableSettlementCount { get; init; } = 2;
 
-    public int MinimumPhaseCPolityCount { get; init; } = 1;
+    public int MinimumPhaseCPolityCount { get; init; } = 2;
 
-    public int MinimumPhaseCViableFocalCandidateCount { get; init; } = 1;
+    public int MinimumPhaseCViableFocalCandidateCount { get; init; } = 2;
 
-    public double MinimumPhaseCAveragePolityAge { get; init; } = 4.0;
+    public double MinimumPhaseCAveragePolityAge { get; init; } = 5.0;
 
     public double MinimumPhaseCHistoricalEventDensity { get; init; } = 0.18;
 
@@ -118,19 +130,29 @@ public sealed class WorldGenerationSettings
 
     public double CandidateDiversitySpeciesBonus { get; init; } = 0.08;
 
+    public double CandidateDiversityLineageBonus { get; init; } = 0.07;
+
     public double CandidateDiversityRegionBonus { get; init; } = 0.07;
+
+    public double CandidateDiversityBiomeBonus { get; init; } = 0.06;
 
     public double CandidateDiversitySubsistenceBonus { get; init; } = 0.05;
 
+    public double CandidateDiversitySettlementProfileBonus { get; init; } = 0.05;
+
+    public double CandidateDiversityConditionBonus { get; init; } = 0.04;
+
     public int MaxStartupRegenerationAttempts { get; init; } = 4;
 
-    public double MinimumBiologicalReadinessFloor { get; init; } = 0.40;
+    public double MinimumBiologicalReadinessFloor { get; init; } = 0.52;
 
-    public int MinimumHealthyCandidateCount { get; init; } = 1;
+    public int MinimumHealthyCandidateCount { get; init; } = 2;
 
-    public double MinimumHealthyCandidateScore { get; init; } = 0.68;
+    public double MinimumHealthyCandidateScore { get; init; } = 0.64;
 
     public int MaximumEmergencyFallbackCandidatesToSurface { get; init; } = 1;
 
     public bool AllowSingleFallbackCandidateSelection { get; init; } = false;
+
+    public bool AllowPhaseCFallbackCivilizationalSeeding { get; init; } = false;
 }

@@ -21,6 +21,13 @@ public sealed class EmergingSociety
     public int? PredecessorGroupId { get; set; }
     public int? ParentSocietyId { get; set; }
     public int? FounderPolityId { get; set; }
+    public bool IsFallbackCreated { get; set; }
+    public double FoodSecurity { get; set; }
+    public double StorageSupport { get; set; }
+    public double SettlementSupport { get; set; }
+    public double LocalCarryingSupport { get; set; }
+    public double MigrationPressure { get; set; }
+    public double FragmentationPressure { get; set; }
     public bool IsCollapsed { get; set; }
     public string FoundingMemorySeed { get; set; } = "shared survival";
     public string ThreatMemorySeed { get; set; } = "hardship";

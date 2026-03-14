@@ -23,6 +23,12 @@ public sealed class SentientPopulationGroup
     public int? PredecessorGroupId { get; set; }
     public int? FounderRegionId { get; set; }
     public int LastMigrationYear { get; set; } = -1;
+    public bool IsFallbackCreated { get; set; }
+    public double FoodSecurity { get; set; }
+    public double StorageSupport { get; set; }
+    public double LocalCarryingSupport { get; set; }
+    public double MigrationPressure { get; set; }
+    public double FragmentationPressure { get; set; }
     public bool IsCollapsed { get; set; }
     public HashSet<string> IdentityMarkers { get; } = [];
     public Dictionary<string, CulturalDiscovery> SharedKnowledge { get; } = new(StringComparer.OrdinalIgnoreCase);

@@ -10,6 +10,8 @@ The startup direction is now explicitly primitive-life-first:
 4. polity start and player entry
 
 Pass 1 through Pass 4 are implemented now. The default generated world reaches ecological readiness first, then runs evolutionary bootstrap, then social emergence bootstrap, then a player-entry evaluation/runtime layer that stops prehistory on readiness or max-age fallback, produces real focal candidates, and waits in a dedicated selection state before active play begins.
+The corrective startup-stabilization pass tightened that contract further: normal starts are expected to come from multiple organic candidate polities, while fallback-created or emergency-admitted worlds are explicitly labeled, diagnosed, and usually regenerated instead of being surfaced as healthy defaults.
+The follow-up startup-richness pass tightened Pass 2 through Pass 4 in a different way: it improves weak Phase B seed families by deepening biological branching/replacement history and makes later candidate summaries/ranking depend on current polity state instead of frozen founder-origin labels.
 
 ## Core Structure
 
@@ -69,12 +71,16 @@ World seeding is now split into a few explicit pieces so density tuning stays de
 - `WorldGenerationCatalog` provides curated biome layout, name pools, and species templates
 - `WorldGenerator` now turns those settings and templates into connected regions, ecology profiles, primitive lineage templates, weighted seeded ranges, and a Phase A ecological bootstrap
 - `WorldGenerator` now also initializes explicit lineage records, runs an internal evolutionary bootstrap, and stores a `PhaseBReadinessReport` before active simulation begins
-- `WorldGenerator` now also runs a social-emergence bootstrap, tracks candidate polities, and stores a `PhaseCReadinessReport` before handing the world to the live polity simulation
+- `WorldGenerator` now also runs a social-emergence bootstrap with real population growth/decline, first-settlement pressure, early polity settlement spread, and multi-trajectory lineage activation before storing a `PhaseCReadinessReport`
+- `WorldGenerator` now treats fallback polity seeding as an explicit last-resort mode instead of an unconditional Phase C rescue, and the default path now prefers honest regeneration when organic readiness never materializes
+- `WorldGenerator` now also stores `PhaseBDiagnostics`, uses root-diverse sentience bootstrap handoff, and prefers capable branches that widen adapted-biome/root coverage before repeating one lineage branch
 - producer coverage is intentionally broad while consumer and predator spread is narrower and more uneven, so the world opens biologically alive without becoming uniform
 - `EcosystemSettings` now centralizes the long-run fauna spread knobs that take over after generation: migration thresholds, founder-population sizing, prey-support gates, predator establishment windows, and cooldown pacing
 - `PhaseAReadinessEvaluator` summarizes whether the generated world has broad, uneven, functioning ecological foundations rather than relying on a fixed time cutoff
 - `PhaseBReadinessEvaluator` summarizes whether the post-ecology world has enough branching, extinction, divergence maturity, and sentience-capable potential to hand off into later social emergence
-- `PhaseCReadinessEvaluator` summarizes whether the world now has enough groups, societies, settlements, polities, and viable focal candidates to hand off into later player-entry logic
+- `PhaseCReadinessEvaluator` now measures organic social trajectories, settlements, polities, and focal candidates separately from fallback-created actors so readiness cannot drift into "healthy on paper, rescued in practice"
+- `StartupOutcomeDiagnosticsEvaluator` provides organic-vs-fallback startup counts, emergency candidate counts, candidate rejection totals, bottleneck reasons, and regeneration reasons for debug inspection and startup balancing
+- `PhaseBDiagnosticsEvaluator` provides deeper inspection for shallow-seed failures: ancestry depth, branch count, divergence maturity, adapted-biome spread, extinction/replacement texture, and sentience-capable root breadth
 
 This keeps the startup world explicit rather than burying scale changes in scattered magic numbers.
 
@@ -209,6 +215,7 @@ Left/Right paging is view-agnostic now: list screens page selection, while chron
 Simulation now also performs an explicit bootstrap seeding pass before active play begins. The default bootstrap is now four layers deep: world generation runs primitive seeding and Phase A stabilization, initializes lineage history and runs an internal evolutionary pass until `PhaseBReadinessReport` is evaluated, runs a social-emergence pass until `PhaseCReadinessReport` is evaluated, then runs a dedicated player-entry evaluation pass that builds `WorldReadinessReport`, generates/ranks focal candidates, and stops in `FocalSelection`.
 Visible time no longer resets to year 0 after bootstrap. Instead, the chosen polity enters active play at the real simulated world age, while the live chronicle starts at an explicit boundary marker so prehistory stays in structured history and summaries rather than leaking into the active watch feed.
 Weak-world startup outcomes are now filtered more aggressively too: max-age worlds that only produce fallback-quality starts after serious readiness failures are regenerated instead of being surfaced as normal player starts.
+Debug startup summaries now also expose organic groups/societies/settlements/polities, fallback counts, emergency candidate admissions, candidate rejection totals, and regeneration causes so repeated startup sweeps can be judged on simulation health instead of only on whether a world technically produced one start.
 
 ## Focus And Continuity
 
@@ -255,7 +262,9 @@ The food architecture is intentionally asymmetric now:
 
 The later monthly `MigrationSystem` still handles polity relocation after food resolution. Mutation does not read polity movement directly; it reads seasonal species-exchange state on `RegionSpeciesPopulation`.
 `MutationSystem` now owns the regional evolution pass on those same records: pressure accumulation, local trait drift, divergence pressure, contact moderation, adaptation milestones, sentience-capability progression, and descendant-species creation for long-isolated viable populations.
+That evolutionary pass now lets founder isolation, ecology mismatch, and partial contact produce richer divergence histories, while descendant species keep enough retained momentum to create deeper lineage trees without immediate recursive speciation.
 Speciation is now additionally gated by descendant-species age, global species population, sustained readiness, and stabilization rules so evolutionary storytelling remains visible without turning into recursive geometric growth.
+`EcosystemSystem` now also treats recent local extinctions as ecological openings for related-lineage replacement, so extinction history feeds later biological texture instead of disappearing into a flat survivor snapshot.
 When polity migration does occur, settlement records are relocated with the polity so settlement-grounded systems keep a coherent local model until a later phase introduces true cross-region polity settlement networks.
 
 Year-end:

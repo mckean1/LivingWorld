@@ -23,6 +23,8 @@ The startup path is now explicitly primitive-life-first:
 4. polity start and player entry
 
 Pass 1 through Pass 4 are implemented now. The default generated world reaches ecological readiness, then evolutionary readiness, then social/political readiness, then a player-entry evaluation/readiness stop before active play starts.
+The corrective startup-stabilization pass tightened the interaction rules between those layers: Phase C must now produce organic social depth that Pass 4 agrees is real, and fallback-only candidate pools are treated as regeneration cases rather than as ordinary starts.
+The startup-richness follow-up then widened the contract again: Pass 2 must produce richer branch/adaptation/sentience breadth, and Pass 4 must preserve genuine current-polity differentiation instead of flattening all healthy starts into the same late-bootstrap profile.
 
 ## Current Major Systems
 
@@ -158,10 +160,13 @@ Implemented:
 - Region ecology profiles now cache derived productivity, habitability, migration ease, and volatility so seeding and simulation use the same environmental frame
 - Primitive lineage templates now provide the Pass 1 startup roster for producers, grazers/foragers, scavenger-omnivores, and predators
 - Phase A readiness reporting now summarizes whether ecology is broad, uneven, and stable enough for later startup passes
-- Explicit lineage ancestry, divergence/contact state, mutation/speciation history, sentience-capability progression, and Phase B readiness now provide the Pass 2 handoff layer into later social emergence
+- Explicit lineage ancestry, divergence/contact state, mutation/speciation history, sentience-capability progression, `PhaseBDiagnostics`, and Phase B readiness now provide the Pass 2 handoff layer into later social emergence
 - Sentient groups, societies, social settlements, candidate polities, civilizational history, and Phase C readiness now provide the Pass 3 handoff layer into later player-entry logic
-- Startup world-age presets, `WorldReadinessReport`, focal-candidate generation/ranking, `FocalSelection`, player binding, and live-chronicle boundary markers now provide the Pass 4 handoff from prehistory into active play
+- Startup world-age presets, `WorldReadinessReport`, focal-candidate generation/ranking, current-polity candidate profiling, `FocalSelection`, player binding, and live-chronicle boundary markers now provide the Pass 4 handoff from prehistory into active play
 - Weak-world startup outcomes are now screened more aggressively so fallback-only, max-age, biologically weak worlds regenerate more often instead of being surfaced as ordinary starts
+- Social-emergence actors now feed player-entry through explicit organic-vs-fallback origin tracking, emergency candidate labeling, and startup outcome diagnostics instead of letting fallback rescue paths disappear into the normal candidate pool
+- Deterministic startup retry seeding now keeps worldgen rerolls stable across runs, which makes repeated-run tuning and startup-regression tests reflect real simulation changes instead of process-randomized retry variance
+- Compact repeated-run validation during this pass improved from `5/9` accepted worlds to `7/9`, with accepted runs keeping `0` fallback candidates and usually reaching `2-3` sentience-capable roots
 
 ---
 

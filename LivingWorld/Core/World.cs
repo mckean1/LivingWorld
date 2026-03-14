@@ -26,6 +26,7 @@ public sealed class World
     public int? LiveChronicleStartMonth { get; private set; }
     public PhaseAReadinessReport PhaseAReadinessReport { get; set; } = PhaseAReadinessReport.Empty;
     public PhaseBReadinessReport PhaseBReadinessReport { get; set; } = PhaseBReadinessReport.Empty;
+    public PhaseBDiagnostics PhaseBDiagnostics { get; set; } = PhaseBDiagnostics.Empty;
     public PhaseCReadinessReport PhaseCReadinessReport { get; set; } = PhaseCReadinessReport.Empty;
 
     public List<Region> Regions { get; } = new();
@@ -42,6 +43,7 @@ public sealed class World
     public List<LocalPopulationExtinctionRecord> LocalPopulationExtinctions { get; } = new();
     public Dictionary<int, string> CandidateRejectionReasons { get; } = new();
     public List<string> StartupDiagnostics { get; } = new();
+    public StartupOutcomeDiagnostics StartupOutcomeDiagnostics { get; set; } = StartupOutcomeDiagnostics.Empty;
     public int StartupGenerationAttempt { get; set; }
 
     public List<WorldEvent> Events { get; } = new();

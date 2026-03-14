@@ -68,5 +68,11 @@ public sealed class EcosystemSettings
 
     public double RecolonizationTargetScoreThreshold { get; init; } = 0.62;
 
+    public double ExtinctionOpeningBonus { get; init; } = 0.12;
+
+    public double RelatedLineageReplacementBonus { get; init; } = 0.10;
+
+    public double SameNicheReplacementBonus { get; init; } = 0.08;
+
     public int MaxMigrationTargetsPerPopulation { get; init; } = 1;
 }

@@ -319,6 +319,9 @@ public static class WatchScreenBuilder
         lines.Add($" {selected.SpeciesName} of {selected.HomeRegionName}");
         lines.Add($" Age {selected.PolityAge} | Settlements {selected.SettlementCount} | Population {selected.PopulationBand}");
         lines.Add($" {selected.SubsistenceStyle} | {selected.CurrentCondition}");
+        lines.Add($" Network: {selected.SettlementProfile}");
+        lines.Add($" Region: {selected.RegionalProfile}");
+        lines.Add($" Lineage: {selected.LineageProfile}");
         lines.Add(string.Empty);
         lines.Add($" Discoveries: {selected.DiscoverySummary}");
         lines.Add($" Learned: {selected.LearnedSummary}");

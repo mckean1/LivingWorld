@@ -12,6 +12,8 @@ The agreed startup plan is now:
 4. polity start and player entry
 
 Pass 1 through Pass 4 are implemented now, so the default loop begins from an already-seeded ecological foundation, bootstrap evolutionary history, bootstrap social/political emergence, and a completed player-entry evaluation layer.
+The startup corrective pass now expects that bootstrap to produce multiple organic candidate starts most of the time. Worlds that top out at one fallback/emergency candidate or that never clear biological/social readiness are regenerated instead of being treated as normal entry outcomes.
+The follow-up richness pass deepened Phase B divergence/replacement history and changed Pass 4 candidate summaries to describe the polity's current subsistence/network state instead of just founder-origin labels.
 
 ## Monthly Flow
 
@@ -38,6 +40,8 @@ Pass 1 through Pass 4 are implemented now, so the default loop begins from an al
 In Pass 1, the active monthly path effectively ends after the ecological layers above.
 In Pass 2, the active monthly path adds mutation/divergence/speciation and extinction-history upkeep but still defers hunting and all polity-driven loops.
 By the time the generated world reaches active simulation, Pass 3 has already used that biological foundation to create sentient groups, societies, early settlements, and some early polities, and Pass 4 has already chosen a readiness-based stop point plus a focal polity candidate pool. The live monthly path therefore begins only after selection from real social continuity rather than an invented polity snapshot.
+Pass 3 now also includes real social population dynamics: groups, societies, settlement populations, and early polities can grow, stagnate, fragment, or collapse based on ecology, food/storage support, settlement viability, cohesion, and carrying pressure before Pass 4 ever evaluates player entry.
+Late-bootstrap polity settlement expansion is now slower for non-agrarian/frontier networks and requires the youngest settlement to mature first, so healthy worlds preserve more legible settlement depth instead of collapsing into one last-minute expansion shape.
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
@@ -84,6 +88,8 @@ Year-end focus resolution now also consumes the current year's rolling event cac
 
 Pass 4 now takes those viable polity candidates, ranks/diversifies them, freezes the world in `FocalSelection`, and starts the live watch only after the player binds to one of them.
 If a max-age world only yields fallback-quality starts after core readiness fails, startup now prefers regeneration over surfacing that world as a normal player-facing selection screen.
+Debug startup summaries now report organic-vs-fallback actor counts, emergency candidate admissions, candidate rejection reasons, and regeneration causes so repeated startup sweeps can be evaluated directly.
+The compact repeated-run validation profile used during this pass improved from `5/9` accepted worlds to `7/9`, while the accepted runs kept `0` fallback candidates and generally widened sentience-capable root breadth to `2-3` roots.
 
 ## Default Watch Output
 

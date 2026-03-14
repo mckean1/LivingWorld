@@ -30,6 +30,7 @@ public sealed class WorldGenerator
 
         World? lastWorld = null;
         List<string> lastRejectionReasons = [];
+        List<string> priorRegenerationReasons = [];
         for (int attempt = 0; attempt < _settings.MaxStartupRegenerationAttempts; attempt++)
         {
             if (attempt == 0)
@@ -37,9 +38,15 @@ public sealed class WorldGenerator
                 World generatedWorld = GenerateSingleAttempt(attempt);
                 if (ShouldSurfaceFocalSelection(generatedWorld, out List<string> attemptRejectionReasons))
                 {
+                    if (priorRegenerationReasons.Count > 0)
+                    {
+                        RefreshStartupEvaluationState(generatedWorld, priorRegenerationReasons);
+                    }
+
                     return generatedWorld;
                 }
 
+                priorRegenerationReasons.AddRange(attemptRejectionReasons.Select(reason => $"attempt_{attempt}:{reason}"));
                 lastWorld = generatedWorld;
                 lastRejectionReasons = attemptRejectionReasons;
                 continue;
@@ -50,9 +57,15 @@ public sealed class WorldGenerator
             World regeneratedWorld = attemptGenerator.GenerateSingleAttempt(attempt);
             if (attemptGenerator.ShouldSurfaceFocalSelection(regeneratedWorld, out List<string> regeneratedRejectionReasons))
             {
+                if (priorRegenerationReasons.Count > 0)
+                {
+                    attemptGenerator.RefreshStartupEvaluationState(regeneratedWorld, priorRegenerationReasons);
+                }
+
                 return regeneratedWorld;
             }
 
+            priorRegenerationReasons.AddRange(regeneratedRejectionReasons.Select(reason => $"attempt_{attempt}:{reason}"));
             lastWorld = regeneratedWorld;
             lastRejectionReasons = regeneratedRejectionReasons;
         }
@@ -327,6 +340,7 @@ public sealed class WorldGenerator
 
             RefreshEvolutionaryLineageSnapshots(world);
             world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
+            world.PhaseBDiagnostics = PhaseBDiagnosticsEvaluator.Evaluate(world, _settings);
             if (year >= _settings.PhaseBMinimumBootstrapYears && world.PhaseBReadinessReport.IsReady)
             {
                 break;
@@ -335,6 +349,7 @@ public sealed class WorldGenerator
 
         RefreshEvolutionaryLineageSnapshots(world);
         world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
+        world.PhaseBDiagnostics = PhaseBDiagnosticsEvaluator.Evaluate(world, _settings);
         _prehistoryRuntimeController.RefreshAge(world);
     }
 
@@ -344,6 +359,8 @@ public sealed class WorldGenerator
         _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseC_CivilizationalEmergence);
         world.StartupStage = WorldStartupStage.SentienceActivation;
         EnsureSentienceCapableSeedBranches(world);
+        world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
+        world.PhaseBDiagnostics = PhaseBDiagnosticsEvaluator.Evaluate(world, _settings);
 
         for (int year = 1; year <= _settings.PhaseCMaximumBootstrapYears; year++)
         {
@@ -362,7 +379,8 @@ public sealed class WorldGenerator
             world.Time.Reset(world.Time.Year + 1, world.Time.Month);
         }
 
-        if (world.Polities.Count == 0)
+        if (_settings.AllowPhaseCFallbackCivilizationalSeeding
+            && world.Polities.All(polity => polity.Population <= 0))
         {
             SeedFallbackCivilizationalActor(world);
         }
@@ -382,6 +400,7 @@ public sealed class WorldGenerator
 
         BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
         world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+        RefreshStartupEvaluationState(world);
 
         while (world.Time.Year < world.StartupAgeConfiguration.MaxPrehistoryYears)
         {
@@ -393,6 +412,7 @@ public sealed class WorldGenerator
             {
                 BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
                 world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+                RefreshStartupEvaluationState(world);
                 if (world.WorldReadinessReport.IsReady)
                 {
                     _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.ReadinessSatisfied, "world_readiness_passed");
@@ -406,6 +426,7 @@ public sealed class WorldGenerator
             {
                 BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
                 world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+                RefreshStartupEvaluationState(world);
                 if (world.WorldReadinessReport.IsReady)
                 {
                     _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.ReadinessSatisfied, "target_age_readiness_passed");
@@ -431,12 +452,7 @@ public sealed class WorldGenerator
         bool allowEmergencyFallback = world.PrehistoryStopReason == PrehistoryStopReason.MaxAgeReached;
         BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback);
         world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
-
-        if (world.PlayerEntryCandidates.Count == 0)
-        {
-            throw new InvalidOperationException(
-                $"Player entry failed: no viable focal candidates after prehistory stop ({world.PrehistoryStopSummary}).");
-        }
+        RefreshStartupEvaluationState(world);
 
         if (world.PrehistoryStopReason == PrehistoryStopReason.MaxAgeReached && world.PlayerEntryCandidates.Any(candidate => candidate.IsFallbackCandidate))
         {
@@ -444,10 +460,14 @@ public sealed class WorldGenerator
             world.PrehistoryStopSummary = "candidate_fallback_after_max_age";
             world.PrehistoryRuntime.StopReason = PrehistoryStopReason.ForcedFallback;
             world.PrehistoryRuntime.StopSummary = world.PrehistoryStopSummary;
+            RefreshStartupEvaluationState(world);
         }
 
-        _prehistoryRuntimeController.EnterFocalSelection(world);
-        world.StartupStage = WorldStartupStage.FocalSelection;
+        if (world.PlayerEntryCandidates.Count > 0)
+        {
+            _prehistoryRuntimeController.EnterFocalSelection(world);
+            world.StartupStage = WorldStartupStage.FocalSelection;
+        }
     }
 
     private void BuildPlayerEntryCandidates(World world, PlayerEntryCandidateGenerator generator, bool allowEmergencyFallback)
@@ -464,40 +484,92 @@ public sealed class WorldGenerator
 
     private bool ShouldSurfaceFocalSelection(World world, out List<string> rejectionReasons)
     {
-        if (PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, _settings, out rejectionReasons))
-        {
-            return true;
-        }
-
-        world.StartupDiagnostics.Clear();
-        world.StartupDiagnostics.Add($"startup_attempt_rejected:{world.StartupGenerationAttempt}");
-        foreach (string reason in rejectionReasons)
-        {
-            world.StartupDiagnostics.Add(reason);
-        }
-        foreach (string failure in world.WorldReadinessReport.FailureReasons)
-        {
-            world.StartupDiagnostics.Add($"readiness_failure:{failure}");
-        }
-
-        return false;
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, _settings, out rejectionReasons);
+        RefreshStartupEvaluationState(world, accepted ? null : rejectionReasons);
+        return accepted;
     }
 
     private int DeriveAttemptSeed(int attempt)
-        => HashCode.Combine(_seed, attempt, 6151);
+        => MixSeed(_seed, attempt, 6151);
 
-    private static void EnsureSentienceCapableSeedBranches(World world)
+    private void RefreshStartupEvaluationState(World world, IReadOnlyList<string>? regenerationReasons = null)
     {
-        if (world.Species.Any(species => species.SentienceCapability == SentienceCapabilityState.Capable && !species.IsGloballyExtinct))
+        world.StartupOutcomeDiagnostics = StartupOutcomeDiagnosticsEvaluator.Evaluate(world, regenerationReasons);
+        RefreshStartupDiagnostics(world, regenerationReasons);
+    }
+
+    private void RefreshStartupDiagnostics(World world, IReadOnlyList<string>? regenerationReasons = null)
+    {
+        StartupOutcomeDiagnostics diagnostics = world.StartupOutcomeDiagnostics;
+        world.StartupDiagnostics.Clear();
+        world.StartupDiagnostics.Add($"startup_attempt:{world.StartupGenerationAttempt}");
+        world.StartupDiagnostics.Add(
+            $"organic_counts:groups={diagnostics.OrganicSentientGroupCount},societies={diagnostics.OrganicSocietyCount},settlements={diagnostics.OrganicSettlementCount},polities={diagnostics.OrganicPolityCount},focal_candidates={diagnostics.OrganicFocalCandidateCount},entry_candidates={diagnostics.OrganicPlayerEntryCandidateCount}");
+        world.StartupDiagnostics.Add(
+            $"fallback_counts:groups={diagnostics.FallbackSentientGroupCount},societies={diagnostics.FallbackSocietyCount},settlements={diagnostics.FallbackSettlementCount},polities={diagnostics.FallbackPolityCount},focal_candidates={diagnostics.FallbackFocalCandidateCount},entry_candidates={diagnostics.FallbackPlayerEntryCandidateCount},emergency={diagnostics.EmergencyAdmittedCandidateCount}");
+        world.StartupDiagnostics.Add(
+            $"phase_b_diagnostics:avg_depth={world.PhaseBDiagnostics.AverageAncestryDepth:F2},branching={world.PhaseBDiagnostics.BranchingLineageCount},deep={world.PhaseBDiagnostics.DeepLineageCount},diverged={world.PhaseBDiagnostics.MatureDivergenceLineageCount},adapted_biomes={world.PhaseBDiagnostics.AdaptedBiomeSpan},local_ext={world.PhaseBDiagnostics.LocalExtinctionEventCount},recolonized={world.PhaseBDiagnostics.RecolonizationEventCount},sentient_roots={world.PhaseBDiagnostics.SentienceCapableRootBranchCount}");
+
+        foreach (string weakness in world.PhaseBDiagnostics.WeaknessReasons)
+        {
+            world.StartupDiagnostics.Add($"phase_b_weakness:{weakness}");
+        }
+
+        foreach ((string reason, int count) in diagnostics.CandidateRejectionCounts
+                     .OrderByDescending(entry => entry.Value)
+                     .ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            world.StartupDiagnostics.Add($"candidate_rejection:{reason}:{count}");
+        }
+
+        foreach (string reason in diagnostics.BottleneckReasons)
+        {
+            world.StartupDiagnostics.Add($"bottleneck:{reason}");
+        }
+
+        foreach (string reason in regenerationReasons ?? Array.Empty<string>())
+        {
+            world.StartupDiagnostics.Add($"regeneration_reason:{reason}");
+        }
+    }
+
+    private void EnsureSentienceCapableSeedBranches(World world)
+    {
+        int targetCapableLineageCount = Math.Max(
+            _settings.MinimumPhaseBSentienceCapableLineageCount,
+            _settings.BootstrapSentienceCapableLineageTarget);
+        int capableLineageCount = world.EvolutionaryLineages.Count(lineage =>
+            !lineage.IsExtinct
+            && lineage.SentienceCapability == SentienceCapabilityState.Capable);
+        HashSet<int> capableRoots = world.Species
+            .Where(species => species.SentienceCapability == SentienceCapabilityState.Capable)
+            .Select(species => species.RootAncestorSpeciesId)
+            .ToHashSet();
+        HashSet<int> adaptedBiomes = world.EvolutionaryLineages
+            .Where(lineage => lineage.SentienceCapability == SentienceCapabilityState.Capable)
+            .SelectMany(lineage => lineage.AdaptedBiomeIds)
+            .ToHashSet();
+        if (capableLineageCount >= targetCapableLineageCount)
         {
             return;
         }
 
         foreach (Species species in world.Species
-                     .Where(candidate => !candidate.IsGloballyExtinct)
-                     .OrderByDescending(candidate => candidate.SentiencePotential + candidate.Intelligence + candidate.Cooperation)
+                     .Where(candidate => !candidate.IsGloballyExtinct && candidate.SentienceCapability != SentienceCapabilityState.Capable)
+                     .OrderBy(candidate => capableRoots.Contains(candidate.RootAncestorSpeciesId) ? 1 : 0)
+                     .ThenByDescending(candidate =>
+                     {
+                         EvolutionaryLineage? lineage = world.GetLineageForSpecies(candidate.Id);
+                         bool introducesBiomeNovelty = lineage is not null && lineage.AdaptedBiomeIds.Any(biomeId => !adaptedBiomes.Contains(biomeId));
+                         double lineageDepth = lineage?.AncestryDepth ?? 0;
+                         double adaptationBreadth = lineage?.AdaptedBiomeIds.Count ?? 0;
+                         return (introducesBiomeNovelty ? 0.30 : 0.0)
+                                + (candidate.SentiencePotential + candidate.Intelligence + candidate.Cooperation)
+                                + Math.Min(0.24, lineageDepth * 0.06)
+                                + Math.Min(0.18, adaptationBreadth * 0.04);
+                     })
                      .ThenByDescending(candidate => world.Regions.Sum(region => region.GetSpeciesPopulation(candidate.Id)?.PopulationCount ?? 0))
-                     .Take(2))
+                     .ThenBy(candidate => candidate.Id))
         {
             int totalPopulation = world.Regions.Sum(region => region.GetSpeciesPopulation(species.Id)?.PopulationCount ?? 0);
             if (totalPopulation < 60)
@@ -510,6 +582,10 @@ public sealed class WorldGenerator
             {
                 lineage.SentienceCapability = SentienceCapabilityState.Capable;
                 lineage.Stage = LineageStage.SentienceCapable;
+                foreach (int biomeId in lineage.AdaptedBiomeIds)
+                {
+                    adaptedBiomes.Add(biomeId);
+                }
             }
 
             world.AddEvolutionaryHistoryEvent(
@@ -523,10 +599,16 @@ public sealed class WorldGenerator
                 new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["populationSupport"] = totalPopulation.ToString(),
-                    ["sentiencePotential"] = species.SentiencePotential.ToString("F2")
+                    ["sentiencePotential"] = species.SentiencePotential.ToString("F2"),
+                    ["rootNovelty"] = (!capableRoots.Contains(species.RootAncestorSpeciesId)).ToString()
                 });
 
-            break;
+            capableRoots.Add(species.RootAncestorSpeciesId);
+            capableLineageCount++;
+            if (capableLineageCount >= targetCapableLineageCount)
+            {
+                break;
+            }
         }
     }
 
@@ -574,7 +656,13 @@ public sealed class WorldGenerator
             MigrationPattern = "anchored basin circuit",
             FoundingMemorySeed = $"{region.Name} continuity",
             ThreatMemorySeed = "bootstrap social safeguard",
-            PressureSummary = "anchoring on rich ground"
+            PressureSummary = "anchoring on rich ground",
+            IsFallbackCreated = true,
+            FoodSecurity = 0.70,
+            StorageSupport = 0.40,
+            LocalCarryingSupport = 0.72,
+            MigrationPressure = 0.18,
+            FragmentationPressure = 0.12
         };
         group.SharedKnowledge["water"] = new Societies.CulturalDiscovery("water", $"{region.Name} holds reliable water", Societies.CulturalDiscoveryCategory.Geography, RegionId: region.Id);
         group.SharedKnowledge["fertile"] = new Societies.CulturalDiscovery("fertile", $"{region.Name} is fertile ground", Societies.CulturalDiscoveryCategory.Environment, RegionId: region.Id);
@@ -599,7 +687,14 @@ public sealed class WorldGenerator
             ContinuityYears = 8,
             PredecessorGroupId = group.Id,
             FoundingMemorySeed = group.FoundingMemorySeed,
-            ThreatMemorySeed = group.ThreatMemorySeed
+            ThreatMemorySeed = group.ThreatMemorySeed,
+            IsFallbackCreated = true,
+            FoodSecurity = 0.74,
+            StorageSupport = 0.44,
+            SettlementSupport = 0.70,
+            LocalCarryingSupport = 0.76,
+            MigrationPressure = 0.16,
+            FragmentationPressure = 0.12
         };
         society.RegionIds.Add(region.Id);
         society.IdentityMarkers.Add(region.Biome.ToString());
@@ -619,7 +714,11 @@ public sealed class WorldGenerator
             FoodBaseProfile = region.Fertility >= 0.68 ? "fertile mixed subsistence" : "anchored foraging",
             StorageLevel = 0.42,
             SettlementViability = 0.72,
-            CurrentPressureSummary = "bootstrap social safeguard"
+            CurrentPressureSummary = "bootstrap social safeguard",
+            IsFallbackCreated = true,
+            FoodSecurity = 0.72,
+            LocalCarryingSupport = 0.74,
+            Stress = 0.16
         };
         world.SocialSettlements.Add(socialSettlement);
         society.SettlementIds.Add(socialSettlement.Id);
@@ -632,7 +731,8 @@ public sealed class WorldGenerator
             SettlementStatus = Societies.SettlementStatus.SemiSettled,
             YearsSinceFounded = 4,
             CurrentPressureSummary = "bootstrap social safeguard",
-            IdentitySeed = region.Biome.ToString()
+            IdentitySeed = region.Biome.ToString(),
+            IsFallbackCreated = true
         };
         polity.EstablishFirstSettlement(region.Id, $"{region.Name} Hearth");
         polity.AddDiscovery(new Societies.CulturalDiscovery("water", $"{region.Name} holds reliable water", Societies.CulturalDiscoveryCategory.Geography, RegionId: region.Id));
@@ -982,7 +1082,7 @@ public sealed class WorldGenerator
     {
         double RollMaterial(double min, double max, int salt)
         {
-            Random localRandom = new(HashCode.Combine(_seed, region.Id, (int)biome, salt));
+            Random localRandom = new(MixSeed(_seed, region.Id, (int)biome, salt));
             return min + (localRandom.NextDouble() * (max - min));
         }
 
@@ -1034,8 +1134,22 @@ public sealed class WorldGenerator
 
     private double SeedNoise(int speciesId, int regionId)
     {
-        Random localRandom = new(HashCode.Combine(_seed, speciesId, regionId, 991));
+        Random localRandom = new(MixSeed(_seed, speciesId, regionId, 991));
         return localRandom.NextDouble() * 0.035;
+    }
+
+    private static int MixSeed(params int[] values)
+    {
+        unchecked
+        {
+            int hash = (int)2166136261;
+            foreach (int value in values)
+            {
+                hash = (hash ^ value) * 16777619;
+            }
+
+            return hash;
+        }
     }
 
     private double Roll(double min, double max)

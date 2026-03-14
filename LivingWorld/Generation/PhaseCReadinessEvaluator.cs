@@ -7,48 +7,82 @@ public static class PhaseCReadinessEvaluator
 {
     public static PhaseCReadinessReport Evaluate(World world, WorldGenerationSettings settings)
     {
+        Dictionary<int, Polity> politiesById = world.Polities.ToDictionary(polity => polity.Id);
+
         int sentientGroupCount = world.SentientGroups.Count(group => !group.IsCollapsed);
+        int organicSentientGroupCount = world.SentientGroups.Count(group => !group.IsCollapsed && !group.IsFallbackCreated);
+        int fallbackSentientGroupCount = sentientGroupCount - organicSentientGroupCount;
+
         int persistentSocietyCount = world.Societies.Count(society => !society.IsCollapsed);
+        int organicPersistentSocietyCount = world.Societies.Count(society => !society.IsCollapsed && !society.IsFallbackCreated);
+        int fallbackPersistentSocietyCount = persistentSocietyCount - organicPersistentSocietyCount;
+
         int settlementCount = world.SocialSettlements.Count(settlement => !settlement.IsAbandoned);
+        int organicSettlementCount = world.SocialSettlements.Count(settlement => !settlement.IsAbandoned && !settlement.IsFallbackCreated);
+        int fallbackSettlementCount = settlementCount - organicSettlementCount;
         int viableSettlementCount = world.SocialSettlements.Count(settlement => !settlement.IsAbandoned && settlement.SettlementViability >= 0.55);
+        int organicViableSettlementCount = world.SocialSettlements.Count(settlement =>
+            !settlement.IsAbandoned
+            && !settlement.IsFallbackCreated
+            && settlement.SettlementViability >= 0.55);
+
         int polityCount = world.Polities.Count(polity => polity.Population > 0);
+        int organicPolityCount = world.Polities.Count(polity => polity.Population > 0 && !polity.IsFallbackCreated);
+        int fallbackPolityCount = polityCount - organicPolityCount;
+        int organicSocialTrajectoryCount = organicSentientGroupCount + organicPersistentSocietyCount;
+
         int viableCandidateCount = world.FocalCandidateProfiles.Count(profile => profile.IsViable);
-        double averagePolityAge = polityCount == 0
+        int organicViableCandidateCount = world.FocalCandidateProfiles.Count(profile =>
+            profile.IsViable
+            && (!politiesById.TryGetValue(profile.PolityId, out Polity? polity) || !polity.IsFallbackCreated));
+        int fallbackViableCandidateCount = viableCandidateCount - organicViableCandidateCount;
+
+        double averagePolityAge = organicPolityCount == 0
             ? 0.0
-            : world.Polities.Where(polity => polity.Population > 0).Average(polity => polity.YearsSinceFounded);
+            : world.Polities.Where(polity => polity.Population > 0 && !polity.IsFallbackCreated).Average(polity => polity.YearsSinceFounded);
         double historicalEventDensity = world.Regions.Count == 0
             ? 0.0
             : (double)world.CivilizationalHistory.Count / world.Regions.Count;
 
         List<string> failures = [];
-        if (sentientGroupCount < settings.MinimumPhaseCSentientGroupCount)
+        if (organicSocialTrajectoryCount < settings.MinimumPhaseCSentientGroupCount)
         {
-            failures.Add("insufficient_sentient_groups");
+            failures.Add("insufficient_organic_social_trajectories");
         }
 
-        if (persistentSocietyCount < settings.MinimumPhaseCPersistentSocietyCount)
+        if (organicPersistentSocietyCount < settings.MinimumPhaseCPersistentSocietyCount)
         {
-            failures.Add("insufficient_societies");
+            failures.Add("insufficient_organic_societies");
         }
 
-        if (settlementCount < settings.MinimumPhaseCSettlementCount)
+        if (organicSettlementCount < settings.MinimumPhaseCSettlementCount)
         {
-            failures.Add("insufficient_settlements");
+            failures.Add("insufficient_organic_settlements");
         }
 
-        if (viableSettlementCount < settings.MinimumPhaseCViableSettlementCount)
+        if (organicViableSettlementCount < settings.MinimumPhaseCViableSettlementCount)
         {
-            failures.Add("insufficient_viable_settlements");
+            failures.Add("insufficient_organic_viable_settlements");
         }
 
-        if (polityCount < settings.MinimumPhaseCPolityCount)
+        if (organicPolityCount < settings.MinimumPhaseCPolityCount)
         {
-            failures.Add("insufficient_polities");
+            failures.Add("insufficient_organic_polities");
         }
 
-        if (viableCandidateCount < settings.MinimumPhaseCViableFocalCandidateCount)
+        if (organicViableCandidateCount < settings.MinimumPhaseCViableFocalCandidateCount)
         {
-            failures.Add("insufficient_focal_candidates");
+            failures.Add("insufficient_organic_focal_candidates");
+        }
+
+        if (organicPolityCount == 0 && fallbackPolityCount > 0)
+        {
+            failures.Add("fallback_only_polities");
+        }
+
+        if (organicViableCandidateCount == 0 && fallbackViableCandidateCount > 0)
+        {
+            failures.Add("fallback_only_focal_candidates");
         }
 
         if (averagePolityAge < settings.MinimumPhaseCAveragePolityAge)
@@ -64,11 +98,21 @@ public static class PhaseCReadinessEvaluator
         return new PhaseCReadinessReport(
             failures.Count == 0,
             sentientGroupCount,
+            organicSentientGroupCount,
+            fallbackSentientGroupCount,
             persistentSocietyCount,
+            organicPersistentSocietyCount,
+            fallbackPersistentSocietyCount,
             settlementCount,
+            organicSettlementCount,
+            fallbackSettlementCount,
             viableSettlementCount,
             polityCount,
+            organicPolityCount,
+            fallbackPolityCount,
             viableCandidateCount,
+            organicViableCandidateCount,
+            fallbackViableCandidateCount,
             averagePolityAge,
             historicalEventDensity,
             failures);

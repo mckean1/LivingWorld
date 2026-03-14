@@ -28,6 +28,8 @@ The agreed 4-pass startup plan is:
 Pass 1 through Pass 4 are what currently boot by default. World generation seeds primitive ecology, runs internal Phase A stabilization, initializes lineage history, runs internal mutation/divergence/speciation/bootstrap sentience progression, then runs social emergence into groups, societies, settlements, and early polities, then runs player-entry evaluation into `WorldReadinessReport`, focal-candidate generation, and `FocalSelection`.
 Canonical events now retain explicit origin metadata as well, and `World` now stores an explicit live-chronicle boundary marker, so the visible chronicle can refuse prehistory/setup events even if they share a type with legitimate later transitions.
 The renderer now also sanitizes the chronicle buffer itself to full historical lines, so summary fragments and stale selection text cannot survive the startup handoff.
+That startup path now also tracks explicit organic-vs-fallback startup diagnostics, so bootstrap rerolls can tell the difference between a healthy simulated start and a rescued weak world.
+The latest startup-richness pass also makes Phase B branch/replacement texture and current-polity candidate differentiation explicit parts of that bootstrap contract instead of leaving them as accidental byproducts.
 
 ## Monthly Systems
 
@@ -39,6 +41,7 @@ The renderer now also sanitizes the chronicle buffer itself to full historical l
 - hunting is resolved per settlement, using that settlement's actual region
 - seasonal mutation, divergence, and speciation pass every third month using the same season's species exchange flags once startup has advanced past Pass 1
 - speciation eligibility now also depends on species age, global population, sustained readiness, and descendant stabilization
+- founder isolation, ecology-distance divergence, and local-extinction replacement openings now also feed that biological bootstrap so weak seed families can build deeper history without lowering readiness
 - seasonal extinction cleanup and biomass sync every third month
 - plant gathering and farming
 - farming is resolved per settlement, with settlements in the same region competing for the same regional arable capacity
@@ -71,6 +74,8 @@ If the world is still in `WorldStartupStage.PrimitiveEcologyFoundation`, the loo
 If the world has advanced to `WorldStartupStage.EvolutionaryExpansion`, the loop runs ecology plus mutation/divergence/speciation/sentience-capability work, then still stops before polity-facing systems.
 Once bootstrap reaches `WorldStartupStage.FocalSelection`, time is intentionally frozen while the player reviews real simulated candidates.
 Only after selection does `WorldStartupStage.ActivePlay` begin and the existing polity-facing loop take over from a world that already has social continuity plus a chosen focal line.
+During that bootstrap, social actors are no longer static placeholders: groups, societies, settlements, and early polities now change population under food support, storage, cohesion, carrying pressure, migration pressure, and fragmentation pressure before the player-entry gate evaluates them.
+Polity settlement expansion during bootstrap now depends on current subsistence mode plus network age, which keeps healthy starts from flattening into one oversized settlement profile before candidate selection.
 
 ## Year-End Systems
 
@@ -115,6 +120,7 @@ In watch mode:
 - emit on state transitions, not every tick
 - do not narrate bootstrap-created baseline state as live history
 - do not narrate prehistory candidate-building or readiness-stop context as live chronicle history
+- do not treat fallback-only or emergency-only startup candidates as equivalent to organic starts; startup diagnostics and gating must keep those paths explicit
 - do not allow status-panel or focal-selection summary fragments into the chronicle buffer; chronicle entries must remain complete historical lines
 - settlement starvation and failed-aid logging therefore key off starvation-stage transitions rather than repeating each monthly starving result
 - do not let responsive internal economy identity promote directly into chronicle reputation; visible `known for` and trade-good turns now require minimum settlement age, sustained monthly confirmation, and stronger thresholds than the hidden economy layer

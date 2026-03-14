@@ -662,6 +662,15 @@ public sealed class EcosystemSystem
             return false;
         }
 
+        bool hasLocalExtinctionHistory = targetPopulation is
+        {
+            HasEverExisted: true
+        } && (targetPopulation.LocalExtinctionRecorded || targetPopulation.LastLocalExtinctionYear >= 0);
+        if (!hasLocalExtinctionHistory)
+        {
+            return false;
+        }
+
         if (bestTargetScore < _settings.RecolonizationTargetScoreThreshold || sourcePopulation.CarryingCapacity <= 0)
         {
             return false;
@@ -670,6 +679,46 @@ public sealed class EcosystemSystem
         double sourceCapacityRatio = (double)sourcePopulation.PopulationCount / sourcePopulation.CarryingCapacity;
         return sourcePopulation.PopulationCount >= Math.Max(8, sourcePopulation.CarryingCapacity / 5)
             && sourceCapacityRatio >= 0.42;
+    }
+
+    private double ResolveExtinctionOpeningBonus(
+        World world,
+        IReadOnlyDictionary<int, Species> speciesById,
+        Species species,
+        Region target,
+        bool canRecolonize)
+    {
+        List<LocalPopulationExtinctionRecord> recentExtinctions = world.LocalPopulationExtinctions
+            .Where(record => record.RegionId == target.Id && world.Time.Year - record.Year <= 120)
+            .ToList();
+        if (recentExtinctions.Count == 0)
+        {
+            return 0.0;
+        }
+
+        double bonus = canRecolonize ? _settings.ExtinctionOpeningBonus : 0.0;
+        foreach (LocalPopulationExtinctionRecord record in recentExtinctions)
+        {
+            if (!speciesById.TryGetValue(record.SpeciesId, out Species? extinctSpecies))
+            {
+                continue;
+            }
+
+            if (extinctSpecies.TrophicRole == species.TrophicRole)
+            {
+                bonus += _settings.SameNicheReplacementBonus;
+            }
+
+            bool relatedLineage = extinctSpecies.RootAncestorSpeciesId == species.RootAncestorSpeciesId
+                || extinctSpecies.Id == species.ParentSpeciesId
+                || species.Id == extinctSpecies.ParentSpeciesId;
+            if (relatedLineage)
+            {
+                bonus += _settings.RelatedLineageReplacementBonus;
+            }
+        }
+
+        return Math.Min(0.30, bonus);
     }
 
     private bool CanSourceAttemptMigration(
@@ -708,12 +757,12 @@ public sealed class EcosystemSystem
     {
         if (species.TrophicRole is TrophicRole.Herbivore or TrophicRole.Omnivore)
         {
-            List<MigrationCandidate> frontierCandidates = candidates
-                .Where(candidate => candidate.Kind is "frontier" or "recolonization")
+            List<MigrationCandidate> expansionCandidates = candidates
+                .Where(candidate => candidate.Kind is "frontier" or "recolonization" or "replacement")
                 .ToList();
-            if (frontierCandidates.Count > 0)
+            if (expansionCandidates.Count > 0)
             {
-                return frontierCandidates;
+                return expansionCandidates;
             }
         }
 
@@ -738,6 +787,10 @@ public sealed class EcosystemSystem
         bool faunaFrontier = emptyTarget && existingFaunaPopulation == 0;
         bool herbivoreFrontier = emptyTarget && ResolveHerbivorePopulation(target, speciesById) == 0;
         bool canRecolonize = emptyTarget && CanAttemptRecolonization(sourcePopulation, species, target, suitabilityScore);
+        double replacementBonus = emptyTarget
+            ? ResolveExtinctionOpeningBonus(world, speciesById, species, target, canRecolonize)
+            : 0.0;
+        bool isReplacement = emptyTarget && replacementBonus > 0.0 && !canRecolonize;
 
         if (species.TrophicRole is TrophicRole.Herbivore or TrophicRole.Omnivore)
         {
@@ -751,12 +804,15 @@ public sealed class EcosystemSystem
 
             string kind = canRecolonize
                 ? "recolonization"
+                : isReplacement
+                    ? "replacement"
                 : faunaFrontier || herbivoreFrontier
                     ? "frontier"
                     : "pressure";
             double score = suitabilityScore
                 + (faunaFrontier ? _settings.EmptyFaunaFrontierBonus : 0.0)
                 + (herbivoreFrontier && species.TrophicRole == TrophicRole.Herbivore ? _settings.HerbivoreFrontierBonus : 0.0)
+                + replacementBonus
                 + Math.Max(0.0, sourcePopulation.MigrationPressure - _settings.MigrationPressureThreshold) * 0.18;
 
             int founderPopulation = ResolveFounderPopulation(species, speciesById, sourcePopulation, target);
@@ -787,6 +843,7 @@ public sealed class EcosystemSystem
             + Math.Min(0.24, preySupport / 220.0)
             + Math.Min(0.18, supportRatio * 0.12)
             + (openness * 0.08)
+            + replacementBonus
             - (CountPredatorSpecies(target, speciesById) * _settings.PredatorCompetitionPenalty)
             - (ResolveOccupiedRegionRatio(world, species) * _settings.PredatorGlobalRangePenalty);
         if (predatorFounderPopulation <= 0)
@@ -797,7 +854,7 @@ public sealed class EcosystemSystem
         WorldEventSeverity predatorSeverity = emptyTarget && species.TrophicRole == TrophicRole.Apex
             ? WorldEventSeverity.Major
             : WorldEventSeverity.Notable;
-        return new MigrationCandidate(target, predatorScore, "predator_follow", predatorFounderPopulation, predatorSeverity);
+        return new MigrationCandidate(target, predatorScore, isReplacement ? "replacement" : "predator_follow", predatorFounderPopulation, predatorSeverity);
     }
 
     private void ExecuteMigration(
@@ -830,6 +887,7 @@ public sealed class EcosystemSystem
         targetPopulation.CarryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, targetPopulation, target, targetPopulation.HabitatSuitability);
         targetPopulation.EstablishedThisSeason = newlyEstablished;
         bool recolonization = newlyEstablished && targetPopulation.HasEverExisted && targetPopulation.LocalExtinctionRecorded;
+        bool replacement = newlyEstablished && candidate.Kind == "replacement";
         if (newlyEstablished)
         {
             targetPopulation.MarkEstablished(world.Time.Year, world.Time.Month, candidate.Kind, sourceRegion.Id, species.Id);
@@ -849,11 +907,19 @@ public sealed class EcosystemSystem
             candidate.Severity,
             recolonization
                 ? $"{species.Name} returned to {target.Name}"
+                : replacement
+                    ? $"{species.Name} replaced a vanished population in {target.Name}"
                 : $"{species.Name} established a new population in {target.Name}",
             recolonization
                 ? $"{transfer} {species.Name} recolonized {target.Name} from {sourceRegion.Name}."
+                : replacement
+                    ? $"{transfer} {species.Name} spread from {sourceRegion.Name} into {target.Name}, filling an ecological opening after a local extinction."
                 : $"{transfer} {species.Name} migrated from {sourceRegion.Name} into {target.Name}.",
-            reason: recolonization ? "regional_recolonization" : "seasonal_species_migration",
+            reason: recolonization
+                ? "regional_recolonization"
+                : replacement
+                    ? "regional_replacement"
+                : "seasonal_species_migration",
             scope: WorldEventScope.Regional,
             speciesId: species.Id,
             speciesName: species.Name,

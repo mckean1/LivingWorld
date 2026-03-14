@@ -16,10 +16,15 @@ public sealed record PlayerEntryCandidateSummary(
     string PopulationBand,
     string SubsistenceStyle,
     string CurrentCondition,
+    string SettlementProfile,
+    string RegionalProfile,
+    string LineageProfile,
     string DiscoverySummary,
     string LearnedSummary,
     string RecentHistoricalNote,
     string DefiningPressureOrOpportunity,
     double RankScore,
     StabilityBand StabilityBand,
-    bool IsFallbackCandidate);
+    bool IsFallbackCandidate,
+    bool IsEmergencyAdmitted = false,
+    string CandidateOriginReason = "");

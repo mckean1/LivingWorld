@@ -38,12 +38,12 @@ public sealed class MutationSystem
                 }
 
                 UpdateIsolation(world, region, population, species);
-                AccumulatePressure(species, region, population);
+                AccumulatePressure(world, species, region, population);
                 EmitIsolationMilestone(world, region, population, species);
                 EmitAdaptationMilestone(world, region, population, species);
                 mutationChecks++;
 
-                if (!ShouldMutate(population, out MutationTier tier))
+                if (!ShouldMutate(species, population, out MutationTier tier))
                 {
                     if (IsSpeciationCandidate(world, population, species, speciationContext, out SpeciationCandidateState nonMutationCandidateState))
                     {
@@ -89,19 +89,35 @@ public sealed class MutationSystem
             return;
         }
 
-        bool connectedPopulationExists = region.ConnectedRegionIds
+        List<RegionSpeciesPopulation> connectedPopulations = region.ConnectedRegionIds
             .Select(id => world.Regions.First(candidate => candidate.Id == id))
             .Select(candidate => candidate.GetSpeciesPopulation(species.Id))
-            .Any(candidate => candidate is not null && candidate.PopulationCount > 0);
+            .Where(candidate => candidate is not null && candidate.PopulationCount > 0)
+            .Cast<RegionSpeciesPopulation>()
+            .ToList();
+        double contactExposure = connectedPopulations.Count == 0
+            ? 0.0
+            : connectedPopulations.Average(candidate => ResolveContactExposure(world, region, population, species, candidate));
+        bool connectedPopulationExists = connectedPopulations.Count > 0;
 
-        population.IsolationSeasons = connectedPopulationExists
-            ? Math.Max(0, population.IsolationSeasons - 1)
-            : population.IsolationSeasons + 1;
+        if (!connectedPopulationExists)
+        {
+            population.IsolationSeasons++;
+        }
+        else if (contactExposure >= 0.72)
+        {
+            population.IsolationSeasons = Math.Max(0, population.IsolationSeasons - 1);
+        }
+        else if (contactExposure < 0.38)
+        {
+            population.IsolationSeasons++;
+        }
+
         population.IsolationYears = population.IsolationSeasons / 4;
         if (connectedPopulationExists)
         {
             population.LastContactYear = world.Time.Year;
-            population.ContactPressure = Math.Clamp(population.ContactPressure + 0.18, 0.0, 1.0);
+            population.ContactPressure = Math.Clamp(population.ContactPressure + (0.18 * contactExposure), 0.0, 1.0);
         }
         else
         {
@@ -118,13 +134,17 @@ public sealed class MutationSystem
         }
     }
 
-    private void AccumulatePressure(Species species, Region region, RegionSpeciesPopulation population)
+    private void AccumulatePressure(World world, Species species, Region region, RegionSpeciesPopulation population)
     {
         double carryingRatio = population.CarryingCapacity <= 0
             ? 1.0
             : (double)population.PopulationCount / population.CarryingCapacity;
         double habitatMismatch = Math.Max(0.0, 0.82 - population.HabitatSuitability);
         double ancestralMismatch = Math.Max(0.0, 0.82 - population.BaseHabitatSuitability);
+        double ecologicalDistance = ResolveEcologicalDistance(species, region);
+        double founderEcologyDistance = ResolveFounderEcologyDistance(world, region, population);
+        double founderIsolationMomentum = ResolveFounderIsolationMomentum(population, founderEcologyDistance);
+        double mutationPotentialPressure = species.MutationPotential * _settings.MutationPotentialPressureScale;
         // Same-season arrivals should create a clear short-term mismatch spike even when
         // the destination's recalculated baseline fit is only moderately hostile.
         double migrationShock = population.ReceivedMigrantsThisSeason
@@ -140,10 +160,22 @@ public sealed class MutationSystem
         population.FoodStressMutationPressure = DecayAndAdd(population.FoodStressMutationPressure, population.RecentFoodStress * 0.52, 0.84);
         population.PredationMutationPressure = DecayAndAdd(population.PredationMutationPressure, population.RecentPredationPressure * 0.48, 0.86);
         population.HuntingMutationPressure = DecayAndAdd(population.HuntingMutationPressure, population.RecentHuntingPressure * 0.52, 0.86);
-        population.HabitatMismatchMutationPressure = DecayAndAdd(population.HabitatMismatchMutationPressure, (ancestralMismatch * 0.44) + migrationShock, 0.88);
-        population.IsolationMutationPressure = DecayAndAdd(population.IsolationMutationPressure, isolationGain, 0.92);
+        population.HabitatMismatchMutationPressure = DecayAndAdd(
+            population.HabitatMismatchMutationPressure,
+            (ancestralMismatch * 0.44)
+            + migrationShock
+            + (ecologicalDistance * _settings.EcologicalIsolationPressureScale)
+            + founderIsolationMomentum,
+            0.88);
+        population.IsolationMutationPressure = DecayAndAdd(
+            population.IsolationMutationPressure,
+            isolationGain + founderIsolationMomentum + mutationPotentialPressure,
+            0.92);
         population.CrowdingMutationPressure = DecayAndAdd(population.CrowdingMutationPressure, Math.Max(0.0, carryingRatio - 0.85) * 0.55, 0.86);
-        population.DriftMutationPressure = DecayAndAdd(population.DriftMutationPressure, driftGain, 0.92);
+        population.DriftMutationPressure = DecayAndAdd(
+            population.DriftMutationPressure,
+            driftGain + (founderEcologyDistance * 0.04) + mutationPotentialPressure,
+            0.92);
 
         double activePressure =
             population.FoodStressMutationPressure +
@@ -155,22 +187,27 @@ public sealed class MutationSystem
 
         population.DivergencePressure = DecayAndAdd(
             population.DivergencePressure,
-            (activePressure * _settings.DivergencePressureScale) + (population.DriftMutationPressure * 0.05),
+            (activePressure * _settings.DivergencePressureScale)
+            + (population.DriftMutationPressure * 0.05)
+            + mutationPotentialPressure
+            + founderIsolationMomentum,
             _settings.DivergencePressureDecay);
+        double contactResistance = 1.0 - Math.Clamp(founderEcologyDistance * _settings.ContactEcologyResistanceScale, 0.0, 0.70);
         population.DivergenceScore = Math.Clamp(
             population.DivergenceScore +
             (population.DivergencePressure * 0.06) +
             (population.DriftMutationPressure * 0.01) -
-            (population.ContactPressure * _settings.ContactDivergenceReductionPerSeason) -
+            (population.ContactPressure * _settings.ContactDivergenceReductionPerSeason * contactResistance) -
             _settings.DivergenceDecayPerSeason,
             0.0,
             4.8);
         population.AdaptationPressureSummary = BuildAdaptationPressureSummary(population);
     }
 
-    private bool ShouldMutate(RegionSpeciesPopulation population, out MutationTier tier)
+    private bool ShouldMutate(Species species, RegionSpeciesPopulation population, out MutationTier tier)
     {
         tier = MutationTier.None;
+        double mutationPotentialBonus = species.MutationPotential * 0.35;
 
         double weightedPressure =
             population.FoodStressMutationPressure +
@@ -179,7 +216,8 @@ public sealed class MutationSystem
             population.HabitatMismatchMutationPressure +
             (population.IsolationMutationPressure * 0.85) +
             (population.CrowdingMutationPressure * 0.70) +
-            (population.DriftMutationPressure * 0.35);
+            (population.DriftMutationPressure * 0.35) +
+            mutationPotentialBonus;
 
         if (weightedPressure < _settings.MinorMutationThreshold)
         {
@@ -189,9 +227,10 @@ public sealed class MutationSystem
         double majorChance = Math.Clamp(
             ((weightedPressure - 2.60) * _settings.MajorMutationChanceScale) +
             (population.DivergenceScore * 0.03) +
-            (population.IsolationMutationPressure * 0.04),
+            (population.IsolationMutationPressure * 0.04) +
+            (species.MutationPotential * 0.02),
             0.0,
-            0.08);
+            0.12);
         if (weightedPressure >= _settings.MajorMutationThreshold && _random.NextDouble() < majorChance)
         {
             tier = MutationTier.Major;
@@ -200,9 +239,10 @@ public sealed class MutationSystem
 
         double minorChance = Math.Clamp(
             ((weightedPressure - 1.10) * _settings.MinorMutationChanceScale) +
-            (population.IsolationMutationPressure * 0.03),
+            (population.IsolationMutationPressure * 0.03) +
+            (species.MutationPotential * 0.03),
             0.0,
-            0.28);
+            0.36);
         if (_random.NextDouble() < minorChance)
         {
             tier = MutationTier.Minor;
@@ -857,6 +897,17 @@ public sealed class MutationSystem
         }
 
         int parentPopulationBeforeSplit = population.PopulationCount;
+        double parentPreSplitDivergenceScore = population.DivergenceScore;
+        double parentPreSplitDivergencePressure = population.DivergencePressure;
+        double parentPreSplitIsolationPressure = population.IsolationMutationPressure;
+        double parentPreSplitFoodStressPressure = population.FoodStressMutationPressure;
+        double parentPreSplitPredationPressure = population.PredationMutationPressure;
+        double parentPreSplitHuntingPressure = population.HuntingMutationPressure;
+        double parentPreSplitHabitatMismatchPressure = population.HabitatMismatchMutationPressure;
+        double parentPreSplitCrowdingPressure = population.CrowdingMutationPressure;
+        double parentPreSplitDriftPressure = population.DriftMutationPressure;
+        int parentPreSplitIsolationSeasons = population.IsolationSeasons;
+        int parentPreSplitReadinessSeasons = population.SpeciationReadinessSeasons;
         population.PopulationCount = Math.Max(1, population.PopulationCount - descendantPopulationCount);
         population.LastSpeciationYear = world.Time.Year;
         population.DivergenceScore *= _settings.ParentPostSpeciationDivergenceRetention;
@@ -877,17 +928,21 @@ public sealed class MutationSystem
         descendantPopulation.DietFlexibilityOffset = population.DietFlexibilityOffset * _settings.DescendantResidualOffsetShare;
         descendantPopulation.ClimateToleranceOffset = population.ClimateToleranceOffset * _settings.DescendantResidualOffsetShare;
         descendantPopulation.SizeOffset = population.SizeOffset * _settings.DescendantResidualOffsetShare;
-        descendantPopulation.FoodStressMutationPressure = population.FoodStressMutationPressure * _settings.DescendantStartingStressPressureRetention;
-        descendantPopulation.PredationMutationPressure = population.PredationMutationPressure * _settings.DescendantStartingStressPressureRetention;
-        descendantPopulation.HuntingMutationPressure = population.HuntingMutationPressure * _settings.DescendantStartingStressPressureRetention;
-        descendantPopulation.HabitatMismatchMutationPressure = population.HabitatMismatchMutationPressure * 0.55;
-        descendantPopulation.IsolationMutationPressure = population.IsolationMutationPressure * _settings.DescendantStartingIsolationPressureRetention;
-        descendantPopulation.CrowdingMutationPressure = population.CrowdingMutationPressure * 0.35;
-        descendantPopulation.DriftMutationPressure = population.DriftMutationPressure * 0.50;
-        descendantPopulation.DivergencePressure = population.DivergencePressure * _settings.DescendantStartingDivergencePressureRetention;
-        descendantPopulation.DivergenceScore = Math.Max(0.0, population.DivergenceScore * _settings.DescendantStartingDivergenceRetention);
-        descendantPopulation.IsolationSeasons = _settings.DescendantStartingIsolationSeasons;
-        descendantPopulation.SpeciationReadinessSeasons = _settings.DescendantStartingReadinessSeasons;
+        descendantPopulation.FoodStressMutationPressure = parentPreSplitFoodStressPressure * _settings.DescendantStartingStressPressureRetention;
+        descendantPopulation.PredationMutationPressure = parentPreSplitPredationPressure * _settings.DescendantStartingStressPressureRetention;
+        descendantPopulation.HuntingMutationPressure = parentPreSplitHuntingPressure * _settings.DescendantStartingStressPressureRetention;
+        descendantPopulation.HabitatMismatchMutationPressure = parentPreSplitHabitatMismatchPressure * 0.60;
+        descendantPopulation.IsolationMutationPressure = parentPreSplitIsolationPressure * _settings.DescendantStartingIsolationPressureRetention;
+        descendantPopulation.CrowdingMutationPressure = parentPreSplitCrowdingPressure * 0.42;
+        descendantPopulation.DriftMutationPressure = parentPreSplitDriftPressure * 0.55;
+        descendantPopulation.DivergencePressure = parentPreSplitDivergencePressure * _settings.DescendantStartingDivergencePressureRetention;
+        descendantPopulation.DivergenceScore = Math.Max(0.0, parentPreSplitDivergenceScore * _settings.DescendantStartingDivergenceRetention);
+        descendantPopulation.IsolationSeasons = Math.Max(
+            _settings.DescendantStartingIsolationSeasons,
+            (int)Math.Round(parentPreSplitIsolationSeasons * _settings.DescendantIsolationSeasonsRetention));
+        descendantPopulation.SpeciationReadinessSeasons = Math.Max(
+            _settings.DescendantStartingReadinessSeasons,
+            (int)Math.Round(parentPreSplitReadinessSeasons * _settings.DescendantReadinessSeasonsRetention));
         descendantPopulation.MinorMutationCount = 0;
         descendantPopulation.MajorMutationCount = 0;
         descendantPopulation.LastMutationYear = world.Time.Year;
@@ -929,7 +984,7 @@ public sealed class MutationSystem
             before: new Dictionary<string, string>
             {
                 ["parentPopulation"] = parentPopulationBeforeSplit.ToString(),
-                ["parentDivergenceScore"] = (population.DivergenceScore / _settings.ParentPostSpeciationDivergenceRetention).ToString("F2")
+                ["parentDivergenceScore"] = parentPreSplitDivergenceScore.ToString("F2")
             },
             after: new Dictionary<string, string>
             {
@@ -1036,7 +1091,12 @@ public sealed class MutationSystem
             return false;
         }
 
-        if (population.MajorMutationCount < _settings.SpeciationMinimumMajorMutations)
+        bool speciationSignal = population.MajorMutationCount >= _settings.SpeciationMinimumMajorMutations
+            || population.RegionAdaptationRecorded
+            || (population.IsolationSeasons >= _settings.SpeciationIsolationSeasonsThreshold + 8
+                && population.DivergenceScore >= candidateState.RequiredDivergence + 0.35
+                && population.HabitatSuitability >= population.BaseHabitatSuitability + 0.10);
+        if (!speciationSignal)
         {
             return false;
         }
@@ -1048,7 +1108,8 @@ public sealed class MutationSystem
 
         return population.DivergencePressure >= _settings.MajorPressureForSpeciationBonus
             || population.MajorMutationCount > 0
-            || population.RegionAdaptationRecorded;
+            || population.RegionAdaptationRecorded
+            || population.DivergenceScore >= candidateState.RequiredDivergence + 0.40;
     }
 
     private Species CreateDescendantSpecies(
@@ -1148,6 +1209,13 @@ public sealed class MutationSystem
             lineage.Stage = ResolveLineageStage(species, activePopulations);
             lineage.SentienceCapability = species.SentienceCapability;
             lineage.TraitProfileSummary = BuildSpeciesTraitSummary(species, activePopulations.FirstOrDefault());
+            lineage.AdaptedBiomeIds.Clear();
+            foreach (RegionSpeciesPopulation population in activePopulations.Where(candidate =>
+                         candidate.RegionAdaptationRecorded
+                         || candidate.HabitatSuitability >= candidate.BaseHabitatSuitability + 0.08))
+            {
+                lineage.AdaptedBiomeIds.Add((int)world.Regions[population.RegionId].Biome);
+            }
             lineage.HabitatAdaptationSummary = activePopulations
                 .OrderByDescending(population => population.HabitatSuitability)
                 .Select(population => BuildLineageHabitatAdaptationSummary(world.Regions[population.RegionId], species, population))
@@ -1173,14 +1241,38 @@ public sealed class MutationSystem
             : activePopulations.Average(population => PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Sociality));
         double ecologicalComplexity = activePopulations.Count == 0
             ? 0.0
-            : activePopulations.Average(population =>
-                population.DivergencePressure +
-                population.HabitatMismatchMutationPressure +
-                population.PredationMutationPressure +
-                population.FoodStressMutationPressure);
+            : activePopulations
+                .OrderByDescending(population => population.DivergenceScore + population.DivergencePressure)
+                .Take(3)
+                .Average(population =>
+                    population.DivergencePressure +
+                    population.HabitatMismatchMutationPressure +
+                    population.PredationMutationPressure +
+                    population.FoodStressMutationPressure +
+                    (population.DivergenceScore * 0.24));
         int viablePopulationSupport = activePopulations.Sum(population => population.PopulationCount);
         int lineageAge = Math.Max(0, world.Time.Year - species.OriginYear);
+        double historyComplexity = Math.Clamp(
+            (lineage.AncestryDepth * 0.18)
+            + (lineage.SpeciationCount * 0.14)
+            + (lineage.LocalExtinctionCount * 0.08)
+            + (lineage.AdaptedBiomeIds.Count * 0.10),
+            0.0,
+            1.8) * _settings.SentienceHistoryComplexityBonusScale;
+        ecologicalComplexity += historyComplexity + (species.SentiencePotential * _settings.SentiencePotentialComplexityBonusScale);
         int capableCount = world.EvolutionaryLineages.Count(candidate => !candidate.IsExtinct && candidate.SentienceCapability == SentienceCapabilityState.Capable);
+        HashSet<int> capableRoots = world.Species
+            .Where(candidate => !candidate.IsGloballyExtinct && candidate.SentienceCapability == SentienceCapabilityState.Capable)
+            .Select(candidate => candidate.RootAncestorSpeciesId)
+            .ToHashSet();
+        int capableRootCount = capableRoots.Count;
+        bool rootAlreadyCapable = capableRoots.Contains(species.RootAncestorSpeciesId);
+        double capableComplexityThreshold = rootAlreadyCapable
+            ? _settings.SentienceComplexityThreshold * 1.08
+            : _settings.SentienceComplexityThreshold;
+        int capablePopulationThreshold = rootAlreadyCapable
+            ? (int)(_settings.SentienceMinimumPopulationSupport * 1.18)
+            : _settings.SentienceMinimumPopulationSupport;
 
         SentienceCapabilityState nextState = SentienceCapabilityState.None;
         if (intelligence >= _settings.SentienceIntelligenceThreshold * 0.82
@@ -1201,11 +1293,12 @@ public sealed class MutationSystem
             nextState = SentienceCapabilityState.Emerging;
         }
 
-        if (capableCount < _settings.SentienceCapableLineageSoftCap
+        if (capableCount < (_settings.SentienceCapableLineageSoftCap + 1)
+            && (!rootAlreadyCapable || capableRootCount >= _settings.SentienceCapableLineageSoftCap)
             && intelligence >= _settings.SentienceIntelligenceThreshold
             && sociality >= _settings.SentienceSocialityThreshold
-            && ecologicalComplexity >= _settings.SentienceComplexityThreshold
-            && viablePopulationSupport >= _settings.SentienceMinimumPopulationSupport
+            && ecologicalComplexity >= capableComplexityThreshold
+            && viablePopulationSupport >= capablePopulationThreshold
             && lineageAge >= _settings.SentienceMinimumHistoryYears)
         {
             nextState = SentienceCapabilityState.Capable;
@@ -1337,6 +1430,101 @@ public sealed class MutationSystem
                 ["descendantPopulation"] = descendantPopulationCount.ToString(),
                 ["pressureSummary"] = pressureSummary
             });
+    }
+
+    private double ResolveContactExposure(
+        World world,
+        Region region,
+        RegionSpeciesPopulation population,
+        Species species,
+        RegionSpeciesPopulation connectedPopulation)
+    {
+        Region connectedRegion = world.Regions[connectedPopulation.RegionId];
+        double ecologySimilarity = 1.0 - ResolveRegionEcologyDistance(region, connectedRegion);
+        double suitabilitySimilarity = 1.0 - Math.Abs(population.HabitatSuitability - connectedPopulation.HabitatSuitability);
+        double divergenceResistance = Math.Clamp(
+            (population.DivergenceScore / Math.Max(0.01, _settings.SpeciationDivergenceThreshold)) * _settings.ContactEcologyResistanceScale,
+            0.0,
+            0.65);
+        double founderDistance = population.FounderSourceRegionId.HasValue && population.FounderSourceRegionId.Value != region.Id
+            ? ResolveFounderEcologyDistance(world, region, population)
+            : 0.0;
+        double preferredBiomeAffinity = species.PreferredBiomes.Contains(region.Biome) && !species.PreferredBiomes.Contains(connectedRegion.Biome)
+            ? 0.08
+            : 0.0;
+
+        return Math.Clamp(
+            (ecologySimilarity * 0.55)
+            + (suitabilitySimilarity * 0.25)
+            + 0.10
+            - divergenceResistance
+            - (founderDistance * 0.24)
+            - preferredBiomeAffinity,
+            0.0,
+            1.0);
+    }
+
+    private double ResolveFounderIsolationMomentum(RegionSpeciesPopulation population, double founderEcologyDistance)
+    {
+        if (population.FounderSourceRegionId is null || population.FounderSourceRegionId == population.RegionId)
+        {
+            return 0.0;
+        }
+
+        double founderKindBonus = string.Equals(population.FounderKind, "recolonization", StringComparison.OrdinalIgnoreCase)
+            ? 0.06
+            : string.Equals(population.FounderKind, "speciation", StringComparison.OrdinalIgnoreCase)
+                ? 0.04
+                : 0.0;
+        return Math.Clamp(
+            founderKindBonus
+            + (founderEcologyDistance * _settings.FounderIsolationPressureBonus)
+            + (Math.Max(0, population.IsolationSeasons - 4) / 40.0),
+            0.0,
+            0.24);
+    }
+
+    private static double ResolveEcologicalDistance(Species species, Region region)
+    {
+        RegionEcologyProfile ecology = region.EffectiveEcologyProfile;
+        double temperatureDistance = Math.Abs(ecology.Temperature - species.TemperaturePreference);
+        double moistureDistance = Math.Abs(ecology.Moisture - species.MoisturePreference);
+        double fertilityDistance = Math.Abs(region.Fertility - species.FertilityPreference);
+        double waterDistance = Math.Abs(region.WaterAvailability - species.WaterPreference);
+        return Math.Clamp(
+            (temperatureDistance * 0.28)
+            + (moistureDistance * 0.28)
+            + (fertilityDistance * 0.22)
+            + (waterDistance * 0.22),
+            0.0,
+            1.0);
+    }
+
+    private static double ResolveFounderEcologyDistance(World world, Region region, RegionSpeciesPopulation population)
+    {
+        if (!population.FounderSourceRegionId.HasValue
+            || population.FounderSourceRegionId.Value == region.Id
+            || population.FounderSourceRegionId.Value < 0
+            || population.FounderSourceRegionId.Value >= world.Regions.Count)
+        {
+            return 0.0;
+        }
+
+        return ResolveRegionEcologyDistance(region, world.Regions[population.FounderSourceRegionId.Value]);
+    }
+
+    private static double ResolveRegionEcologyDistance(Region left, Region right)
+    {
+        RegionEcologyProfile leftProfile = left.EffectiveEcologyProfile;
+        RegionEcologyProfile rightProfile = right.EffectiveEcologyProfile;
+        return Math.Clamp(
+            (Math.Abs(leftProfile.Temperature - rightProfile.Temperature) * 0.24)
+            + (Math.Abs(leftProfile.Moisture - rightProfile.Moisture) * 0.24)
+            + (Math.Abs(left.Fertility - right.Fertility) * 0.20)
+            + (Math.Abs(left.WaterAvailability - right.WaterAvailability) * 0.20)
+            + (Math.Abs(leftProfile.TerrainHarshness - rightProfile.TerrainHarshness) * 0.12),
+            0.0,
+            1.0);
     }
 
     private static string BuildAdaptationPressureSummary(RegionSpeciesPopulation population)

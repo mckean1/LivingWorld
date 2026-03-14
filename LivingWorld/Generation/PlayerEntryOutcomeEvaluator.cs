@@ -8,24 +8,57 @@ public static class PlayerEntryOutcomeEvaluator
     {
         rejectionReasons = [];
         int fallbackCandidateCount = world.PlayerEntryCandidates.Count(candidate => candidate.IsFallbackCandidate);
-        int healthyCandidateCount = world.PlayerEntryCandidates.Count(candidate => !candidate.IsFallbackCandidate && candidate.RankScore >= settings.MinimumHealthyCandidateScore);
+        int organicCandidateCount = world.PlayerEntryCandidates.Count(candidate => !candidate.IsFallbackCandidate);
+        int healthyOrganicCandidateCount = world.PlayerEntryCandidates.Count(candidate =>
+            !candidate.IsFallbackCandidate
+            && candidate.RankScore >= settings.MinimumHealthyCandidateScore);
         bool biologyWeak = world.WorldReadinessReport.FailureReasons.Contains("biology_not_ready", StringComparer.OrdinalIgnoreCase)
             || world.WorldReadinessReport.FailureReasons.Contains("biology_floor_below_minimum", StringComparer.OrdinalIgnoreCase);
         bool weakMaxAgeOutcome = world.PrehistoryStopReason is PrehistoryStopReason.MaxAgeReached or PrehistoryStopReason.ForcedFallback;
 
-        if (biologyWeak && weakMaxAgeOutcome && fallbackCandidateCount > 0)
+        if (world.PhaseCReadinessReport.OrganicPolityCount == 0)
+        {
+            rejectionReasons.Add("no_organic_polities_available");
+        }
+
+        if (world.PhaseCReadinessReport.OrganicViableFocalCandidateCount == 0)
+        {
+            rejectionReasons.Add("no_organic_focal_candidates_available");
+        }
+
+        if (organicCandidateCount < settings.MinimumViablePlayerEntryCandidates)
+        {
+            rejectionReasons.Add($"candidate_pool_too_shallow:{organicCandidateCount}/{settings.MinimumViablePlayerEntryCandidates}");
+        }
+
+        if (healthyOrganicCandidateCount < settings.MinimumHealthyCandidateCount)
+        {
+            rejectionReasons.Add($"healthy_organic_candidate_count_below_floor:{healthyOrganicCandidateCount}/{settings.MinimumHealthyCandidateCount}");
+        }
+
+        if (world.PlayerEntryCandidates.Count == 1)
+        {
+            rejectionReasons.Add("single_candidate_world_rejected");
+        }
+
+        if (biologyWeak && weakMaxAgeOutcome)
         {
             rejectionReasons.Add("biology_floor_not_met");
         }
 
-        if (weakMaxAgeOutcome && fallbackCandidateCount > 0 && healthyCandidateCount < settings.MinimumHealthyCandidateCount)
+        if (weakMaxAgeOutcome && organicCandidateCount < settings.MinimumViablePlayerEntryCandidates)
+        {
+            rejectionReasons.Add("max_age_stop_without_organic_candidate_pool");
+        }
+
+        if (weakMaxAgeOutcome && fallbackCandidateCount > 0 && healthyOrganicCandidateCount < settings.MinimumHealthyCandidateCount)
         {
             rejectionReasons.Add("max_age_stop_only_produced_fallback_pool");
         }
 
-        if (weakMaxAgeOutcome && biologyWeak && fallbackCandidateCount > 0 && world.PlayerEntryCandidates.Count < 2)
+        if (world.PrehistoryStopReason == PrehistoryStopReason.ForcedFallback)
         {
-            rejectionReasons.Add($"candidate_pool_too_shallow:{world.PlayerEntryCandidates.Count}");
+            rejectionReasons.Add("forced_fallback_stop_rejected");
         }
 
         if (!settings.AllowSingleFallbackCandidateSelection
@@ -40,9 +73,9 @@ public static class PlayerEntryOutcomeEvaluator
             rejectionReasons.Add("too_many_emergency_fallback_candidates");
         }
 
-        if (world.PlayerEntryCandidates.Count > 0 && healthyCandidateCount < settings.MinimumHealthyCandidateCount && fallbackCandidateCount > 0)
+        if (fallbackCandidateCount > 0 && organicCandidateCount == 0)
         {
-            rejectionReasons.Add($"healthy_candidate_count_below_floor:{healthyCandidateCount}");
+            rejectionReasons.Add("fallback_only_candidate_pool");
         }
 
         return rejectionReasons.Count == 0;

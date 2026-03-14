@@ -2,6 +2,7 @@ using LivingWorld.Core;
 using LivingWorld.Generation;
 using LivingWorld.Life;
 using LivingWorld.Map;
+using LivingWorld.Societies;
 using LivingWorld.Systems;
 using Xunit;
 
@@ -209,6 +210,21 @@ public sealed class WorldGenerationTests
         Assert.True(world.PhaseBReadinessReport.MatureRegionalDivergenceCount >= 0);
     }
 
+    [Fact]
+    public void CompactYoungWorldValidation_SurfacesOrganicCandidatesAcrossMultipleRoots()
+    {
+        World world = new WorldGenerator(seed: 43, CreateCompactValidationSettings()).Generate();
+
+        IReadOnlyList<PlayerEntryCandidateSummary> organicCandidates = world.PlayerEntryCandidates
+            .Where(candidate => !candidate.IsFallbackCandidate)
+            .ToList();
+
+        Assert.True(world.PhaseBDiagnostics.SentienceCapableRootBranchCount >= 2);
+        Assert.True(organicCandidates.Count >= 2);
+        Assert.True(organicCandidates.Select(candidate => candidate.HomeRegionId).Distinct().Count() >= 2);
+        Assert.True(organicCandidates.Select(candidate => candidate.LineageId).Distinct().Count() >= 2);
+    }
+
     private static World CreateFounderSpreadWorld()
     {
         World world = new(new WorldTime(), WorldSimulationPhase.Bootstrap)
@@ -300,4 +316,20 @@ public sealed class WorldGenerationTests
 
         return world;
     }
+
+    private static WorldGenerationSettings CreateCompactValidationSettings()
+        => new()
+        {
+            StartupWorldAgePreset = StartupWorldAgePreset.YoungWorld,
+            RegionCount = 16,
+            ContinentWidth = 4,
+            ContinentHeight = 4,
+            PhaseAMaximumBootstrapMonths = 36,
+            PhaseBMinimumBootstrapYears = 120,
+            PhaseBMaximumBootstrapYears = 320,
+            PhaseCMinimumBootstrapYears = 80,
+            PhaseCMaximumBootstrapYears = 220,
+            ReadinessEvaluationIntervalYears = 10,
+            MaxStartupRegenerationAttempts = 2
+        };
 }

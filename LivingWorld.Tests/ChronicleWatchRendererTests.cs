@@ -136,7 +136,7 @@ public sealed class ChronicleWatchRendererTests
             StartupStage = WorldStartupStage.FocalSelection,
             PrehistoryStopReason = PrehistoryStopReason.ReadinessSatisfied
         };
-        world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(1, "Green Basin Confederacy", 1, "Humans", 1, 0, "Green Basin", 12, 812, 2, "large", "Proto-farming", "Stable", "water, grain", "Fire", "founded a second settlement", "anchoring on rich ground", 0.92, StabilityBand.Stable, false));
+        world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(1, "Green Basin Confederacy", 1, "Humans", 1, 0, "Green Basin", 12, 812, 2, "large", "Proto-farming", "Stable", "paired hearths", "river valley, rich water and fertile ground", "deep descendant branch; river valley fit 0.88", "water, grain", "Fire", "founded a second settlement", "anchoring on rich ground", 0.92, StabilityBand.Stable, false));
         WatchUiState uiState = new();
         uiState.SetActiveMainView(WatchViewType.FocalSelection);
 

@@ -889,6 +889,31 @@ public sealed class Simulation : IDisposable
         {
             Console.WriteLine($"PhaseC failures: {string.Join(", ", _world.PhaseCReadinessReport.FailureReasons)}");
         }
+        if (_world.StartupOutcomeDiagnostics != StartupOutcomeDiagnostics.Empty)
+        {
+            Console.WriteLine(
+                $"Startup organic: Groups={_world.StartupOutcomeDiagnostics.OrganicSentientGroupCount} Societies={_world.StartupOutcomeDiagnostics.OrganicSocietyCount} Settlements={_world.StartupOutcomeDiagnostics.OrganicSettlementCount} Polities={_world.StartupOutcomeDiagnostics.OrganicPolityCount} FocalCandidates={_world.StartupOutcomeDiagnostics.OrganicFocalCandidateCount} EntryCandidates={_world.StartupOutcomeDiagnostics.OrganicPlayerEntryCandidateCount}");
+            Console.WriteLine(
+                $"Startup fallback: Groups={_world.StartupOutcomeDiagnostics.FallbackSentientGroupCount} Societies={_world.StartupOutcomeDiagnostics.FallbackSocietyCount} Settlements={_world.StartupOutcomeDiagnostics.FallbackSettlementCount} Polities={_world.StartupOutcomeDiagnostics.FallbackPolityCount} FocalCandidates={_world.StartupOutcomeDiagnostics.FallbackFocalCandidateCount} EntryCandidates={_world.StartupOutcomeDiagnostics.FallbackPlayerEntryCandidateCount} Emergency={_world.StartupOutcomeDiagnostics.EmergencyAdmittedCandidateCount}");
+            if (_world.StartupOutcomeDiagnostics.CandidateRejectionCounts.Count > 0)
+            {
+                string rejectionSummary = string.Join(", ", _world.StartupOutcomeDiagnostics.CandidateRejectionCounts
+                    .OrderByDescending(entry => entry.Value)
+                    .ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
+                    .Select(entry => $"{entry.Key}={entry.Value}"));
+                Console.WriteLine($"Startup candidate rejections: {rejectionSummary}");
+            }
+
+            if (_world.StartupOutcomeDiagnostics.BottleneckReasons.Count > 0)
+            {
+                Console.WriteLine($"Startup bottlenecks: {string.Join(", ", _world.StartupOutcomeDiagnostics.BottleneckReasons)}");
+            }
+
+            if (_world.StartupOutcomeDiagnostics.RegenerationReasons.Count > 0)
+            {
+                Console.WriteLine($"Startup regenerations: {string.Join(", ", _world.StartupOutcomeDiagnostics.RegenerationReasons)}");
+            }
+        }
 
         if (_world.Time.Year is 0 or 5 or 20)
         {

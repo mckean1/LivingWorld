@@ -10,7 +10,10 @@ public sealed record WorldReadinessReport(
     double StabilityScore,
     int ViableCandidateCount,
     IReadOnlyList<string> FailureReasons,
-    IReadOnlyDictionary<string, bool> ReadinessPassesByCategory)
+    IReadOnlyDictionary<string, bool> ReadinessPassesByCategory,
+    int OrganicCandidateCount = 0,
+    int FallbackCandidateCount = 0,
+    int OrganicHealthyCandidateCount = 0)
 {
     public static WorldReadinessReport Empty { get; } = new(
         false,

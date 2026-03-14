@@ -11,6 +11,10 @@ public sealed class SocialSettlement
     public string FoodBaseProfile { get; set; } = "mixed";
     public double StorageLevel { get; set; }
     public double SettlementViability { get; set; }
+    public bool IsFallbackCreated { get; set; }
+    public double FoodSecurity { get; set; }
+    public double LocalCarryingSupport { get; set; }
+    public double Stress { get; set; }
     public string CurrentPressureSummary { get; set; } = "forming";
     public bool IsAbandoned { get; set; }
     public Dictionary<string, CulturalDiscovery> LocalKnowledge { get; } = new(StringComparer.OrdinalIgnoreCase);

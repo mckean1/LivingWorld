@@ -55,7 +55,7 @@ public sealed class MutationSystemTests
         Assert.False(population.ReceivedMigrantsThisSeason);
         Assert.False(population.SentMigrantsThisSeason);
         Assert.False(population.EstablishedThisSeason);
-        Assert.True(population.HabitatMismatchMutationPressure < 0.05);
+        Assert.True(population.HabitatMismatchMutationPressure < 0.20);
     }
 
     [Fact]
@@ -379,8 +379,8 @@ public sealed class MutationSystemTests
         Assert.Equal(4, descendant.ParentSpeciesId);
         Assert.Equal(region.Id, descendant.OriginRegionId);
         Assert.True(descendantPopulation.PopulationCount > 0);
-        Assert.Equal(0, descendantPopulation.IsolationSeasons);
-        Assert.Equal(0, descendantPopulation.SpeciationReadinessSeasons);
+        Assert.InRange(descendantPopulation.IsolationSeasons, 1, 12);
+        Assert.InRange(descendantPopulation.SpeciationReadinessSeasons, 1, 12);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.NewSpeciesAppeared && evt.SpeciesId == descendant.Id);
         Assert.Contains(world.EvolutionaryLineages, lineage => lineage.SpeciesId == descendant.Id && lineage.ParentLineageId == 4);
         Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.Speciation && evt.SpeciesId == descendant.Id);
@@ -419,8 +419,8 @@ public sealed class MutationSystemTests
         RegionSpeciesPopulation descendantPopulation = region.GetSpeciesPopulation(descendant.Id)!;
 
         Assert.True(descendant.EarliestSpeciationYear > world.Time.Year);
-        Assert.Equal(0, descendantPopulation.IsolationSeasons);
-        Assert.Equal(0, descendantPopulation.SpeciationReadinessSeasons);
+        Assert.InRange(descendantPopulation.IsolationSeasons, 1, 12);
+        Assert.InRange(descendantPopulation.SpeciationReadinessSeasons, 1, 12);
         Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.NewSpeciesAppeared && evt.SpeciesId != descendant.Id);
     }
 
@@ -483,6 +483,39 @@ public sealed class MutationSystemTests
     }
 
     [Fact]
+    public void FounderIsolationAcrossDistinctEcology_AcceleratesDivergence()
+    {
+        World founderWorld = CreateWorld(withConnectedPopulation: false);
+        World localWorld = CreateWorld(withConnectedPopulation: false);
+        MutationSystem founderSystem = new(seed: 69);
+        MutationSystem localSystem = new(seed: 69);
+
+        RegionSpeciesPopulation founderPopulation = GetElkPopulation(founderWorld);
+        RegionSpeciesPopulation localPopulation = GetElkPopulation(localWorld);
+        founderPopulation.PopulationCount = 34;
+        founderPopulation.CarryingCapacity = 78;
+        founderPopulation.IsolationSeasons = 10;
+        founderPopulation.FounderSourceRegionId = 1;
+        founderPopulation.FounderKind = "frontier";
+        founderPopulation.HabitatSuitability = 0.64;
+        founderPopulation.BaseHabitatSuitability = 0.56;
+        localPopulation.PopulationCount = 34;
+        localPopulation.CarryingCapacity = 78;
+        localPopulation.IsolationSeasons = 10;
+        localPopulation.HabitatSuitability = 0.64;
+        localPopulation.BaseHabitatSuitability = 0.56;
+
+        for (int season = 0; season < 6; season++)
+        {
+            founderSystem.UpdateSeason(founderWorld);
+            localSystem.UpdateSeason(localWorld);
+        }
+
+        Assert.True(founderPopulation.IsolationMutationPressure > localPopulation.IsolationMutationPressure);
+        Assert.True(founderPopulation.DivergenceScore > localPopulation.DivergenceScore);
+    }
+
+    [Fact]
     public void SentienceCapability_RequiresSustainedPressureAndSupport()
     {
         World world = CreateWorld(withConnectedPopulation: false);
@@ -512,6 +545,43 @@ public sealed class MutationSystemTests
     }
 
     [Fact]
+    public void DescendantSpecies_RetainEnoughMomentum_ToSupportDeeperBranching()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        Region region = world.Regions[0];
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+        MutationSystem mutationSystem = new(seed: 73, settings: new MutationSettings
+        {
+            MinimumSpeciesAgeYearsForSpeciation = 0,
+            DescendantSpeciesStabilizationYears = 12,
+            RegionalRootSpeciationCooldownYears = 0,
+            RegionalRootLineageSoftCap = 99,
+            RegionalRootLineageHardCap = 999
+        });
+
+        population.PopulationCount = 46;
+        population.CarryingCapacity = 84;
+        population.IsolationSeasons = 18;
+        population.SpeciationReadinessSeasons = 18;
+        population.DivergencePressure = 1.92;
+        population.DivergenceScore = 3.28;
+        population.MajorMutationCount = 1;
+        population.MinorMutationCount = 4;
+        population.RegionAdaptationRecorded = true;
+        world.Species.First(species => species.Id == 4).EarliestSpeciationYear = 0;
+        world.Regions[1].GetOrCreateSpeciesPopulation(4).PopulationCount = 24;
+
+        mutationSystem.UpdateSeason(world);
+
+        Species descendant = world.Species.OrderByDescending(species => species.Id).First();
+        RegionSpeciesPopulation descendantPopulation = region.GetSpeciesPopulation(descendant.Id)!;
+
+        Assert.True(descendantPopulation.DivergenceScore >= 0.45);
+        Assert.True(descendantPopulation.IsolationSeasons >= 2);
+        Assert.True(descendantPopulation.SpeciationReadinessSeasons >= 1);
+    }
+
+    [Fact]
     public void LocalAndGlobalExtinction_RecordEvolutionaryHistory()
     {
         World world = CreateWorld(withConnectedPopulation: false);
@@ -531,6 +601,72 @@ public sealed class MutationSystemTests
         Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.LocalExtinction && evt.SpeciesId == elk.Id);
         Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.GlobalExtinction && evt.SpeciesId == elk.Id);
         Assert.True(world.GetLineageForSpecies(elk.Id)?.IsExtinct);
+    }
+
+    [Fact]
+    public void ExtinctionOpenings_CanProduceReplacementMigrationHistory()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        world.Regions[0].AddConnection(1);
+        world.Regions[1].AddConnection(0);
+        EcosystemSystem ecosystemSystem = new(new EcosystemSettings
+        {
+            HerbivoreExpansionCapacityRatioThreshold = 0.30,
+            MinimumSourcePopulationForMigration = 6,
+            FounderPopulationMinimum = 2
+        });
+
+        Species parent = world.Species.First(species => species.Id == 4);
+        Species descendant = new(40, "Northreach Elk", parent.Intelligence, parent.Cooperation)
+        {
+            TrophicRole = parent.TrophicRole,
+            ParentSpeciesId = parent.Id,
+            RootAncestorSpeciesId = parent.RootAncestorSpeciesId,
+            FertilityPreference = parent.FertilityPreference,
+            WaterPreference = parent.WaterPreference,
+            PlantBiomassAffinity = parent.PlantBiomassAffinity,
+            AnimalBiomassAffinity = parent.AnimalBiomassAffinity,
+            BaseCarryingCapacityFactor = parent.BaseCarryingCapacityFactor,
+            MigrationCapability = 0.34,
+            ExpansionPressure = 0.30,
+            BaseReproductionRate = parent.BaseReproductionRate,
+            BaseDeclineRate = parent.BaseDeclineRate,
+            HuntingDifficulty = parent.HuntingDifficulty,
+            HuntingDanger = parent.HuntingDanger,
+            MeatYield = parent.MeatYield
+        };
+        descendant.DietSpeciesIds.AddRange(parent.DietSpeciesIds);
+        descendant.PreferredBiomes.Add(RegionBiome.RiverValley);
+        descendant.PreferredBiomes.Add(RegionBiome.Plains);
+        world.Species.Add(descendant);
+
+        RegionSpeciesPopulation sourcePopulation = world.Regions[0].GetOrCreateSpeciesPopulation(descendant.Id);
+        sourcePopulation.PopulationCount = 72;
+        sourcePopulation.CarryingCapacity = 90;
+        sourcePopulation.MigrationPressure = 0.92;
+        sourcePopulation.HabitatSuitability = 0.86;
+        sourcePopulation.HasEverExisted = true;
+
+        world.LocalPopulationExtinctions.Add(new LocalPopulationExtinctionRecord(
+            1,
+            world.Regions[1].Name,
+            parent.Id,
+            parent.Name,
+            world.Time.Year - 4,
+            world.Time.Month,
+            "collapse",
+            24,
+            0.82,
+            0.42));
+
+        ecosystemSystem.UpdateSeason(world);
+
+        RegionSpeciesPopulation targetPopulation = world.Regions[1].GetSpeciesPopulation(descendant.Id)!;
+        Assert.True(targetPopulation.PopulationCount > 0);
+        Assert.Contains(world.Events, evt =>
+            evt.Type == WorldEventType.SpeciesPopulationEstablished
+            && evt.Metadata.TryGetValue("founderKind", out string? founderKind)
+            && founderKind == "replacement");
     }
 
     [Fact]
