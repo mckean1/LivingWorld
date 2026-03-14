@@ -11,16 +11,28 @@ public static class WorldReadinessEvaluator
         double civilizationalScore = ScoreCivilization(world, settings);
         double candidateScore = ScoreCandidates(world, settings);
         double stabilityScore = ScoreStability(world);
+        bool biologyFloorPass = biologicalScore >= settings.MinimumBiologicalReadinessFloor;
+        int healthyCandidateCount = world.PlayerEntryCandidates.Count(candidate => !candidate.IsFallbackCandidate && candidate.RankScore >= settings.MinimumHealthyCandidateScore);
         Dictionary<string, bool> passes = new(StringComparer.OrdinalIgnoreCase)
         {
-            ["biology"] = biologicalScore >= (0.72 * world.StartupAgeConfiguration.ReadinessStrictness),
+            ["biology"] = biologyFloorPass && biologicalScore >= (0.72 * world.StartupAgeConfiguration.ReadinessStrictness),
             ["social"] = socialScore >= (0.58 * world.StartupAgeConfiguration.ReadinessStrictness),
             ["civilization"] = civilizationalScore >= (0.58 * world.StartupAgeConfiguration.ReadinessStrictness),
-            ["candidates"] = candidateScore >= 0.52,
+            ["candidates"] = candidateScore >= 0.52 && healthyCandidateCount >= settings.MinimumHealthyCandidateCount,
             ["stability"] = stabilityScore >= 0.48
         };
 
         List<string> failures = [];
+        if (!biologyFloorPass)
+        {
+            failures.Add("biology_floor_below_minimum");
+        }
+
+        if (healthyCandidateCount < settings.MinimumHealthyCandidateCount)
+        {
+            failures.Add($"healthy_candidate_count_below_target:{healthyCandidateCount}/{settings.MinimumHealthyCandidateCount}");
+        }
+
         foreach ((string category, bool passed) in passes)
         {
             if (!passed)

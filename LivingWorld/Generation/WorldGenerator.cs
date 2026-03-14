@@ -28,9 +28,49 @@ public sealed class WorldGenerator
     {
         ValidateSettings();
 
+        World? lastWorld = null;
+        List<string> lastRejectionReasons = [];
+        for (int attempt = 0; attempt < _settings.MaxStartupRegenerationAttempts; attempt++)
+        {
+            if (attempt == 0)
+            {
+                World generatedWorld = GenerateSingleAttempt(attempt);
+                if (ShouldSurfaceFocalSelection(generatedWorld, out List<string> attemptRejectionReasons))
+                {
+                    return generatedWorld;
+                }
+
+                lastWorld = generatedWorld;
+                lastRejectionReasons = attemptRejectionReasons;
+                continue;
+            }
+
+            int attemptSeed = DeriveAttemptSeed(attempt);
+            WorldGenerator attemptGenerator = new(attemptSeed, _settings);
+            World regeneratedWorld = attemptGenerator.GenerateSingleAttempt(attempt);
+            if (attemptGenerator.ShouldSurfaceFocalSelection(regeneratedWorld, out List<string> regeneratedRejectionReasons))
+            {
+                return regeneratedWorld;
+            }
+
+            lastWorld = regeneratedWorld;
+            lastRejectionReasons = regeneratedRejectionReasons;
+        }
+
+        if (lastWorld is not null)
+        {
+            throw new InvalidOperationException($"Player entry failed after {_settings.MaxStartupRegenerationAttempts} startup attempts: {string.Join(", ", lastRejectionReasons)}");
+        }
+
+        throw new InvalidOperationException("Player entry failed before world generation could complete.");
+    }
+
+    private World GenerateSingleAttempt(int attempt)
+    {
         World world = new(new WorldTime(), WorldSimulationPhase.Bootstrap)
         {
-            StartupStage = WorldStartupStage.PrimitiveEcologyFoundation
+            StartupStage = WorldStartupStage.PrimitiveEcologyFoundation,
+            StartupGenerationAttempt = attempt
         };
         _prehistoryRuntimeController.Initialize(world, StartupWorldAgeConfiguration.ForPreset(_settings.StartupWorldAgePreset));
 
@@ -421,6 +461,30 @@ public sealed class WorldGenerator
             world.CandidateRejectionReasons[polityId] = reason;
         }
     }
+
+    private bool ShouldSurfaceFocalSelection(World world, out List<string> rejectionReasons)
+    {
+        if (PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, _settings, out rejectionReasons))
+        {
+            return true;
+        }
+
+        world.StartupDiagnostics.Clear();
+        world.StartupDiagnostics.Add($"startup_attempt_rejected:{world.StartupGenerationAttempt}");
+        foreach (string reason in rejectionReasons)
+        {
+            world.StartupDiagnostics.Add(reason);
+        }
+        foreach (string failure in world.WorldReadinessReport.FailureReasons)
+        {
+            world.StartupDiagnostics.Add($"readiness_failure:{failure}");
+        }
+
+        return false;
+    }
+
+    private int DeriveAttemptSeed(int attempt)
+        => HashCode.Combine(_seed, attempt, 6151);
 
     private static void EnsureSentienceCapableSeedBranches(World world)
     {

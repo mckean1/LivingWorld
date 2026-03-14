@@ -83,6 +83,7 @@ That formatter also has a fallback narrative-based state key for visible familie
 Year-end focus resolution now also consumes the current year's rolling event cache instead of filtering the full historical event list every year.
 
 Pass 4 now takes those viable polity candidates, ranks/diversifies them, freezes the world in `FocalSelection`, and starts the live watch only after the player binds to one of them.
+If a max-age world only yields fallback-quality starts after core readiness fails, startup now prefers regeneration over surfacing that world as a normal player-facing selection screen.
 
 ## Default Watch Output
 
@@ -103,6 +104,7 @@ Default player mode shows:
 
 Chronicle lines themselves remain short and do not append species after every polity name.
 Prehistory events do not appear there at all; they stay in structured history and compact candidate/origin summaries until future history views expose them directly.
+Selection-screen summaries, top-panel knowledge summaries, and chronicle entries now have stricter pane ownership so detached fragments cannot remain in the chronicle viewport after the startup handoff.
 The intended fuller-world opening is now more active in years `0-20`: home-anchor hunting, early food relief or hardship, migration under real pressure, and faster first consolidations for viable lineages.
 Chronicle scrollback now retains a deeper in-memory buffer, and Left/Right paging is available for both chronicle history and list-heavy inspection screens.
 

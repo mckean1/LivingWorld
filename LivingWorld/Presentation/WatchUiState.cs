@@ -14,6 +14,7 @@ public sealed class WatchUiState
     public WatchViewType ActiveView { get; private set; } = WatchViewType.Chronicle;
 
     public bool IsPaused { get; private set; }
+    public bool ShowDiagnostics { get; private set; }
 
     public int? SelectedRegionId { get; private set; }
 
@@ -30,6 +31,9 @@ public sealed class WatchUiState
 
     public void SetPaused(bool isPaused)
         => IsPaused = isPaused;
+
+    public void ToggleDiagnostics()
+        => ShowDiagnostics = !ShowDiagnostics;
 
     public void SetActiveMainView(WatchViewType view)
     {

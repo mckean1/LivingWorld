@@ -110,18 +110,15 @@ public static class ChronicleTextFormatter
             return "None yet";
         }
 
-        List<string> topTwo = polity.Discoveries
+        string primary = polity.Discoveries
             .OrderBy(discovery => discovery.Category)
             .ThenBy(discovery => discovery.Summary, StringComparer.Ordinal)
-            .Take(2)
             .Select(discovery => discovery.Summary)
-            .ToList();
+            .First();
 
         return polity.Discoveries.Count == 1
-            ? topTwo[0]
-            : polity.Discoveries.Count == 2
-                ? string.Join(", ", topTwo)
-                : $"{string.Join(", ", topTwo)}, +{polity.Discoveries.Count - 2} more";
+            ? primary
+            : $"{primary}, +{polity.Discoveries.Count - 1} more";
     }
 
     public static string DescribeLearnedAdvancements(Polity polity)
@@ -137,16 +134,8 @@ public static class ChronicleTextFormatter
             return advancement.Name;
         }
 
-        string topTwo = string.Join(
-            ", ",
-            polity.Advancements
-                .OrderBy(id => id)
-                .Take(2)
-                .Select(id => AdvancementCatalog.Get(id).Name));
-
-        return polity.Advancements.Count == 2
-            ? topTwo
-            : $"{topTwo}, +{polity.Advancements.Count - 2} more";
+        string first = AdvancementCatalog.Get(polity.Advancements.OrderBy(id => id).First()).Name;
+        return $"{first}, +{polity.Advancements.Count - 1} more";
     }
 
     public static string RenderPopulationDelta(int delta)

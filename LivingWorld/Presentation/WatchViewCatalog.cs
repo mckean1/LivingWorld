@@ -54,7 +54,7 @@ public static class WatchViewCatalog
         => view is WatchViewType.FocalSelection or WatchViewType.KnownRegions or WatchViewType.KnownSpecies or WatchViewType.KnownPolities;
 
     public static string BuildControlsSummary()
-        => "Space Pause  Tab Cycle  1-7 Views  Up/Down Move  Left/Right Page  Enter Inspect/Select  Esc Back";
+        => "Space Pause  Tab Cycle  1-7 Views  Up/Down Move  Left/Right Page  Enter Inspect/Select  D Diagnostics  Esc Back";
 
     private sealed record WatchViewDescriptor(WatchViewType View, string Label, string DirectKey)
     {

@@ -286,44 +286,61 @@ public static class WatchScreenBuilder
 
     private static IReadOnlyList<string> BuildFocalSelectionLines(World world, WatchUiState uiState)
     {
+        int candidateCount = world.PlayerEntryCandidates.Count;
         List<string> lines =
         [
             "Focal Selection",
             string.Empty,
-            $" World Age At Entry: {world.Time.Year}",
-            $" Preset: {world.StartupAgeConfiguration.Preset}",
-            $" Stop Reason: {world.PrehistoryStopReason?.ToString() ?? "Pending"}",
-            $" Readiness: {(world.WorldReadinessReport.IsReady ? "Ready" : "Fallback / weak-world stop")}",
-            $" Scores: Bio {world.WorldReadinessReport.BiologicalScore:F2} | Social {world.WorldReadinessReport.SocialScore:F2} | Civ {world.WorldReadinessReport.CivilizationalScore:F2} | Cand {world.WorldReadinessReport.CandidateScore:F2} | Stable {world.WorldReadinessReport.StabilityScore:F2}",
-            string.Empty,
-            " Candidate Starts:"
+            $" World age {world.Time.Year} | {world.StartupAgeConfiguration.Preset} | {candidateCount} candidate {(candidateCount == 1 ? "start" : "starts")}"
         ];
 
-        if (world.PlayerEntryCandidates.Count == 0)
+        if (candidateCount == 0)
         {
-            lines.Add("  No viable player-entry candidates were found.");
+            lines.Add(string.Empty);
+            lines.Add(" No viable player-entry candidates were found.");
             return lines;
         }
 
-        int selectedIndex = Math.Clamp(uiState.GetSelectedIndex(WatchViewType.FocalSelection), 0, world.PlayerEntryCandidates.Count - 1);
+        int selectedIndex = Math.Clamp(uiState.GetSelectedIndex(WatchViewType.FocalSelection), 0, candidateCount - 1);
         uiState.SetSelectedIndex(WatchViewType.FocalSelection, selectedIndex);
-        for (int index = 0; index < world.PlayerEntryCandidates.Count; index++)
+        lines.Add(string.Empty);
+        lines.Add(" Candidate List:");
+        for (int index = 0; index < candidateCount; index++)
         {
             PlayerEntryCandidateSummary candidate = world.PlayerEntryCandidates[index];
             string marker = index == selectedIndex ? ">" : " ";
-            string fallback = candidate.IsFallbackCandidate ? " [fallback]" : string.Empty;
-            lines.Add($"{marker} {candidate.PolityName,-28} {candidate.SpeciesName,-18} {candidate.HomeRegionName,-18} age {candidate.PolityAge,3}{fallback}");
-            lines.Add($"    settlements {candidate.SettlementCount} | pop {candidate.PopulationBand} | {candidate.SubsistenceStyle} | {candidate.CurrentCondition}");
-            lines.Add($"    discoveries {candidate.DiscoverySummary}");
-            lines.Add($"    learned {candidate.LearnedSummary}");
-            lines.Add($"    note {candidate.RecentHistoricalNote}");
-            lines.Add($"    pressure/opportunity {candidate.DefiningPressureOrOpportunity}");
+            lines.Add($"{marker} {candidate.PolityName,-28} {candidate.SpeciesName,-16} {candidate.HomeRegionName,-16}");
         }
 
-        if (world.WorldReadinessReport.FailureReasons.Count > 0)
+        PlayerEntryCandidateSummary selected = world.PlayerEntryCandidates[selectedIndex];
+        lines.Add(string.Empty);
+        lines.Add(" Start Summary:");
+        lines.Add($" {selected.PolityName}");
+        lines.Add($" {selected.SpeciesName} of {selected.HomeRegionName}");
+        lines.Add($" Age {selected.PolityAge} | Settlements {selected.SettlementCount} | Population {selected.PopulationBand}");
+        lines.Add($" {selected.SubsistenceStyle} | {selected.CurrentCondition}");
+        lines.Add(string.Empty);
+        lines.Add($" Discoveries: {selected.DiscoverySummary}");
+        lines.Add($" Learned: {selected.LearnedSummary}");
+        lines.Add($" History: {selected.RecentHistoricalNote}");
+        lines.Add($" Pressure / Opportunity: {selected.DefiningPressureOrOpportunity}");
+
+        if (uiState.ShowDiagnostics)
         {
             lines.Add(string.Empty);
-            lines.Add($" Readiness Gaps: {string.Join(", ", world.WorldReadinessReport.FailureReasons)}");
+            lines.Add(" Diagnostics:");
+            lines.Add($"  Stop: {world.PrehistoryStopReason?.ToString() ?? "Pending"}");
+            lines.Add($"  Scores: bio {world.WorldReadinessReport.BiologicalScore:F2} | social {world.WorldReadinessReport.SocialScore:F2} | civ {world.WorldReadinessReport.CivilizationalScore:F2} | cand {world.WorldReadinessReport.CandidateScore:F2} | stable {world.WorldReadinessReport.StabilityScore:F2}");
+            lines.Add($"  Fallback Candidate: {(selected.IsFallbackCandidate ? "yes" : "no")}");
+            if (world.WorldReadinessReport.FailureReasons.Count > 0)
+            {
+                lines.Add($"  Readiness Gaps: {string.Join(", ", world.WorldReadinessReport.FailureReasons)}");
+            }
+
+            foreach (string diagnostic in world.StartupDiagnostics.Take(4))
+            {
+                lines.Add($"  {diagnostic}");
+            }
         }
 
         return lines;

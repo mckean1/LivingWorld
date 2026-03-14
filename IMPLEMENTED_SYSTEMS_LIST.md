@@ -83,6 +83,8 @@ Implemented:
 - dedicated `FocalSelection` watch/UI state that freezes time until the player binds to a chosen polity
 - player binding / handoff fields on `World` for selected polity, entry year, polity-age context, stop reason, summary snapshot, and live-chronicle start marker
 - strict chronicle boundary enforcement so prehistory remains structured history and summary material instead of leaking into the live chronicle buffer
+- stricter weak-world handling so max-age / fallback-only / biologically weak outcomes are rejected more often and rerolled instead of being surfaced as normal starts
+- selection-screen cleanup plus chronicle viewport sanitation so player-facing startup text is narrative-first and stale status/summary fragments cannot leak into the chronicle pane
 
 Intentionally deferred after Pass 4:
 - richer player-entry presets and custom world-age editing

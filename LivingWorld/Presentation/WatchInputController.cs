@@ -34,6 +34,9 @@ public sealed class WatchInputController
         WatchKnowledgeSnapshot snapshot = WatchInspectionData.CreateSnapshot(world, focus);
         switch (keyInfo.Key)
         {
+            case ConsoleKey.D:
+                _state.ToggleDiagnostics();
+                return true;
             case ConsoleKey.Spacebar:
                 _state.TogglePaused();
                 return true;

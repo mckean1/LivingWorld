@@ -106,12 +106,12 @@ public sealed class PlayerEntryCandidateGenerator
 
         Region homeRegion = world.Regions[polity.RegionId];
         string discoverySummary = polity.Discoveries.Count == 0
-            ? "Early survival knowledge"
-            : string.Join(", ", polity.Discoveries.Take(2).Select(discovery => discovery.Summary));
+            ? "Shared survival lore"
+            : string.Join(", ", polity.Discoveries.Take(2).Select(discovery => SanitizePlayerFacingText(discovery.Summary, "Shared survival lore")));
         string learnedSummary = polity.Advancements.Count == 0
             ? "None"
             : string.Join(", ", polity.Advancements.OrderBy(advancement => advancement).Take(2).Select(advancement => AdvancementCatalog.Get(advancement).Name));
-        string historicalNote = profile.RecentHistoricalNote;
+        string historicalNote = ResolveHistoricalNote(world, polity, profile);
         summary = new PlayerEntryCandidateSummary(
             polity.Id,
             polity.Name,
@@ -129,7 +129,7 @@ public sealed class PlayerEntryCandidateGenerator
             discoverySummary,
             learnedSummary,
             historicalNote,
-            polity.CurrentPressureSummary ?? profile.PressureSummary,
+            ResolvePressureLine(polity.CurrentPressureSummary ?? profile.PressureSummary),
             viabilityScore,
             profile.StabilityBand,
             allowEmergencyFallback && viabilityScore < _settings.CandidateMinimumViabilityScore);
@@ -225,5 +225,65 @@ public sealed class PlayerEntryCandidateGenerator
         double knowledgeDepth = Math.Min(1.0, polity.Discoveries.Count / 6.0);
         double populationDepth = Math.Min(1.0, polity.Population / 260.0);
         return Math.Clamp((stabilityScore * 0.28) + (settlementDepth * 0.20) + (historyDepth * 0.18) + (knowledgeDepth * 0.16) + (populationDepth * 0.18) - pressurePenalty, 0.0, 1.5);
+    }
+
+    private static string ResolveHistoricalNote(World world, Polity polity, FocalCandidateProfile profile)
+    {
+        string note = world.CivilizationalHistory
+            .Where(evt => evt.PolityId == polity.Id)
+            .OrderByDescending(evt => evt.Year)
+            .ThenByDescending(evt => evt.Month)
+            .Select(evt => evt.Type switch
+            {
+                CivilizationalHistoryEventType.SettlementFounded => "recently founded a settlement",
+                CivilizationalHistoryEventType.MigrationWave => "recently shifted into new ground",
+                CivilizationalHistoryEventType.Fragmentation => "descended from an older split",
+                CivilizationalHistoryEventType.PolityFormation => "recently consolidated into a polity",
+                _ => SanitizePlayerFacingText(evt.Summary, "holds an older local history")
+            })
+            .FirstOrDefault()
+            ?? profile.RecentHistoricalNote;
+        return SanitizePlayerFacingText(note, "holds an older local history");
+    }
+
+    private static string ResolvePressureLine(string pressureSummary)
+    {
+        string normalized = pressureSummary.Trim();
+        if (normalized.Contains("bootstrap", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("fallback", StringComparison.OrdinalIgnoreCase))
+        {
+            return "holding together through recent strain";
+        }
+
+        return normalized switch
+        {
+            "anchoring on rich ground" => "holding fertile ground",
+            "frontier strain" => "pushing into lean frontier",
+            "shared survival" => "bound by shared survival",
+            "ecological hardship" => "weathering food and climate strain",
+            "group fragmentation" => "managing internal fracture",
+            "society fragmentation" => "holding together after an internal split",
+            "forming" => "gathering into a stronger center",
+            "activation" => "newly consolidated",
+            _ => SanitizePlayerFacingText(normalized, "managing local strain")
+        };
+    }
+
+    private static string SanitizePlayerFacingText(string text, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return fallback;
+        }
+
+        string sanitized = text
+            .Replace("bootstrap social safeguard", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("fallback polity", "younger polity", StringComparison.OrdinalIgnoreCase)
+            .Replace("bootstrap", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("fallback", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("safeguard", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Trim(' ', '.', ',', ';', ':', '-');
+
+        return string.IsNullOrWhiteSpace(sanitized) ? fallback : sanitized;
     }
 }

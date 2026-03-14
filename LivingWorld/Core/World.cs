@@ -41,6 +41,8 @@ public sealed class World
     public List<Polity> Polities { get; } = new();
     public List<LocalPopulationExtinctionRecord> LocalPopulationExtinctions { get; } = new();
     public Dictionary<int, string> CandidateRejectionReasons { get; } = new();
+    public List<string> StartupDiagnostics { get; } = new();
+    public int StartupGenerationAttempt { get; set; }
 
     public List<WorldEvent> Events { get; } = new();
 

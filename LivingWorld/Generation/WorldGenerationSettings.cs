@@ -121,4 +121,16 @@ public sealed class WorldGenerationSettings
     public double CandidateDiversityRegionBonus { get; init; } = 0.07;
 
     public double CandidateDiversitySubsistenceBonus { get; init; } = 0.05;
+
+    public int MaxStartupRegenerationAttempts { get; init; } = 4;
+
+    public double MinimumBiologicalReadinessFloor { get; init; } = 0.40;
+
+    public int MinimumHealthyCandidateCount { get; init; } = 1;
+
+    public double MinimumHealthyCandidateScore { get; init; } = 0.68;
+
+    public int MaximumEmergencyFallbackCandidatesToSurface { get; init; } = 1;
+
+    public bool AllowSingleFallbackCandidateSelection { get; init; } = false;
 }

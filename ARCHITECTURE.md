@@ -178,6 +178,7 @@ Important traits:
 - prehistory history before player binding remains structured-only and is exposed through candidate/origin summaries rather than the live chronicle
 - `World.LiveChronicleStartYear/Month` marks the boundary where visible chronicle eligibility begins
 - event origin now distinguishes bootstrap baseline/setup context from true live transitions, which gives the chronicle pipeline a final safety guard against bootstrap-derived leaks
+- render ownership is now stricter across startup states, so focal-selection cards, diagnostics, status summaries, and chronicle entries are redrawn as separate panes rather than reusing stale text
 - economy identity families now use a clearer two-layer model: internal specialization / trade-good state can respond quickly, while visible `known for` milestones require settlement maturity, sustained confirmation, and stricter promotion thresholds
 - related specialization and trade-good turns for the same settlement-material pair now also share one presentation family key, which gives the chronicle a final anti-stacking guard even if an upstream producer emits both
 - chronicle presentation now uses per-family visibility profiles with semantic scope keys, state signatures, and separate same-state versus changed-state cooldown gaps
@@ -207,6 +208,7 @@ Left/Right paging is view-agnostic now: list screens page selection, while chron
 `My Polity` is also a special focal-polity view rather than just a shortcut into generic polity detail. `Enter` intentionally leaves the player there so focal-only information cannot be downgraded by a foreign-polity-safe renderer path.
 Simulation now also performs an explicit bootstrap seeding pass before active play begins. The default bootstrap is now four layers deep: world generation runs primitive seeding and Phase A stabilization, initializes lineage history and runs an internal evolutionary pass until `PhaseBReadinessReport` is evaluated, runs a social-emergence pass until `PhaseCReadinessReport` is evaluated, then runs a dedicated player-entry evaluation pass that builds `WorldReadinessReport`, generates/ranks focal candidates, and stops in `FocalSelection`.
 Visible time no longer resets to year 0 after bootstrap. Instead, the chosen polity enters active play at the real simulated world age, while the live chronicle starts at an explicit boundary marker so prehistory stays in structured history and summaries rather than leaking into the active watch feed.
+Weak-world startup outcomes are now filtered more aggressively too: max-age worlds that only produce fallback-quality starts after serious readiness failures are regenerated instead of being surfaced as normal player starts.
 
 ## Focus And Continuity
 

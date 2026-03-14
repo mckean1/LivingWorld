@@ -161,6 +161,7 @@ Implemented:
 - Explicit lineage ancestry, divergence/contact state, mutation/speciation history, sentience-capability progression, and Phase B readiness now provide the Pass 2 handoff layer into later social emergence
 - Sentient groups, societies, social settlements, candidate polities, civilizational history, and Phase C readiness now provide the Pass 3 handoff layer into later player-entry logic
 - Startup world-age presets, `WorldReadinessReport`, focal-candidate generation/ranking, `FocalSelection`, player binding, and live-chronicle boundary markers now provide the Pass 4 handoff from prehistory into active play
+- Weak-world startup outcomes are now screened more aggressively so fallback-only, max-age, biologically weak worlds regenerate more often instead of being surfaced as ordinary starts
 
 ---
 
@@ -213,6 +214,7 @@ Implemented:
 - Direct screen switching and cycling behavior
 - Views for Chronicle, My Polity, Current Region, Known Regions, Known Species, Known Polities, and World Overview
 - Dedicated focal-selection state before active simulation starts
+- Diagnostics can be toggled separately from the default focal-selection summary so player-facing startup text stays narrative-first
 - Visibility-aware world data presentation
 - Shared knowledge visibility rules foundation
 

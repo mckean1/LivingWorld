@@ -27,6 +27,7 @@ The agreed 4-pass startup plan is:
 
 Pass 1 through Pass 4 are what currently boot by default. World generation seeds primitive ecology, runs internal Phase A stabilization, initializes lineage history, runs internal mutation/divergence/speciation/bootstrap sentience progression, then runs social emergence into groups, societies, settlements, and early polities, then runs player-entry evaluation into `WorldReadinessReport`, focal-candidate generation, and `FocalSelection`.
 Canonical events now retain explicit origin metadata as well, and `World` now stores an explicit live-chronicle boundary marker, so the visible chronicle can refuse prehistory/setup events even if they share a type with legitimate later transitions.
+The renderer now also sanitizes the chronicle buffer itself to full historical lines, so summary fragments and stale selection text cannot survive the startup handoff.
 
 ## Monthly Systems
 
@@ -114,6 +115,7 @@ In watch mode:
 - emit on state transitions, not every tick
 - do not narrate bootstrap-created baseline state as live history
 - do not narrate prehistory candidate-building or readiness-stop context as live chronicle history
+- do not allow status-panel or focal-selection summary fragments into the chronicle buffer; chronicle entries must remain complete historical lines
 - settlement starvation and failed-aid logging therefore key off starvation-stage transitions rather than repeating each monthly starving result
 - do not let responsive internal economy identity promote directly into chronicle reputation; visible `known for` and trade-good turns now require minimum settlement age, sustained monthly confirmation, and stronger thresholds than the hidden economy layer
 - dedupe identical follow-ups inside a propagation step

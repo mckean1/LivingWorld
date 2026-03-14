@@ -56,18 +56,14 @@ public sealed class PlayerEntryLayerTests
     [Fact]
     public void WorldGenerator_ForceStopsAtMaxAgeWhenReadinessNeverPasses()
     {
-        WorldGenerationSettings settings = new()
-        {
-            StartupWorldAgePreset = StartupWorldAgePreset.YoungWorld,
-            MinimumViablePlayerEntryCandidates = 99
-        };
+        WorldGenerationSettings settings = new();
+        World world = CreateWeakFallbackWorld();
 
-        World world = new WorldGenerator(seed: 41, settings).Generate();
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, out List<string> rejectionReasons);
 
-        Assert.True(world.Time.Year >= world.StartupAgeConfiguration.MaxPrehistoryYears);
-        Assert.True(
-            world.PrehistoryStopReason is PrehistoryStopReason.MaxAgeReached or PrehistoryStopReason.ForcedFallback,
-            $"Unexpected stop reason: {world.PrehistoryStopReason}");
+        Assert.False(accepted);
+        Assert.Contains("max_age_stop_only_produced_fallback_pool", rejectionReasons);
+        Assert.Contains("single_fallback_candidate_rejected", rejectionReasons);
     }
 
     [Fact]
@@ -82,6 +78,40 @@ public sealed class PlayerEntryLayerTests
         Assert.Equal(1, candidates[0].PolityId);
         Assert.Contains(2, rejectionReasons.Keys);
         Assert.Contains(3, rejectionReasons.Keys);
+    }
+
+    [Fact]
+    public void StrictWeakWorldHandling_RejectsFallbackOnlyWorlds()
+    {
+        WorldGenerationSettings settings = new()
+        {
+            MinimumBiologicalReadinessFloor = 0.99,
+            MinimumHealthyCandidateCount = 3,
+            MinimumViablePlayerEntryCandidates = 3,
+            MaximumEmergencyFallbackCandidatesToSurface = 0,
+            MaxStartupRegenerationAttempts = 1
+        };
+        World world = CreateWeakFallbackWorld();
+
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, out List<string> rejectionReasons);
+
+        Assert.False(accepted);
+        Assert.NotEmpty(rejectionReasons);
+    }
+
+    [Fact]
+    public void FocalSelection_DefaultPresentation_HidesInternalFallbackWording()
+    {
+        World world = CreateSelectionWorld();
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.FocalSelection);
+
+        IReadOnlyList<string> lines = WatchScreenBuilder.BuildBodyLines(world, new ChronicleFocus(), uiState);
+        string joined = string.Join('\n', lines);
+
+        Assert.DoesNotContain("fallback", joined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("bootstrap", joined, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Start Summary:", joined);
     }
 
     [Fact]
@@ -110,6 +140,40 @@ public sealed class PlayerEntryLayerTests
             SimulationPhase = WorldSimulationPhase.Bootstrap,
             Narrative = "Prehistory event"
         }));
+    }
+
+    [Fact]
+    public void ChronicleRenderer_SanitizesDetachedSummaryFragments()
+    {
+        World world = CreateSelectionWorld();
+        ChronicleWatchRenderer renderer = new(
+            new SimulationOptions { OutputMode = OutputMode.Watch, WriteStructuredHistory = false },
+            new ChronicleColorWriter(),
+            new ChronicleEventFormatter());
+        ChronicleFocus focus = new();
+        focus.SetFocus(1, 10);
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.Chronicle);
+
+        renderer.Record(world, focus, uiState, new WorldEvent
+        {
+            Year = 812,
+            Month = 1,
+            SimulationPhase = WorldSimulationPhase.Active,
+            Narrative = "A settlement was founded",
+            Type = WorldEventType.SettlementFounded,
+            Severity = WorldEventSeverity.Major,
+            PolityId = 1
+        });
+
+        List<string> entries = (List<string>)typeof(ChronicleWatchRenderer)
+            .GetField("_chronicleEntries", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(renderer)!;
+        entries.Add("learned Seasonal Planning, Storage");
+
+        renderer.Render(world, focus, uiState);
+
+        Assert.All(renderer.SnapshotChronicleEntries(), entry => Assert.StartsWith("Year ", entry, StringComparison.Ordinal));
     }
 
     private static World CreateCandidateWorld()
@@ -158,6 +222,93 @@ public sealed class PlayerEntryLayerTests
         world.FocalCandidateProfiles.Add(new FocalCandidateProfile(2, 20, 2, 4, 1, "small", 1, "migration pressure", "early knowledge", "recovered after migration", StabilityBand.Strained, false));
         world.FocalCandidateProfiles.Add(new FocalCandidateProfile(3, 30, 3, 5, 0, "growing", 2, "frontier strain", "early knowledge", "pressure on the hills", StabilityBand.Stable, false));
 
+        return world;
+    }
+
+    private static World CreateSelectionWorld()
+    {
+        World world = CreateCandidateWorld();
+        world.StartupStage = WorldStartupStage.FocalSelection;
+        world.PrehistoryStopReason = PrehistoryStopReason.ReadinessSatisfied;
+        world.PlayerEntryCandidates.Clear();
+        world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(
+            1,
+            "Green Basin Confederacy",
+            1,
+            "River Folk",
+            10,
+            0,
+            "Green Basin",
+            12,
+            812,
+            2,
+            "large",
+            "Proto-farming",
+            "Stable",
+            "Reliable basin water, Edible marsh grain",
+            "Fire, Seasonal Planning",
+            "recently founded a settlement",
+            "holding fertile ground",
+            0.92,
+            StabilityBand.Stable,
+            false));
+        world.WorldReadinessReport = new WorldReadinessReport(
+            true,
+            812,
+            0.86,
+            0.74,
+            0.72,
+            0.84,
+            0.78,
+            1,
+            Array.Empty<string>(),
+            new Dictionary<string, bool>
+            {
+                ["biology"] = true,
+                ["social"] = true,
+                ["civilization"] = true,
+                ["candidates"] = true,
+                ["stability"] = true
+            });
+        world.Time.Reset(812, 1);
+        return world;
+    }
+
+    private static World CreateWeakFallbackWorld()
+    {
+        World world = CreateSelectionWorld();
+        world.PrehistoryStopReason = PrehistoryStopReason.MaxAgeReached;
+        world.PlayerEntryCandidates.Clear();
+        world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(
+            1,
+            "Green Basin Confederacy",
+            1,
+            "River Folk",
+            10,
+            0,
+            "Green Basin",
+            4,
+            950,
+            1,
+            "small",
+            "Mixed subsistence",
+            "Vulnerable",
+            "Shared survival lore",
+            "None",
+            "holds an older local history",
+            "holding together through recent strain",
+            0.46,
+            StabilityBand.Fragile,
+            true));
+        world.WorldReadinessReport = world.WorldReadinessReport with
+        {
+            IsReady = false,
+            WorldAgeYears = 950,
+            BiologicalScore = 0.34,
+            CandidateScore = 0.28,
+            ViableCandidateCount = 1,
+            FailureReasons = new[] { "biology_floor_below_minimum", "candidates_not_ready" }
+        };
         return world;
     }
 }

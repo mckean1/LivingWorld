@@ -102,8 +102,8 @@ public sealed class ChronicleWatchRendererTests
 
         List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(world, polity, 80, stage => stage.ToString());
 
-        Assert.Contains(statusLines, line => line.StartsWith(" Discoveries: ", StringComparison.Ordinal) && line.Contains("+1 more", StringComparison.Ordinal));
-        Assert.Contains(statusLines, line => line.StartsWith(" Learned: ", StringComparison.Ordinal) && line.Contains("+1 more", StringComparison.Ordinal));
+        Assert.Contains(statusLines, line => line.StartsWith(" Discoveries: ", StringComparison.Ordinal) && line.Contains("+2 more", StringComparison.Ordinal));
+        Assert.Contains(statusLines, line => line.StartsWith(" Learned: ", StringComparison.Ordinal) && line.Contains("+2 more", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class ChronicleWatchRendererTests
             stageNameFormatter: stage => stage.ToString());
 
         Assert.Contains(" Status: SELECTING | View: Focal Selection", statusLines);
-        Assert.Contains(" Candidates: 1", statusLines);
+        Assert.Contains(" Candidate Starts: 1", statusLines);
     }
 
     [Fact]

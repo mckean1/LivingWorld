@@ -16,6 +16,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
     private IReadOnlyList<string> _lastFooterLines = [];
     private int _lastWidth = -1;
     private int _lastHeight = -1;
+    private string _lastRenderOwner = string.Empty;
     private bool _cursorWasVisible = true;
     private bool _cursorHidden;
 
@@ -48,6 +49,11 @@ public sealed class ChronicleWatchRenderer : IDisposable
         }
 
         if (!_formatter.TryFormat(worldEvent, focus, out string chronicleLine))
+        {
+            return false;
+        }
+
+        if (!chronicleLine.StartsWith("Year ", StringComparison.Ordinal))
         {
             return false;
         }
@@ -125,9 +131,12 @@ public sealed class ChronicleWatchRenderer : IDisposable
         {
             lines.Add(" Chronicle Watch");
             lines.Add($" Status: SELECTING | View: {view}");
-            lines.Add($" World Age: {world.Time.Year}");
-            lines.Add($" Stop: {world.PrehistoryStopReason?.ToString() ?? "Pending"}");
-            lines.Add($" Candidates: {world.PlayerEntryCandidates.Count}");
+            lines.Add($" World Age: {world.Time.Year} | Preset: {world.StartupAgeConfiguration.Preset}");
+            lines.Add($" Candidate Starts: {world.PlayerEntryCandidates.Count}");
+            if (uiState.ShowDiagnostics)
+            {
+                lines.Add($" Stop: {world.PrehistoryStopReason?.ToString() ?? "Pending"}");
+            }
             lines.Add(border);
             return lines;
         }
@@ -165,6 +174,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
 
     private List<string> BuildChronicleViewportEntries(WatchUiState uiState)
     {
+        SanitizeChronicleEntries();
         if (_chronicleEntries.Count == 0)
         {
             return ["The chronicle is quiet."];
@@ -223,23 +233,26 @@ public sealed class ChronicleWatchRenderer : IDisposable
         HideCursor();
 
         bool dimensionsChanged = layout.Width != _lastWidth || layout.Height != _lastHeight;
-        if (dimensionsChanged)
+        string renderOwner = $"{world.StartupStage}|{world.SelectedFocalPolityId}|{layout.SeparatorTop}|{layout.FooterTop}";
+        bool ownerChanged = !string.Equals(renderOwner, _lastRenderOwner, StringComparison.Ordinal);
+        if (dimensionsChanged || ownerChanged)
         {
             ClearWindow(layout.Width, layout.Height);
         }
 
-        WriteRegion(0, layout.StatusLines, _lastStatusLines, layout.Width, context, forceAll: dimensionsChanged);
+        WriteRegion(0, layout.StatusLines, _lastStatusLines, layout.Width, context, forceAll: dimensionsChanged || ownerChanged);
         WriteRegion(layout.SeparatorTop, [string.Empty], [], layout.Width, context, forceAll: true);
         int bodyTop = layout.SeparatorTop + 1;
-        WriteRegion(bodyTop, layout.BodyLines, _lastBodyLines, layout.Width, context, forceAll: dimensionsChanged);
+        WriteRegion(bodyTop, layout.BodyLines, _lastBodyLines, layout.Width, context, forceAll: dimensionsChanged || ownerChanged);
         WriteRegion(layout.FooterTop - 1, [string.Empty], [], layout.Width, context, forceAll: true);
-        WriteRegion(layout.FooterTop, layout.FooterLines, _lastFooterLines, layout.Width, context, forceAll: dimensionsChanged);
+        WriteRegion(layout.FooterTop, layout.FooterLines, _lastFooterLines, layout.Width, context, forceAll: dimensionsChanged || ownerChanged);
 
         _lastStatusLines = layout.StatusLines.ToList();
         _lastBodyLines = layout.BodyLines.ToList();
         _lastFooterLines = layout.FooterLines.ToList();
         _lastWidth = layout.Width;
         _lastHeight = layout.Height;
+        _lastRenderOwner = renderOwner;
 
         int safeCursorTop = Math.Min(layout.Height - 1, layout.FooterTop + layout.FooterLines.Count);
         Console.SetCursorPosition(0, Math.Max(0, safeCursorTop));
@@ -310,6 +323,11 @@ public sealed class ChronicleWatchRenderer : IDisposable
         {
             _chronicleEntries.RemoveAt(_chronicleEntries.Count - 1);
         }
+    }
+
+    private void SanitizeChronicleEntries()
+    {
+        _chronicleEntries.RemoveAll(entry => !entry.StartsWith("Year ", StringComparison.Ordinal));
     }
 
     private static int ResolveWindowWidth()
