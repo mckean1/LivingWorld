@@ -1,7 +1,11 @@
+using LivingWorld.Core;
+
 namespace LivingWorld.Generation;
 
 public sealed class WorldGenerationSettings
 {
+    public StartupWorldAgePreset StartupWorldAgePreset { get; init; } = StartupWorldAgePreset.StandardWorld;
+
     public int RegionCount { get; init; } = 36;
 
     public int InitialSpeciesCount { get; init; } = 7;
@@ -95,4 +99,26 @@ public sealed class WorldGenerationSettings
     public double MinimumPhaseCAveragePolityAge { get; init; } = 4.0;
 
     public double MinimumPhaseCHistoricalEventDensity { get; init; } = 0.18;
+
+    public int ReadinessEvaluationIntervalYears { get; init; } = 20;
+
+    public int MinimumViablePlayerEntryCandidates { get; init; } = 2;
+
+    public int CandidateMinimumPopulation { get; init; } = 90;
+
+    public int CandidateMinimumPolityAgeYears { get; init; } = 3;
+
+    public double CandidateMinimumViabilityScore { get; init; } = 0.60;
+
+    public double EmergencyCandidateMinimumViabilityScore { get; init; } = 0.42;
+
+    public double CandidateMinimumSettlementViability { get; init; } = 0.42;
+
+    public double CandidateMaximumCollapseSeverity { get; init; } = 0.88;
+
+    public double CandidateDiversitySpeciesBonus { get; init; } = 0.08;
+
+    public double CandidateDiversityRegionBonus { get; init; } = 0.07;
+
+    public double CandidateDiversitySubsistenceBonus { get; init; } = 0.05;
 }

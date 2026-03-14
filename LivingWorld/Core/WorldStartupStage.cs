@@ -5,5 +5,8 @@ public enum WorldStartupStage
     PrimitiveEcologyFoundation,
     EvolutionaryExpansion,
     SentienceActivation,
-    SocietalSimulation
+    SocietalSimulation,
+    PlayerEntryEvaluation,
+    FocalSelection,
+    ActivePlay
 }

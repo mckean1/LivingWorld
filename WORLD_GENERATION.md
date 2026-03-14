@@ -10,7 +10,7 @@ The agreed startup path is:
 3. sentience and social formation
 4. polity start and player entry
 
-This document describes the current default startup output, which now includes Pass 1 ecological foundation, Pass 2 evolutionary history bootstrap, and Pass 3 civilizational emergence bootstrap before player entry begins.
+This document describes the current default startup output, which now includes Pass 1 ecological foundation, Pass 2 evolutionary history bootstrap, Pass 3 civilizational emergence bootstrap, and Pass 4 player-entry evaluation before active play begins.
 
 ## Default Scale
 
@@ -29,7 +29,7 @@ The current startup targets live in `LivingWorld/Generation/WorldGenerationSetti
 - `PhaseCMaximumBootstrapYears = 480`
 - readiness thresholds for occupied regions, producer coverage, consumer coverage, and predator coverage
 - readiness thresholds for mature lineage count, speciation count, ancestry depth, divergence maturity, sentience-capable count, and stable regions
-- readiness thresholds for sentient groups, societies, settlements, polities, viable focal candidates, and historical density
+- readiness thresholds for sentient groups, societies, settlements, polities, viable focal candidates, historical density, and final player-entry candidate filtering/diversity
 
 These values are intentionally centralized so density tuning can happen without rewriting generation logic.
 
@@ -45,9 +45,11 @@ These values are intentionally centralized so density tuning can happen without 
 8. initialize explicit evolutionary lineage records from the surviving primitive carriers
 9. run an internal Phase B evolutionary bootstrap loop with mutation, divergence, speciation, extinction, and sentience-capability progression until readiness is achieved or the bootstrap year cap is reached
 10. run an internal Phase C social bootstrap loop with sentient activation, society formation, settlement pressure, polity formation, and candidate tracking until readiness is achieved or the bootstrap year cap is reached
-11. store `PhaseAReadinessReport`, `PhaseBReadinessReport`, and `PhaseCReadinessReport` for inspection and later startup passes
+11. run an internal Phase D player-entry evaluation loop using startup age presets, periodic readiness checks, and focal-candidate generation until readiness passes or max age forces a stop
+12. store `PhaseAReadinessReport`, `PhaseBReadinessReport`, `PhaseCReadinessReport`, and `WorldReadinessReport` for inspection
+13. freeze the world in `FocalSelection` with compact candidate summaries ready for player choice
 
-The default startup now intentionally stops before player-entry logic exists, but it no longer stops before societies or polities.
+The default startup now intentionally reaches a playable prehistory handoff rather than stopping before player-entry logic exists.
 
 ## Region Model
 
@@ -170,23 +172,31 @@ That layer adds:
 
 The startup path still does not yet implement:
 
-- focal-polity selection
-- player-entry runtime assumptions
-- active-play chronicle handoff changes for bootstrap history
+## Pass 4 Player Entry Layer
+
+Pass 4 adds:
+
+- `StartupWorldAgeConfiguration` presets (`YoungWorld`, `StandardWorld`, `AncientWorld`) with min/target/max prehistory years, readiness strictness, and candidate-count targets
+- `PrehistoryRuntimeStatus` / `PrehistoryRuntimeState` so startup state is explicit instead of inferred from active play assumptions
+- `WorldReadinessReport` that combines biological continuity, social maturity, civilizational maturity, candidate quality, and stability sanity
+- `PlayerEntryCandidateGenerator` that filters, ranks, and diversity-trims real simulated polities into a compact player-facing pool
+- strict fallback order: normal readiness stop, final candidate search at max age, weaker but still simulated emergency candidates, and generation failure if the world still produces nobody worth starting as
+- preservation of prehistory as structured history only; the live chronicle begins after focal selection and player binding
 
 ## Output Model After Generation
 
 After generation:
 
-- the whole world simulates normally
-- default player-facing output is the live chronicle watch view
-- structured history records events for the broader world underneath
+- the world is frozen in `FocalSelection`, not already running active time
+- default player-facing output is a candidate-selection watch screen first, then the live chronicle watch view after a polity is chosen
+- structured history records prehistory underneath, but the live chronicle begins only after the explicit handoff marker
 
 World generation does not produce a separate player-facing yearly report path.
 
 Regional primitive populations now exist before any later-stage society logic could run.
 Those populations now also carry founder/contact/divergence state, so mutation/speciation and sentience-capability progression grow from real ecological history rather than replacing the startup model.
 Pass 3 then turns only viable sentience-capable branches into social actors, accumulates early cultural discoveries, forms durable societies, founds early settlements, and promotes only the strongest societies into pre-player polities.
+Pass 4 then evaluates whether that world is mature enough for player entry, ranks distinct simulated starts, and preserves prehistory as summary/history context rather than as live chronicle noise.
 
 ## Phase 13/14 Generation Support
 

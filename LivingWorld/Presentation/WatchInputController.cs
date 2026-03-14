@@ -15,6 +15,16 @@ public sealed class WatchInputController
 
     public bool HandleKey(ConsoleKeyInfo keyInfo, World world, ChronicleFocus focus)
     {
+        if (world.StartupStage == WorldStartupStage.FocalSelection)
+        {
+            return keyInfo.Key switch
+            {
+                ConsoleKey.UpArrow => MoveSelection(WatchViewType.FocalSelection, world.PlayerEntryCandidates.Count, -1),
+                ConsoleKey.DownArrow => MoveSelection(WatchViewType.FocalSelection, world.PlayerEntryCandidates.Count, 1),
+                _ => false
+            };
+        }
+
         if (WatchViewCatalog.TryGetMainView(keyInfo.Key, out WatchViewType directView))
         {
             _state.SetActiveMainView(directView);

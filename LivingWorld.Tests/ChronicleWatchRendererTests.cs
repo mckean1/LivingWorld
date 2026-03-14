@@ -129,6 +129,29 @@ public sealed class ChronicleWatchRendererTests
     }
 
     [Fact]
+    public void StatusPanel_ShowsFocalSelectionState()
+    {
+        World world = new(new WorldTime(812, 1))
+        {
+            StartupStage = WorldStartupStage.FocalSelection,
+            PrehistoryStopReason = PrehistoryStopReason.ReadinessSatisfied
+        };
+        world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(1, "Green Basin Confederacy", 1, "Humans", 1, 0, "Green Basin", 12, 812, 2, "large", "Proto-farming", "Stable", "water, grain", "Fire", "founded a second settlement", "anchoring on rich ground", 0.92, StabilityBand.Stable, false));
+        WatchUiState uiState = new();
+        uiState.SetActiveMainView(WatchViewType.FocalSelection);
+
+        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(
+            world,
+            polity: null,
+            uiState,
+            width: 80,
+            stageNameFormatter: stage => stage.ToString());
+
+        Assert.Contains(" Status: SELECTING | View: Focal Selection", statusLines);
+        Assert.Contains(" Candidates: 1", statusLines);
+    }
+
+    [Fact]
     public void Record_KeepsNewestChronicleEntryFirst()
     {
         World world = new(new WorldTime(12, 1));

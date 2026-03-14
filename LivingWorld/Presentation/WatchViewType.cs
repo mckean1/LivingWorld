@@ -2,6 +2,7 @@ namespace LivingWorld.Presentation;
 
 public enum WatchViewType
 {
+    FocalSelection = -1,
     Chronicle = 0,
     MyPolity = 1,
     CurrentRegion = 2,

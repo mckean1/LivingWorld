@@ -121,6 +121,16 @@ public sealed class ChronicleWatchRenderer : IDisposable
         List<string> lines = [border];
         string status = uiState.IsPaused ? "PAUSED" : "RUNNING";
         string view = WatchViewCatalog.DescribeView(uiState.ActiveView);
+        if (world.StartupStage == WorldStartupStage.FocalSelection)
+        {
+            lines.Add(" Chronicle Watch");
+            lines.Add($" Status: SELECTING | View: {view}");
+            lines.Add($" World Age: {world.Time.Year}");
+            lines.Add($" Stop: {world.PrehistoryStopReason?.ToString() ?? "Pending"}");
+            lines.Add($" Candidates: {world.PlayerEntryCandidates.Count}");
+            lines.Add(border);
+            return lines;
+        }
 
         if (polity is null)
         {

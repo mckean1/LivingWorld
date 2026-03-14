@@ -13,6 +13,7 @@ public sealed class WorldGenerator
     private readonly Queue<string> _regionNames;
     private readonly List<PrimitiveLineageTemplate> _primitiveTemplates;
     private readonly WorldGenerationSettings _settings;
+    private readonly PrehistoryRuntimeController _prehistoryRuntimeController = new();
 
     public WorldGenerator(int seed, WorldGenerationSettings? settings = null)
     {
@@ -31,6 +32,7 @@ public sealed class WorldGenerator
         {
             StartupStage = WorldStartupStage.PrimitiveEcologyFoundation
         };
+        _prehistoryRuntimeController.Initialize(world, StartupWorldAgeConfiguration.ForPreset(_settings.StartupWorldAgePreset));
 
         GenerateRegions(world);
         ConnectRegions(world);
@@ -40,8 +42,7 @@ public sealed class WorldGenerator
         InitializeEvolutionaryLineages(world);
         AdvanceEvolutionaryHistory(world);
         AdvanceCivilizationalEmergence(world);
-        world.Time.Reset();
-        world.StartupStage = WorldStartupStage.SocietalSimulation;
+        AdvancePlayerEntryEvaluation(world);
 
         return world;
     }
@@ -200,6 +201,7 @@ public sealed class WorldGenerator
 
     private void StabilizePrimitiveEcology(World world)
     {
+        _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseA_BiologicalFoundation);
         FoodSystem foodSystem = new();
         EcosystemSystem ecosystemSystem = new();
         ecosystemSystem.InitializeRegionalPopulations(world);
@@ -220,6 +222,8 @@ public sealed class WorldGenerator
 
             world.Time.AdvanceOneMonth();
         }
+
+        _prehistoryRuntimeController.RefreshAge(world);
     }
 
     private static void InitializeEvolutionaryLineages(World world)
@@ -261,6 +265,7 @@ public sealed class WorldGenerator
 
     private void AdvanceEvolutionaryHistory(World world)
     {
+        _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseB_EvolutionaryHistory);
         MutationSystem mutationSystem = new(seed: _seed + 177);
         FoodSystem foodSystem = new();
         EcosystemSystem ecosystemSystem = new();
@@ -290,11 +295,13 @@ public sealed class WorldGenerator
 
         RefreshEvolutionaryLineageSnapshots(world);
         world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
+        _prehistoryRuntimeController.RefreshAge(world);
     }
 
     private void AdvanceCivilizationalEmergence(World world)
     {
         SocialEmergenceSystem socialEmergenceSystem = new(_seed + 313, _settings);
+        _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseC_CivilizationalEmergence);
         world.StartupStage = WorldStartupStage.SentienceActivation;
         EnsureSentienceCapableSeedBranches(world);
 
@@ -322,6 +329,97 @@ public sealed class WorldGenerator
 
         socialEmergenceSystem.UpdateYear(world);
         world.PhaseCReadinessReport = PhaseCReadinessEvaluator.Evaluate(world, _settings);
+        _prehistoryRuntimeController.RefreshAge(world);
+    }
+
+    private void AdvancePlayerEntryEvaluation(World world)
+    {
+        _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseD_PlayerEntryEvaluation);
+        world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
+
+        SocialEmergenceSystem socialEmergenceSystem = new(_seed + 727, _settings);
+        PlayerEntryCandidateGenerator candidateGenerator = new(_settings);
+
+        BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
+        world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+
+        while (world.Time.Year < world.StartupAgeConfiguration.MaxPrehistoryYears)
+        {
+            _prehistoryRuntimeController.RefreshAge(world);
+            bool readinessWindowOpen = world.PrehistoryRuntime.AreReadinessChecksActive;
+            bool shouldEvaluate = readinessWindowOpen
+                && ((world.Time.Year - world.StartupAgeConfiguration.MinPrehistoryYears) % Math.Max(1, _settings.ReadinessEvaluationIntervalYears) == 0);
+            if (shouldEvaluate)
+            {
+                BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
+                world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+                if (world.WorldReadinessReport.IsReady)
+                {
+                    _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.ReadinessSatisfied, "world_readiness_passed");
+                    break;
+                }
+            }
+
+            if (world.Time.Year >= world.StartupAgeConfiguration.TargetPrehistoryYears
+                && world.PlayerEntryCandidates.Count >= world.StartupAgeConfiguration.CandidateCountTarget
+                && world.PhaseCReadinessReport.IsReady)
+            {
+                BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
+                world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+                if (world.WorldReadinessReport.IsReady)
+                {
+                    _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.ReadinessSatisfied, "target_age_readiness_passed");
+                    break;
+                }
+            }
+
+            socialEmergenceSystem.UpdateYear(world);
+            foreach (Polity polity in world.Polities.Where(candidate => candidate.Population > 0))
+            {
+                polity.YearsSinceFounded++;
+                polity.YearsInCurrentRegion++;
+            }
+
+            world.Time.Reset(world.Time.Year + 1, world.Time.Month);
+        }
+
+        if (world.PrehistoryStopReason is null)
+        {
+            _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.MaxAgeReached, "max_prehistory_age_reached");
+        }
+
+        bool allowEmergencyFallback = world.PrehistoryStopReason == PrehistoryStopReason.MaxAgeReached;
+        BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback);
+        world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+
+        if (world.PlayerEntryCandidates.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"Player entry failed: no viable focal candidates after prehistory stop ({world.PrehistoryStopSummary}).");
+        }
+
+        if (world.PrehistoryStopReason == PrehistoryStopReason.MaxAgeReached && world.PlayerEntryCandidates.Any(candidate => candidate.IsFallbackCandidate))
+        {
+            world.PrehistoryStopReason = PrehistoryStopReason.ForcedFallback;
+            world.PrehistoryStopSummary = "candidate_fallback_after_max_age";
+            world.PrehistoryRuntime.StopReason = PrehistoryStopReason.ForcedFallback;
+            world.PrehistoryRuntime.StopSummary = world.PrehistoryStopSummary;
+        }
+
+        _prehistoryRuntimeController.EnterFocalSelection(world);
+        world.StartupStage = WorldStartupStage.FocalSelection;
+    }
+
+    private void BuildPlayerEntryCandidates(World world, PlayerEntryCandidateGenerator generator, bool allowEmergencyFallback)
+    {
+        IReadOnlyList<PlayerEntryCandidateSummary> candidates = generator.Generate(world, allowEmergencyFallback, out Dictionary<int, string> rejectionReasons);
+        world.PlayerEntryCandidates.Clear();
+        world.PlayerEntryCandidates.AddRange(candidates);
+        world.CandidateRejectionReasons.Clear();
+        foreach ((int polityId, string reason) in rejectionReasons)
+        {
+            world.CandidateRejectionReasons[polityId] = reason;
+        }
     }
 
     private static void EnsureSentienceCapableSeedBranches(World world)

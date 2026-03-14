@@ -11,7 +11,7 @@ The agreed startup plan is now:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1, Pass 2, and Pass 3 are implemented now, so the default loop begins from an already-seeded ecological foundation, bootstrap evolutionary history, and bootstrap social/political emergence while still deferring later player-entry logic.
+Pass 1 through Pass 4 are implemented now, so the default loop begins from an already-seeded ecological foundation, bootstrap evolutionary history, bootstrap social/political emergence, and a completed player-entry evaluation layer.
 
 ## Monthly Flow
 
@@ -37,7 +37,7 @@ Pass 1, Pass 2, and Pass 3 are implemented now, so the default loop begins from 
 
 In Pass 1, the active monthly path effectively ends after the ecological layers above.
 In Pass 2, the active monthly path adds mutation/divergence/speciation and extinction-history upkeep but still defers hunting and all polity-driven loops.
-By the time the generated world reaches active simulation, Pass 3 has already used that biological foundation to create sentient groups, societies, early settlements, and some early polities, so the live monthly path can begin from real social continuity rather than an invented polity snapshot.
+By the time the generated world reaches active simulation, Pass 3 has already used that biological foundation to create sentient groups, societies, early settlements, and some early polities, and Pass 4 has already chosen a readiness-based stop point plus a focal polity candidate pool. The live monthly path therefore begins only after selection from real social continuity rather than an invented polity snapshot.
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
@@ -82,8 +82,7 @@ The chronicle formatter now distinguishes between repeated same-state reminders 
 That formatter also has a fallback narrative-based state key for visible families without a custom semantic signature, so exact repeated lines are still treated as the same visible state.
 Year-end focus resolution now also consumes the current year's rolling event cache instead of filtering the full historical event list every year.
 
-Pass 3 startup now usually leaves at least one viable polity candidate in the world.
-The watch path therefore begins from a real social actor more often, but final focal selection and player-entry handoff still remain deferred to Pass 4.
+Pass 4 now takes those viable polity candidates, ranks/diversifies them, freezes the world in `FocalSelection`, and starts the live watch only after the player binds to one of them.
 
 ## Default Watch Output
 
@@ -94,7 +93,8 @@ Default player mode shows:
 - focal polity species in that panel
 - the currently active watch view in that panel
 - separate `Discoveries` and `Learned` rows in that panel
-- a chronicle viewport beneath it sized from the available console height
+- a focal-selection screen before time starts
+- a chronicle viewport beneath the status panel after selection, sized from the available console height
 - newest messages first
 - concise `Major` and `Legendary` history only
 - key-driven inspection screens for polity, region, species, polity lists, and world overview
@@ -102,6 +102,7 @@ Default player mode shows:
 - `My Polity` remains the focal polity's expanded screen; pressing `Enter` there does not route into the generic foreign-polity detail path
 
 Chronicle lines themselves remain short and do not append species after every polity name.
+Prehistory events do not appear there at all; they stay in structured history and compact candidate/origin summaries until future history views expose them directly.
 The intended fuller-world opening is now more active in years `0-20`: home-anchor hunting, early food relief or hardship, migration under real pressure, and faster first consolidations for viable lineages.
 Chronicle scrollback now retains a deeper in-memory buffer, and Left/Right paging is available for both chronicle history and list-heavy inspection screens.
 

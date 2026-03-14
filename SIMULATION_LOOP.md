@@ -25,9 +25,8 @@ The agreed 4-pass startup plan is:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1, Pass 2, and Pass 3 are what currently boot by default. World generation seeds primitive ecology, runs internal Phase A stabilization, initializes lineage history, runs internal mutation/divergence/speciation/bootstrap sentience progression, then runs social emergence into groups, societies, settlements, and early polities, records `PhaseAReadinessReport`, `PhaseBReadinessReport`, and `PhaseCReadinessReport`, and only then hands the world to the active loop.
-Later player-entry and chronicle-boundary layers still remain deferred to Pass 4.
-Canonical events now retain explicit origin metadata as well, so the visible chronicle can refuse non-live setup events even if they share a type with legitimate later transitions.
+Pass 1 through Pass 4 are what currently boot by default. World generation seeds primitive ecology, runs internal Phase A stabilization, initializes lineage history, runs internal mutation/divergence/speciation/bootstrap sentience progression, then runs social emergence into groups, societies, settlements, and early polities, then runs player-entry evaluation into `WorldReadinessReport`, focal-candidate generation, and `FocalSelection`.
+Canonical events now retain explicit origin metadata as well, and `World` now stores an explicit live-chronicle boundary marker, so the visible chronicle can refuse prehistory/setup events even if they share a type with legitimate later transitions.
 
 ## Monthly Systems
 
@@ -69,8 +68,8 @@ Ecosystem migration pacing itself is centralized in `EcosystemSettings`, includi
 
 If the world is still in `WorldStartupStage.PrimitiveEcologyFoundation`, the loop intentionally stops after ecology work.
 If the world has advanced to `WorldStartupStage.EvolutionaryExpansion`, the loop runs ecology plus mutation/divergence/speciation/sentience-capability work, then still stops before polity-facing systems.
-Once bootstrap reaches `WorldStartupStage.SocietalSimulation`, the existing polity-facing loop takes over from a world that already has social continuity.
-That keeps Pass 1, Pass 2, and Pass 3 honest while still deferring final player-entry assumptions.
+Once bootstrap reaches `WorldStartupStage.FocalSelection`, time is intentionally frozen while the player reviews real simulated candidates.
+Only after selection does `WorldStartupStage.ActivePlay` begin and the existing polity-facing loop take over from a world that already has social continuity plus a chosen focal line.
 
 ## Year-End Systems
 
@@ -103,6 +102,7 @@ In watch mode:
 - monthly simulation advancement occurs only when the next scheduled step time arrives
 - changing views does not affect world logic
 - `Space` pauses monthly advancement but leaves the watch UI responsive
+- `FocalSelection` is a dedicated frozen state with its own candidate-list navigation
 - while paused, the renderer can still redraw list/detail screens and scroll chronicle history
 - `Left` / `Right` now page chronicle or detail scroll state and jump faster through list selection
 - `Enter` on `My Polity` is intentionally non-drilling so the focal polity never loses visibility by entering a more filtered detail screen
@@ -113,6 +113,7 @@ In watch mode:
 
 - emit on state transitions, not every tick
 - do not narrate bootstrap-created baseline state as live history
+- do not narrate prehistory candidate-building or readiness-stop context as live chronicle history
 - settlement starvation and failed-aid logging therefore key off starvation-stage transitions rather than repeating each monthly starving result
 - do not let responsive internal economy identity promote directly into chronicle reputation; visible `known for` and trade-good turns now require minimum settlement age, sustained monthly confirmation, and stronger thresholds than the hidden economy layer
 - dedupe identical follow-ups inside a propagation step

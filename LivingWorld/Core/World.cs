@@ -12,6 +12,18 @@ public sealed class World
     public WorldTime Time { get; }
     public WorldSimulationPhase SimulationPhase { get; private set; }
     public WorldStartupStage StartupStage { get; set; } = WorldStartupStage.SocietalSimulation;
+    public StartupWorldAgeConfiguration StartupAgeConfiguration { get; set; } = StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld);
+    public PrehistoryRuntimeStatus PrehistoryRuntime { get; } = new();
+    public WorldReadinessReport WorldReadinessReport { get; set; } = WorldReadinessReport.Empty;
+    public PrehistoryStopReason? PrehistoryStopReason { get; set; }
+    public string? PrehistoryStopSummary { get; set; }
+    public int? SelectedFocalPolityId { get; set; }
+    public int? PlayerEntryWorldYear { get; set; }
+    public int? PlayerEntryPolityAge { get; set; }
+    public string? InitialCandidateSummarySnapshot { get; set; }
+    public int? LiveChronicleStartTick { get; private set; }
+    public int? LiveChronicleStartYear { get; private set; }
+    public int? LiveChronicleStartMonth { get; private set; }
     public PhaseAReadinessReport PhaseAReadinessReport { get; set; } = PhaseAReadinessReport.Empty;
     public PhaseBReadinessReport PhaseBReadinessReport { get; set; } = PhaseBReadinessReport.Empty;
     public PhaseCReadinessReport PhaseCReadinessReport { get; set; } = PhaseCReadinessReport.Empty;
@@ -25,8 +37,10 @@ public sealed class World
     public List<SocialSettlement> SocialSettlements { get; } = new();
     public List<CivilizationalHistoryEvent> CivilizationalHistory { get; } = new();
     public List<FocalCandidateProfile> FocalCandidateProfiles { get; } = new();
+    public List<PlayerEntryCandidateSummary> PlayerEntryCandidates { get; } = new();
     public List<Polity> Polities { get; } = new();
     public List<LocalPopulationExtinctionRecord> LocalPopulationExtinctions { get; } = new();
+    public Dictionary<int, string> CandidateRejectionReasons { get; } = new();
 
     public List<WorldEvent> Events { get; } = new();
 
@@ -48,6 +62,12 @@ public sealed class World
     public void BeginActiveSimulation()
     {
         SimulationPhase = WorldSimulationPhase.Active;
+        if (!LiveChronicleStartTick.HasValue)
+        {
+            LiveChronicleStartTick = Time.Tick;
+            LiveChronicleStartYear = Time.Year;
+            LiveChronicleStartMonth = Time.Month;
+        }
     }
 
     public void ConfigureEventPropagation(EventPropagationCoordinator coordinator)
@@ -233,5 +253,16 @@ public sealed class World
             summary,
             reason,
             data ?? CivilizationalHistoryEvent.EmptyData));
+    }
+
+    public bool IsEventVisibleInLiveChronicle(WorldEvent worldEvent)
+    {
+        if (worldEvent.IsBootstrapEvent || !LiveChronicleStartTick.HasValue)
+        {
+            return false;
+        }
+
+        return worldEvent.Year > LiveChronicleStartYear
+            || (worldEvent.Year == LiveChronicleStartYear && worldEvent.Month >= LiveChronicleStartMonth);
     }
 }

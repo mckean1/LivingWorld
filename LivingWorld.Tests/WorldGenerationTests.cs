@@ -34,7 +34,7 @@ public sealed class WorldGenerationTests
     {
         World world = new WorldGenerator(seed: 7).Generate();
 
-        Assert.Equal(WorldStartupStage.SocietalSimulation, world.StartupStage);
+        Assert.Equal(WorldStartupStage.FocalSelection, world.StartupStage);
         Assert.Equal(36, world.Regions.Count);
         Assert.True(world.Species.Count >= 7);
         Assert.Equal(world.Species.Count, world.EvolutionaryLineages.Count);
@@ -47,8 +47,10 @@ public sealed class WorldGenerationTests
         Assert.True(world.PhaseCReadinessReport.PolityCount >= 1);
         Assert.NotEmpty(world.EvolutionaryHistory);
         Assert.NotEmpty(world.CivilizationalHistory);
-        Assert.Equal(0, world.Time.Year);
+        Assert.True(world.Time.Year >= world.StartupAgeConfiguration.MinPrehistoryYears);
         Assert.Equal(1, world.Time.Month);
+        Assert.NotEmpty(world.PlayerEntryCandidates);
+        Assert.NotNull(world.PrehistoryStopReason);
     }
 
     [Fact]

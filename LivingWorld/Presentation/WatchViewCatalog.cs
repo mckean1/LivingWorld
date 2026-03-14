@@ -33,6 +33,7 @@ public static class WatchViewCatalog
     public static string DescribeView(WatchViewType view)
         => view switch
         {
+            WatchViewType.FocalSelection => "Focal Selection",
             WatchViewType.RegionDetail => "Region Detail",
             WatchViewType.SpeciesDetail => "Species Detail",
             WatchViewType.PolityDetail => "Polity Detail",
@@ -42,6 +43,7 @@ public static class WatchViewCatalog
     public static WatchViewType GetOwningMainView(WatchViewType view)
         => view switch
         {
+            WatchViewType.FocalSelection => WatchViewType.FocalSelection,
             WatchViewType.RegionDetail => WatchViewType.KnownRegions,
             WatchViewType.SpeciesDetail => WatchViewType.KnownSpecies,
             WatchViewType.PolityDetail => WatchViewType.KnownPolities,
@@ -49,10 +51,10 @@ public static class WatchViewCatalog
         };
 
     public static bool IsListView(WatchViewType view)
-        => view is WatchViewType.KnownRegions or WatchViewType.KnownSpecies or WatchViewType.KnownPolities;
+        => view is WatchViewType.FocalSelection or WatchViewType.KnownRegions or WatchViewType.KnownSpecies or WatchViewType.KnownPolities;
 
     public static string BuildControlsSummary()
-        => "Space Pause  Tab Cycle  1-7 Views  Up/Down Move  Left/Right Page  Enter Inspect  Esc Back";
+        => "Space Pause  Tab Cycle  1-7 Views  Up/Down Move  Left/Right Page  Enter Inspect/Select  Esc Back";
 
     private sealed record WatchViewDescriptor(WatchViewType View, string Label, string DirectKey)
     {

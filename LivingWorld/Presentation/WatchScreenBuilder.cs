@@ -17,6 +17,7 @@ public static class WatchScreenBuilder
 
         return uiState.ActiveView switch
         {
+            WatchViewType.FocalSelection => BuildFocalSelectionLines(world, uiState),
             WatchViewType.MyPolity => BuildMyPolityLines(knowledge.FocalPolity, lookup),
             WatchViewType.CurrentRegion => BuildCurrentRegionLines(world, knowledge, lookup),
             WatchViewType.KnownRegions => BuildKnownRegionsLines(knowledge, uiState, lookup),
@@ -36,6 +37,7 @@ public static class WatchScreenBuilder
         string controls = WatchViewCatalog.BuildControlsSummary();
         string context = uiState.ActiveView switch
         {
+            WatchViewType.FocalSelection => "Prehistory is frozen. Up/Down moves through candidate starts; Enter confirms the focal polity.",
             WatchViewType.Chronicle => "Chronicle stays newest-first. Up/Down scroll line-by-line; Left/Right page through history.",
             WatchViewType.KnownRegions => "Known Regions uses the focal polity's settlements, current center, discovered regions, and adjacent regions.",
             WatchViewType.KnownSpecies => "Known Species includes seen species, discovered prey knowledge, and species tied to known polities.",
@@ -220,6 +222,9 @@ public static class WatchScreenBuilder
             "World Overview",
             string.Empty,
             $" Year: {world.Time.Year} ({world.Time.Season})",
+            $" Prehistory Preset: {world.StartupAgeConfiguration.Preset}",
+            $" Prehistory Stop: {world.PrehistoryStopReason?.ToString() ?? "Still running"}",
+            $" Live Chronicle Starts: {(world.LiveChronicleStartYear.HasValue ? $"y{world.LiveChronicleStartYear} m{world.LiveChronicleStartMonth}" : "not started")}",
             $" Known Regions: {knowledge.KnownRegions.Count}",
             $" Known Species: {knowledge.KnownSpecies.Count}",
             $" Known Polities: {Math.Max(0, knowledge.KnownPolities.Count - 1)}",
@@ -274,6 +279,51 @@ public static class WatchScreenBuilder
         if (lines[^1] == " Strategic Material Hotspots:")
         {
             lines.Add("  None known.");
+        }
+
+        return lines;
+    }
+
+    private static IReadOnlyList<string> BuildFocalSelectionLines(World world, WatchUiState uiState)
+    {
+        List<string> lines =
+        [
+            "Focal Selection",
+            string.Empty,
+            $" World Age At Entry: {world.Time.Year}",
+            $" Preset: {world.StartupAgeConfiguration.Preset}",
+            $" Stop Reason: {world.PrehistoryStopReason?.ToString() ?? "Pending"}",
+            $" Readiness: {(world.WorldReadinessReport.IsReady ? "Ready" : "Fallback / weak-world stop")}",
+            $" Scores: Bio {world.WorldReadinessReport.BiologicalScore:F2} | Social {world.WorldReadinessReport.SocialScore:F2} | Civ {world.WorldReadinessReport.CivilizationalScore:F2} | Cand {world.WorldReadinessReport.CandidateScore:F2} | Stable {world.WorldReadinessReport.StabilityScore:F2}",
+            string.Empty,
+            " Candidate Starts:"
+        ];
+
+        if (world.PlayerEntryCandidates.Count == 0)
+        {
+            lines.Add("  No viable player-entry candidates were found.");
+            return lines;
+        }
+
+        int selectedIndex = Math.Clamp(uiState.GetSelectedIndex(WatchViewType.FocalSelection), 0, world.PlayerEntryCandidates.Count - 1);
+        uiState.SetSelectedIndex(WatchViewType.FocalSelection, selectedIndex);
+        for (int index = 0; index < world.PlayerEntryCandidates.Count; index++)
+        {
+            PlayerEntryCandidateSummary candidate = world.PlayerEntryCandidates[index];
+            string marker = index == selectedIndex ? ">" : " ";
+            string fallback = candidate.IsFallbackCandidate ? " [fallback]" : string.Empty;
+            lines.Add($"{marker} {candidate.PolityName,-28} {candidate.SpeciesName,-18} {candidate.HomeRegionName,-18} age {candidate.PolityAge,3}{fallback}");
+            lines.Add($"    settlements {candidate.SettlementCount} | pop {candidate.PopulationBand} | {candidate.SubsistenceStyle} | {candidate.CurrentCondition}");
+            lines.Add($"    discoveries {candidate.DiscoverySummary}");
+            lines.Add($"    learned {candidate.LearnedSummary}");
+            lines.Add($"    note {candidate.RecentHistoricalNote}");
+            lines.Add($"    pressure/opportunity {candidate.DefiningPressureOrOpportunity}");
+        }
+
+        if (world.WorldReadinessReport.FailureReasons.Count > 0)
+        {
+            lines.Add(string.Empty);
+            lines.Add($" Readiness Gaps: {string.Join(", ", world.WorldReadinessReport.FailureReasons)}");
         }
 
         return lines;

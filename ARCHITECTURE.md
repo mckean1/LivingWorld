@@ -9,7 +9,7 @@ The startup direction is now explicitly primitive-life-first:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1, Pass 2, and Pass 3 are implemented now. The default generated world reaches ecological readiness first, then runs evolutionary bootstrap, then social emergence bootstrap that can produce sentient groups, societies, settlements, and early polities before player entry begins.
+Pass 1 through Pass 4 are implemented now. The default generated world reaches ecological readiness first, then runs evolutionary bootstrap, then social emergence bootstrap, then a player-entry evaluation/runtime layer that stops prehistory on readiness or max-age fallback, produces real focal candidates, and waits in a dedicated selection state before active play begins.
 
 ## Core Structure
 
@@ -43,7 +43,7 @@ Major systems:
 - polity stage progression
 
 Only some of those systems are active in the default startup stage.
-`World.StartupStage` now gates the default path so Pass 1 worlds run ecological foundation first, Pass 2 worlds continue through mutation/divergence/speciation, Pass 3 bootstrap reaches actual social/polity actors, and player-entry assumptions remain deferred to Pass 4.
+`World.StartupStage` now gates the default path so Pass 1 worlds run ecological foundation first, Pass 2 worlds continue through mutation/divergence/speciation, Pass 3 bootstrap reaches actual social/polity actors, and Pass 4 evaluates world readiness, enters focal selection, and only then begins active play.
 
 ## Settlement-Grounded Locality
 
@@ -175,6 +175,8 @@ Important traits:
 - only `Major+` turning points are shown in normal player mode
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
 - bootstrap-created baseline events remain canonical/internal but are not eligible for the player chronicle or recent-major-event summaries
+- prehistory history before player binding remains structured-only and is exposed through candidate/origin summaries rather than the live chronicle
+- `World.LiveChronicleStartYear/Month` marks the boundary where visible chronicle eligibility begins
 - event origin now distinguishes bootstrap baseline/setup context from true live transitions, which gives the chronicle pipeline a final safety guard against bootstrap-derived leaks
 - economy identity families now use a clearer two-layer model: internal specialization / trade-good state can respond quickly, while visible `known for` milestones require settlement maturity, sustained confirmation, and stricter promotion thresholds
 - related specialization and trade-good turns for the same settlement-material pair now also share one presentation family key, which gives the chronicle a final anti-stacking guard even if an upstream producer emits both
@@ -203,8 +205,8 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
 Left/Right paging is view-agnostic now: list screens page selection, while chronicle and detail screens page scroll offsets.
 `My Polity` is also a special focal-polity view rather than just a shortcut into generic polity detail. `Enter` intentionally leaves the player there so focal-only information cannot be downgraded by a foreign-polity-safe renderer path.
-Simulation now also performs an explicit bootstrap seeding pass before active play begins. The default bootstrap is now three layers deep: world generation runs primitive seeding and Phase A stabilization, then initializes lineage history and runs an internal evolutionary pass until `PhaseBReadinessReport` is evaluated, then runs a social-emergence pass until `PhaseCReadinessReport` is evaluated, then resets visible time back to the active simulation boundary.
-Later player-entry and chronicle-handoff layers still remain deferred, but the bootstrap now intentionally produces real early polities and settlements before active simulation starts.
+Simulation now also performs an explicit bootstrap seeding pass before active play begins. The default bootstrap is now four layers deep: world generation runs primitive seeding and Phase A stabilization, initializes lineage history and runs an internal evolutionary pass until `PhaseBReadinessReport` is evaluated, runs a social-emergence pass until `PhaseCReadinessReport` is evaluated, then runs a dedicated player-entry evaluation pass that builds `WorldReadinessReport`, generates/ranks focal candidates, and stops in `FocalSelection`.
+Visible time no longer resets to year 0 after bootstrap. Instead, the chosen polity enters active play at the real simulated world age, while the live chronicle starts at an explicit boundary marker so prehistory stays in structured history and summaries rather than leaking into the active watch feed.
 
 ## Focus And Continuity
 
@@ -237,7 +239,7 @@ Monthly:
 
 In startup Pass 1, the active monthly path intentionally stops after ecological systems.
 In startup Pass 2, the active monthly path runs ecology plus mutation/divergence/speciation and extinction history, but still stops before hunting, economy, migration, settlement, and polity-year-end systems.
-After Pass 3 bootstrap, the generated world reaches `SocietalSimulation`, so the existing polity, settlement, advancement, and fragmentation systems can take over live continuation from the prebuilt social world.
+After Pass 3 bootstrap, the generated world reaches pre-social/political continuity. Pass 4 then evaluates readiness, generates candidates, freezes in `FocalSelection`, and only after the player binds a polity does the existing polity, settlement, advancement, and fragmentation loop continue in `ActivePlay`.
 
 The food architecture is intentionally asymmetric now:
 

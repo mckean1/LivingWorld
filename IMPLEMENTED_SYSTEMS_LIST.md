@@ -72,12 +72,24 @@ Intentionally deferred to Pass 4:
 - active-play chronicle boundary changes for bootstrap history
 
 ### Pass 4 - Polity Start and Player Entry
-**Status:** Planned
+**Status:** Implemented foundation slice
 
-Planned:
-- focal-polity selection
-- player-facing entry into an already-biologically-and-socially-grounded world
-- explicit handoff from bootstrap ecology history into live chronicle play
+Implemented:
+- startup world-age presets with variable prehistory duration, target age as a soft centerpoint, and readiness strictness / candidate-count tuning
+- explicit prehistory runtime state flow across biological foundation, evolutionary history, social emergence, player-entry evaluation, focal selection, and active play
+- `WorldReadinessReport` for player-entry handoff using biological, social, civilizational, candidate, and stability categories instead of raw age alone
+- focal candidate generation from real simulated post-prehistory polities with viability filters, score-plus-diversity ranking, and weak-world emergency fallback thresholds
+- compact player-facing candidate summaries covering lineage/species, region, age, settlement depth, subsistence style, current condition, discoveries, learned capability, and a recent historical note
+- dedicated `FocalSelection` watch/UI state that freezes time until the player binds to a chosen polity
+- player binding / handoff fields on `World` for selected polity, entry year, polity-age context, stop reason, summary snapshot, and live-chronicle start marker
+- strict chronicle boundary enforcement so prehistory remains structured history and summary material instead of leaking into the live chronicle buffer
+
+Intentionally deferred after Pass 4:
+- richer player-entry presets and custom world-age editing
+- deeper focal-candidate inspection UI and compare views
+- dedicated civilization/species/world history screens built on the preserved structured prehistory
+
+This completes the intended primitive-life-first startup path end to end: Pass 1 creates a living ecology, Pass 2 creates branching biological history, Pass 3 creates early social/political actors, and Pass 4 now stops prehistory on readiness, offers simulated focal starts, and hands the chosen polity into active play.
 
 ---
 
