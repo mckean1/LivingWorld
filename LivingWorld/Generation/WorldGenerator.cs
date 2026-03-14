@@ -1,6 +1,7 @@
 using LivingWorld.Core;
 using LivingWorld.Life;
 using LivingWorld.Map;
+using LivingWorld.Societies;
 using LivingWorld.Systems;
 
 namespace LivingWorld.Generation;
@@ -38,8 +39,9 @@ public sealed class WorldGenerator
         StabilizePrimitiveEcology(world);
         InitializeEvolutionaryLineages(world);
         AdvanceEvolutionaryHistory(world);
+        AdvanceCivilizationalEmergence(world);
         world.Time.Reset();
-        world.StartupStage = WorldStartupStage.EvolutionaryExpansion;
+        world.StartupStage = WorldStartupStage.SocietalSimulation;
 
         return world;
     }
@@ -288,6 +290,206 @@ public sealed class WorldGenerator
 
         RefreshEvolutionaryLineageSnapshots(world);
         world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
+    }
+
+    private void AdvanceCivilizationalEmergence(World world)
+    {
+        SocialEmergenceSystem socialEmergenceSystem = new(_seed + 313, _settings);
+        world.StartupStage = WorldStartupStage.SentienceActivation;
+        EnsureSentienceCapableSeedBranches(world);
+
+        for (int year = 1; year <= _settings.PhaseCMaximumBootstrapYears; year++)
+        {
+            socialEmergenceSystem.UpdateYear(world);
+            foreach (Societies.Polity polity in world.Polities.Where(candidate => candidate.Population > 0))
+            {
+                polity.YearsSinceFounded++;
+                polity.YearsInCurrentRegion++;
+            }
+
+            if (year >= _settings.PhaseCMinimumBootstrapYears && world.PhaseCReadinessReport.IsReady)
+            {
+                break;
+            }
+
+            world.Time.Reset(world.Time.Year + 1, world.Time.Month);
+        }
+
+        if (world.Polities.Count == 0)
+        {
+            SeedFallbackCivilizationalActor(world);
+        }
+
+        socialEmergenceSystem.UpdateYear(world);
+        world.PhaseCReadinessReport = PhaseCReadinessEvaluator.Evaluate(world, _settings);
+    }
+
+    private static void EnsureSentienceCapableSeedBranches(World world)
+    {
+        if (world.Species.Any(species => species.SentienceCapability == SentienceCapabilityState.Capable && !species.IsGloballyExtinct))
+        {
+            return;
+        }
+
+        foreach (Species species in world.Species
+                     .Where(candidate => !candidate.IsGloballyExtinct)
+                     .OrderByDescending(candidate => candidate.SentiencePotential + candidate.Intelligence + candidate.Cooperation)
+                     .ThenByDescending(candidate => world.Regions.Sum(region => region.GetSpeciesPopulation(candidate.Id)?.PopulationCount ?? 0))
+                     .Take(2))
+        {
+            int totalPopulation = world.Regions.Sum(region => region.GetSpeciesPopulation(species.Id)?.PopulationCount ?? 0);
+            if (totalPopulation < 60)
+            {
+                continue;
+            }
+
+            species.SentienceCapability = SentienceCapabilityState.Capable;
+            if (world.GetLineageForSpecies(species.Id) is EvolutionaryLineage lineage)
+            {
+                lineage.SentienceCapability = SentienceCapabilityState.Capable;
+                lineage.Stage = LineageStage.SentienceCapable;
+            }
+
+            world.AddEvolutionaryHistoryEvent(
+                EvolutionaryHistoryEventType.SentienceCapabilityMilestone,
+                species.LineageId,
+                species.ParentSpeciesId,
+                species.Id,
+                species.OriginRegionId,
+                $"{species.Name} remained the strongest sentience-capable branch after Phase B bootstrap",
+                "bootstrap_sentience_handoff",
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["populationSupport"] = totalPopulation.ToString(),
+                    ["sentiencePotential"] = species.SentiencePotential.ToString("F2")
+                });
+
+            break;
+        }
+    }
+
+    private static void SeedFallbackCivilizationalActor(World world)
+    {
+        Species? species = world.Species
+            .Where(candidate => !candidate.IsGloballyExtinct)
+            .OrderByDescending(candidate => candidate.SentienceCapability)
+            .ThenByDescending(candidate => candidate.SentiencePotential + candidate.Intelligence + candidate.Cooperation)
+            .ThenByDescending(candidate => world.Regions.Sum(region => region.GetSpeciesPopulation(candidate.Id)?.PopulationCount ?? 0))
+            .FirstOrDefault();
+        if (species is null)
+        {
+            return;
+        }
+
+        Region region = world.Regions
+            .OrderByDescending(candidate => (candidate.GetSpeciesPopulation(species.Id)?.PopulationCount ?? 0) + (candidate.Fertility * 100))
+            .ThenBy(candidate => candidate.Id)
+            .First();
+        species.SentienceCapability = SentienceCapabilityState.Capable;
+        species.IsSapient = true;
+        if (world.GetLineageForSpecies(species.Id) is EvolutionaryLineage lineage)
+        {
+            lineage.SentienceCapability = SentienceCapabilityState.Capable;
+            lineage.Stage = LineageStage.SentienceCapable;
+        }
+
+        SentientPopulationGroup group = new(world.SentientGroups.Count == 0 ? 1 : world.SentientGroups.Max(candidate => candidate.Id) + 1)
+        {
+            SourceLineageId = species.LineageId,
+            CurrentRegionId = region.Id,
+            FounderRegionId = region.Id,
+            ActivationYear = world.Time.Year,
+            PopulationCount = Math.Max(36, (region.GetSpeciesPopulation(species.Id)?.PopulationCount ?? 72) / 2),
+            MobilityMode = Societies.MobilityMode.SemiSedentary,
+            Cohesion = 0.54,
+            SocialComplexity = 0.46,
+            SurvivalKnowledge = 0.48,
+            SettlementIntent = 0.58,
+            Stress = 0.20,
+            SedentismPressure = 0.66,
+            ContinuityYears = 6,
+            IdentityStrength = 0.52,
+            MigrationPattern = "anchored basin circuit",
+            FoundingMemorySeed = $"{region.Name} continuity",
+            ThreatMemorySeed = "bootstrap social safeguard",
+            PressureSummary = "anchoring on rich ground"
+        };
+        group.SharedKnowledge["water"] = new Societies.CulturalDiscovery("water", $"{region.Name} holds reliable water", Societies.CulturalDiscoveryCategory.Geography, RegionId: region.Id);
+        group.SharedKnowledge["fertile"] = new Societies.CulturalDiscovery("fertile", $"{region.Name} is fertile ground", Societies.CulturalDiscoveryCategory.Environment, RegionId: region.Id);
+        group.SharedKnowledge["prey"] = new Societies.CulturalDiscovery("prey", "Nearby fauna can be hunted", Societies.CulturalDiscoveryCategory.SpeciesUse, RegionId: region.Id);
+        world.SentientGroups.Add(group);
+
+        EmergingSociety society = new(world.Societies.Count == 0 ? 1 : world.Societies.Max(candidate => candidate.Id) + 1)
+        {
+            LineageId = species.LineageId,
+            SpeciesId = species.Id,
+            OriginRegionId = region.Id,
+            FoundingYear = Math.Max(0, world.Time.Year - 5),
+            Population = Math.Max(80, group.PopulationCount + 40),
+            MobilityMode = Societies.MobilityMode.SemiSedentary,
+            SubsistenceMode = region.Fertility >= 0.68 ? Societies.SubsistenceMode.ProtoFarming : Societies.SubsistenceMode.MixedHunterForager,
+            Cohesion = 0.58,
+            IdentityStrength = 0.56,
+            SocialComplexity = 0.60,
+            SurvivalKnowledge = 0.62,
+            SedentismPressure = 0.72,
+            PressureSummary = "bootstrap social safeguard",
+            ContinuityYears = 8,
+            PredecessorGroupId = group.Id,
+            FoundingMemorySeed = group.FoundingMemorySeed,
+            ThreatMemorySeed = group.ThreatMemorySeed
+        };
+        society.RegionIds.Add(region.Id);
+        society.IdentityMarkers.Add(region.Biome.ToString());
+        foreach ((string key, Societies.CulturalDiscovery discovery) in group.SharedKnowledge)
+        {
+            society.CulturalKnowledge[key] = discovery;
+        }
+        world.Societies.Add(society);
+
+        SocialSettlement socialSettlement = new(world.SocialSettlements.Count == 0 ? 1 : world.SocialSettlements.Max(candidate => candidate.Id) + 1)
+        {
+            FounderSocietyId = society.Id,
+            FounderLineageId = society.LineageId,
+            RegionId = region.Id,
+            FoundingYear = Math.Max(0, world.Time.Year - 3),
+            Population = 52,
+            FoodBaseProfile = region.Fertility >= 0.68 ? "fertile mixed subsistence" : "anchored foraging",
+            StorageLevel = 0.42,
+            SettlementViability = 0.72,
+            CurrentPressureSummary = "bootstrap social safeguard"
+        };
+        world.SocialSettlements.Add(socialSettlement);
+        society.SettlementIds.Add(socialSettlement.Id);
+
+        int polityId = world.Polities.Count == 0 ? 1 : world.Polities.Max(candidate => candidate.Id) + 1;
+        Societies.Polity polity = new(polityId, $"{region.Name} {species.Name.Split(' ')[0]} Polity", species.Id, region.Id, society.Population, lineageId: society.LineageId)
+        {
+            FounderSocietyId = society.Id,
+            Stage = Societies.PolityStage.Tribe,
+            SettlementStatus = Societies.SettlementStatus.SemiSettled,
+            YearsSinceFounded = 4,
+            CurrentPressureSummary = "bootstrap social safeguard",
+            IdentitySeed = region.Biome.ToString()
+        };
+        polity.EstablishFirstSettlement(region.Id, $"{region.Name} Hearth");
+        polity.AddDiscovery(new Societies.CulturalDiscovery("water", $"{region.Name} holds reliable water", Societies.CulturalDiscoveryCategory.Geography, RegionId: region.Id));
+        polity.AddDiscovery(new Societies.CulturalDiscovery("fertile", $"{region.Name} is fertile ground", Societies.CulturalDiscoveryCategory.Environment, RegionId: region.Id));
+        polity.AddDiscovery(new Societies.CulturalDiscovery("prey", "Nearby fauna can be hunted", Societies.CulturalDiscoveryCategory.SpeciesUse, RegionId: region.Id));
+        polity.LearnAdvancement(Advancement.AdvancementId.Fire);
+        polity.LearnAdvancement(Advancement.AdvancementId.StoneTools);
+        polity.LearnAdvancement(Advancement.AdvancementId.SeasonalPlanning);
+        polity.LearnAdvancement(Advancement.AdvancementId.FoodStorage);
+        if (region.Fertility >= 0.68)
+        {
+            polity.LearnAdvancement(Advancement.AdvancementId.Agriculture);
+        }
+        world.Polities.Add(polity);
+
+        world.AddCivilizationalHistoryEvent(Societies.CivilizationalHistoryEventType.SentientActivation, species.LineageId, region.Id, $"{species.Name} activated a fallback sentient group", "bootstrap_social_safeguard", groupId: group.Id);
+        world.AddCivilizationalHistoryEvent(Societies.CivilizationalHistoryEventType.SocietyFormation, species.LineageId, region.Id, $"Society {society.Id} stabilized in {region.Name}", "bootstrap_social_safeguard", societyId: society.Id);
+        world.AddCivilizationalHistoryEvent(Societies.CivilizationalHistoryEventType.SettlementFounded, species.LineageId, region.Id, $"A settlement took root in {region.Name}", "bootstrap_social_safeguard", societyId: society.Id, settlementId: socialSettlement.Id);
+        world.AddCivilizationalHistoryEvent(Societies.CivilizationalHistoryEventType.PolityFormation, species.LineageId, region.Id, $"{polity.Name} emerged as a fallback polity", "bootstrap_social_safeguard", societyId: society.Id, polityId: polity.Id);
     }
 
     private static void RefreshEvolutionaryLineageSnapshots(World world)

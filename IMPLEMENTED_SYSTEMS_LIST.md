@@ -53,18 +53,28 @@ Intentionally deferred to later startup passes:
 - active-play chronicle changes for bootstrap biological history
 
 ### Pass 3 - Sentience and Social Formation
-**Status:** Planned
+**Status:** Implemented foundation slice
 
-Planned:
-- social emergence from already-sentience-capable lineages
-- early social groups and continuity before full polity logic
-- transition rules from ecological populations into proto-societal actors
+Implemented:
+- activation of actual sentient population groups from viable sentience-capable lineages
+- persistent group continuity with cohesion, identity strength, survival knowledge, migration pattern, and stress tracking
+- society formation as the first durable social unit with predecessor links, mobility mode, subsistence mode, cultural knowledge, and settlement pressure
+- early cultural discovery accumulation around edible species, dangerous animals, fertile/harsh regions, and reliable water
+- pressure-based settlement founding plus abandonment/failure handling through `SocialSettlement`
+- first society-to-polity transition foundations, including limited early `Learned` capability seeding where needed for continuity
+- continuity-preserving group and society fragmentation plus collapse history
+- focal-candidate viability tracking for later player starts
+- `PhaseCReadinessReport` so startup handoff is based on actual social/political maturity rather than time alone
+
+Intentionally deferred to Pass 4:
+- final focal polity selection UI
+- player-entry runtime and stop-logic handoff
+- active-play chronicle boundary changes for bootstrap history
 
 ### Pass 4 - Polity Start and Player Entry
 **Status:** Planned
 
 Planned:
-- society to polity formation
 - focal-polity selection
 - player-facing entry into an already-biologically-and-socially-grounded world
 - explicit handoff from bootstrap ecology history into live chronicle play

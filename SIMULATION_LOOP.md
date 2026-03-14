@@ -25,8 +25,8 @@ The agreed 4-pass startup plan is:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1 and Pass 2 are what currently boot by default. World generation seeds primitive ecology, runs internal Phase A stabilization, initializes lineage history, runs internal mutation/divergence/speciation/bootstrap sentience progression, records `PhaseAReadinessReport` and `PhaseBReadinessReport`, and only then hands the world to the active loop.
-Later bootstrap layers such as economy/material baselines still exist, but they are skipped while the world remains in the pre-social startup stages.
+Pass 1, Pass 2, and Pass 3 are what currently boot by default. World generation seeds primitive ecology, runs internal Phase A stabilization, initializes lineage history, runs internal mutation/divergence/speciation/bootstrap sentience progression, then runs social emergence into groups, societies, settlements, and early polities, records `PhaseAReadinessReport`, `PhaseBReadinessReport`, and `PhaseCReadinessReport`, and only then hands the world to the active loop.
+Later player-entry and chronicle-boundary layers still remain deferred to Pass 4.
 Canonical events now retain explicit origin metadata as well, so the visible chronicle can refuse non-live setup events even if they share a type with legitimate later transitions.
 
 ## Monthly Systems
@@ -69,7 +69,8 @@ Ecosystem migration pacing itself is centralized in `EcosystemSettings`, includi
 
 If the world is still in `WorldStartupStage.PrimitiveEcologyFoundation`, the loop intentionally stops after ecology work.
 If the world has advanced to `WorldStartupStage.EvolutionaryExpansion`, the loop runs ecology plus mutation/divergence/speciation/sentience-capability work, then still stops before polity-facing systems.
-That keeps Pass 1 and Pass 2 honest: no society, polity-year-end logic, or player-entry assumptions are activated yet.
+Once bootstrap reaches `WorldStartupStage.SocietalSimulation`, the existing polity-facing loop takes over from a world that already has social continuity.
+That keeps Pass 1, Pass 2, and Pass 3 honest while still deferring final player-entry assumptions.
 
 ## Year-End Systems
 

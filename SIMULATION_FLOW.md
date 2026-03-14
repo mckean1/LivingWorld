@@ -3,7 +3,7 @@
 LivingWorld runs the full world in monthly ticks. Player-facing output is live chronicle playback, not a yearly report.
 The watch UI can now swap between chronicle and inspection screens without changing the simulation state it observes.
 
-The default seed world feeding that loop is now a pre-social biological history world: `36` regions, primitive founding lineages, descendant branches from bootstrap evolution, and `0` starting polities.
+The default seed world feeding that loop is now a biologically and socially grounded bootstrap world: `36` regions, primitive founding lineages, descendant branches from bootstrap evolution, and early pre-player polities created by social emergence.
 The agreed startup plan is now:
 
 1. biological world foundation
@@ -11,7 +11,7 @@ The agreed startup plan is now:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1 and Pass 2 are implemented now, so the default loop begins from an already-seeded ecological foundation plus bootstrap evolutionary history and still defers later social startup layers.
+Pass 1, Pass 2, and Pass 3 are implemented now, so the default loop begins from an already-seeded ecological foundation, bootstrap evolutionary history, and bootstrap social/political emergence while still deferring later player-entry logic.
 
 ## Monthly Flow
 
@@ -37,7 +37,7 @@ Pass 1 and Pass 2 are implemented now, so the default loop begins from an alread
 
 In Pass 1, the active monthly path effectively ends after the ecological layers above.
 In Pass 2, the active monthly path adds mutation/divergence/speciation and extinction-history upkeep but still defers hunting and all polity-driven loops.
-Animal food therefore still does not matter yet for the default startup path; the important opening work is that `AnimalBiomass`, regional consumer presence, lineage branching, and extinction history all come from real biological simulation instead of an assumed civilization-ready world.
+By the time the generated world reaches active simulation, Pass 3 has already used that biological foundation to create sentient groups, societies, early settlements, and some early polities, so the live monthly path can begin from real social continuity rather than an invented polity snapshot.
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
@@ -82,8 +82,8 @@ The chronicle formatter now distinguishes between repeated same-state reminders 
 That formatter also has a fallback narrative-based state key for visible families without a custom semantic signature, so exact repeated lines are still treated as the same visible state.
 Year-end focus resolution now also consumes the current year's rolling event cache instead of filtering the full historical event list every year.
 
-For Pass 1 worlds there is usually no focal polity yet.
-The watch path remains valid, but it is observation-only until later startup passes create a real social actor to follow.
+Pass 3 startup now usually leaves at least one viable polity candidate in the world.
+The watch path therefore begins from a real social actor more often, but final focal selection and player-entry handoff still remain deferred to Pass 4.
 
 ## Default Watch Output
 

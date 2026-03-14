@@ -14,11 +14,17 @@ public sealed class World
     public WorldStartupStage StartupStage { get; set; } = WorldStartupStage.SocietalSimulation;
     public PhaseAReadinessReport PhaseAReadinessReport { get; set; } = PhaseAReadinessReport.Empty;
     public PhaseBReadinessReport PhaseBReadinessReport { get; set; } = PhaseBReadinessReport.Empty;
+    public PhaseCReadinessReport PhaseCReadinessReport { get; set; } = PhaseCReadinessReport.Empty;
 
     public List<Region> Regions { get; } = new();
     public List<Species> Species { get; } = new();
     public List<EvolutionaryLineage> EvolutionaryLineages { get; } = new();
     public List<EvolutionaryHistoryEvent> EvolutionaryHistory { get; } = new();
+    public List<SentientPopulationGroup> SentientGroups { get; } = new();
+    public List<EmergingSociety> Societies { get; } = new();
+    public List<SocialSettlement> SocialSettlements { get; } = new();
+    public List<CivilizationalHistoryEvent> CivilizationalHistory { get; } = new();
+    public List<FocalCandidateProfile> FocalCandidateProfiles { get; } = new();
     public List<Polity> Polities { get; } = new();
     public List<LocalPopulationExtinctionRecord> LocalPopulationExtinctions { get; } = new();
 
@@ -200,5 +206,32 @@ public sealed class World
             summary,
             reason,
             data ?? EvolutionaryHistoryEvent.EmptyData));
+    }
+
+    public void AddCivilizationalHistoryEvent(
+        CivilizationalHistoryEventType type,
+        int lineageId,
+        int regionId,
+        string summary,
+        string? reason = null,
+        int? groupId = null,
+        int? societyId = null,
+        int? settlementId = null,
+        int? polityId = null,
+        IReadOnlyDictionary<string, string>? data = null)
+    {
+        CivilizationalHistory.Add(new CivilizationalHistoryEvent(
+            type,
+            Time.Year,
+            Time.Month,
+            groupId,
+            societyId,
+            settlementId,
+            polityId,
+            lineageId,
+            regionId,
+            summary,
+            reason,
+            data ?? CivilizationalHistoryEvent.EmptyData));
     }
 }

@@ -22,7 +22,7 @@ The startup path is now explicitly primitive-life-first:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1 and Pass 2 are implemented now. The default generated world reaches ecological readiness, then evolutionary readiness, while later social/polity systems stay dormant until later startup passes activate them.
+Pass 1, Pass 2, and Pass 3 are implemented now. The default generated world reaches ecological readiness, then evolutionary readiness, then social/political readiness, while final player-entry logic remains deferred.
 
 ## Current Major Systems
 
@@ -159,6 +159,7 @@ Implemented:
 - Primitive lineage templates now provide the Pass 1 startup roster for producers, grazers/foragers, scavenger-omnivores, and predators
 - Phase A readiness reporting now summarizes whether ecology is broad, uneven, and stable enough for later startup passes
 - Explicit lineage ancestry, divergence/contact state, mutation/speciation history, sentience-capability progression, and Phase B readiness now provide the Pass 2 handoff layer into later social emergence
+- Sentient groups, societies, social settlements, candidate polities, civilizational history, and Phase C readiness now provide the Pass 3 handoff layer into later player-entry logic
 
 ---
 

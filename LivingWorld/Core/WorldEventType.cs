@@ -80,5 +80,9 @@ public static class WorldEventType
     public const string SpeciesPopulationAdaptedToRegion = "species_population_adapted_to_region";
     public const string SpeciesPopulationEvolutionaryTurningPoint = "species_population_evolutionary_turning_point";
     public const string NewSpeciesAppeared = "new_species_appeared";
+    public const string SentientPopulationActivated = "sentient_population_activated";
+    public const string SocietyFormed = "society_formed";
+    public const string EmergentSettlementFounded = "emergent_settlement_founded";
+    public const string EmergentSettlementAbandoned = "emergent_settlement_abandoned";
     public const string WorldEvent = "world_event";
 }

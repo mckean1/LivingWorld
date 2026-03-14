@@ -9,7 +9,7 @@ The startup direction is now explicitly primitive-life-first:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1 and Pass 2 are implemented now. The default generated world reaches ecological readiness first, then runs a pre-social evolutionary bootstrap that can produce branching lineages, extinction history, and rare sentience-capable biological branches before any society or polity layer exists.
+Pass 1, Pass 2, and Pass 3 are implemented now. The default generated world reaches ecological readiness first, then runs evolutionary bootstrap, then social emergence bootstrap that can produce sentient groups, societies, settlements, and early polities before player entry begins.
 
 ## Core Structure
 
@@ -18,6 +18,7 @@ Pass 1 and Pass 2 are implemented now. The default generated world reaches ecolo
 - regions
 - species
 - evolutionary lineages and structured biological history
+- sentient groups, societies, social settlements, focal-candidate summaries, and structured civilizational history
 - polities
 - polity-owned settlements
 - time
@@ -42,7 +43,7 @@ Major systems:
 - polity stage progression
 
 Only some of those systems are active in the default startup stage.
-`World.StartupStage` now gates the default path so Pass 1 worlds run ecological foundation first, Pass 2 worlds continue through mutation/divergence/speciation without social systems, and polity/player assumptions remain deferred to later startup passes.
+`World.StartupStage` now gates the default path so Pass 1 worlds run ecological foundation first, Pass 2 worlds continue through mutation/divergence/speciation, Pass 3 bootstrap reaches actual social/polity actors, and player-entry assumptions remain deferred to Pass 4.
 
 ## Settlement-Grounded Locality
 
@@ -68,10 +69,12 @@ World seeding is now split into a few explicit pieces so density tuning stays de
 - `WorldGenerationCatalog` provides curated biome layout, name pools, and species templates
 - `WorldGenerator` now turns those settings and templates into connected regions, ecology profiles, primitive lineage templates, weighted seeded ranges, and a Phase A ecological bootstrap
 - `WorldGenerator` now also initializes explicit lineage records, runs an internal evolutionary bootstrap, and stores a `PhaseBReadinessReport` before active simulation begins
+- `WorldGenerator` now also runs a social-emergence bootstrap, tracks candidate polities, and stores a `PhaseCReadinessReport` before handing the world to the live polity simulation
 - producer coverage is intentionally broad while consumer and predator spread is narrower and more uneven, so the world opens biologically alive without becoming uniform
 - `EcosystemSettings` now centralizes the long-run fauna spread knobs that take over after generation: migration thresholds, founder-population sizing, prey-support gates, predator establishment windows, and cooldown pacing
 - `PhaseAReadinessEvaluator` summarizes whether the generated world has broad, uneven, functioning ecological foundations rather than relying on a fixed time cutoff
 - `PhaseBReadinessEvaluator` summarizes whether the post-ecology world has enough branching, extinction, divergence maturity, and sentience-capable potential to hand off into later social emergence
+- `PhaseCReadinessEvaluator` summarizes whether the world now has enough groups, societies, settlements, polities, and viable focal candidates to hand off into later player-entry logic
 
 This keeps the startup world explicit rather than burying scale changes in scattered magic numbers.
 
@@ -200,8 +203,8 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
 Left/Right paging is view-agnostic now: list screens page selection, while chronicle and detail screens page scroll offsets.
 `My Polity` is also a special focal-polity view rather than just a shortcut into generic polity detail. `Enter` intentionally leaves the player there so focal-only information cannot be downgraded by a foreign-polity-safe renderer path.
-Simulation now also performs an explicit bootstrap seeding pass before active play begins. The default bootstrap is now two biological layers deep: world generation runs primitive seeding and Phase A stabilization, then initializes lineage history and runs an internal evolutionary pass until `PhaseBReadinessReport` is evaluated, then resets visible time back to the active simulation boundary.
-Later bootstrap layers such as economy baselines still exist in the codebase, but they are skipped while the world remains in the pre-social startup stages because societies and settlements are intentionally deferred.
+Simulation now also performs an explicit bootstrap seeding pass before active play begins. The default bootstrap is now three layers deep: world generation runs primitive seeding and Phase A stabilization, then initializes lineage history and runs an internal evolutionary pass until `PhaseBReadinessReport` is evaluated, then runs a social-emergence pass until `PhaseCReadinessReport` is evaluated, then resets visible time back to the active simulation boundary.
+Later player-entry and chronicle-handoff layers still remain deferred, but the bootstrap now intentionally produces real early polities and settlements before active simulation starts.
 
 ## Focus And Continuity
 
@@ -234,6 +237,7 @@ Monthly:
 
 In startup Pass 1, the active monthly path intentionally stops after ecological systems.
 In startup Pass 2, the active monthly path runs ecology plus mutation/divergence/speciation and extinction history, but still stops before hunting, economy, migration, settlement, and polity-year-end systems.
+After Pass 3 bootstrap, the generated world reaches `SocietalSimulation`, so the existing polity, settlement, advancement, and fragmentation systems can take over live continuation from the prebuilt social world.
 
 The food architecture is intentionally asymmetric now:
 

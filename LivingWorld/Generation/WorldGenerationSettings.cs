@@ -30,6 +30,10 @@ public sealed class WorldGenerationSettings
 
     public int PhaseBMaximumBootstrapYears { get; init; } = 900;
 
+    public int PhaseCMinimumBootstrapYears { get; init; } = 120;
+
+    public int PhaseCMaximumBootstrapYears { get; init; } = 480;
+
     public double MinimumPhaseAOccupiedRegionPercentage { get; init; } = 0.78;
 
     public double MinimumPhaseAProducerCoverage { get; init; } = 0.88;
@@ -53,4 +57,42 @@ public sealed class WorldGenerationSettings
     public int MinimumPhaseBStableRegionCount { get; init; } = 12;
 
     public double PhaseBMatureRegionalDivergenceThreshold { get; init; } = 1.60;
+
+    public int SentientActivationMinimumPopulation { get; init; } = 70;
+
+    public double SentientActivationMinimumSupport { get; init; } = 0.40;
+
+    public double PersistentGroupCohesionThreshold { get; init; } = 0.35;
+
+    public int PersistentGroupContinuityYears { get; init; } = 4;
+
+    public int SocietyFormationContinuityYears { get; init; } = 6;
+
+    public double SocietyFormationIdentityThreshold { get; init; } = 0.28;
+
+    public int SettlementIntentReturnThreshold { get; init; } = 2;
+
+    public double SettlementFoundingPressureThreshold { get; init; } = 0.48;
+
+    public int PolityFormationMinimumPopulation { get; init; } = 120;
+
+    public int PolityFormationMinimumKnowledgeCount { get; init; } = 3;
+
+    public double PolityFormationComplexityThreshold { get; init; } = 0.42;
+
+    public int MinimumPhaseCSentientGroupCount { get; init; } = 2;
+
+    public int MinimumPhaseCPersistentSocietyCount { get; init; } = 2;
+
+    public int MinimumPhaseCSettlementCount { get; init; } = 2;
+
+    public int MinimumPhaseCViableSettlementCount { get; init; } = 1;
+
+    public int MinimumPhaseCPolityCount { get; init; } = 1;
+
+    public int MinimumPhaseCViableFocalCandidateCount { get; init; } = 1;
+
+    public double MinimumPhaseCAveragePolityAge { get; init; } = 4.0;
+
+    public double MinimumPhaseCHistoricalEventDensity { get; init; } = 0.18;
 }

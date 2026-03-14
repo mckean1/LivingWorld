@@ -15,8 +15,11 @@ public sealed class Polity
     public int RegionId { get; set; }
     public int Population { get; set; }
     public int LineageId { get; set; }
+    public int? FounderSocietyId { get; set; }
     public int? ParentPolityId { get; set; }
     public PolityStage Stage { get; set; }
+    public string? IdentitySeed { get; set; }
+    public string? CurrentPressureSummary { get; set; }
 
     public int YearsSinceFounded { get; set; }
     public int YearsInCurrentRegion { get; set; }
@@ -118,8 +121,11 @@ public sealed class Polity
         RegionId = regionId;
         Population = population;
         LineageId = lineageId ?? id;
+        FounderSocietyId = null;
         ParentPolityId = parentPolityId;
         Stage = stage;
+        IdentitySeed = null;
+        CurrentPressureSummary = null;
 
         YearsSinceFounded = 0;
         YearsInCurrentRegion = 0;

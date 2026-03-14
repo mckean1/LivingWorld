@@ -777,6 +777,12 @@ public sealed class Simulation : IDisposable
         {
             Console.WriteLine($"PhaseB failures: {string.Join(", ", _world.PhaseBReadinessReport.FailureReasons)}");
         }
+        Console.WriteLine(
+            $"PhaseC: Ready={_world.PhaseCReadinessReport.IsReady} Groups={_world.PhaseCReadinessReport.SentientGroupCount} Societies={_world.PhaseCReadinessReport.PersistentSocietyCount} Settlements={_world.PhaseCReadinessReport.SettlementCount}/{_world.PhaseCReadinessReport.ViableSettlementCount} Polities={_world.PhaseCReadinessReport.PolityCount} Candidates={_world.PhaseCReadinessReport.ViableFocalCandidateCount} AvgPolityAge={_world.PhaseCReadinessReport.AveragePolityAge:F1}");
+        if (_world.PhaseCReadinessReport.FailureReasons.Count > 0)
+        {
+            Console.WriteLine($"PhaseC failures: {string.Join(", ", _world.PhaseCReadinessReport.FailureReasons)}");
+        }
 
         if (_world.Time.Year is 0 or 5 or 20)
         {

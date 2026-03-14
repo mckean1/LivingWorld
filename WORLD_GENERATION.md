@@ -10,7 +10,7 @@ The agreed startup path is:
 3. sentience and social formation
 4. polity start and player entry
 
-This document describes the current default startup output, which now includes Pass 1 ecological foundation and Pass 2 evolutionary history bootstrap before any social layer begins.
+This document describes the current default startup output, which now includes Pass 1 ecological foundation, Pass 2 evolutionary history bootstrap, and Pass 3 civilizational emergence bootstrap before player entry begins.
 
 ## Default Scale
 
@@ -25,8 +25,11 @@ The current startup targets live in `LivingWorld/Generation/WorldGenerationSetti
 - `PhaseAMaximumBootstrapMonths = 60`
 - `PhaseBMinimumBootstrapYears = 180`
 - `PhaseBMaximumBootstrapYears = 900`
+- `PhaseCMinimumBootstrapYears = 120`
+- `PhaseCMaximumBootstrapYears = 480`
 - readiness thresholds for occupied regions, producer coverage, consumer coverage, and predator coverage
 - readiness thresholds for mature lineage count, speciation count, ancestry depth, divergence maturity, sentience-capable count, and stable regions
+- readiness thresholds for sentient groups, societies, settlements, polities, viable focal candidates, and historical density
 
 These values are intentionally centralized so density tuning can happen without rewriting generation logic.
 
@@ -41,9 +44,10 @@ These values are intentionally centralized so density tuning can happen without 
 7. run an internal Phase A ecological bootstrap loop until readiness is achieved or the bootstrap month cap is reached
 8. initialize explicit evolutionary lineage records from the surviving primitive carriers
 9. run an internal Phase B evolutionary bootstrap loop with mutation, divergence, speciation, extinction, and sentience-capability progression until readiness is achieved or the bootstrap year cap is reached
-10. store `PhaseAReadinessReport` and `PhaseBReadinessReport` for inspection and later startup passes
+10. run an internal Phase C social bootstrap loop with sentient activation, society formation, settlement pressure, polity formation, and candidate tracking until readiness is achieved or the bootstrap year cap is reached
+11. store `PhaseAReadinessReport`, `PhaseBReadinessReport`, and `PhaseCReadinessReport` for inspection and later startup passes
 
-The default startup still intentionally stops before societies or polities exist.
+The default startup now intentionally stops before player-entry logic exists, but it no longer stops before societies or polities.
 
 ## Region Model
 
@@ -136,14 +140,39 @@ That layer adds:
 - stable ecosystem region count
 - failure reasons
 
+## Phase C Bootstrap And Readiness
+
+After Phase B succeeds, startup now activates viable sentience-capable branches into actual sentient groups and lets them try to persist, settle, and organize.
+
+That layer adds:
+
+- sentient group activation from viable sentience-capable lineage populations
+- persistent group continuity with cohesion, continuity years, identity strength, and shared knowledge
+- society formation with mobility and subsistence identity
+- pressure-based settlement founding plus abandonment/failure handling
+- first polity formation from only the strongest settlement-backed societies
+- focal-candidate viability tracking for later player-entry selection
+- a narrow fallback safeguard so startup does not end in a socially dead world if every otherwise-viable branch narrowly misses polity formation
+
+`PhaseCReadinessReport` currently tracks:
+
+- sentient group count
+- persistent society count
+- settlement count
+- viable settlement count
+- polity count
+- viable focal-candidate count
+- average polity age
+- historical event density
+- failure reasons
+
 ## Deferred To Later Passes
 
 The startup path still does not yet implement:
 
-- full sentient societies from sentience-capable branches
-- society or polity generation
 - focal-polity selection
 - player-entry runtime assumptions
+- active-play chronicle handoff changes for bootstrap history
 
 ## Output Model After Generation
 
@@ -157,6 +186,7 @@ World generation does not produce a separate player-facing yearly report path.
 
 Regional primitive populations now exist before any later-stage society logic could run.
 Those populations now also carry founder/contact/divergence state, so mutation/speciation and sentience-capability progression grow from real ecological history rather than replacing the startup model.
+Pass 3 then turns only viable sentience-capable branches into social actors, accumulates early cultural discoveries, forms durable societies, founds early settlements, and promotes only the strongest societies into pre-player polities.
 
 ## Phase 13/14 Generation Support
 

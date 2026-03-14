@@ -34,16 +34,19 @@ public sealed class WorldGenerationTests
     {
         World world = new WorldGenerator(seed: 7).Generate();
 
-        Assert.Equal(WorldStartupStage.EvolutionaryExpansion, world.StartupStage);
+        Assert.Equal(WorldStartupStage.SocietalSimulation, world.StartupStage);
         Assert.Equal(36, world.Regions.Count);
         Assert.True(world.Species.Count >= 7);
         Assert.Equal(world.Species.Count, world.EvolutionaryLineages.Count);
-        Assert.Empty(world.Polities);
+        Assert.True(world.Polities.Count >= 1);
+        Assert.True(world.Societies.Count >= 1);
         Assert.True(world.Species.Count(species => species.IsPrimitiveLineage) >= 7);
         Assert.Contains(world.Species, species => species.ParentSpeciesId is not null);
         Assert.True(world.PhaseAReadinessReport.OccupiedRegions > 0);
         Assert.True(world.PhaseBReadinessReport.MatureLineageCount >= 0);
+        Assert.True(world.PhaseCReadinessReport.PolityCount >= 1);
         Assert.NotEmpty(world.EvolutionaryHistory);
+        Assert.NotEmpty(world.CivilizationalHistory);
         Assert.Equal(0, world.Time.Year);
         Assert.Equal(1, world.Time.Month);
     }
