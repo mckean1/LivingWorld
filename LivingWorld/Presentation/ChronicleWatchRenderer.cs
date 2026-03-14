@@ -346,7 +346,9 @@ public sealed class ChronicleWatchRenderer : IDisposable
             return 26;
         }
 
-        return Math.Max(16, Console.WindowHeight > 0 ? Console.WindowHeight : 26);
+        int windowHeight = Console.WindowHeight > 0 ? Console.WindowHeight : 26;
+        int bufferHeight = ResolveBufferHeight();
+        return Math.Max(8, Math.Min(windowHeight, bufferHeight));
     }
 
     private int ResolveViewportHeight(int statusLineCount, int footerLineCount)
@@ -354,6 +356,18 @@ public sealed class ChronicleWatchRenderer : IDisposable
         int totalHeight = ResolveWindowHeight();
         int reserved = statusLineCount + footerLineCount + 2;
         return Math.Max(1, totalHeight - reserved);
+    }
+
+    private static int ResolveBufferHeight()
+    {
+        try
+        {
+            return Math.Max(1, Console.BufferHeight);
+        }
+        catch
+        {
+            return 26;
+        }
     }
 
     private sealed record ChronicleLayout(

@@ -36,11 +36,19 @@ public sealed class ChronicleColorWriter
             return;
         }
 
-        string fitted = FitToWidth(line, width);
+        int bufferWidth = ResolveConsoleBufferWidth();
+        int bufferHeight = ResolveConsoleBufferHeight();
+        if (top < 0 || top >= bufferHeight || left >= bufferWidth)
+        {
+            return;
+        }
+
+        int drawableWidth = Math.Max(1, Math.Min(width, bufferWidth - Math.Max(0, left)));
+        string fitted = FitToWidth(line, drawableWidth);
         Console.SetCursorPosition(left, top);
         Write(fitted, context);
 
-        int remaining = Math.Max(0, width - fitted.Length);
+        int remaining = Math.Max(0, drawableWidth - fitted.Length);
         if (remaining > 0)
         {
             Console.Write(new string(' ', remaining));
@@ -76,6 +84,30 @@ public sealed class ChronicleColorWriter
         return line.Length <= width
             ? line
             : line[..width];
+    }
+
+    private static int ResolveConsoleBufferWidth()
+    {
+        try
+        {
+            return Math.Max(1, Console.BufferWidth);
+        }
+        catch
+        {
+            return Math.Max(1, Console.WindowWidth > 0 ? Console.WindowWidth : 80);
+        }
+    }
+
+    private static int ResolveConsoleBufferHeight()
+    {
+        try
+        {
+            return Math.Max(1, Console.BufferHeight);
+        }
+        catch
+        {
+            return Math.Max(1, Console.WindowHeight > 0 ? Console.WindowHeight : 26);
+        }
     }
 
     private static ConsoleColor MapColor(ChronicleSemantic semantic)
