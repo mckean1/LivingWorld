@@ -99,6 +99,7 @@ In watch mode:
 - emit on state transitions, not every tick
 - do not narrate bootstrap-created baseline state as live history
 - settlement starvation and failed-aid logging therefore key off starvation-stage transitions rather than repeating each monthly starving result
+- do not let responsive internal economy identity promote directly into chronicle reputation; visible `known for` and trade-good turns now require minimum settlement age, sustained monthly confirmation, and stronger thresholds than the hidden economy layer
 - dedupe identical follow-ups inside a propagation step
 - cap propagation depth
 - cap total follow-up count
@@ -107,6 +108,7 @@ In watch mode:
 - visible families without a custom semantic state key still fall back to normalized narrative-by-actor suppression, which prevents exact repeated chronicle lines from slipping through default presentation paths
 - source systems now also suppress repeated biology status events through milestone guards and year-level cooldowns before those events ever hit storage
 - explicit bootstrap state seeding initializes previous-state trackers so the first active month does not misread baseline conditions as a fresh historical transition
+- related economy identity beats now also share a tighter visible family key and source-side anti-stacking gate, so one settlement-material pair does not generate back-to-back specialization and trade-good chronicle lines in the same early window
 
 ## Focus And Lineage Continuity
 
@@ -180,6 +182,7 @@ Phase 18 now adds stronger economic response behavior inside this loop:
 - after reserve targets and pressure are known, settlements calculate internal need, value, opportunity, and production-focus signals
 - those signals steer extraction, production, convoy priority, and specialization drift without introducing currency or a buy/sell market screen
 - major economy turns such as highly valued goods or trade-good identity still pass through the same structured event pipeline and chronicle filters
+- identity-style economy milestones now only surface when the settlement has stayed old enough and strong enough for long enough to read as earned history rather than as one responsive month of internal pressure
 
 The next planned loop-facing expansions follow the canonical roadmap order:
 

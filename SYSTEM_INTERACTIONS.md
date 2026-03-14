@@ -260,6 +260,8 @@ Implemented:
 - Explicit bootstrap-aware chronicle handling so initialization-created economy baselines remain internal state and setup history instead of appearing as live Year 0 narrative
 - Bootstrap baseline seeding now initializes older settlements' economy and material-reputation state deeply enough that the first live tick compares against an established baseline instead of inventing new `known for`, trade-good, or false recovery history
 - Shared visible-event dedupe and chronicle filtering that still allow real post-bootstrap transitions, including legitimate Year 0 changes, to surface normally
+- Economy identity milestones are now stricter than the internal economy layer itself: specialization and trade-good chronicle turns require minimum settlement age, multi-month persistence, and stronger visible thresholds before they are promoted into player-facing history
+- Related specialization and trade-good milestones for the same settlement-material pair now use anti-stacking and escalation rules, so the chronicle prefers one earned historical reputation beat over two near-duplicate early lines
 
 ---
 

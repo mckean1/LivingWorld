@@ -147,6 +147,7 @@ The monthly material layer now follows this order inside a polity:
 9. emit grouped settlement-level crisis turns when multiple related material shifts happen together
 10. surface only major material transitions such as a broader crisis beginning, worsening, easing, or a settlement becoming known for a craft
 11. apply a final player-facing dedupe identity when recent visible major-event summaries are collected, so repeated same-year lines do not reappear through a different view path
+12. keep economy identity chronicle turns stricter than internal economy labels: `known for` and trade-good milestones require mature settlements, sustained monthly confirmation, and stronger escalation than the hidden pressure model itself
 
 This keeps the physical economy legible:
 
@@ -158,6 +159,7 @@ Phase 18 now extends that flow with a hybrid economy layer:
 - extraction and recipe choice use those smoothed signals so settlements react to scarcity, surplus, and local opportunity without thrashing every month
 - redistribution still moves real material stockpiles, but receiver priority now reflects economic value pressure as well as reserve deficit
 - player-facing screens summarize the result through readable labels rather than raw price numbers
+- visible identity-style economy events now sit one layer higher: bootstrap baselines remain hidden, legitimate post-bootstrap Year 0 milestones are still allowed, but only after age, persistence, and anti-stacking gates confirm that the settlement has earned a durable reputation
 
 The canonical next roadmap sequence is:
 

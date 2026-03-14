@@ -158,7 +158,7 @@ public sealed class ChroniclePresentationPolicy
             [WorldEventType.SettlementSpecialized] = new ChronicleEventProfile(
                 BasePriority: 5,
                 SameStateCooldownYears: 24,
-                ChangedStateCooldownYears: 0,
+                ChangedStateCooldownYears: 1,
                 BuildMaterialScopeKey,
                 BuildMaterialStateKey),
             [WorldEventType.PreservationEstablished] = new ChronicleEventProfile(
@@ -194,7 +194,7 @@ public sealed class ChroniclePresentationPolicy
             [WorldEventType.TradeGoodEstablished] = new ChronicleEventProfile(
                 BasePriority: 5,
                 SameStateCooldownYears: 20,
-                ChangedStateCooldownYears: 0,
+                ChangedStateCooldownYears: 1,
                 BuildMaterialScopeKey,
                 BuildMaterialStateKey),
             [WorldEventType.StageChanged] = new ChronicleEventProfile(
@@ -251,7 +251,7 @@ public sealed class ChroniclePresentationPolicy
         return string.Join(":", new[]
         {
             worldEvent.Year.ToString(),
-            worldEvent.Type,
+            ResolvePresentationFamily(worldEvent),
             actorScope ?? "global",
             stateKey
         });
@@ -302,7 +302,7 @@ public sealed class ChroniclePresentationPolicy
             return true;
         }
 
-        presentationKey = $"{worldEvent.Type}:{actorScope}";
+        presentationKey = $"{ResolvePresentationFamily(worldEvent)}:{actorScope}";
         string? stateKey = ResolveStateKey(worldEvent);
 
         if (!previouslyPresented.TryGetValue(presentationKey, out ChroniclePresentationRecord? previousRecord))
@@ -375,6 +375,13 @@ public sealed class ChroniclePresentationPolicy
 
     private static bool ShouldSuppressFromChronicle(WorldEvent worldEvent)
         => worldEvent.IsBootstrapEvent || !worldEvent.IsLiveTransition;
+
+    private static string ResolvePresentationFamily(WorldEvent worldEvent)
+        => worldEvent.Type switch
+        {
+            WorldEventType.SettlementSpecialized or WorldEventType.TradeGoodEstablished => "economy_identity",
+            _ => worldEvent.Type
+        };
 
     private ChronicleEventProfile ResolveProfile(WorldEvent worldEvent)
         => _profiles.TryGetValue(worldEvent.Type, out ChronicleEventProfile? profile)

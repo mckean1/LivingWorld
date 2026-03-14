@@ -371,7 +371,15 @@ public sealed class Polity
     {
         foreach (Settlement settlement in _settlements)
         {
-            settlement.YearsEstablished++;
+            settlement.EstablishedMonths += 12;
+        }
+    }
+
+    public void AdvanceSettlementMonths()
+    {
+        foreach (Settlement settlement in _settlements)
+        {
+            settlement.AdvanceOneMonthOfAge();
         }
     }
 

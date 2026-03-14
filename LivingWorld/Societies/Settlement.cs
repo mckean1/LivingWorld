@@ -13,7 +13,12 @@ public sealed class Settlement
     public int RegionId { get; set; }
     public string Name { get; set; }
     public double CultivatedLand { get; set; }
-    public int YearsEstablished { get; set; }
+    public int EstablishedMonths { get; set; }
+    public int YearsEstablished
+    {
+        get => EstablishedMonths / 12;
+        set => EstablishedMonths = Math.Max(0, value) * 12;
+    }
     public double FoodProduced { get; set; }
     public double FoodStored { get; set; }
     public double FoodRequired { get; set; }
@@ -46,6 +51,10 @@ public sealed class Settlement
     public Dictionary<MaterialType, double> MaterialProductionFocusScores { get; } = [];
     public Dictionary<MaterialType, int> LastRecordedHighlyValuedBands { get; } = [];
     public Dictionary<MaterialType, bool> LastRecordedTradeGoodStates { get; } = [];
+    public Dictionary<MaterialType, int> VisibleTradeGoodCandidateMonths { get; } = [];
+    public HashSet<MaterialType> ChronicleTradeGoodMaterials { get; } = [];
+    public Dictionary<MaterialType, int> LastVisibleEconomyIdentityMonthByMaterial { get; } = [];
+    public Dictionary<MaterialType, EconomyIdentityMilestoneKind> LastVisibleEconomyIdentityKindByMaterial { get; } = [];
     public HashSet<MaterialType> HighlyValuedMaterials { get; } = [];
     public HashSet<MaterialType> TradeGoodMaterials { get; } = [];
     public HashSet<MaterialType> LocallyCommonMaterials { get; } = [];
@@ -55,7 +64,9 @@ public sealed class Settlement
     public int ProductionFocusShiftCooldownMonths { get; set; }
     public bool LiveMaterialCrisisActive { get; set; }
     public Dictionary<SettlementSpecializationTag, double> SpecializationScores { get; } = [];
+    public Dictionary<SettlementSpecializationTag, int> VisibleSpecializationCandidateMonths { get; } = [];
     public HashSet<SettlementSpecializationTag> SpecializationTags { get; } = [];
+    public HashSet<SettlementSpecializationTag> ChronicleSpecializationTags { get; } = [];
     public HashSet<string> MaterialMilestonesRecorded { get; } = [];
     public List<ManagedHerd> ManagedHerds { get; } = [];
     public List<CultivatedCrop> CultivatedCrops { get; } = [];
@@ -89,6 +100,14 @@ public sealed class Settlement
             MaterialProductionFocusScores[materialType] = 0.0;
             LastRecordedHighlyValuedBands[materialType] = 0;
             LastRecordedTradeGoodStates[materialType] = false;
+            VisibleTradeGoodCandidateMonths[materialType] = 0;
+            LastVisibleEconomyIdentityMonthByMaterial[materialType] = int.MinValue;
+            LastVisibleEconomyIdentityKindByMaterial[materialType] = EconomyIdentityMilestoneKind.None;
+        }
+
+        foreach (SettlementSpecializationTag tag in Enum.GetValues<SettlementSpecializationTag>())
+        {
+            VisibleSpecializationCandidateMonths[tag] = 0;
         }
     }
 
@@ -190,6 +209,9 @@ public sealed class Settlement
             MaterialConsumedThisMonth[materialType] = 0.0;
         }
     }
+
+    public void AdvanceOneMonthOfAge()
+        => EstablishedMonths++;
 
     public void SetMaterialEconomySignals(
         MaterialType materialType,
@@ -324,4 +346,11 @@ public sealed class Settlement
             _ => SettlementStarvationStage.Starving
         };
     }
+}
+
+public enum EconomyIdentityMilestoneKind
+{
+    None,
+    Specialization,
+    TradeGood
 }

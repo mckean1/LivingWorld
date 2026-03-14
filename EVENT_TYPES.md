@@ -192,6 +192,7 @@ Predator founder failure and success are expected to be common structured ecolog
 Anchored starting settlements are also generation state, not synthetic `settlement_founded` events. Chronicle-visible settlement beats still come from later real transitions such as consolidation.
 The same rule now applies to bootstrap-tagged baseline economy and hardship events: initialization may create canonical setup events internally, but only post-bootstrap transitions are eligible for player-facing chronicle history.
 Economy/material/reputation families now also rely on explicit event origin so grouped milestone or summary presentation can reject bootstrap-derived setup even when an event shares the same type as a legitimate later live transition.
+Identity-style economy events now also require stronger live promotion than the internal economy labels they derive from. A settlement may internally lean toward timber work or a trade good earlier, while the visible chronicle waits for minimum age, sustained confirmation, and stronger thresholds before using `became known for ...` wording.
 The completed watch inspection UI does not introduce event types for pausing, paging, screen switching, or other presentation-only actions.
 
 Watch mode also separates:
@@ -303,6 +304,7 @@ New structured event types:
   - a critical material shortage remained unaided at a meaningful transition
 - `settlement_specialized`
   - a settlement became known for a sustained craft or extraction role
+  - only after sustained proof on a mature settlement; this is a narrative reputation milestone, not the first month of internal specialization pressure
 - `preservation_established`
   - a settlement began preserving food through salt-backed storage
 - `toolmaking_established`
@@ -325,10 +327,13 @@ New structured event types:
   - a favored output chain stalled because an input stayed constrained
 - `trade_good_established`
   - a settlement built sustained surplus in a good that remained broadly valuable
+  - should only surface after mature multi-month proof, and usually not immediately after a related `settlement_specialized` beat for the same material
 
 Intent:
 
 - keep the real economy pressure model internal
 - surface only the major historical turns
+- keep visible identity milestones stricter than internal economy labels
+- allow true live Year 0 milestones only when those stricter maturity and persistence rules are actually satisfied
 - preserve cause metadata such as `materialType`, bottleneck input, or prior focus in structured history
 - avoid duplicate major-event presentation for the same settlement-material turn in one year

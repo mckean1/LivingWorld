@@ -684,6 +684,32 @@ public sealed class ChronicleEventFormatterTests
     }
 
     [Fact]
+    public void RelatedEconomyIdentityEvents_DoNotStackInSameYearForSameSettlementMaterial()
+    {
+        WorldEvent specializationEvent = CreateEvent(
+            WorldEventType.SettlementSpecialized,
+            WorldEventSeverity.Major,
+            year: 243,
+            narrative: "Stonefen became known for pottery",
+            settlementId: 7004,
+            settlementName: "Stonefen");
+        specializationEvent.Metadata["specializationTag"] = "PotteryTradition";
+        specializationEvent.Metadata["materialType"] = "Pottery";
+
+        WorldEvent tradeGoodEvent = CreateEvent(
+            WorldEventType.TradeGoodEstablished,
+            WorldEventSeverity.Major,
+            year: 243,
+            narrative: "Stonefen became known for pottery as a trade good",
+            settlementId: 7004,
+            settlementName: "Stonefen");
+        tradeGoodEvent.Metadata["materialType"] = "Pottery";
+
+        Assert.True(_formatter.TryFormat(specializationEvent, _focus, out _));
+        Assert.False(_formatter.TryFormat(tradeGoodEvent, _focus, out _));
+    }
+
+    [Fact]
     public void ExactDuplicateVisibleRecoveryLine_InSameYear_IsSuppressedBySafetyNet()
     {
         WorldEvent firstRecovery = CreateEvent(

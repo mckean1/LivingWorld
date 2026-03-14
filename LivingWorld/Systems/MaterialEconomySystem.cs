@@ -19,6 +19,15 @@ public sealed class MaterialEconomySystem
     private const double HighlyValuedScoreThreshold = 1.35;
     private const double FocusShiftScoreThreshold = 1.05;
     private const int FocusShiftConfirmationMonths = 3;
+    private const int VisibleIdentityMinimumAgeMonths = 24;
+    private const int VisibleSpecializationPersistenceMonths = 6;
+    private const int VisibleTradeGoodPersistenceMonths = 9;
+    private const int RelatedIdentityCooldownMonths = 18;
+    private const int TradeGoodEscalationMinimumGapMonths = 12;
+    private const double VisibleSpecializationScoreThreshold = 28.0;
+    private const double VisibleTradeGoodReadinessThreshold = 1.25;
+    private const double VisibleTradeGoodOpportunityThreshold = 0.90;
+    private const double VisibleTradeGoodEscalationThreshold = 1.40;
 
     private static readonly MaterialType[] RawMaterials =
     [
@@ -945,6 +954,7 @@ public sealed class MaterialEconomySystem
     {
         Region region = lookup.GetRequiredRegion(settlement.RegionId, "Economy transitions");
         Species species = lookup.GetRequiredSpecies(polity.SpeciesId, "Economy transitions");
+        int currentMonthIndex = ResolveCurrentMonthIndex(world);
 
         foreach (MaterialType materialType in RedistributionPriority)
         {
@@ -981,7 +991,21 @@ public sealed class MaterialEconomySystem
 
             bool currentTradeGoodState = settlement.TradeGoodMaterials.Contains(materialType);
             bool previousTradeGoodState = settlement.LastRecordedTradeGoodStates[materialType];
-            if (currentTradeGoodState && !previousTradeGoodState)
+            bool visibleTradeGoodCandidate =
+                currentTradeGoodState
+                && settlement.MaterialExternalPullReadiness[materialType] >= VisibleTradeGoodReadinessThreshold
+                && settlement.MaterialOpportunityScores[materialType] >= VisibleTradeGoodOpportunityThreshold
+                && settlement.MaterialPressureStates[materialType] == MaterialPressureState.Surplus;
+            settlement.VisibleTradeGoodCandidateMonths[materialType] = visibleTradeGoodCandidate
+                ? settlement.VisibleTradeGoodCandidateMonths[materialType] + 1
+                : 0;
+
+            if (currentTradeGoodState
+                && visibleTradeGoodCandidate
+                && !settlement.ChronicleTradeGoodMaterials.Contains(materialType)
+                && settlement.VisibleTradeGoodCandidateMonths[materialType] >= VisibleTradeGoodPersistenceMonths
+                && settlement.EstablishedMonths >= VisibleIdentityMinimumAgeMonths
+                && CanEmitTradeGoodMilestone(settlement, materialType, currentMonthIndex))
             {
                 world.AddEvent(
                     WorldEventType.TradeGoodEstablished,
@@ -1000,8 +1024,15 @@ public sealed class MaterialEconomySystem
                     settlementName: settlement.Name,
                     metadata: new Dictionary<string, string>
                     {
-                        ["materialType"] = materialType.ToString()
+                        ["materialType"] = materialType.ToString(),
+                        ["identityTier"] = "2",
+                        ["identityAgeMonths"] = settlement.EstablishedMonths.ToString(),
+                        ["identityPersistenceMonths"] = settlement.VisibleTradeGoodCandidateMonths[materialType].ToString()
                     });
+
+                settlement.ChronicleTradeGoodMaterials.Add(materialType);
+                settlement.LastVisibleEconomyIdentityMonthByMaterial[materialType] = currentMonthIndex;
+                settlement.LastVisibleEconomyIdentityKindByMaterial[materialType] = EconomyIdentityMilestoneKind.TradeGood;
             }
 
             settlement.LastRecordedHighlyValuedBands[materialType] = currentHighlyValuedBand;
@@ -1097,10 +1128,12 @@ public sealed class MaterialEconomySystem
     private static void UpdateSpecialization(World world, WorldLookup lookup, Polity polity, Settlement settlement)
     {
         Region region = lookup.GetRequiredRegion(settlement.RegionId, "Settlement specialization");
+        int currentMonthIndex = ResolveCurrentMonthIndex(world);
         foreach ((SettlementSpecializationTag tag, MaterialType output, double monthlyOutput, double localMatch) in ResolveSpecializationSignals(region, settlement))
         {
             if (monthlyOutput <= 0.05)
             {
+                settlement.VisibleSpecializationCandidateMonths[tag] = 0;
                 continue;
             }
 
@@ -1109,7 +1142,25 @@ public sealed class MaterialEconomySystem
                 : monthlyOutput * (0.45 + localMatch + (settlement.MaterialOpportunityScores[output] * 0.18) + (settlement.MaterialExternalPullReadiness[output] * 0.15));
             settlement.SpecializationScores[tag] = updatedScore;
 
-            if (updatedScore < 18.0 || !settlement.SpecializationTags.Add(tag))
+            if (updatedScore >= 18.0)
+            {
+                settlement.SpecializationTags.Add(tag);
+            }
+
+            bool visibleSpecializationCandidate =
+                updatedScore >= VisibleSpecializationScoreThreshold
+                && settlement.MaterialOpportunityScores[output] >= 0.85
+                && settlement.MaterialProducedThisMonth[output] >= 1.0;
+            settlement.VisibleSpecializationCandidateMonths[tag] = visibleSpecializationCandidate
+                ? settlement.VisibleSpecializationCandidateMonths[tag] + 1
+                : 0;
+
+            if (updatedScore < 18.0
+                || settlement.ChronicleSpecializationTags.Contains(tag)
+                || !visibleSpecializationCandidate
+                || settlement.VisibleSpecializationCandidateMonths[tag] < VisibleSpecializationPersistenceMonths
+                || settlement.EstablishedMonths < VisibleIdentityMinimumAgeMonths
+                || !CanEmitSpecializationMilestone(settlement, output, currentMonthIndex))
             {
                 continue;
             }
@@ -1132,8 +1183,15 @@ public sealed class MaterialEconomySystem
                 metadata: new Dictionary<string, string>
                 {
                     ["specializationTag"] = tag.ToString(),
-                    ["materialType"] = output.ToString()
+                    ["materialType"] = output.ToString(),
+                    ["identityTier"] = "1",
+                    ["identityAgeMonths"] = settlement.EstablishedMonths.ToString(),
+                    ["identityPersistenceMonths"] = settlement.VisibleSpecializationCandidateMonths[tag].ToString()
                 });
+
+            settlement.ChronicleSpecializationTags.Add(tag);
+            settlement.LastVisibleEconomyIdentityMonthByMaterial[output] = currentMonthIndex;
+            settlement.LastVisibleEconomyIdentityKindByMaterial[output] = EconomyIdentityMilestoneKind.Specialization;
         }
     }
 
@@ -1266,6 +1324,13 @@ public sealed class MaterialEconomySystem
                 _ => 0
             };
             settlement.LastRecordedTradeGoodStates[materialType] = settlement.TradeGoodMaterials.Contains(materialType);
+            settlement.VisibleTradeGoodCandidateMonths[materialType] =
+                settlement.TradeGoodMaterials.Contains(materialType)
+                && settlement.MaterialExternalPullReadiness[materialType] >= VisibleTradeGoodReadinessThreshold
+                && settlement.MaterialOpportunityScores[materialType] >= VisibleTradeGoodOpportunityThreshold
+                && settlement.MaterialPressureStates[materialType] == MaterialPressureState.Surplus
+                    ? VisibleTradeGoodPersistenceMonths
+                    : 0;
         }
 
         settlement.DominantProductionFocusMaterial = ResolveDominantProductionFocus(settlement);
@@ -1294,8 +1359,75 @@ public sealed class MaterialEconomySystem
             {
                 settlement.SpecializationTags.Add(tag);
             }
+
+            settlement.VisibleSpecializationCandidateMonths[tag] = resolvedScore >= VisibleSpecializationScoreThreshold
+                ? VisibleSpecializationPersistenceMonths
+                : 0;
+        }
+
+        if (settlement.EstablishedMonths >= VisibleIdentityMinimumAgeMonths)
+        {
+            foreach ((SettlementSpecializationTag tag, MaterialType output, _, _) in ResolveSpecializationSignals(region, settlement))
+            {
+                if (settlement.SpecializationScores.TryGetValue(tag, out double specializationScore)
+                    && specializationScore >= VisibleSpecializationScoreThreshold)
+                {
+                    settlement.ChronicleSpecializationTags.Add(tag);
+                    settlement.LastVisibleEconomyIdentityMonthByMaterial[output] = 0;
+                    settlement.LastVisibleEconomyIdentityKindByMaterial[output] = EconomyIdentityMilestoneKind.Specialization;
+                }
+            }
+
+            foreach (MaterialType materialType in RedistributionPriority)
+            {
+                if (settlement.TradeGoodMaterials.Contains(materialType)
+                    && settlement.MaterialExternalPullReadiness[materialType] >= VisibleTradeGoodReadinessThreshold
+                    && settlement.MaterialOpportunityScores[materialType] >= VisibleTradeGoodOpportunityThreshold
+                    && settlement.MaterialPressureStates[materialType] == MaterialPressureState.Surplus)
+                {
+                    settlement.ChronicleTradeGoodMaterials.Add(materialType);
+                    settlement.LastVisibleEconomyIdentityMonthByMaterial[materialType] = 0;
+                    settlement.LastVisibleEconomyIdentityKindByMaterial[materialType] = EconomyIdentityMilestoneKind.TradeGood;
+                }
+            }
         }
     }
+
+    private static bool CanEmitSpecializationMilestone(Settlement settlement, MaterialType output, int currentMonthIndex)
+    {
+        EconomyIdentityMilestoneKind previousKind = settlement.LastVisibleEconomyIdentityKindByMaterial[output];
+        int previousMonth = settlement.LastVisibleEconomyIdentityMonthByMaterial[output];
+        if (previousKind == EconomyIdentityMilestoneKind.None)
+        {
+            return true;
+        }
+
+        return previousKind != EconomyIdentityMilestoneKind.TradeGood
+               && currentMonthIndex - previousMonth >= RelatedIdentityCooldownMonths;
+    }
+
+    private static bool CanEmitTradeGoodMilestone(Settlement settlement, MaterialType materialType, int currentMonthIndex)
+    {
+        EconomyIdentityMilestoneKind previousKind = settlement.LastVisibleEconomyIdentityKindByMaterial[materialType];
+        int previousMonth = settlement.LastVisibleEconomyIdentityMonthByMaterial[materialType];
+        if (previousKind == EconomyIdentityMilestoneKind.None)
+        {
+            return true;
+        }
+
+        if (previousKind == EconomyIdentityMilestoneKind.TradeGood)
+        {
+            return false;
+        }
+
+        int monthsSincePrevious = currentMonthIndex - previousMonth;
+        return monthsSincePrevious >= TradeGoodEscalationMinimumGapMonths
+               && settlement.MaterialExternalPullReadiness[materialType] >= VisibleTradeGoodEscalationThreshold
+               && settlement.VisibleTradeGoodCandidateMonths[materialType] >= VisibleTradeGoodPersistenceMonths;
+    }
+
+    private static int ResolveCurrentMonthIndex(World world)
+        => (world.Time.Year * 12) + Math.Max(0, world.Time.Month - 1);
 
     private static Dictionary<string, string> BuildGroupedMaterialMetadata(
         IReadOnlyList<MaterialType> materials,

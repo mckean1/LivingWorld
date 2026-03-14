@@ -253,6 +253,8 @@ Phase 18 keeps the economy simulation internal and pressure-based rather than ex
 - player-facing watch screens stay readable through compact summaries such as `Shortage`, `Stable`, `Surplus`, `Highly Valued`, `Trade Good`, and `Locally Common`
 - new economy-turn event families remain structured-first unless they become true major historical beats such as a material becoming highly valued or a settlement becoming known for a trade good
 - startup baseline economy passes now seed those states during explicit bootstrap, so the live chronicle begins from world change rather than narrating initialization output
+- visible economy identity lines are now stricter than the internal economy signals beneath them: a settlement must be mature enough, strong enough, and stable for long enough before the chronicle says it `became known for` a craft or trade good
+- related identity beats also share anti-stacking rules, so specialization and trade-good milestones for the same settlement-material pair do not usually surface as back-to-back early chronicle lines
 
 The canonical roadmap now points next to:
 

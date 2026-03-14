@@ -151,15 +151,21 @@ public sealed class SimulationBootstrapTests
         };
 
         world.AddEvent(specializationEvent);
-        world.AddEvent(tradeGoodEvent);
         world.AddEvent(recoveryEvent);
 
         Assert.True(formatter.TryFormat(Assert.Single(world.Events, evt => evt.Type == WorldEventType.SettlementSpecialized && !evt.IsBootstrapEvent), focus, out string specializationLine));
         Assert.Equal("Year 0 - Green Hearth became known for timber work.", specializationLine);
-        Assert.True(formatter.TryFormat(Assert.Single(world.Events, evt => evt.Type == WorldEventType.TradeGoodEstablished && !evt.IsBootstrapEvent), focus, out string tradeGoodLine));
-        Assert.Equal("Year 0 - Green Hearth became known for lumber as a trade good.", tradeGoodLine);
         Assert.True(formatter.TryFormat(Assert.Single(world.Events, evt => evt.Type == WorldEventType.MaterialCrisisResolved && !evt.IsBootstrapEvent), focus, out string recoveryLine));
         Assert.Equal("Year 0 - Green Hearth recovered from a broader material crisis.", recoveryLine);
+
+        WorldEvent laterTradeGoodEvent = tradeGoodEvent with
+        {
+            Year = 2,
+            Month = 1,
+            Season = Season.Winter
+        };
+        Assert.True(formatter.TryFormat(laterTradeGoodEvent, focus, out string tradeGoodLine));
+        Assert.Equal("Year 2 - Green Hearth became known for lumber as a trade good.", tradeGoodLine);
     }
 
     [Fact]

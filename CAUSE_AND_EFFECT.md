@@ -48,6 +48,7 @@ Settlement hardship follows the same pattern at a smaller scale:
 No chronicle beat should be emitted for a settlement that is merely still starving in the same way it was before. The event belongs to the transition, not the steady state.
 The same rule now applies one step earlier in time: initialization-created baseline state is not chronicle history. Bootstrap can seed settlement pressure, shortage, trade-good, specialization, and starvation baselines internally, and only later world change should narrate those conditions as history.
 Event origin is now explicit as well, so the chronicle can distinguish setup/baseline context from a true live transition even when the event family is the same.
+The same rule now applies inside live economy play: internal specialization and trade-good state can shift responsively, but the chronicle only narrates identity milestones after mature, sustained conditions make that reputation historically plausible.
 
 ### Settlement Pressure
 
@@ -198,6 +199,7 @@ Instead it favors:
 - adaptation milestone transitions rather than repeated reaffirmation of the same adaptation state
 - chronicle-visible hardship, recovery, migration, and ecology beats only when the tracked visible band actually changes or enough quiet time has passed
 - as a final presentation safeguard, exact repeated visible lines for the same actor are also suppressed even when a family has not been given a custom semantic state key yet
+- economy identity beats now also add source-side maturity and persistence gates, plus related-signal anti-stacking, so one short-lived surplus does not instantly become `became known for ...` history
 
 This is why yearly hardship transitions remain important: they summarize meaningful changes without narrating every month of unchanged suffering.
 The fuller-world opening is therefore tuned by improving real local anchors, homeland support, and viability, not by inventing disconnected drama.

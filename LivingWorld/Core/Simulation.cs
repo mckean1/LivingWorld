@@ -183,6 +183,7 @@ public sealed class Simulation : IDisposable
         foreach (Polity polity in _world.Polities)
         {
             polity.TickPropagationState();
+            polity.AdvanceSettlementMonths();
         }
 
         RunMonthlySystems();

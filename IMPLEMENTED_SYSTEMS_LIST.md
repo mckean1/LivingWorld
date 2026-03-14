@@ -240,6 +240,7 @@ Implemented:
 - Bootstrap baseline seeding now initializes older settlements' economy and material-reputation state deeply enough that the first live tick compares against an established baseline instead of inventing new `known for`, trade-good, or false recovery history
 - Event origin metadata now distinguishes bootstrap baseline setup from true live transitions, and the visible chronicle applies a final non-live-origin safety guard for these families
 - Shared visible-event dedupe and chronicle filtering that still allow real post-bootstrap transitions, including legitimate Year 0 changes, to surface normally
+- Economy identity chronicle milestones such as `became known for ...` and `... as a trade good` now sit on a stricter narrative layer than the internal economy: they require minimum settlement age, sustained multi-month confirmation, stronger visible thresholds, sticky earned identity, and related-signal anti-stacking before they appear as history
 
 ---
 

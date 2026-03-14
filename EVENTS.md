@@ -178,12 +178,14 @@ The chronicle formatter now also treats some event families as semantic transiti
 - systems emit events on state transitions, not repeated unchanged conditions
 - bootstrap setup is not itself a player-facing historical transition; baseline seeding can emit canonical events, but those events are filtered from live chronicle surfaces by simulation phase
 - prior-state trackers should be seeded during bootstrap so the first active comparison does not turn established specialization, trade-good identity, or crisis normalization into fake new history
+- economy identity milestones are also stricter than internal economy state: visible `settlement_specialized` and `trade_good_established` beats now require minimum settlement age, sustained monthly confirmation, and stronger visible thresholds before they become live chronicle history
 - the propagation coordinator dedupes identical follow-up events inside one step
 - propagation depth is capped
 - total events per source event are capped
 - chronicle cooldowns still suppress repeated visible beats for the same actor scope
 - visible cooldowns are now semantic and family-specific, so repeated same-state events are suppressed more strongly than changed-state transitions
 - visible families without an explicit semantic key still use a fallback normalized-narrative state key by actor scope, which suppresses exact repeated chronicle lines without hiding distinct turning points
+- related economy identity families now also share one visible presentation family for the same settlement-material pair, which helps prevent back-to-back `known for` and trade-good lines from stacking in the same early window
 - source systems may also suppress repeat emissions before they ever reach chronicle presentation when no new milestone has been crossed
 - settlement aid failure follows the same rule: `aid_failed` and starvation recovery only emit when a settlement enters starvation, worsens to a deeper starvation stage, or exits starvation
 - player-facing major-event summaries now also apply a final dedupe pass using the same visible event identity as chronicle presentation, so exact or equivalent same-year lines do not reappear in recent-event lists
@@ -242,3 +244,4 @@ Default visibility intent:
 - `material_highly_valued` and `trade_good_established` can surface when they become real major historical turns for the focused line
 - duplicate-safe major-event presentation still applies, so the live chronicle and recent-major-event views should not repeat the same settlement-material turn in one year
 - those same economy-turn families are now bootstrap-aware, so initial shortage, trade-good, highly valued, specialization, or convoy-failure state can be recorded internally without creating a startup chronicle dump
+- `settlement_specialized` and `trade_good_established` now also rely on mature settlement age, multi-month persistence, and related-signal anti-stacking so the chronicle reserves `became known for ...` wording for durable identity rather than early fluctuations

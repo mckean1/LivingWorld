@@ -157,6 +157,8 @@ Important traits:
 - internal propagation events remain structured-first unless they are promoted into genuine historical beats
 - bootstrap-created baseline events remain canonical/internal but are not eligible for the player chronicle or recent-major-event summaries
 - event origin now distinguishes bootstrap baseline/setup context from true live transitions, which gives the chronicle pipeline a final safety guard against bootstrap-derived leaks
+- economy identity families now use a clearer two-layer model: internal specialization / trade-good state can respond quickly, while visible `known for` milestones require settlement maturity, sustained confirmation, and stricter promotion thresholds
+- related specialization and trade-good turns for the same settlement-material pair now also share one presentation family key, which gives the chronicle a final anti-stacking guard even if an upstream producer emits both
 - chronicle presentation now uses per-family visibility profiles with semantic scope keys, state signatures, and separate same-state versus changed-state cooldown gaps
 - when a visible event family has no custom state signature yet, chronicle presentation falls back to actor scope plus normalized narrative so exact repeated lines are still suppressed
 - the fixed top panel shows focal polity context such as species

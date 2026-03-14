@@ -111,15 +111,53 @@ public sealed class MaterialEconomySystemTests
         Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
         Settlement settlement = polity.Settlements[0];
         settlement.FoodRequired = 30;
+        settlement.EstablishedMonths = 36;
 
         MaterialEconomySystem system = new();
-        for (int month = 0; month < 6; month++)
-        {
-            system.UpdateMonthlyMaterials(world);
-        }
+        RunMaterialMonths(world, polity, system, months: 8);
 
         Assert.Contains(SettlementSpecializationTag.PotteryTradition, settlement.SpecializationTags);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SettlementSpecialized);
+    }
+
+    [Fact]
+    public void YoungSettlement_DoesNotEmitIdentityMilestoneTooEarly()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        region.ClayAbundance = 0.94;
+        region.SaltAbundance = 0.82;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 30;
+        settlement.EstablishedMonths = 6;
+
+        MaterialEconomySystem system = new();
+        RunMaterialMonths(world, polity, system, months: 8);
+
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.SettlementSpecialized && evt.SettlementId == settlement.Id);
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.TradeGoodEstablished && evt.SettlementId == settlement.Id);
+    }
+
+    [Fact]
+    public void BriefFluctuation_DoesNotEmitVisibleIdentityMilestone()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        region.ClayAbundance = 0.96;
+        region.SaltAbundance = 0.88;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 36;
+        settlement.EstablishedMonths = 48;
+
+        MaterialEconomySystem system = new();
+        RunMaterialMonths(world, polity, system, months: 2);
+
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.SettlementSpecialized && evt.SettlementId == settlement.Id);
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.TradeGoodEstablished && evt.SettlementId == settlement.Id);
     }
 
     [Fact]
@@ -228,22 +266,91 @@ public sealed class MaterialEconomySystemTests
         Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
         Settlement settlement = polity.Settlements[0];
         settlement.FoodRequired = 48;
+        settlement.EstablishedMonths = 48;
         polity.FoodStores = 8;
         polity.FoodNeededThisMonth = 48;
 
         MaterialEconomySystem system = new();
-        for (int month = 0; month < 8; month++)
-        {
-            system.UpdateMonthlyMaterials(world);
-        }
+        RunMaterialMonths(world, polity, system, months: 30);
 
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.MaterialHighlyValued && evt.SettlementId == settlement.Id);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.TradeGoodEstablished && evt.SettlementId == settlement.Id);
     }
 
-    private static World CreateWorld()
+    [Fact]
+    public void MatureSettlement_CanStillEarnIdentityMilestoneInYearZero()
     {
-        World world = new(new WorldTime(120, 6));
+        World world = CreateWorld(startingYear: 0, startingMonth: 1);
+        Region region = world.Regions[0];
+        region.ClayAbundance = 0.96;
+        region.SaltAbundance = 0.88;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 42;
+        settlement.EstablishedMonths = 60;
+
+        MaterialEconomySystem system = new();
+        RunMaterialMonths(world, polity, system, months: 10);
+
+        Assert.Contains(world.Events, evt =>
+            evt.SettlementId == settlement.Id
+            && evt.Type is WorldEventType.SettlementSpecialized or WorldEventType.TradeGoodEstablished
+            && evt.Year == 0);
+    }
+
+    [Fact]
+    public void DurableIdentityEvent_EventuallyAppearsAfterSustainedProof()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        region.WoodAbundance = 0.96;
+        region.SaltAbundance = 0.70;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 30;
+        settlement.EstablishedMonths = 60;
+
+        MaterialEconomySystem system = new();
+        RunMaterialMonths(world, polity, system, months: 18);
+
+        Assert.Contains(world.Events, evt =>
+            evt.Type == WorldEventType.SettlementSpecialized
+            && evt.SettlementId == settlement.Id
+            && evt.Metadata.TryGetValue("identityPersistenceMonths", out string? persistence)
+            && int.Parse(persistence) >= 6);
+    }
+
+    [Fact]
+    public void RelatedIdentityEvents_DoNotStackBackToBackWithoutLongerEscalation()
+    {
+        World world = CreateWorld();
+        Region region = world.Regions[0];
+        region.ClayAbundance = 0.96;
+        region.SaltAbundance = 0.88;
+
+        Polity polity = CreatePolityWithCapabilities(world, 7, "River Clan", 0);
+        Settlement settlement = polity.Settlements[0];
+        settlement.FoodRequired = 40;
+        settlement.EstablishedMonths = 48;
+        polity.FoodStores = 20;
+        polity.FoodNeededThisMonth = 40;
+
+        MaterialEconomySystem system = new();
+        RunMaterialMonths(world, polity, system, months: 10);
+
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SettlementSpecialized && evt.SettlementId == settlement.Id);
+        Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.TradeGoodEstablished && evt.SettlementId == settlement.Id);
+
+        RunMaterialMonths(world, polity, system, months: 12);
+
+        Assert.Contains(world.Events, evt => evt.Type == WorldEventType.TradeGoodEstablished && evt.SettlementId == settlement.Id);
+    }
+
+    private static World CreateWorld(int startingYear = 120, int startingMonth = 6)
+    {
+        World world = new(new WorldTime(startingYear, startingMonth));
         world.Regions.Add(new Region(0, "Green Barrow")
         {
             Fertility = 0.78,
@@ -277,5 +384,15 @@ public sealed class MaterialEconomySystemTests
         polity.LearnAdvancement(AdvancementId.Agriculture);
         world.Polities.Add(polity);
         return polity;
+    }
+
+    private static void RunMaterialMonths(World world, Polity polity, MaterialEconomySystem system, int months)
+    {
+        for (int month = 0; month < months; month++)
+        {
+            polity.AdvanceSettlementMonths();
+            system.UpdateMonthlyMaterials(world);
+            world.Time.AdvanceOneMonth();
+        }
     }
 }
