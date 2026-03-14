@@ -1,37 +1,45 @@
 # LivingWorld World Generation
 
-World generation creates the starting simulation state: regions, species, and initial polities.
+World generation now creates the starting primitive ecological state first.
+The default startup no longer assumes named civilization-ready species and initial polities already exist.
+
+The agreed startup path is:
+
+1. biological world foundation
+2. evolution and divergence
+3. sentience and social formation
+4. polity start and player entry
+
+This document describes Pass 1, which is the current default startup output.
 
 ## Default Scale
 
-The current fuller-world targets live in `LivingWorld/Generation/WorldGenerationSettings.cs`:
+The current Pass 1 targets live in `LivingWorld/Generation/WorldGenerationSettings.cs`:
 
 - `RegionCount = 36`
-- `InitialSpeciesCount = 31`
-- `InitialPolityCount = 10`
+- `InitialSpeciesCount = 7`
+- `InitialPolityCount = 0`
 - `ContinentWidth = 6`
 - `ContinentHeight = 6`
-- `MinimumStartingPolityRegionSpacing = 1`
-- `HomelandSupportRadius = 1`
-- `MinimumAccessibleHomelandSupportSpecies = 2`
-- `StartPolitiesWithHomeSettlements = true`
+- `PhaseAMinimumBootstrapMonths = 18`
+- `PhaseAMaximumBootstrapMonths = 60`
+- readiness thresholds for occupied regions, producer coverage, consumer coverage, and predator coverage
 
 These values are intentionally centralized so density tuning can happen without rewriting generation logic.
 
 ## Generation Steps
 
 1. generate regions with biome-shaped fertility, water, biomass, and carrying-capacity context
-2. connect regions for movement paths
-3. generate sapient and wildlife species with trophic roles, habitat preferences, migration traits, and hunting traits
-4. assign each species a clustered initial range over viable regions
-5. initialize regional species populations from habitat suitability, carrying capacity, and seeded range limits
-6. generate starting polities from sapient species only
+2. derive and cache regional ecology profiles
+3. connect regions for founder movement paths
+4. generate primitive lineage templates as early ecological archetypes
+5. assign each primitive lineage a suitability-based clustered starting range
+6. initialize regional primitive populations from those ranges
+7. run an internal Phase A ecological bootstrap loop until readiness is achieved or the bootstrap month cap is reached
+8. store a `PhaseAReadinessReport` for inspection and later startup passes
 
-World generation still creates only baseline species definitions. Mutation, divergence, regional adaptation, and descendant-species splitting now begin from those starting populations during simulation rather than being pre-baked into world generation.
-Generation also now hands off a sparse regional-population map: only seeded or otherwise meaningful starting populations are materialized, rather than every species-region pair.
-That means regional adaptation later measures how far a local population has moved away from its ancestral fit in that region, not whether the generated species started there fully adapted.
-World generation now gives each starting polity one grounded home settlement anchor in its starting region.
-That anchor is intentionally lightweight: it enables settlement-grounded hunting, trade endpoints, migration locality, and focal inspection from year zero without fabricating extra setup events.
+Pass 1 intentionally does not generate sentient species, societies, or polities.
+Those layers remain deferred to later startup passes.
 
 ## Region Model
 
@@ -51,48 +59,63 @@ Current biome mix is lightweight by design and covers:
 - coast
 - dryland
 
-## Species Distribution Rules
+## Region Ecology Profiles
 
-Species are no longer treated as globally present by default.
+Each region now caches a compact derived ecology profile so later systems do not repeatedly recompute the same environmental summary from raw biome, fertility, and water values.
 
-- each generated species can declare `PreferredBiomes`
-- generation scores regions for suitability using fertility, water, biomass, and biome fit
-- each species receives a clustered `InitialRangeRegionIds` set rather than random global scatter
-- target range size varies by trophic role so producers and herbivores seed more broadly than apex predators
-- herbivores and omnivores now also use slightly broader viable-range thresholds than before, which helps fertile regions start with multiple real consumer niches instead of one token prey species
-- ecosystem initialization only seeds starting populations inside that initial range
-- after the first clustered pass, world generation now patches fauna-empty fertile regions into the nearest plausible herbivore cluster so strong producer regions do not start as plant-only ecological dead ends
-- predator and apex ranges are then trimmed back to herbivore-supported regions, keeping predator presence limited and prey-grounded
-- the default species roster now includes the full built-in predator and apex set, so later regional predator variety is not capped by a truncated startup catalog
-- later regional fauna migration complements this seed state rather than replacing it; worldgen still decides the opening map, while seasonal founder spread reshapes it over decades
+Current derived values:
 
-This keeps the opening world denser without making every region ecologically identical.
-The target outcome is regional variation with a healthier prey baseline: some rich regions, some moderate regions, and some sparse ones, rather than globally thin wildlife.
+- `BasePrimaryProductivity`
+- `HabitabilityScore`
+- `MigrationEase`
+- `EnvironmentalVolatility`
+- supporting climate axes such as derived `Temperature`, `Moisture`, and `TerrainHarshness`
 
-## Starting Polity Placement
+These values are designed to be tunable and easy to inspect in debug output and tests.
 
-Starting polities are seeded from sapient species only and now prefer viable, reasonably separated starting regions.
+## Primitive Lineage Distribution Rules
 
-- candidate regions come from that sapient species' initial range
-- settlement suitability favors fertile land, water, biomass support, and biome-specific settlement bonuses
-- settlement suitability also favors homeland regions with accessible support species in the local corridor
-- starting regions must respect `MinimumStartingPolityRegionSpacing` when practical
-- starting regions now mildly prefer connected corridor regions over isolated dead ends
-- the generator therefore leaves meaningful empty space for later migration, expansion, and fragmentation
+Primitive lineages are no longer treated as globally present by default.
 
-The current default density is roughly one polity per three to four regions, which keeps the early world active without stacking most polities into the same small cluster.
-Starting polities also begin with a single home settlement record in that region, usually in a `SemiSettled` state, so early settlement-grounded systems have a real execution point immediately.
+- each primitive lineage template declares niche, habitat preferences, temperature/moisture tolerance, resilience, migration tendency, and starting spread weight
+- generation scores every region x lineage pairing using ecology profile values plus biome and biomass fit
+- each lineage receives a clustered `InitialRangeRegionIds` set rather than random global scatter
+- producers seed broadly across habitable clusters
+- grazers/foragers and scavenger-omnivores seed more narrowly and unevenly
+- predators begin sparse and prey-grounded
+- later founder migration complements this seed state rather than replacing it
 
-## Starting Chronicle Focus
+This keeps the opening world biologically alive without making every region ecologically identical.
+The target outcome is broad producer presence, meaningful prey coverage, sparse predator presence, and visible regional unevenness.
 
-Watch mode begins by selecting one focal polity.
+## Phase A Bootstrap And Readiness
 
-Default behavior:
+Pass 1 runs an internal ecological bootstrap after initial seeding.
+That bootstrap uses the monthly/seasonal ecology cadence to stabilize regional populations before later startup passes are allowed to proceed.
 
-- use `SimulationOptions.FocusedPolityId` if provided
-- otherwise follow the lowest-id starting polity
+Readiness is not time-based only.
+`PhaseAReadinessReport` currently tracks:
 
-This keeps the initial chronicle deterministic while the lineage handoff system preserves continuity later.
+- occupied region percentage
+- producer coverage
+- consumer coverage
+- predator coverage
+- biodiversity count
+- stable region count
+- collapsing region count
+- failure reasons
+
+Later startup passes should use that report to decide whether the ecological foundation is ready to hand off.
+
+## Deferred To Later Passes
+
+Pass 1 does not yet implement:
+
+- mutation/speciation activation in the startup path
+- sentience activation
+- society or polity generation
+- focal-polity selection
+- player-entry runtime assumptions
 
 ## Output Model After Generation
 
@@ -104,14 +127,8 @@ After generation:
 
 World generation does not produce a separate player-facing yearly report path.
 
-Regional species populations now exist before the first polity season resolves, so the first hunting and ecology phase has concrete prey, predators, and producers to work with.
-Those starting regional populations also now have clean divergence and founder/source state slots, so mutation, speciation, recolonization history, and domestication groundwork can build historical lineage change forward from generation year zero.
-The denser seed world is intentionally still range-limited and biome-shaped so early chronicle output gains context without turning into random clutter.
-Starting-polity homeland scoring also now prefers nearby support species coverage, so focal starts are less likely to open in a dead ecological pocket.
-Initial `AnimalBiomass` values are best read as starting ecological context for species seeding and region summaries; once the simulation begins, animal biomass is derived from real consumer populations rather than harvested as an independent food pool.
-Initial consumer populations are now seeded from carrying capacity and habitat fit strongly enough that fertile producer-rich regions can support substantially larger herbivore starts.
-Predator coverage remains narrower, so early worlds usually establish a herbivore foundation before predator suppression becomes a major constraint.
-Predator starts are also intentionally less blanket-wide than herbivores, because later ecology is expected to sort predator founders into successful or failed colonies based on prey support rather than filling every suitable biome immediately.
+Regional primitive populations now exist before any later-stage society logic could run.
+Those populations carry founder/source and stress/trend slots already, so later mutation/speciation and sentience passes can grow from real ecological history rather than replacing the startup model.
 
 ## Phase 13/14 Generation Support
 

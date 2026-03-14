@@ -12,7 +12,14 @@ public sealed class Species
     public double Intelligence { get; }
     public double Cooperation { get; }
     public bool IsSapient { get; set; }
+    public bool IsPrimitiveLineage { get; set; }
+    public string? PrimitiveTemplateId { get; set; }
+    public string EcologyNiche { get; set; }
     public TrophicRole TrophicRole { get; set; }
+    public double TemperaturePreference { get; set; }
+    public double TemperatureTolerance { get; set; }
+    public double MoisturePreference { get; set; }
+    public double MoistureTolerance { get; set; }
     public double FertilityPreference { get; set; }
     public double WaterPreference { get; set; }
     public double PlantBiomassAffinity { get; set; }
@@ -32,6 +39,10 @@ public sealed class Species
     public bool IsToxicToEat { get; set; }
     public double DomesticationAffinity { get; set; }
     public double CultivationAffinity { get; set; }
+    public double Resilience { get; set; }
+    public double StartingSpreadWeight { get; set; }
+    public double MutationPotential { get; set; }
+    public double SentiencePotential { get; set; }
     public int? ParentSpeciesId { get; set; }
     public int RootAncestorSpeciesId { get; set; }
     public int? OriginRegionId { get; set; }
@@ -55,7 +66,13 @@ public sealed class Species
         Intelligence = intelligence;
         Cooperation = cooperation;
         IsSapient = false;
+        IsPrimitiveLineage = false;
+        EcologyNiche = "generalist";
         TrophicRole = TrophicRole.Herbivore;
+        TemperaturePreference = 0.5;
+        TemperatureTolerance = 0.50;
+        MoisturePreference = 0.5;
+        MoistureTolerance = 0.50;
         FertilityPreference = 0.5;
         WaterPreference = 0.5;
         PlantBiomassAffinity = 0.5;
@@ -75,6 +92,10 @@ public sealed class Species
         IsToxicToEat = false;
         DomesticationAffinity = 0.20;
         CultivationAffinity = 0.0;
+        Resilience = 0.45;
+        StartingSpreadWeight = 0.50;
+        MutationPotential = 0.25;
+        SentiencePotential = 0.0;
         RootAncestorSpeciesId = id;
         OriginYear = 0;
         OriginMonth = 1;

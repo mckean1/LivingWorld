@@ -1,7 +1,7 @@
 using LivingWorld.Core;
 using LivingWorld.Life;
 using LivingWorld.Map;
-using LivingWorld.Societies;
+using LivingWorld.Systems;
 
 namespace LivingWorld.Generation;
 
@@ -10,11 +10,8 @@ public sealed class WorldGenerator
     private readonly Random _random;
     private readonly int _seed;
     private readonly Queue<string> _regionNames;
-    private readonly Queue<string> _polityNames;
-    private readonly List<SpeciesTemplate> _speciesTemplates;
+    private readonly List<PrimitiveLineageTemplate> _primitiveTemplates;
     private readonly WorldGenerationSettings _settings;
-    private Dictionary<int, Species>? _speciesById;
-    private Dictionary<int, Region>? _regionsById;
 
     public WorldGenerator(int seed, WorldGenerationSettings? settings = null)
     {
@@ -22,24 +19,24 @@ public sealed class WorldGenerator
         _random = new Random(seed);
         _settings = settings ?? new WorldGenerationSettings();
         _regionNames = new Queue<string>(BuildShuffledNames(WorldGenerationCatalog.CreateRegionNames()));
-        _polityNames = new Queue<string>(BuildShuffledNames(WorldGenerationCatalog.CreatePolityNames()));
-        _speciesTemplates = WorldGenerationCatalog.CreateSpeciesTemplates();
+        _primitiveTemplates = WorldGenerationCatalog.CreatePrimitiveLineageTemplates();
     }
 
     public World Generate()
     {
         ValidateSettings();
 
-        World world = new(new WorldTime(), WorldSimulationPhase.Bootstrap);
+        World world = new(new WorldTime(), WorldSimulationPhase.Bootstrap)
+        {
+            StartupStage = WorldStartupStage.PrimitiveEcologyFoundation
+        };
+
         GenerateRegions(world);
         ConnectRegions(world);
-        _regionsById = world.Regions.ToDictionary(region => region.Id);
-        GenerateSpecies(world);
-        _speciesById = world.Species.ToDictionary(species => species.Id);
-        AssignInitialSpeciesRanges(world);
-        EnsureFertileRegionsHaveFauna(world);
-        ConstrainPredatorRangesToPreySupportedRegions(world);
-        GeneratePolities(world);
+        GeneratePrimitiveLineages(world);
+        AssignInitialPrimitiveRanges(world);
+        StabilizePrimitiveEcology(world);
+        world.Time.Reset();
 
         return world;
     }
@@ -60,6 +57,7 @@ public sealed class WorldGenerator
                 };
 
                 ApplyRegionProfile(region, biome);
+                region.EcologyProfile = RegionEcologyProfileBuilder.Build(region);
                 world.Regions.Add(region);
             }
         }
@@ -99,170 +97,222 @@ public sealed class WorldGenerator
         }
     }
 
-    private void GenerateSpecies(World world)
+    private void GeneratePrimitiveLineages(World world)
     {
-        foreach ((SpeciesTemplate template, int index) in _speciesTemplates.Take(_settings.InitialSpeciesCount).Select((template, index) => (template, index)))
+        foreach ((PrimitiveLineageTemplate template, int index) in _primitiveTemplates
+                     .Take(_settings.InitialSpeciesCount)
+                     .Select((template, index) => (template, index)))
         {
-            Species species = new(index, template.Name, template.Intelligence, template.Cooperation)
+            Species lineage = new(index, template.Name, intelligence: 0.02, cooperation: template.TrophicRole == TrophicRole.Predator ? 0.12 : 0.06)
             {
-                IsSapient = template.IsSapient,
+                IsPrimitiveLineage = true,
+                PrimitiveTemplateId = template.Id,
+                EcologyNiche = template.EcologyNiche,
                 TrophicRole = template.TrophicRole,
+                TemperaturePreference = template.TemperaturePreference,
+                TemperatureTolerance = template.TemperatureTolerance,
+                MoisturePreference = template.MoisturePreference,
+                MoistureTolerance = template.MoistureTolerance,
                 FertilityPreference = template.FertilityPreference,
                 WaterPreference = template.WaterPreference,
                 PlantBiomassAffinity = template.PlantBiomassAffinity,
                 AnimalBiomassAffinity = template.AnimalBiomassAffinity,
                 BaseCarryingCapacityFactor = template.BaseCarryingCapacityFactor,
-                MigrationCapability = template.MigrationCapability,
-                ExpansionPressure = template.ExpansionPressure,
                 BaseReproductionRate = template.BaseReproductionRate,
                 BaseDeclineRate = template.BaseDeclineRate,
-                SpringReproductionModifier = template.SpringModifier,
-                SummerReproductionModifier = template.SummerModifier,
-                AutumnReproductionModifier = template.AutumnModifier,
-                WinterReproductionModifier = template.WinterModifier,
+                SpringReproductionModifier = template.TrophicRole == TrophicRole.Producer ? 1.28 : 1.14,
+                SummerReproductionModifier = 1.04,
+                AutumnReproductionModifier = 0.90,
+                WinterReproductionModifier = template.TrophicRole == TrophicRole.Producer ? 0.70 : 0.62,
+                MigrationCapability = template.MigrationCapability,
+                ExpansionPressure = template.ExpansionPressure,
+                Resilience = template.Resilience,
+                StartingSpreadWeight = template.StartingSpreadWeight,
+                MutationPotential = template.MutationPotential,
+                SentiencePotential = template.SentiencePotential,
                 MeatYield = template.MeatYield,
                 HuntingDifficulty = template.HuntingDifficulty,
                 HuntingDanger = template.HuntingDanger,
-                IsToxicToEat = template.IsToxicToEat,
-                DomesticationAffinity = template.DomesticationAffinity,
-                CultivationAffinity = template.CultivationAffinity
+                DomesticationAffinity = 0.0,
+                CultivationAffinity = 0.0,
+                OriginCause = "phase_a_primitive_seed"
             };
 
             foreach (RegionBiome biome in template.PreferredBiomes)
             {
-                species.PreferredBiomes.Add(biome);
+                lineage.PreferredBiomes.Add(biome);
             }
 
-            world.Species.Add(species);
+            world.Species.Add(lineage);
         }
 
-        Dictionary<string, Species> speciesByName = world.Species.ToDictionary(species => species.Name, StringComparer.Ordinal);
-        foreach (SpeciesTemplate template in _speciesTemplates.Take(_settings.InitialSpeciesCount))
+        Dictionary<string, Species> speciesByTemplateId = world.Species
+            .Where(species => species.PrimitiveTemplateId is not null)
+            .ToDictionary(species => species.PrimitiveTemplateId!, StringComparer.Ordinal);
+        foreach (PrimitiveLineageTemplate template in _primitiveTemplates.Take(_settings.InitialSpeciesCount))
         {
-            Species species = speciesByName[template.Name];
-            foreach (string dietSpeciesName in template.DietSpeciesNames)
+            Species lineage = speciesByTemplateId[template.Id];
+            foreach (string dietTemplateId in template.DietTemplateIds)
             {
-                if (speciesByName.TryGetValue(dietSpeciesName, out Species? prey))
+                if (speciesByTemplateId.TryGetValue(dietTemplateId, out Species? prey))
                 {
-                    species.DietSpeciesIds.Add(prey.Id);
+                    lineage.DietSpeciesIds.Add(prey.Id);
                 }
             }
         }
     }
 
-    private void AssignInitialSpeciesRanges(World world)
+    private void AssignInitialPrimitiveRanges(World world)
     {
-        foreach (Species species in world.Species)
+        foreach (Species lineage in world.Species)
         {
             List<(Region Region, double Score)> viableRegions = world.Regions
-                .Select(region => (Region: region, Score: ScoreRegionForSpecies(species, region)))
-                .Where(entry => entry.Score >= ResolveRangeThreshold(species))
-                .OrderByDescending(entry => entry.Score)
+                .Select(region => (Region: region, Score: ScoreRegionForLineage(lineage, region)))
+                .Where(entry => entry.Score >= ResolveRangeThreshold(lineage))
+                .OrderByDescending(entry => entry.Score + SeedNoise(lineage.Id, entry.Region.Id))
                 .ThenBy(entry => entry.Region.Id)
                 .ToList();
 
             if (viableRegions.Count == 0)
             {
-                Region fallbackRegion = world.Regions.OrderByDescending(region => ScoreRegionForSpecies(species, region)).First();
-                species.InitialRangeRegionIds.Add(fallbackRegion.Id);
+                Region fallbackRegion = world.Regions.OrderByDescending(region => ScoreRegionForLineage(lineage, region)).First();
+                lineage.InitialRangeRegionIds.Add(fallbackRegion.Id);
                 continue;
             }
 
-            int targetRangeSize = ResolveTargetRangeSize(species, viableRegions.Count);
-            Region seedRegion = viableRegions[_random.Next(Math.Min(3, viableRegions.Count))].Region;
+            int targetRangeSize = ResolveTargetRangeSize(lineage, viableRegions.Count, world.Regions.Count);
+            Region seedRegion = viableRegions[Math.Min(viableRegions.Count - 1, _random.Next(Math.Min(3, viableRegions.Count)))].Region;
             foreach (int regionId in BuildClusteredRange(world, viableRegions, seedRegion.Id, targetRangeSize))
             {
-                species.InitialRangeRegionIds.Add(regionId);
+                lineage.InitialRangeRegionIds.Add(regionId);
             }
+        }
+
+        EnsureBroadProducerCoverage(world);
+        EnsureConsumerPresence(world);
+        ConstrainPredatorsToSupportedRegions(world);
+    }
+
+    private void StabilizePrimitiveEcology(World world)
+    {
+        FoodSystem foodSystem = new();
+        EcosystemSystem ecosystemSystem = new();
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        for (int month = 1; month <= _settings.PhaseAMaximumBootstrapMonths; month++)
+        {
+            foodSystem.UpdateRegionEcology(world);
+            if (month % 3 == 0)
+            {
+                ecosystemSystem.UpdateSeason(world);
+                ecosystemSystem.ResolveSeasonalCleanup(world);
+                world.PhaseAReadinessReport = PhaseAReadinessEvaluator.Evaluate(world, _settings);
+                if (month >= _settings.PhaseAMinimumBootstrapMonths && world.PhaseAReadinessReport.IsReady)
+                {
+                    break;
+                }
+            }
+
+            world.Time.AdvanceOneMonth();
         }
     }
 
-    private void EnsureFertileRegionsHaveFauna(World world)
+    private void EnsureBroadProducerCoverage(World world)
     {
-        List<Species> herbivores = world.Species
-            .Where(species => species.TrophicRole == TrophicRole.Herbivore)
-            .ToList();
-        HashSet<int> herbivoreCoveredRegions = herbivores
+        HashSet<int> producerCoveredRegions = world.Species
+            .Where(species => species.TrophicRole == TrophicRole.Producer)
             .SelectMany(species => species.InitialRangeRegionIds)
             .ToHashSet();
 
         foreach (Region region in world.Regions
-                     .Where(IsFertileFaunaTarget)
-                     .OrderByDescending(ResolveFertileFaunaScore)
+                     .Where(region => region.EffectiveEcologyProfile.HabitabilityScore >= 0.44)
+                     .OrderByDescending(region => region.EffectiveEcologyProfile.BasePrimaryProductivity)
                      .ThenBy(region => region.Id))
         {
-            if (herbivoreCoveredRegions.Contains(region.Id))
+            if (producerCoveredRegions.Contains(region.Id))
             {
                 continue;
             }
 
-            Species? bestHerbivore = null;
-            List<int>? bestExpansionPath = null;
-            double bestFit = double.MinValue;
-            int bestPathLength = int.MaxValue;
-
-            foreach (Species herbivore in herbivores)
-            {
-                double fit = ScoreRegionForSpecies(herbivore, region);
-                if (fit < 0.70)
-                {
-                    continue;
-                }
-
-                List<int>? path = BuildRangeExpansionPath(world, herbivore, region.Id);
-                if (path is null)
-                {
-                    continue;
-                }
-
-                if (bestHerbivore is null
-                    || path.Count < bestPathLength
-                    || (path.Count == bestPathLength && fit > bestFit))
-                {
-                    bestHerbivore = herbivore;
-                    bestExpansionPath = path;
-                    bestFit = fit;
-                    bestPathLength = path.Count;
-                }
-            }
-
-            if (bestHerbivore is null || bestExpansionPath is null)
+            Species? producer = world.Species
+                .Where(species => species.TrophicRole == TrophicRole.Producer)
+                .OrderByDescending(species => ScoreRegionForLineage(species, region))
+                .ThenByDescending(species => species.StartingSpreadWeight)
+                .FirstOrDefault();
+            if (producer is null || ScoreRegionForLineage(producer, region) < 0.48)
             {
                 continue;
             }
 
-            foreach (int regionId in bestExpansionPath)
-            {
-                if (bestHerbivore.InitialRangeRegionIds.Contains(regionId))
-                {
-                    continue;
-                }
-
-                bestHerbivore.InitialRangeRegionIds.Add(regionId);
-                herbivoreCoveredRegions.Add(regionId);
-            }
+            producer.InitialRangeRegionIds.Add(region.Id);
+            producerCoveredRegions.Add(region.Id);
         }
     }
 
-    private void ConstrainPredatorRangesToPreySupportedRegions(World world)
+    private void EnsureConsumerPresence(World world)
     {
-        HashSet<int> herbivoreCoveredRegions = world.Species
-            .Where(species => species.TrophicRole == TrophicRole.Herbivore)
+        HashSet<int> consumerCoveredRegions = world.Species
+            .Where(species => species.TrophicRole is TrophicRole.Herbivore or TrophicRole.Omnivore)
+            .SelectMany(species => species.InitialRangeRegionIds)
+            .ToHashSet();
+
+        foreach (Region region in world.Regions
+                     .Where(region => region.EffectiveEcologyProfile.BasePrimaryProductivity >= 0.46)
+                     .OrderByDescending(region => region.EffectiveEcologyProfile.HabitabilityScore)
+                     .ThenBy(region => region.Id))
+        {
+            if (consumerCoveredRegions.Contains(region.Id))
+            {
+                continue;
+            }
+
+            Species? consumer = world.Species
+                .Where(species => species.TrophicRole is TrophicRole.Herbivore or TrophicRole.Omnivore)
+                .OrderByDescending(species => ScoreRegionForLineage(species, region))
+                .ThenByDescending(species => species.StartingSpreadWeight)
+                .FirstOrDefault();
+            if (consumer is null || ScoreRegionForLineage(consumer, region) < 0.54)
+            {
+                continue;
+            }
+
+            List<int>? path = BuildRangeExpansionPath(world, consumer, region.Id);
+            if (path is null)
+            {
+                consumer.InitialRangeRegionIds.Add(region.Id);
+            }
+            else
+            {
+                foreach (int regionId in path)
+                {
+                    consumer.InitialRangeRegionIds.Add(regionId);
+                }
+            }
+
+            consumerCoveredRegions.Add(region.Id);
+        }
+    }
+
+    private void ConstrainPredatorsToSupportedRegions(World world)
+    {
+        HashSet<int> preySupportedRegions = world.Species
+            .Where(species => species.TrophicRole is TrophicRole.Herbivore or TrophicRole.Omnivore)
             .SelectMany(species => species.InitialRangeRegionIds)
             .ToHashSet();
 
         foreach (Species predator in world.Species.Where(species => species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex))
         {
             List<int> supportedRegions = predator.InitialRangeRegionIds
-                .Where(herbivoreCoveredRegions.Contains)
+                .Where(preySupportedRegions.Contains)
                 .Distinct()
+                .OrderBy(regionId => regionId)
                 .ToList();
 
             if (supportedRegions.Count == 0)
             {
                 Region? fallbackRegion = world.Regions
-                    .Where(region => herbivoreCoveredRegions.Contains(region.Id))
-                    .OrderByDescending(region => ScoreRegionForSpecies(predator, region))
+                    .Where(region => preySupportedRegions.Contains(region.Id))
+                    .OrderByDescending(region => ScoreRegionForLineage(predator, region))
                     .FirstOrDefault();
                 if (fallbackRegion is not null)
                 {
@@ -271,67 +321,12 @@ public sealed class WorldGenerator
             }
 
             predator.InitialRangeRegionIds.Clear();
-            foreach (int regionId in supportedRegions)
+            foreach (int regionId in supportedRegions.Take(predator.TrophicRole == TrophicRole.Predator ? 5 : 3))
             {
                 predator.InitialRangeRegionIds.Add(regionId);
             }
         }
     }
-
-    private void GeneratePolities(World world)
-    {
-        List<Species> sapientSpecies = world.Species.Where(species => species.IsSapient).OrderBy(species => species.Name, StringComparer.Ordinal).ToList();
-        List<int> occupiedRegionIds = [];
-
-        for (int polityIndex = 0; polityIndex < _settings.InitialPolityCount; polityIndex++)
-        {
-            Species species = sapientSpecies[polityIndex % sapientSpecies.Count];
-            Region region = SelectStartingPolityRegion(world, species, occupiedRegionIds);
-            occupiedRegionIds.Add(region.Id);
-
-            int population = _random.Next(42, 91);
-            Polity polity = new(polityIndex, NextPolityName(polityIndex), species.Id, region.Id, population, lineageId: polityIndex)
-            {
-                FoodStores = population * (1.20 + (_random.NextDouble() * 0.85)),
-                YearsSinceFounded = _random.Next(0, 4),
-                YearsInCurrentRegion = _random.Next(1, 6)
-            };
-
-            if (_settings.StartPolitiesWithHomeSettlements)
-            {
-                Settlement settlement = polity.EstablishFirstSettlement(region.Id, $"{region.Name} Hearth");
-                settlement.YearsEstablished = _settings.StartingSettlementAgeYears;
-                polity.YearsSinceFirstSettlement = _settings.StartingSettlementAgeYears;
-            }
-
-            world.Polities.Add(polity);
-        }
-    }
-
-    private Region SelectStartingPolityRegion(World world, Species species, IReadOnlyCollection<int> occupiedRegionIds)
-    {
-        List<Region> spacedCandidates = world.Regions
-            .Where(region => species.InitialRangeRegionIds.Contains(region.Id))
-            .Where(region => !occupiedRegionIds.Contains(region.Id))
-            .Where(region => IsFarEnoughFromOccupiedRegions(world, region.Id, occupiedRegionIds))
-            .OrderByDescending(region => ScoreStartingPolityRegion(species, region))
-            .ThenBy(region => region.Id)
-            .ToList();
-
-        if (spacedCandidates.Count > 0)
-        {
-            return spacedCandidates[0];
-        }
-
-        return world.Regions
-            .Where(region => !occupiedRegionIds.Contains(region.Id))
-            .OrderByDescending(region => ScoreStartingPolityRegion(species, region))
-            .ThenBy(region => region.Id)
-            .First();
-    }
-
-    private bool IsFarEnoughFromOccupiedRegions(World world, int regionId, IReadOnlyCollection<int> occupiedRegionIds)
-        => occupiedRegionIds.All(occupiedRegionId => FindRegionDistance(world, regionId, occupiedRegionId) >= _settings.MinimumStartingPolityRegionSpacing);
 
     private IEnumerable<int> BuildClusteredRange(
         World world,
@@ -379,47 +374,14 @@ public sealed class WorldGenerator
         return selected;
     }
 
-    private int FindRegionDistance(World world, int startRegionId, int targetRegionId)
+    private List<int>? BuildRangeExpansionPath(World world, Species lineage, int targetRegionId)
     {
-        if (startRegionId == targetRegionId)
-        {
-            return 0;
-        }
-
-        Queue<(int RegionId, int Distance)> frontier = new();
-        HashSet<int> visited = [startRegionId];
-        frontier.Enqueue((startRegionId, 0));
-
-        while (frontier.Count > 0)
-        {
-            (int regionId, int distance) = frontier.Dequeue();
-            foreach (int neighborId in world.Regions[regionId].ConnectedRegionIds)
-            {
-                if (!visited.Add(neighborId))
-                {
-                    continue;
-                }
-
-                if (neighborId == targetRegionId)
-                {
-                    return distance + 1;
-                }
-
-                frontier.Enqueue((neighborId, distance + 1));
-            }
-        }
-
-        return int.MaxValue;
-    }
-
-    private List<int>? BuildRangeExpansionPath(World world, Species species, int targetRegionId)
-    {
-        if (species.InitialRangeRegionIds.Contains(targetRegionId))
+        if (lineage.InitialRangeRegionIds.Contains(targetRegionId))
         {
             return [];
         }
 
-        HashSet<int> occupied = species.InitialRangeRegionIds.ToHashSet();
+        HashSet<int> occupied = lineage.InitialRangeRegionIds.ToHashSet();
         Queue<int> frontier = new();
         Dictionary<int, int?> parents = new();
 
@@ -438,7 +400,7 @@ public sealed class WorldGenerator
             }
 
             foreach (int neighborId in world.Regions[currentRegionId].ConnectedRegionIds
-                         .OrderByDescending(id => ScoreRegionForSpecies(species, world.Regions[id]))
+                         .OrderByDescending(id => ScoreRegionForLineage(lineage, world.Regions[id]))
                          .ThenBy(id => id))
             {
                 if (parents.ContainsKey(neighborId))
@@ -446,7 +408,7 @@ public sealed class WorldGenerator
                     continue;
                 }
 
-                if (ScoreRegionForSpecies(species, world.Regions[neighborId]) < ResolveRangeThreshold(species))
+                if (ScoreRegionForLineage(lineage, world.Regions[neighborId]) < ResolveRangeThreshold(lineage))
                 {
                     continue;
                 }
@@ -482,15 +444,15 @@ public sealed class WorldGenerator
     {
         (double fertilityMin, double fertilityMax, double waterMin, double waterMax, int plantMin, int plantMax, int animalMin, int animalMax) = biome switch
         {
-            RegionBiome.Coast => (0.46, 0.72, 0.78, 0.98, 760, 1120, 260, 420),
-            RegionBiome.RiverValley => (0.74, 0.95, 0.78, 0.96, 980, 1320, 320, 500),
-            RegionBiome.Plains => (0.58, 0.82, 0.42, 0.66, 760, 1080, 230, 380),
-            RegionBiome.Forest => (0.54, 0.80, 0.60, 0.84, 900, 1260, 220, 360),
-            RegionBiome.Highlands => (0.34, 0.60, 0.34, 0.58, 520, 860, 180, 320),
-            RegionBiome.Mountains => (0.18, 0.42, 0.20, 0.42, 340, 620, 160, 300),
-            RegionBiome.Wetlands => (0.60, 0.84, 0.76, 0.96, 880, 1220, 240, 360),
-            RegionBiome.Drylands => (0.18, 0.40, 0.12, 0.28, 260, 520, 150, 280),
-            _ => (0.50, 0.70, 0.40, 0.60, 680, 1000, 220, 360)
+            RegionBiome.Coast => (0.46, 0.72, 0.78, 0.98, 760, 1120, 220, 360),
+            RegionBiome.RiverValley => (0.74, 0.95, 0.78, 0.96, 980, 1320, 280, 420),
+            RegionBiome.Plains => (0.58, 0.82, 0.42, 0.66, 760, 1080, 190, 320),
+            RegionBiome.Forest => (0.54, 0.80, 0.60, 0.84, 900, 1260, 180, 300),
+            RegionBiome.Highlands => (0.34, 0.60, 0.34, 0.58, 520, 860, 120, 220),
+            RegionBiome.Mountains => (0.18, 0.42, 0.20, 0.42, 340, 620, 80, 180),
+            RegionBiome.Wetlands => (0.60, 0.84, 0.76, 0.96, 880, 1220, 200, 320),
+            RegionBiome.Drylands => (0.18, 0.40, 0.12, 0.28, 260, 520, 90, 180),
+            _ => (0.50, 0.70, 0.40, 0.60, 680, 1000, 160, 280)
         };
 
         region.Fertility = Roll(fertilityMin, fertilityMax);
@@ -498,7 +460,7 @@ public sealed class WorldGenerator
         region.MaxPlantBiomass = _random.Next(plantMin, plantMax + 1);
         region.MaxAnimalBiomass = _random.Next(animalMin, animalMax + 1);
         region.PlantBiomass = region.MaxPlantBiomass * Roll(0.52, 0.72);
-        region.AnimalBiomass = region.MaxAnimalBiomass * Roll(0.48, 0.68);
+        region.AnimalBiomass = region.MaxAnimalBiomass * Roll(0.24, 0.44);
         AssignMaterialAbundance(region, biome);
     }
 
@@ -524,160 +486,43 @@ public sealed class WorldGenerator
         };
     }
 
-    private double ScoreStartingPolityRegion(Species species, Region region)
-    {
-        int accessibleSupportSpecies = CountAccessibleHomelandSupportSpecies(species, region);
+    private static double ScoreRegionForLineage(Species lineage, Region region)
+        => SpeciesEcology.CalculateBaseHabitatSuitability(lineage, region)
+           + (region.EffectiveEcologyProfile.MigrationEase * lineage.MigrationCapability * 0.08)
+           + (region.EffectiveEcologyProfile.HabitabilityScore * lineage.StartingSpreadWeight * 0.10);
 
-        return ScoreRegionForSpecies(species, region)
-            + (region.Fertility * 0.45)
-            + (region.WaterAvailability * 0.40)
-            + (region.CarryingCapacity / 180.0)
-            + (Math.Min(4, region.ConnectedRegionIds.Count) * 0.05)
-            + (accessibleSupportSpecies * 0.22)
-            + (accessibleSupportSpecies >= _settings.MinimumAccessibleHomelandSupportSpecies ? 0.18 : 0.0)
-            + ResolveBiomeSettlementBonus(region.Biome);
-    }
-
-    private int CountAccessibleHomelandSupportSpecies(Species sapientSpecies, Region region)
-    {
-        if (_speciesById is null || sapientSpecies.DietSpeciesIds.Count == 0)
+    private static double ResolveRangeThreshold(Species lineage)
+        => lineage.TrophicRole switch
         {
-            return 0;
-        }
-
-        HashSet<int> accessibleRegionIds = CollectRegionsWithinRadius(region, _settings.HomelandSupportRadius);
-        int supportSpeciesCount = 0;
-
-        foreach (int supportSpeciesId in sapientSpecies.DietSpeciesIds)
-        {
-            if (!_speciesById.TryGetValue(supportSpeciesId, out Species? supportCandidate) || supportCandidate.IsSapient)
-            {
-                continue;
-            }
-
-            if (supportCandidate.InitialRangeRegionIds.Any(accessibleRegionIds.Contains))
-            {
-                supportSpeciesCount++;
-            }
-        }
-
-        return supportSpeciesCount;
-    }
-
-    private HashSet<int> CollectRegionsWithinRadius(Region seedRegion, int radius)
-    {
-        if (_regionsById is null)
-        {
-            return [seedRegion.Id];
-        }
-
-        HashSet<int> visited = [seedRegion.Id];
-        if (radius <= 0)
-        {
-            return visited;
-        }
-
-        Queue<(int RegionId, int Distance)> frontier = new();
-        frontier.Enqueue((seedRegion.Id, 0));
-
-        while (frontier.Count > 0)
-        {
-            (int regionId, int distance) = frontier.Dequeue();
-            if (distance >= radius)
-            {
-                continue;
-            }
-
-            if (!_regionsById.TryGetValue(regionId, out Region? currentRegion))
-            {
-                continue;
-            }
-
-            foreach (int neighborId in currentRegion.ConnectedRegionIds)
-            {
-                if (!visited.Add(neighborId))
-                {
-                    continue;
-                }
-
-                frontier.Enqueue((neighborId, distance + 1));
-            }
-        }
-
-        return visited;
-    }
-
-    private static double ScoreRegionForSpecies(Species species, Region region)
-    {
-        double fertilityFit = 1.0 - Math.Abs(region.Fertility - species.FertilityPreference);
-        double waterFit = 1.0 - Math.Abs(region.WaterAvailability - species.WaterPreference);
-        double biomassFit = Math.Clamp(
-            (region.MaxPlantBiomass / 1300.0 * species.PlantBiomassAffinity) +
-            (region.MaxAnimalBiomass / 520.0 * species.AnimalBiomassAffinity),
-            0.0,
-            1.5);
-        double biomeFit = species.PreferredBiomes.Count == 0
-            ? 1.0
-            : species.PreferredBiomes.Contains(region.Biome) ? 1.0 : 0.45;
-
-        return Math.Clamp((fertilityFit * 0.30) + (waterFit * 0.25) + (biomeFit * 0.20) + (biomassFit * 0.25), 0.0, 1.5);
-    }
-
-    private static bool IsFertileFaunaTarget(Region region)
-        => ResolveFertileFaunaScore(region) >= 0.70;
-
-    private static double ResolveFertileFaunaScore(Region region)
-    {
-        double plantCapacityFit = Math.Clamp(region.MaxPlantBiomass / 1200.0, 0.0, 1.0);
-        return (region.Fertility * 0.42)
-            + (region.WaterAvailability * 0.24)
-            + (plantCapacityFit * 0.34);
-    }
-
-    private static double ResolveBiomeSettlementBonus(RegionBiome biome)
-        => biome switch
-        {
-            RegionBiome.RiverValley => 0.24,
-            RegionBiome.Coast => 0.16,
-            RegionBiome.Plains => 0.14,
-            RegionBiome.Forest => 0.09,
-            RegionBiome.Wetlands => 0.05,
-            RegionBiome.Highlands => -0.02,
-            RegionBiome.Mountains => -0.10,
-            RegionBiome.Drylands => -0.08,
-            _ => 0.0
+            TrophicRole.Producer => 0.44,
+            TrophicRole.Herbivore => 0.52,
+            TrophicRole.Omnivore => 0.56,
+            TrophicRole.Predator => 0.62,
+            TrophicRole.Apex => 0.66,
+            _ => 0.56
         };
 
-    private int ResolveTargetRangeSize(Species species, int viableRegionCount)
+    private int ResolveTargetRangeSize(Species lineage, int viableRegionCount, int totalRegionCount)
     {
-        int desired = species.TrophicRole switch
+        double desiredShare = lineage.TrophicRole switch
         {
-            TrophicRole.Producer => _random.Next(8, 15),
-            TrophicRole.Herbivore => _random.Next(6, 11),
-            TrophicRole.Omnivore => _random.Next(5, 9),
-            TrophicRole.Predator => _random.Next(4, 6),
-            TrophicRole.Apex => _random.Next(3, 5),
-            _ => _random.Next(4, 8)
+            TrophicRole.Producer => 0.48 + (lineage.StartingSpreadWeight * 0.18),
+            TrophicRole.Herbivore => 0.22 + (lineage.StartingSpreadWeight * 0.16),
+            TrophicRole.Omnivore => 0.14 + (lineage.StartingSpreadWeight * 0.12),
+            TrophicRole.Predator => 0.08 + (lineage.StartingSpreadWeight * 0.06),
+            TrophicRole.Apex => 0.05 + (lineage.StartingSpreadWeight * 0.04),
+            _ => 0.12
         };
 
-        if (species.IsSapient)
-        {
-            desired = Math.Max(desired, 6);
-        }
-
+        int desired = Math.Max(1, (int)Math.Round(totalRegionCount * desiredShare));
         return Math.Clamp(desired, 1, viableRegionCount);
     }
 
-    private static double ResolveRangeThreshold(Species species)
-        => species.TrophicRole switch
-        {
-            TrophicRole.Producer => 0.56,
-            TrophicRole.Herbivore => 0.60,
-            TrophicRole.Omnivore => 0.61,
-            TrophicRole.Predator => 0.64,
-            TrophicRole.Apex => 0.68,
-            _ => 0.60
-        };
+    private double SeedNoise(int speciesId, int regionId)
+    {
+        Random localRandom = new(HashCode.Combine(_seed, speciesId, regionId, 991));
+        return localRandom.NextDouble() * 0.035;
+    }
 
     private double Roll(double min, double max)
         => min + (_random.NextDouble() * (max - min));
@@ -689,9 +534,9 @@ public sealed class WorldGenerator
             throw new InvalidOperationException("World generation settings require RegionCount to match ContinentWidth * ContinentHeight.");
         }
 
-        if (_settings.InitialSpeciesCount > _speciesTemplates.Count)
+        if (_settings.InitialSpeciesCount > _primitiveTemplates.Count)
         {
-            throw new InvalidOperationException("InitialSpeciesCount exceeds the available species templates.");
+            throw new InvalidOperationException("InitialSpeciesCount exceeds the available primitive lineage templates.");
         }
     }
 
@@ -703,9 +548,6 @@ public sealed class WorldGenerator
 
     private string NextRegionName(int index)
         => _regionNames.Count > 0 ? _regionNames.Dequeue() : $"Reach {index}";
-
-    private string NextPolityName(int index)
-        => _polityNames.Count > 0 ? _polityNames.Dequeue() : $"Clan {index}";
 
     private IEnumerable<string> BuildShuffledNames(IReadOnlyList<string> names)
         => names.OrderBy(_ => _random.Next()).ToArray();

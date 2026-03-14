@@ -11,10 +11,13 @@ public sealed class World
 
     public WorldTime Time { get; }
     public WorldSimulationPhase SimulationPhase { get; private set; }
+    public WorldStartupStage StartupStage { get; set; } = WorldStartupStage.SocietalSimulation;
+    public PhaseAReadinessReport PhaseAReadinessReport { get; set; } = PhaseAReadinessReport.Empty;
 
     public List<Region> Regions { get; } = new();
     public List<Species> Species { get; } = new();
     public List<Polity> Polities { get; } = new();
+    public List<LocalPopulationExtinctionRecord> LocalPopulationExtinctions { get; } = new();
 
     public List<WorldEvent> Events { get; } = new();
 

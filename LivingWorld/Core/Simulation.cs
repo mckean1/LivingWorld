@@ -77,7 +77,10 @@ public sealed class Simulation : IDisposable
         _watchInputController = new WatchInputController(_watchUiState);
         _focusSelector = focusSelector ?? new LineagePolityFocusSelector();
         _performanceTracker = new SimulationPerformanceTracker(_options.EnablePerformanceInstrumentation);
-        _ecosystemSystem.InitializeRegionalPopulations(_world);
+        if (!_world.Regions.Any(region => region.SpeciesPopulations.Count > 0))
+        {
+            _ecosystemSystem.InitializeRegionalPopulations(_world);
+        }
         _performanceTracker.BeginYear(_world.Time.Year);
         if (_options.OutputMode == OutputMode.Debug)
         {
@@ -201,6 +204,11 @@ public sealed class Simulation : IDisposable
     {
         _foodSystem.UpdateRegionEcology(_world);
         RunSeasonalBiologyIfNeeded();
+        if (_world.StartupStage == WorldStartupStage.PrimitiveEcologyFoundation)
+        {
+            return;
+        }
+
         _foodSystem.GatherFood(_world);
         _domesticationSystem.UpdateMonthlyKnowledgeAndSources(_world);
         _materialEconomySystem.UpdateMonthlyMaterials(_world);
@@ -225,16 +233,28 @@ public sealed class Simulation : IDisposable
         long ecosystemStartedAt = Stopwatch.GetTimestamp();
         _ecosystemSystem.UpdateSeason(_world);
         _performanceTracker.AddEcosystemTime(Stopwatch.GetElapsedTime(ecosystemStartedAt));
-        _huntingSystem.UpdateSeason(_world);
-        long mutationStartedAt = Stopwatch.GetTimestamp();
-        _mutationSystem.UpdateSeason(_world);
-        _performanceTracker.AddMutationTime(Stopwatch.GetElapsedTime(mutationStartedAt));
+        if (_world.StartupStage != WorldStartupStage.PrimitiveEcologyFoundation)
+        {
+            _huntingSystem.UpdateSeason(_world);
+            long mutationStartedAt = Stopwatch.GetTimestamp();
+            _mutationSystem.UpdateSeason(_world);
+            _performanceTracker.AddMutationTime(Stopwatch.GetElapsedTime(mutationStartedAt));
+        }
         _ecosystemSystem.ResolveSeasonalCleanup(_world);
         _performanceTracker.RecordSeason(_ecosystemSystem.LastSeasonMetrics, _mutationSystem.LastSeasonMetrics, _world.Species.Count);
     }
 
     private void RunYearEndSystems()
     {
+        if (_world.StartupStage == WorldStartupStage.PrimitiveEcologyFoundation)
+        {
+            RenderYearBoundaryOutput();
+            ResetAnnualStats();
+            _eventsThisYear.Clear();
+            _performanceTracker.BeginYear(_world.Time.Year + 1);
+            return;
+        }
+
         foreach (Polity polity in _world.Polities)
         {
             if (polity.Population > 0)
@@ -303,6 +323,12 @@ public sealed class Simulation : IDisposable
 
     private void RunBootstrapInitialization()
     {
+        if (_world.StartupStage == WorldStartupStage.PrimitiveEcologyFoundation)
+        {
+            _world.BeginActiveSimulation();
+            return;
+        }
+
         int bootstrapMaterialWarmupMonths = ResolveBootstrapMaterialWarmupMonths();
         for (int month = 0; month < bootstrapMaterialWarmupMonths; month++)
         {
@@ -677,7 +703,7 @@ public sealed class Simulation : IDisposable
             bool herbivorePresent = ResolveHerbivorePopulation(region) > 0;
             bool predatorPresent = ResolvePredatorPopulation(region) > 0;
             Console.WriteLine(
-                $"  [{region.Id,2}] {region.Name,-18} {region.Biome,-12} Fert={region.Fertility,4:F2} Water={region.WaterAvailability,4:F2} Herbivore={(herbivorePresent ? "Y" : "N")} Predator={(predatorPresent ? "Y" : "N")}");
+                $"  [{region.Id,2}] {region.Name,-18} {region.Biome,-12} Fert={region.Fertility,4:F2} Water={region.WaterAvailability,4:F2} Prod={region.EffectiveEcologyProfile.BasePrimaryProductivity,4:F2} Habit={region.EffectiveEcologyProfile.HabitabilityScore,4:F2} Herbivore={(herbivorePresent ? "Y" : "N")} Predator={(predatorPresent ? "Y" : "N")}");
         }
 
         Console.WriteLine();
@@ -732,6 +758,12 @@ public sealed class Simulation : IDisposable
             $"Wildlife: AvgHerbivores/Region={averageHerbivorePopulation:F0} AvgConsumers/Region={averageConsumerSpecies:F1} Fertile2+Consumers={fertileRegionsWithEstablishedConsumers}/{fertileRegions.Count} FertileHerbivore90+={fertileRegionsWithGrowingHerbivores}/{fertileRegions.Count} PredatorHotspots={predatorSuppressionHotspots}");
         Console.WriteLine(
             $"Predators: Regions={occupiedPredatorRegions}/{_world.Regions.Count} FounderRegions={founderPredatorRegions} EstablishedRegions={establishedPredatorRegions} TotalPop={totalPredatorPopulation} ActiveSpecies={activePredatorSpecies}/{predatorSpecies.Count}");
+        Console.WriteLine(
+            $"PhaseA: Ready={_world.PhaseAReadinessReport.IsReady} Occupied={_world.PhaseAReadinessReport.OccupiedRegionPercentage:F2} Producers={_world.PhaseAReadinessReport.ProducerCoverage:F2} Consumers={_world.PhaseAReadinessReport.ConsumerCoverage:F2} Predators={_world.PhaseAReadinessReport.PredatorCoverage:F2} Stable={_world.PhaseAReadinessReport.StableRegionCount} Collapsing={_world.PhaseAReadinessReport.CollapsingRegionCount}");
+        if (_world.PhaseAReadinessReport.FailureReasons.Count > 0)
+        {
+            Console.WriteLine($"PhaseA failures: {string.Join(", ", _world.PhaseAReadinessReport.FailureReasons)}");
+        }
 
         if (_world.Time.Year is 0 or 5 or 20)
         {
@@ -756,7 +788,7 @@ public sealed class Simulation : IDisposable
                 : region.PlantBiomass / region.MaxPlantBiomass;
 
             Console.WriteLine(
-                $"  [{region.Id,2}] {region.Name,-18} {region.Biome,-12} Herb={herbivorePopulation,4} Cons={consumerSpecies,2} Pred={predatorPopulation,3} Plant={plantRatio,4:F2} AnimalBio={region.AnimalBiomass,6:F0}");
+                $"  [{region.Id,2}] {region.Name,-18} {region.Biome,-12} Herb={herbivorePopulation,4} Cons={consumerSpecies,2} Pred={predatorPopulation,3} Plant={plantRatio,4:F2} AnimalBio={region.AnimalBiomass,6:F0} Move={region.EffectiveEcologyProfile.MigrationEase,4:F2} Vol={region.EffectiveEcologyProfile.EnvironmentalVolatility,4:F2}");
         }
     }
 

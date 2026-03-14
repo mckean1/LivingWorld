@@ -33,4 +33,11 @@ public sealed class WorldTime
             Year++;
         }
     }
+
+    public void Reset(int year = 0, int month = 1)
+    {
+        Year = year;
+        Month = month;
+        Tick = 0;
+    }
 }

@@ -12,6 +12,7 @@ public sealed class Region
 
     public double Fertility { get; set; }
     public double WaterAvailability { get; set; }
+    public RegionEcologyProfile? EcologyProfile { get; set; }
 
     public double PlantBiomass { get; set; }
     public double AnimalBiomass { get; set; }
@@ -43,6 +44,7 @@ public sealed class Region
 
     public double TotalBiomass => PlantBiomass + AnimalBiomass;
     public double TotalBiomassCapacity => MaxPlantBiomass + MaxAnimalBiomass;
+    public RegionEcologyProfile EffectiveEcologyProfile => EcologyProfile ??= RegionEcologyProfileBuilder.Build(this);
 
     public void AddConnection(int regionId)
     {

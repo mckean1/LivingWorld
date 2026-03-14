@@ -2,6 +2,15 @@
 
 LivingWorld keeps simulation logic, event storage, propagation, formatting, and console playback separate.
 
+The startup direction is now explicitly primitive-life-first:
+
+1. biological world foundation
+2. evolution and divergence
+3. sentience and social formation
+4. polity start and player entry
+
+Pass 1 is implemented now. The default generated world stops at ecological foundation instead of assuming sapient species and polities already exist.
+
 ## Core Structure
 
 `World` contains:
@@ -31,6 +40,9 @@ Major systems:
 - fragmentation
 - polity stage progression
 
+Only some of those systems are active in the default startup stage.
+`World.StartupStage` now gates the default path so Pass 1 worlds run ecological foundation first and defer mutation, sentience, polity formation, and player-focus assumptions to later startup passes.
+
 ## Settlement-Grounded Locality
 
 `Polity` now owns lightweight `Settlement` records.
@@ -53,11 +65,12 @@ World seeding is now split into a few explicit pieces so density tuning stays de
 
 - `WorldGenerationSettings` holds the main numeric knobs for region, species, and polity counts
 - `WorldGenerationCatalog` provides curated biome layout, name pools, and species templates
-- `WorldGenerator` turns those settings and templates into connected regions, seeded species ranges, homeland-support-aware polity placement, and anchored starting polities
-- consumer range seeding is intentionally broader for herbivores and omnivores than for predators, so fertile biomes usually open with a prey base before later predator pressure intensifies
+- `WorldGenerator` now turns those settings and templates into connected regions, ecology profiles, primitive lineage templates, weighted seeded ranges, and a Phase A ecological bootstrap
+- producer coverage is intentionally broad while consumer and predator spread is narrower and more uneven, so the world opens biologically alive without becoming uniform
 - `EcosystemSettings` now centralizes the long-run fauna spread knobs that take over after generation: migration thresholds, founder-population sizing, prey-support gates, predator establishment windows, and cooldown pacing
+- `PhaseAReadinessEvaluator` summarizes whether the generated world has broad, uneven, functioning ecological foundations rather than relying on a fixed time cutoff
 
-This keeps the fuller starting world explicit rather than burying scale changes in scattered magic numbers.
+This keeps the startup world explicit rather than burying scale changes in scattered magic numbers.
 
 ## Canonical Event Architecture
 
@@ -184,7 +197,8 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 Simulation advancement remains independent from the active screen. The UI reads world state, while `Space` explicitly gates whether monthly ticks continue.
 Left/Right paging is view-agnostic now: list screens page selection, while chronicle and detail screens page scroll offsets.
 `My Polity` is also a special focal-polity view rather than just a shortcut into generic polity detail. `Enter` intentionally leaves the player there so focal-only information cannot be downgraded by a foreign-polity-safe renderer path.
-Simulation now also performs an explicit bootstrap seeding pass before active play begins. That pass establishes baseline economy and starvation state for older starting settlements, seeds prior-state trackers, and avoids narrating those setup results as history.
+Simulation now also performs an explicit bootstrap seeding pass before active play begins. In Pass 1 that bootstrap is ecological: world generation runs primitive seeding and Phase A stabilization internally, records readiness, then resets visible time back to the active simulation boundary.
+Later bootstrap layers such as economy baselines still exist in the codebase, but they are skipped for the primitive-ecology startup stage because societies and settlements are intentionally deferred.
 
 ## Focus And Continuity
 
@@ -214,6 +228,9 @@ Monthly:
 - propagation state bonuses tick down
 - systems emit canonical events on meaningful transitions
 - follow-up events are processed immediately through the same event pipeline
+
+In startup Pass 1, the active monthly path intentionally stops after ecological systems.
+Hunting, mutation/speciation, economy, migration, settlement, and polity-year-end systems remain available for later startup stages, but the default generated world does not activate them yet.
 
 The food architecture is intentionally asymmetric now:
 
@@ -256,6 +273,7 @@ The architecture continues to prioritize:
 - source-side milestone guards plus chronicle cooldown keys so visible history beats stay about transitions rather than repeated reaffirmation
 - sparse regional-population tracking and descendant-species stabilization as first-class performance safeguards
 - a stricter presentation split where structured history may still keep repeated pressure/follow-up events even when the live chronicle hides them
+- startup-stage honesty, so the generated world only contains layers that have actually been simulated into existence
 ## Phase 12 - Settlement Aid Layer
 
 Regional food exchange now sits between settlement production/consumption bookkeeping and later social-pressure systems. The new monthly pass is settlement-centric: it derives each settlement's local food requirement, production share, and stored food share from the current polity-level totals, classifies the settlement food state, and then performs intra-polity redistribution.

@@ -10,10 +10,16 @@ public sealed class RegionSpeciesPopulation
     public int CarryingCapacity { get; set; }
     public double BaseHabitatSuitability { get; set; }
     public double HabitatSuitability { get; set; }
+    public double FoodSupport { get; set; }
+    public double SupportPressure { get; set; }
+    public double ReproductionPressure { get; set; }
     public double MigrationPressure { get; set; }
     public double RecentPredationPressure { get; set; }
     public double RecentHuntingPressure { get; set; }
     public double RecentFoodStress { get; set; }
+    public double StressScore { get; set; }
+    public PopulationTrend Trend { get; set; }
+    public string? TrendSummary { get; set; }
     public int SeasonsUnderPressure { get; set; }
     public int MigrationCooldownSeasons { get; set; }
     public int FounderSeasonsRemaining { get; set; }
@@ -54,6 +60,7 @@ public sealed class RegionSpeciesPopulation
     public int LastLocalExtinctionYear { get; set; } = -1;
     public int LastLocalExtinctionMonth { get; set; } = -1;
     public string? LastPopulationExitReason { get; set; }
+    public int LastPopulationBeforeExtinction { get; set; }
     public int? FounderSourceRegionId { get; set; }
     public int? FounderSourceSpeciesId { get; set; }
     public string? FounderKind { get; set; }
@@ -81,6 +88,8 @@ public sealed class RegionSpeciesPopulation
         HasEverExisted = true;
         LocalExtinctionRecorded = false;
         LastPopulationExitReason = null;
+        Trend = PopulationTrend.Founder;
+        TrendSummary = founderKind;
         FounderKind = founderKind;
         FounderSourceRegionId = sourceRegionId;
         FounderSourceSpeciesId = sourceSpeciesId;
@@ -125,6 +134,8 @@ public sealed class RegionSpeciesPopulation
         LastLocalExtinctionYear = year;
         LastLocalExtinctionMonth = month;
         LastPopulationExitReason = reason;
+        Trend = PopulationTrend.Extinct;
+        TrendSummary = reason;
     }
 
     public double GetTraitOffset(SpeciesTrait trait)

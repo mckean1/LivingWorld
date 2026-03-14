@@ -17,8 +17,16 @@ Watch mode keeps species in the fixed status panel, separates discoveries from l
 The same watch renderer applies conservative syntax coloring after formatting: structured status lines color only their value segments, while narrative chronicle lines color only boundary-safe semantic units.
 The watch loop now also maintains a small UI state machine for top-level views, detail screens, pause state, and selection memory.
 The seed world entering this loop is now larger by default, but scale tuning remains centralized in `WorldGenerationSettings` rather than spread across systems.
-Before active play, simulation now runs an explicit bootstrap seeding step for baseline local state such as settlement economy pressure and starvation tracking. Those bootstrap events remain canonical/internal but are filtered from player-facing chronicle surfaces.
-That bootstrap seeding also initializes prior material and reputation comparisons so the first active month is measured against real baseline state instead of empty history trackers.
+Before active play, startup now runs an explicit primitive-life-first bootstrap.
+The agreed 4-pass startup plan is:
+
+1. biological world foundation
+2. evolution and divergence
+3. sentience and social formation
+4. polity start and player entry
+
+Pass 1 is what currently boots by default. World generation seeds primitive ecology, runs internal stabilization, records a `PhaseAReadinessReport`, and only then hands the world to the active loop.
+Later bootstrap layers such as economy/material baselines still exist, but they are skipped while the world remains in the primitive ecological startup stage.
 Canonical events now retain explicit origin metadata as well, so the visible chronicle can refuse non-live setup events even if they share a type with legitimate later transitions.
 
 ## Monthly Systems
@@ -27,9 +35,9 @@ Canonical events now retain explicit origin metadata as well, so the visible chr
 - seasonal regional species population maintenance every third month
 - seasonal ecosystem interactions, founder migration, and species exchange every third month
 - ecosystem work is now sparse: it iterates existing regional populations and explicit frontier candidates rather than forcing every species into every region each season
-- seasonal settlement hunting every third month
+- seasonal settlement hunting every third month once a later startup pass has actually created settlements
 - hunting is resolved per settlement, using that settlement's actual region
-- seasonal mutation, divergence, and speciation pass every third month using the same season's species exchange flags
+- seasonal mutation, divergence, and speciation pass every third month using the same season's species exchange flags once startup has advanced past Pass 1
 - speciation eligibility now also depends on species age, global population, sustained readiness, and descendant stabilization
 - seasonal extinction cleanup and biomass sync every third month
 - plant gathering and farming
@@ -41,10 +49,12 @@ Canonical events now retain explicit origin metadata as well, so the visible chr
 The seasonal ecosystem pass now also carries more of the "alive world" burden in years `0-20`:
 
 - initial consumer populations are seeded from ecological capacity and habitat fit
+- region ecology profiles cache derived productivity, habitability, migration ease, and volatility so seeding and simulation use the same tuned environmental frame
 - producer-rich regions give herbivores stronger early recovery and expansion headroom
 - predator starts stay narrower than herbivore coverage so prey foundations usually establish first
 - neighboring fauna can now create small founder populations in suitable adjacent regions over time instead of depending entirely on generation-era ranges
 - predator founder populations now use a short establishment window after migration, so they either grow into viable regional predators or fail under prey shortage and habitat mismatch
+- each regional population now exposes food/support pressure, reproduction pressure, migration pressure, stress, and trend state for debugging and for later startup passes
 
 `Region.AnimalBiomass` is not consumed during the monthly food-gathering step.
 Instead:
@@ -56,6 +66,9 @@ Instead:
 
 At the start of each month, temporary propagation bonuses tick down.
 Ecosystem migration pacing itself is centralized in `EcosystemSettings`, including source thresholds, suitability gates, founder sizing, predator establishment/failure thresholds, prey-support requirements, and cooldowns.
+
+If the world is still in `WorldStartupStage.PrimitiveEcologyFoundation`, the loop intentionally stops after ecology work.
+That keeps Pass 1 honest: no mutation/speciation, no sentience, no polity-year-end logic, and no player-entry assumptions are activated yet.
 
 ## Year-End Systems
 

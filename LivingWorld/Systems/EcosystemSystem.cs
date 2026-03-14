@@ -104,6 +104,18 @@ public sealed class EcosystemSystem
         population.BaseHabitatSuitability = SpeciesEcology.CalculateBaseHabitatSuitability(species, region);
         population.HabitatSuitability = SpeciesEcology.CalculateHabitatSuitability(species, population, population.BaseHabitatSuitability);
         population.CarryingCapacity = SpeciesEcology.CalculateCarryingCapacity(species, population, region, population.HabitatSuitability);
+        population.FoodSupport = 0;
+        population.SupportPressure = 0;
+        population.ReproductionPressure = 0;
+        population.StressScore = Math.Clamp(
+            (population.RecentFoodStress * 0.46) +
+            (population.RecentPredationPressure * 0.28) +
+            (population.RecentHuntingPressure * 0.16) +
+            Math.Max(0.0, 0.72 - population.HabitatSuitability) * 0.10,
+            0.0,
+            1.0);
+        population.Trend = population.FounderSeasonsRemaining > 0 ? PopulationTrend.Founder : PopulationTrend.Stable;
+        population.TrendSummary ??= "stable";
         population.EstablishedThisSeason = false;
         population.ReceivedMigrantsThisSeason = false;
         population.SentMigrantsThisSeason = false;
@@ -137,6 +149,7 @@ public sealed class EcosystemSystem
             double predatorSupportRatio = species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex
                 ? ResolvePredatorSupportRatio(region, speciesById, species, previousPopulation)
                 : 0.0;
+            double foodSupport = ResolveFoodSupport(region, speciesById, species, previousPopulation);
             bool predatorFounderPhase = IsPredatorFounderPhase(species, population, previousPopulation);
             double reproductionRate = species.BaseReproductionRate
                 * species.GetSeasonalReproductionModifier(season)
@@ -186,6 +199,9 @@ public sealed class EcosystemSystem
             }
 
             population.PopulationCount = Math.Max(0, previousPopulation + births - naturalLosses);
+            population.FoodSupport = foodSupport;
+            population.SupportPressure = Math.Clamp(1.0 - foodSupport, 0.0, 1.0);
+            population.ReproductionPressure = Math.Clamp(reproductionRate, 0.0, 1.5);
             population.MigrationPressure = Math.Clamp(
                 (species.ExpansionPressure * 0.45) +
                 (Math.Max(0.0, carryingRatio - 0.85) * 0.65) +
@@ -193,6 +209,16 @@ public sealed class EcosystemSystem
                 (Math.Max(0.0, 0.78 - population.HabitatSuitability) * 0.30),
                 0.0,
                 1.0);
+            population.StressScore = Math.Clamp(
+                (population.SupportPressure * 0.34) +
+                (population.RecentFoodStress * 0.26) +
+                (population.RecentPredationPressure * 0.18) +
+                (population.RecentHuntingPressure * 0.08) +
+                Math.Max(0.0, carryingRatio - 1.0) * 0.14,
+                0.0,
+                1.0);
+            population.Trend = ResolveTrend(population, previousPopulation);
+            population.TrendSummary = BuildTrendSummary(population, previousPopulation);
 
             if (population.PopulationCount < Math.Max(2, population.CarryingCapacity / 25))
             {
@@ -300,6 +326,7 @@ public sealed class EcosystemSystem
                 preyPopulation.PopulationCount = Math.Max(0, preyPopulation.PopulationCount - preyLoss);
                 if (preyPopulation.PopulationCount <= 0)
                 {
+                    preyPopulation.LastPopulationBeforeExtinction = preyBefore;
                     preyPopulation.MarkLocalExtinction(world.Time.Year, world.Time.Month, "predation");
                 }
                 preyPopulation.RecentPredationPressure = Math.Clamp(preyPopulation.RecentPredationPressure + ((double)preyLoss / Math.Max(1, preyBefore)), 0.0, 1.0);
@@ -403,7 +430,29 @@ public sealed class EcosystemSystem
 
                 if (wasPresentBefore && !population.LocalExtinctionRecorded)
                 {
+                    population.LastPopulationBeforeExtinction = Math.Max(population.LastPopulationBeforeExtinction, population.CarryingCapacity / 10);
                     population.MarkLocalExtinction(world.Time.Year, world.Time.Month, population.LastPopulationExitReason ?? "local_extinction");
+                }
+
+                if (wasPresentBefore
+                    && population.LocalExtinctionRecorded
+                    && !world.LocalPopulationExtinctions.Any(record =>
+                        record.RegionId == region.Id
+                        && record.SpeciesId == species.Id
+                        && record.Year == population.LastLocalExtinctionYear
+                        && record.Month == population.LastLocalExtinctionMonth))
+                {
+                    world.LocalPopulationExtinctions.Add(new LocalPopulationExtinctionRecord(
+                        region.Id,
+                        region.Name,
+                        species.Id,
+                        species.Name,
+                        population.LastLocalExtinctionYear,
+                        population.LastLocalExtinctionMonth,
+                        population.LastPopulationExitReason ?? "local_extinction",
+                        population.LastPopulationBeforeExtinction,
+                        population.StressScore,
+                        population.HabitatSuitability));
                 }
 
                 population.RecentPredationPressure = 0;
@@ -592,23 +641,21 @@ public sealed class EcosystemSystem
         double sourceCapacityRatio = (double)sourcePopulation.PopulationCount / sourcePopulation.CarryingCapacity;
         int preySupport = ResolvePreySupportPopulation(sourceRegion, speciesById, species);
 
-        return species.TrophicRole switch
+        bool canMigrate = species.TrophicRole switch
         {
             TrophicRole.Herbivore or TrophicRole.Omnivore =>
                 sourceCapacityRatio >= _settings.HerbivoreExpansionCapacityRatioThreshold
                 || sourcePopulation.MigrationPressure >= _settings.MigrationPressureThreshold,
             TrophicRole.Predator =>
                 preySupport >= _settings.PredatorMinimumPreyPopulation
-                && ResolvePredatorSupportRatio(sourceRegion, speciesById, species, sourcePopulation.PopulationCount) >= _settings.PredatorMigrationSupportRatioThreshold
-                && (sourceCapacityRatio >= _settings.PredatorExpansionCapacityRatioThreshold
-                    || sourcePopulation.MigrationPressure >= _settings.PredatorMigrationPressureThreshold),
+                && sourcePopulation.PopulationCount >= minimumSourcePopulation,
             TrophicRole.Apex =>
                 preySupport >= _settings.ApexMinimumPreyPopulation
-                && ResolvePredatorSupportRatio(sourceRegion, speciesById, species, sourcePopulation.PopulationCount) >= _settings.ApexMigrationSupportRatioThreshold
-                && (sourceCapacityRatio >= (_settings.PredatorExpansionCapacityRatioThreshold + 0.08)
-                    || sourcePopulation.MigrationPressure >= (_settings.PredatorMigrationPressureThreshold + 0.08)),
+                && sourcePopulation.PopulationCount >= minimumSourcePopulation,
             _ => false
         };
+
+        return canMigrate;
     }
 
     private IEnumerable<MigrationCandidate> PrioritizeMigrationCandidates(Species species, IReadOnlyList<MigrationCandidate> candidates)
@@ -683,14 +730,14 @@ public sealed class EcosystemSystem
             : _settings.PredatorMinimumPreyPopulation;
         int predatorFounderPopulation = ResolveFounderPopulation(species, speciesById, sourcePopulation, target);
         double supportRatio = ResolvePredatorSupportRatio(target, speciesById, species, Math.Max(1, predatorFounderPopulation));
+        double effectivePredatorSuitability = targetSuitability + Math.Min(0.10, preySupport / 900.0);
         if (preySupport < minimumPreyPopulation
-            || targetSuitability < _settings.PredatorTargetSuitability
             || supportRatio < ResolvePredatorMigrationSupportThreshold(species))
         {
             return null;
         }
 
-        double predatorScore = suitabilityScore
+        double predatorScore = (suitabilityScore + Math.Min(0.10, effectivePredatorSuitability * 0.08))
             + Math.Min(0.24, preySupport / 220.0)
             + Math.Min(0.18, supportRatio * 0.12)
             + (openness * 0.08)
@@ -919,6 +966,88 @@ public sealed class EcosystemSystem
     private bool IsPredatorFounderPhase(Species species, RegionSpeciesPopulation population, int previousPopulation)
         => species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex
            && (population.FounderSeasonsRemaining > 0 || previousPopulation < ResolvePredatorEstablishmentPopulationThreshold(species));
+
+    private static PopulationTrend ResolveTrend(RegionSpeciesPopulation population, int previousPopulation)
+    {
+        if (population.PopulationCount <= 0)
+        {
+            return PopulationTrend.Extinct;
+        }
+
+        if (population.FounderSeasonsRemaining > 0)
+        {
+            return PopulationTrend.Founder;
+        }
+
+        if (population.PopulationCount > previousPopulation * 1.06)
+        {
+            return PopulationTrend.Growing;
+        }
+
+        if (population.PopulationCount < Math.Max(1, previousPopulation * 0.72) || population.StressScore >= 0.78)
+        {
+            return PopulationTrend.Collapsing;
+        }
+
+        if (population.PopulationCount < previousPopulation * 0.94)
+        {
+            return PopulationTrend.Declining;
+        }
+
+        return PopulationTrend.Stable;
+    }
+
+    private static string BuildTrendSummary(RegionSpeciesPopulation population, int previousPopulation)
+    {
+        if (population.PopulationCount <= 0)
+        {
+            return "extinct";
+        }
+
+        if (population.FounderSeasonsRemaining > 0)
+        {
+            return "founder_window";
+        }
+
+        if (population.PopulationCount > previousPopulation)
+        {
+            return $"growing support={population.FoodSupport:F2}";
+        }
+
+        if (population.StressScore >= 0.75)
+        {
+            return $"collapsing stress={population.StressScore:F2}";
+        }
+
+        if (population.PopulationCount < previousPopulation)
+        {
+            return $"declining support={population.FoodSupport:F2}";
+        }
+
+        return "stable";
+    }
+
+    private double ResolveFoodSupport(Region region, IReadOnlyDictionary<int, Species> speciesById, Species species, int currentPopulation)
+    {
+        if (currentPopulation <= 0)
+        {
+            return 0.0;
+        }
+
+        return species.TrophicRole switch
+        {
+            TrophicRole.Producer => Math.Clamp(region.EffectiveEcologyProfile.BasePrimaryProductivity + ((1.0 - region.EffectiveEcologyProfile.EnvironmentalVolatility) * 0.25), 0.0, 1.2),
+            TrophicRole.Herbivore => Math.Clamp(ResolveProducerPopulation(region, speciesById) / Math.Max(24.0, currentPopulation * 1.2), 0.0, 1.4),
+            TrophicRole.Omnivore => Math.Clamp((ResolveProducerPopulation(region, speciesById) * 0.45 + ResolveConsumerPopulation(region, speciesById) * 0.60) / Math.Max(18.0, currentPopulation * 1.15), 0.0, 1.4),
+            _ => Math.Clamp(ResolvePreySupportPopulation(region, speciesById, species) / Math.Max(12.0, currentPopulation * 1.05), 0.0, 1.4)
+        };
+    }
+
+    private static int ResolveProducerPopulation(Region region, IReadOnlyDictionary<int, Species> speciesById)
+        => region.SpeciesPopulations
+            .Where(population => population.PopulationCount > 0
+                && speciesById[population.SpeciesId].TrophicRole == TrophicRole.Producer)
+            .Sum(population => population.PopulationCount);
 
     private int ResolvePredatorEstablishmentPopulationThreshold(Species species)
         => species.TrophicRole == TrophicRole.Apex

@@ -1,7 +1,7 @@
+using LivingWorld.Core;
 using LivingWorld.Generation;
 using LivingWorld.Life;
 using LivingWorld.Map;
-using LivingWorld.Societies;
 using LivingWorld.Systems;
 using Xunit;
 
@@ -10,293 +10,274 @@ namespace LivingWorld.Tests;
 public sealed class WorldGenerationTests
 {
     [Fact]
-    public void WorldGenerator_UsesFullerDefaultWorldScale()
+    public void RegionEcologyProfileBuilder_DerivesInspectableValues()
     {
-        WorldGenerator generator = new(seed: 7);
+        Region region = new(0, "Green Reach")
+        {
+            Biome = RegionBiome.RiverValley,
+            Fertility = 0.84,
+            WaterAvailability = 0.78,
+            MaxPlantBiomass = 1180,
+            MaxAnimalBiomass = 320
+        };
 
-        var world = generator.Generate();
+        RegionEcologyProfile profile = RegionEcologyProfileBuilder.Build(region);
 
+        Assert.InRange(profile.BasePrimaryProductivity, 0.65, 1.0);
+        Assert.InRange(profile.HabitabilityScore, 0.60, 1.0);
+        Assert.InRange(profile.MigrationEase, 0.20, 1.0);
+        Assert.InRange(profile.EnvironmentalVolatility, 0.0, 1.0);
+    }
+
+    [Fact]
+    public void WorldGenerator_BuildsPrimitiveLifeFirstStartupWorld()
+    {
+        World world = new WorldGenerator(seed: 7).Generate();
+
+        Assert.Equal(WorldStartupStage.PrimitiveEcologyFoundation, world.StartupStage);
         Assert.Equal(36, world.Regions.Count);
-        Assert.Equal(31, world.Species.Count);
-        Assert.Equal(10, world.Polities.Count);
+        Assert.Equal(7, world.Species.Count);
+        Assert.Empty(world.Polities);
+        Assert.All(world.Species, species => Assert.True(species.IsPrimitiveLineage));
+        Assert.True(world.PhaseAReadinessReport.OccupiedRegions > 0);
+        Assert.Equal(0, world.Time.Year);
+        Assert.Equal(1, world.Time.Month);
     }
 
     [Fact]
-    public void WorldGenerator_DistributesStartingPolitiesAcrossDistinctViableRegions()
+    public void SuitabilityBasedPrimitiveSeeding_FavorsPreferredHabitats()
     {
-        WorldGenerator generator = new(seed: 9);
+        World world = new WorldGenerator(seed: 11).Generate();
+        Species wetProducer = Assert.Single(world.Species, species => species.PrimitiveTemplateId == "mat_reeds");
 
-        var world = generator.Generate();
+        Region bestRegion = world.Regions
+            .OrderByDescending(region => SpeciesEcology.CalculateBaseHabitatSuitability(wetProducer, region))
+            .First();
+        int occupiedWetProducerRegions = world.Regions.Count(region => region.GetSpeciesPopulation(wetProducer.Id)?.PopulationCount > 0);
 
-        int distinctRegions = world.Polities.Select(polity => polity.RegionId).Distinct().Count();
-        Assert.True(distinctRegions >= 8);
-        Assert.All(world.Polities, polity =>
-        {
-            Region home = world.Regions.First(region => region.Id == polity.RegionId);
-            Assert.True(home.Fertility >= 0.30 || home.WaterAvailability >= 0.45);
-        });
+        Assert.Contains(bestRegion.Biome, new[] { RegionBiome.RiverValley, RegionBiome.Wetlands, RegionBiome.Coast });
+        Assert.True(bestRegion.GetSpeciesPopulation(wetProducer.Id)?.PopulationCount > 0);
+        Assert.InRange(occupiedWetProducerRegions, 8, 30);
     }
 
     [Fact]
-    public void WorldGenerator_GivesEachStartingPolity_AHomeSettlementAnchor()
+    public void PrimitiveSeeding_ProvidesBroadProducerCoverage_WithoutMakingEveryLineageGlobal()
     {
-        WorldGenerator generator = new(seed: 10);
+        World world = new WorldGenerator(seed: 13).Generate();
 
-        var world = generator.Generate();
+        int producerCoveredRegions = world.Regions.Count(region => region.SpeciesPopulations.Any(population =>
+            population.PopulationCount > 0
+            && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Producer));
 
-        Assert.All(world.Polities, polity =>
-        {
-            Assert.True(polity.HasSettlements);
-            Assert.Equal(SettlementStatus.SemiSettled, polity.SettlementStatus);
-            Assert.Equal(polity.RegionId, polity.Settlements[0].RegionId);
-        });
-    }
-
-    [Fact]
-    public void EcosystemInitialization_SeedsSpeciesIntoSubsetsOfRegions()
-    {
-        WorldGenerator generator = new(seed: 11);
-        var world = generator.Generate();
-        EcosystemSystem ecosystemSystem = new();
-
-        ecosystemSystem.InitializeRegionalPopulations(world);
-
+        Assert.True(producerCoveredRegions >= 30);
         Assert.All(world.Species, species =>
         {
             int occupiedRegions = world.Regions.Count(region => region.GetSpeciesPopulation(species.Id)?.PopulationCount > 0);
             Assert.True(occupiedRegions > 0);
             Assert.True(occupiedRegions < world.Regions.Count);
         });
-
-        Assert.Contains(world.Regions, region => region.Biome == RegionBiome.RiverValley);
-        Assert.Contains(world.Regions, region => region.Biome == RegionBiome.Coast);
-        Assert.Contains(world.Regions, region => region.Biome == RegionBiome.Mountains);
     }
 
     [Fact]
-    public void FullerWorld_ProvidesEarlyFoodWebCoverageAcrossRegions()
+    public void PrimitiveSeeding_IsNonUniformAcrossWorld()
     {
-        WorldGenerator generator = new(seed: 13);
-        var world = generator.Generate();
-        EcosystemSystem ecosystemSystem = new();
+        World world = new WorldGenerator(seed: 17).Generate();
 
-        ecosystemSystem.InitializeRegionalPopulations(world);
-
-        int regionsWithProducer = 0;
-        int regionsWithHerbivore = 0;
-        int regionsWithPredator = 0;
-
-        foreach (Region region in world.Regions)
-        {
-            if (HasRole(region, world.Species, TrophicRole.Producer))
-            {
-                regionsWithProducer++;
-            }
-
-            if (HasRole(region, world.Species, TrophicRole.Herbivore))
-            {
-                regionsWithHerbivore++;
-            }
-
-            if (HasRole(region, world.Species, TrophicRole.Predator) || HasRole(region, world.Species, TrophicRole.Apex))
-            {
-                regionsWithPredator++;
-            }
-        }
-
-        Assert.True(regionsWithProducer >= 24);
-        Assert.True(regionsWithHerbivore >= 18);
-        Assert.True(regionsWithPredator >= 8);
-    }
-
-    [Fact]
-    public void EcosystemInitialization_SeedsMeaningfulHerbivoreBaselines_InFertileRegions()
-    {
-        WorldGenerator generator = new(seed: 13);
-        var world = generator.Generate();
-        EcosystemSystem ecosystemSystem = new();
-
-        ecosystemSystem.InitializeRegionalPopulations(world);
-
-        List<Region> fertileRegions = world.Regions
-            .Where(region => region.Fertility >= 0.55 && region.WaterAvailability >= 0.50)
+        IReadOnlyList<int> occupiedCounts = world.Species
+            .Select(species => world.Regions.Count(region => region.GetSpeciesPopulation(species.Id)?.PopulationCount > 0))
+            .OrderBy(count => count)
+            .ToList();
+        IReadOnlyList<int> regionalRichness = world.Regions
+            .Select(region => region.SpeciesPopulations.Count(population => population.PopulationCount > 0))
+            .OrderBy(count => count)
             .ToList();
 
-        double averageHerbivoresInFertileRegions = fertileRegions.Average(region => region.SpeciesPopulations
-            .Where(population => population.PopulationCount > 0
-                && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
-            .Sum(population => population.PopulationCount));
-        int fertileRegionsWithMultipleConsumers = fertileRegions.Count(region => region.SpeciesPopulations.Count(population =>
-            population.PopulationCount > 0
-            && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole != TrophicRole.Producer) >= 2);
-
-        Assert.True(averageHerbivoresInFertileRegions >= 85);
-        Assert.True(fertileRegionsWithMultipleConsumers >= Math.Max(6, fertileRegions.Count / 2));
+        Assert.True(occupiedCounts.Distinct().Count() >= 4);
+        Assert.True(regionalRichness.First() < regionalRichness.Last());
+        Assert.Contains(world.Regions, region => region.SpeciesPopulations.Count(population => population.PopulationCount > 0) >= 4);
+        Assert.Contains(world.Regions, region => region.SpeciesPopulations.Count(population => population.PopulationCount > 0) <= 2);
     }
 
     [Fact]
-    public void WorldGeneration_EnsuresFertileRegions_AreNotFaunaEmpty()
+    public void EarlyEcologicalLoop_UpdatesPopulationSignals()
     {
-        WorldGenerator generator = new(seed: 13);
-        var world = generator.Generate();
-        EcosystemSystem ecosystemSystem = new();
-
-        ecosystemSystem.InitializeRegionalPopulations(world);
-
-        List<Region> fertileRegions = world.Regions
-            .Where(region => region.Fertility >= 0.55 && region.WaterAvailability >= 0.50)
-            .ToList();
-
-        Assert.All(fertileRegions, region =>
-        {
-            int herbivorePopulation = region.SpeciesPopulations
-                .Where(population => population.PopulationCount > 0
-                    && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
-                .Sum(population => population.PopulationCount);
-            Assert.True(herbivorePopulation > 0, $"Expected fertile region {region.Name} to seed at least one herbivore population.");
-        });
-    }
-
-    [Fact]
-    public void WorldGeneration_KeepsPredators_InsideHerbivoreSupportedRegions()
-    {
-        WorldGenerator generator = new(seed: 13);
-        var world = generator.Generate();
-
-        HashSet<int> herbivoreSupportedRegions = world.Species
-            .Where(species => species.TrophicRole == TrophicRole.Herbivore)
-            .SelectMany(species => species.InitialRangeRegionIds)
-            .ToHashSet();
-
-        Assert.All(world.Species.Where(species => species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex), predator =>
-        {
-            Assert.All(predator.InitialRangeRegionIds, regionId => Assert.Contains(regionId, herbivoreSupportedRegions));
-        });
-    }
-
-    [Fact]
-    public void DefaultWorld_IncludesFullPredatorRoster_AndApexSpecies()
-    {
-        WorldGenerator generator = new(seed: 13);
-
-        var world = generator.Generate();
-
-        int predatorSpecies = world.Species.Count(species => species.TrophicRole == TrophicRole.Predator);
-        int apexSpecies = world.Species.Count(species => species.TrophicRole == TrophicRole.Apex);
-
-        Assert.True(predatorSpecies >= 3);
-        Assert.True(apexSpecies >= 2);
-    }
-
-    [Fact]
-    public void WorldGeneration_DoesNotMakeHerbivores_GlobalAcrossAllRegions()
-    {
-        WorldGenerator generator = new(seed: 13);
-        var world = generator.Generate();
-
-        int herbivoreCoveredRegions = world.Species
-            .Where(species => species.TrophicRole == TrophicRole.Herbivore)
-            .SelectMany(species => species.InitialRangeRegionIds)
-            .Distinct()
-            .Count();
-
-        Assert.True(herbivoreCoveredRegions < world.Regions.Count);
-        Assert.True(herbivoreCoveredRegions >= world.Regions.Count / 2);
-    }
-
-    [Fact]
-    public void SeasonalEcosystem_AllowsHerbivoresToExpand_WhenPlantsAreAbundant()
-    {
-        WorldGenerator generator = new(seed: 13);
-        var world = generator.Generate();
+        World world = new WorldGenerator(seed: 19).Generate();
         EcosystemSystem ecosystemSystem = new(new EcosystemSettings
         {
             MaxMigrationTargetsPerPopulation = 0
         });
 
-        ecosystemSystem.InitializeRegionalPopulations(world);
+        ecosystemSystem.UpdateSeason(world);
+        ecosystemSystem.ResolveSeasonalCleanup(world);
 
-        List<Region> fertileRegions = world.Regions
-            .Where(region => region.Fertility >= 0.55 && region.WaterAvailability >= 0.50)
-            .ToList();
-        double initialAverageHerbivores = fertileRegions.Average(region => region.SpeciesPopulations
-            .Where(population => population.PopulationCount > 0
-                && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
-            .Sum(population => population.PopulationCount));
-
-        for (int season = 0; season < 20; season++)
-        {
-            ecosystemSystem.UpdateSeason(world);
-            ecosystemSystem.ResolveSeasonalCleanup(world);
-        }
-
-        double laterAverageHerbivores = fertileRegions.Average(region => region.SpeciesPopulations
-            .Where(population => population.PopulationCount > 0
-                && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Herbivore)
-            .Sum(population => population.PopulationCount));
-
-        Assert.True(laterAverageHerbivores >= initialAverageHerbivores * 0.80);
-        Assert.Contains(fertileRegions, region => region.AnimalBiomass >= 140);
+        Assert.Contains(world.Regions.SelectMany(region => region.SpeciesPopulations), population => population.FoodSupport > 0);
+        Assert.Contains(world.Regions.SelectMany(region => region.SpeciesPopulations), population => population.ReproductionPressure > 0);
+        Assert.Contains(world.Regions.SelectMany(region => region.SpeciesPopulations), population => population.Trend is PopulationTrend.Growing or PopulationTrend.Declining or PopulationTrend.Stable or PopulationTrend.Founder);
     }
 
     [Fact]
-    public void SeasonalEcosystem_KeepsPredatorsEstablished_InTheDefaultWorld()
+    public void FounderPopulationSpread_CreatesSmallViableRegionalColonies()
     {
-        WorldGenerator generator = new(seed: 13);
-        var world = generator.Generate();
-        EcosystemSystem ecosystemSystem = new();
-
-        ecosystemSystem.InitializeRegionalPopulations(world);
-
-        for (int season = 0; season < 24; season++)
+        World world = CreateFounderSpreadWorld();
+        EcosystemSystem ecosystemSystem = new(new EcosystemSettings
         {
-            ecosystemSystem.UpdateSeason(world);
-            ecosystemSystem.ResolveSeasonalCleanup(world);
-        }
-
-        int occupiedPredatorRegions = world.Regions.Count(region => region.SpeciesPopulations.Any(population =>
-            population.PopulationCount > 0
-            && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole is TrophicRole.Predator or TrophicRole.Apex));
-        int establishedPredatorRegions = world.Regions.Count(region => region.SpeciesPopulations.Any(population =>
-            population.PopulationCount >= 6
-            && population.FounderSeasonsRemaining == 0
-            && world.Species.First(species => species.Id == population.SpeciesId).TrophicRole is TrophicRole.Predator or TrophicRole.Apex));
-
-        Assert.True(occupiedPredatorRegions >= 8);
-        Assert.True(establishedPredatorRegions >= 4);
-    }
-
-    [Fact]
-    public void StartingPolities_HaveAccessibleSupportSpeciesNearTheirHomelands()
-    {
-        WorldGenerator generator = new(seed: 17);
-        var world = generator.Generate();
-        EcosystemSystem ecosystemSystem = new();
-
-        ecosystemSystem.InitializeRegionalPopulations(world);
-
-        Assert.All(world.Polities, polity =>
-        {
-            HashSet<int> accessibleRegionIds = [polity.RegionId];
-            Region home = world.Regions.First(region => region.Id == polity.RegionId);
-            foreach (int neighborId in home.ConnectedRegionIds)
-            {
-                accessibleRegionIds.Add(neighborId);
-            }
-
-            int supportSpecies = world.Species.Count(species =>
-                !species.IsSapient
-                && (species.TrophicRole == TrophicRole.Producer || species.MeatYield > 0)
-                && accessibleRegionIds.Any(regionId => world.Regions[regionId].GetSpeciesPopulation(species.Id)?.PopulationCount > 0));
-
-            Assert.True(supportSpecies >= 3);
+            HerbivoreExpansionCapacityRatioThreshold = 0.32,
+            FrontierTargetSuitability = 0.45,
+            MinimumSourcePopulationForMigration = 6,
+            FounderPopulationMinimum = 2
         });
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        RegionSpeciesPopulation sourcePopulation = world.Regions[0].GetOrCreateSpeciesPopulation(1);
+        RegionSpeciesPopulation targetPopulation = world.Regions[1].GetOrCreateSpeciesPopulation(1);
+        sourcePopulation.PopulationCount = 72;
+        sourcePopulation.CarryingCapacity = 90;
+        sourcePopulation.MigrationPressure = 0.88;
+        targetPopulation.PopulationCount = 0;
+
+        ecosystemSystem.UpdateSeason(world);
+
+        Assert.True(targetPopulation.PopulationCount > 0);
+        Assert.InRange(targetPopulation.PopulationCount, 2, 12);
+        Assert.Equal(PopulationTrend.Founder, targetPopulation.Trend);
     }
 
-    private static bool HasRole(Region region, IReadOnlyCollection<Species> speciesCatalog, TrophicRole role)
+    [Fact]
+    public void LocalExtinctionBehavior_RemovesFailedPopulation_AndKeepsDebugHistory()
     {
-        return region.SpeciesPopulations.Any(population =>
-            population.PopulationCount > 0
-            && speciesCatalog.First(species => species.Id == population.SpeciesId).TrophicRole == role);
+        World world = CreateFounderSpreadWorld();
+        EcosystemSystem ecosystemSystem = new();
+
+        ecosystemSystem.InitializeRegionalPopulations(world);
+
+        Region region = world.Regions[0];
+        RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(1);
+        population.PopulationCount = 0;
+        population.HasEverExisted = true;
+        population.HabitatSuitability = 0.28;
+        population.StressScore = 0.92;
+        population.LastPopulationBeforeExtinction = 9;
+        population.LastPopulationExitReason = "collapse";
+
+        ecosystemSystem.ResolveSeasonalCleanup(world);
+
+        Assert.Contains(world.LocalPopulationExtinctions, record =>
+            record.RegionId == region.Id
+            && record.SpeciesId == 1
+            && record.Reason == "collapse");
+    }
+
+    [Fact]
+    public void PhaseAReadinessReport_ExplainsBrokenWorlds()
+    {
+        World world = new WorldGenerator(seed: 23).Generate();
+        foreach (Region region in world.Regions)
+        {
+            foreach (RegionSpeciesPopulation population in region.SpeciesPopulations)
+            {
+                if (world.Species.First(species => species.Id == population.SpeciesId).TrophicRole == TrophicRole.Producer)
+                {
+                    population.PopulationCount = 0;
+                }
+            }
+        }
+
+        PhaseAReadinessReport report = PhaseAReadinessEvaluator.Evaluate(world, new WorldGenerationSettings());
+
+        Assert.False(report.IsReady);
+        Assert.Contains(report.FailureReasons, reason => reason.StartsWith("producer_coverage_below_target:", StringComparison.Ordinal));
+    }
+
+    private static World CreateFounderSpreadWorld()
+    {
+        World world = new(new WorldTime(), WorldSimulationPhase.Bootstrap)
+        {
+            StartupStage = WorldStartupStage.PrimitiveEcologyFoundation
+        };
+
+        Region source = new(0, "Source Basin")
+        {
+            Biome = RegionBiome.Plains,
+            Fertility = 0.72,
+            WaterAvailability = 0.62,
+            PlantBiomass = 720,
+            AnimalBiomass = 180,
+            MaxPlantBiomass = 1080,
+            MaxAnimalBiomass = 260
+        };
+        Region target = new(1, "Target Basin")
+        {
+            Biome = RegionBiome.Plains,
+            Fertility = 0.68,
+            WaterAvailability = 0.58,
+            PlantBiomass = 680,
+            AnimalBiomass = 120,
+            MaxPlantBiomass = 1020,
+            MaxAnimalBiomass = 240
+        };
+
+        source.EcologyProfile = RegionEcologyProfileBuilder.Build(source);
+        target.EcologyProfile = RegionEcologyProfileBuilder.Build(target);
+        source.AddConnection(1);
+        target.AddConnection(0);
+        world.Regions.Add(source);
+        world.Regions.Add(target);
+
+        Species producer = new(0, "Test Mats", 0.02, 0.02)
+        {
+            IsPrimitiveLineage = true,
+            PrimitiveTemplateId = "test_mats",
+            EcologyNiche = "producer",
+            TrophicRole = TrophicRole.Producer,
+            TemperaturePreference = 0.58,
+            TemperatureTolerance = 0.24,
+            MoisturePreference = 0.56,
+            MoistureTolerance = 0.22,
+            FertilityPreference = 0.70,
+            WaterPreference = 0.62,
+            PlantBiomassAffinity = 0.90,
+            BaseCarryingCapacityFactor = 1.16,
+            BaseReproductionRate = 0.18,
+            BaseDeclineRate = 0.02,
+            Resilience = 0.52,
+            MigrationCapability = 0.12,
+            ExpansionPressure = 0.20,
+            StartingSpreadWeight = 0.88
+        };
+        producer.PreferredBiomes.Add(RegionBiome.Plains);
+        producer.InitialRangeRegionIds.Add(0);
+        producer.InitialRangeRegionIds.Add(1);
+
+        Species grazer = new(1, "Test Grazers", 0.03, 0.04)
+        {
+            IsPrimitiveLineage = true,
+            PrimitiveTemplateId = "test_grazers",
+            EcologyNiche = "grazer",
+            TrophicRole = TrophicRole.Herbivore,
+            TemperaturePreference = 0.58,
+            TemperatureTolerance = 0.22,
+            MoisturePreference = 0.56,
+            MoistureTolerance = 0.20,
+            FertilityPreference = 0.66,
+            WaterPreference = 0.58,
+            PlantBiomassAffinity = 0.72,
+            AnimalBiomassAffinity = 0.06,
+            BaseCarryingCapacityFactor = 1.00,
+            BaseReproductionRate = 0.10,
+            BaseDeclineRate = 0.03,
+            Resilience = 0.44,
+            MigrationCapability = 0.28,
+            ExpansionPressure = 0.24,
+            StartingSpreadWeight = 0.54
+        };
+        grazer.PreferredBiomes.Add(RegionBiome.Plains);
+        grazer.DietSpeciesIds.Add(producer.Id);
+        grazer.InitialRangeRegionIds.Add(0);
+
+        world.Species.Add(producer);
+        world.Species.Add(grazer);
+
+        return world;
     }
 }

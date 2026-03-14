@@ -13,6 +13,59 @@ A feature is not fully complete until:
 
 ---
 
+## Startup Architecture - Primitive-Life-First 4-Pass Plan
+
+This startup plan now sits above the later civilization-era feature phases.
+The world should no longer assume a static civilization-ready start.
+
+### Pass 1 - Biological World Foundation
+**Status:** Implemented foundation slice
+
+Implemented:
+- region ecological profiles with derived productivity, habitability, migration ease, and volatility values
+- primitive lineage templates for producers, grazers/foragers, scavenger-omnivores, and predators
+- suitability-based uneven ecological seeding instead of "everything everywhere"
+- aggregated regional primitive populations with carrying capacity, food/support pressure, reproduction pressure, migration pressure, and trend/stress diagnostics
+- early ecological simulation loop with producer support, consumer pressure, predator pressure, founder spread, and local extinction cleanup
+- founder-population migration into adjacent viable regions
+- Phase A ecological readiness and stability reporting
+- bootstrap gating so the default startup path stops at primitive ecology rather than immediately enabling mutation, sentience, polity formation, or player focus
+
+Intentionally deferred to later startup passes:
+- lineage ancestry trees beyond current species/root bookkeeping
+- mutation/speciation as an active startup-stage system
+- sentience activation
+- society and polity creation
+- focal polity selection and player-entry runtime assumptions
+
+### Pass 2 - Evolution and Divergence
+**Status:** Planned
+
+Planned:
+- activate mutation and divergence from surviving primitive founders
+- descendant-lineage emergence and deeper ancestry tracking
+- ecological divergence pressure tied to founder isolation and environmental mismatch
+- keep the world pre-societal while lineages differentiate
+
+### Pass 3 - Sentience and Social Formation
+**Status:** Planned
+
+Planned:
+- sentience activation from qualifying lineages
+- early social groups and continuity before full polity logic
+- transition rules from ecological populations into proto-societal actors
+
+### Pass 4 - Polity Start and Player Entry
+**Status:** Planned
+
+Planned:
+- society to polity formation
+- focal-polity selection
+- player-facing entry into an already-biologically-and-socially-grounded world
+- explicit handoff from bootstrap ecology history into live chronicle play
+
+---
+
 ## Phase 1 - Core World Simulation Foundations
 **Status:** Complete
 
@@ -23,6 +76,7 @@ Implemented:
 - Aggregated population model
 - Early polity and society lifecycle foundations
 - Single-continent world generation baseline
+- Startup-stage metadata so the simulation can stop at ecological foundation instead of always assuming civilization-ready activation
 
 ---
 
@@ -113,7 +167,7 @@ Implemented:
 ---
 
 ## Phase 9 - Regional Species Population and Ecology System
-**Status:** Complete
+**Status:** Complete and now re-grounded as startup Pass 1 foundation
 
 Implemented:
 - Species as a core simulation pillar
@@ -123,6 +177,8 @@ Implemented:
 - Producer, herbivore, predator, and apex ecosystem relationships
 - Regional extinction and global extinction support
 - Seasonal ecology simulation basis
+- Primitive-life-first startup now uses this layer as the canonical first world state instead of treating it as support for already-existing societies
+- Ecological profile caching, primitive lineage templates, and Phase A readiness reporting now make this layer inspectable and tunable as the base of the whole startup pipeline
 
 ---
 

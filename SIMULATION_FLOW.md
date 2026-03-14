@@ -3,17 +3,24 @@
 LivingWorld runs the full world in monthly ticks. Player-facing output is live chronicle playback, not a yearly report.
 The watch UI can now swap between chronicle and inspection screens without changing the simulation state it observes.
 
-The default seed world feeding that loop is now denser by default: `36` regions, `31` species, and `10` starting polities.
-Those entities are still range-limited and region-grounded before month one begins.
+The default seed world feeding that loop is now a primitive ecological foundation: `36` regions, `7` primitive lineages, and `0` starting polities.
+The agreed startup plan is now:
+
+1. biological world foundation
+2. evolution and divergence
+3. sentience and social formation
+4. polity start and player entry
+
+Pass 1 is implemented now, so the default loop begins from an already-seeded ecological foundation and defers later startup layers.
 
 ## Monthly Flow
 
 1. region ecology update
-2. seasonal regional species population update on season boundaries
+2. seasonal regional primitive-population update on season boundaries
 3. seasonal ecosystem predation, founder migration, predator founder establishment/collapse, and regional species exchange on season boundaries
-4. seasonal settlement hunting on season boundaries
+4. seasonal settlement hunting on season boundaries when the startup stage has actually reached social play
    - each settlement hunts in its own region
-5. seasonal mutation, divergence, and speciation update on season boundaries using the just-resolved species exchange state
+5. seasonal mutation, divergence, and speciation update on season boundaries using the just-resolved species exchange state when the startup stage has advanced beyond Pass 1
    - speciation now requires sustained readiness and descendant-species stabilization, so new species do not immediately create another synchronized burst
 6. seasonal extinction cleanup and biomass sync on season boundaries
 7. wild plant gathering
@@ -28,9 +35,9 @@ Those entities are still range-limited and region-grounded before month one begi
 15. watch mode advances the next month only when its timed step cadence is due
 16. rendering occurs on invalidation rather than after every loop pass; when paused, input continues while monthly advancement is held
 
-Because starting polities now begin with a home settlement anchor, step 4 can produce real local hunting and discovery pressure from the opening season instead of waiting for a later founding roll.
-Animal food no longer enters at step 7. It enters only at step 4 through species-level hunting, while step 7 is now plant-foraging only.
-The same opening pass now relies on stronger wildlife seeding and herbivore growth rather than on any abstract regional animal-food reserve, so region screens should show healthier `AnimalBiomass` because real consumer populations are healthier.
+In Pass 1, the active monthly path effectively ends after the ecological layers above.
+Hunting, mutation, and all polity-driven loops are intentionally deferred until later startup passes activate them.
+Animal food therefore does not matter yet for the default startup path; the important opening work is that `AnimalBiomass` and regional consumer presence now come from real primitive populations instead of an assumed civilization-ready world.
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.
@@ -41,7 +48,7 @@ Predator founders then pass through a short establishment window where strong pr
 
 ## Year-End Flow
 
-When `Month == 12`:
+When `Month == 12` and the startup stage includes polities:
 
 1. increment polity age
 2. update population
@@ -74,6 +81,9 @@ Chronicle pacing is now non-blocking: visible-event recording no longer sleeps i
 The chronicle formatter now distinguishes between repeated same-state reminders and real changed-state transitions for noisy event families, which keeps live playback readable during busy eras without thinning structured history.
 That formatter also has a fallback narrative-based state key for visible families without a custom semantic signature, so exact repeated lines are still treated as the same visible state.
 Year-end focus resolution now also consumes the current year's rolling event cache instead of filtering the full historical event list every year.
+
+For Pass 1 worlds there is usually no focal polity yet.
+The watch path remains valid, but it is observation-only until later startup passes create a real social actor to follow.
 
 ## Default Watch Output
 

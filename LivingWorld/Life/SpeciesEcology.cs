@@ -7,18 +7,40 @@ public static class SpeciesEcology
 {
     public static double CalculateBaseHabitatSuitability(Species species, Region region)
     {
+        RegionEcologyProfile ecology = region.EffectiveEcologyProfile;
         double fertilityFit = 1.0 - Math.Abs(region.Fertility - species.FertilityPreference);
         double waterFit = 1.0 - Math.Abs(region.WaterAvailability - species.WaterPreference);
+        double temperatureFit = ResolveToleranceFit(ecology.Temperature, species.TemperaturePreference, species.TemperatureTolerance);
+        double moistureFit = ResolveToleranceFit(ecology.Moisture, species.MoisturePreference, species.MoistureTolerance);
         double biomassFit = Math.Clamp(
             (region.MaxPlantBiomass / 1000.0 * species.PlantBiomassAffinity) +
             (region.MaxAnimalBiomass / 400.0 * species.AnimalBiomassAffinity),
             0.0,
             1.4);
+        double productivityFit = species.TrophicRole switch
+        {
+            TrophicRole.Producer => ecology.BasePrimaryProductivity,
+            TrophicRole.Herbivore => (ecology.BasePrimaryProductivity * 0.75) + (ecology.HabitabilityScore * 0.25),
+            TrophicRole.Omnivore => (ecology.BasePrimaryProductivity * 0.45) + (ecology.HabitabilityScore * 0.35) + (Math.Clamp(region.MaxAnimalBiomass / 400.0, 0.0, 1.0) * 0.20),
+            _ => (Math.Clamp(region.MaxAnimalBiomass / 400.0, 0.0, 1.0) * 0.70) + (ecology.HabitabilityScore * 0.30)
+        };
         double biomeFit = species.PreferredBiomes.Count == 0
             ? 1.0
             : species.PreferredBiomes.Contains(region.Biome) ? 1.05 : 0.45;
+        double harshnessPenalty = Math.Max(0.0, (ecology.TerrainHarshness * 0.18) + (ecology.EnvironmentalVolatility * (0.22 - (species.Resilience * 0.12))));
 
-        return Math.Clamp((fertilityFit * 0.30) + (waterFit * 0.22) + (biomassFit * 0.33) + (biomeFit * 0.15), 0.03, 1.25);
+        return Math.Clamp(
+            (fertilityFit * 0.16) +
+            (waterFit * 0.12) +
+            (temperatureFit * 0.16) +
+            (moistureFit * 0.16) +
+            (biomassFit * 0.18) +
+            (productivityFit * 0.12) +
+            (biomeFit * 0.10) +
+            (species.Resilience * 0.06) -
+            harshnessPenalty,
+            0.03,
+            1.25);
     }
 
     public static double CalculateHabitatSuitability(Species species, RegionSpeciesPopulation population, double baseSuitability)
@@ -28,11 +50,11 @@ public static class SpeciesEcology
     {
         double baseCapacity = species.TrophicRole switch
         {
-            TrophicRole.Producer => 180 + (region.MaxPlantBiomass * 0.35),
-            TrophicRole.Herbivore => 60 + (region.MaxPlantBiomass * 0.11) + (region.Fertility * 70) + (region.WaterAvailability * 40),
-            TrophicRole.Omnivore => 32 + (region.TotalBiomassCapacity * 0.045),
-            TrophicRole.Predator => 18 + (region.MaxAnimalBiomass * 0.030),
-            TrophicRole.Apex => 9 + (region.MaxAnimalBiomass * 0.018),
+            TrophicRole.Producer => 140 + (region.EffectiveEcologyProfile.BasePrimaryProductivity * 180.0) + (region.MaxPlantBiomass * 0.22),
+            TrophicRole.Herbivore => 40 + (region.MaxPlantBiomass * 0.10) + (region.EffectiveEcologyProfile.HabitabilityScore * 90.0),
+            TrophicRole.Omnivore => 28 + (region.TotalBiomassCapacity * 0.038) + (region.EffectiveEcologyProfile.HabitabilityScore * 36.0),
+            TrophicRole.Predator => 12 + (region.MaxAnimalBiomass * 0.024) + (region.EffectiveEcologyProfile.HabitabilityScore * 18.0),
+            TrophicRole.Apex => 8 + (region.MaxAnimalBiomass * 0.014) + (region.EffectiveEcologyProfile.HabitabilityScore * 12.0),
             _ => 24
         };
 
@@ -62,6 +84,12 @@ public static class SpeciesEcology
 
         double establishmentFactor = 0.55 + (habitatSuitability * 0.45);
         return Math.Max(0, (int)Math.Round(carryingCapacity * startingShare * establishmentFactor));
+    }
+
+    private static double ResolveToleranceFit(double value, double preference, double tolerance)
+    {
+        double normalizedTolerance = Math.Max(0.08, tolerance);
+        return Math.Clamp(1.0 - (Math.Abs(value - preference) / normalizedTolerance), 0.0, 1.0);
     }
 
     public static IReadOnlyList<int> GetOccupiedRegionIds(World world, int speciesId)

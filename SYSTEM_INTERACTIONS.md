@@ -13,6 +13,17 @@ A feature is not fully complete until:
 
 ---
 
+## Startup Direction
+
+The startup path is now explicitly primitive-life-first:
+
+1. biological world foundation
+2. evolution and divergence
+3. sentience and social formation
+4. polity start and player entry
+
+Pass 1 is implemented now. The default generated world reaches only ecological readiness, and later social/polity systems stay dormant until later startup passes activate them.
+
 ## Current Major Systems
 
 - food and ecology
@@ -144,6 +155,9 @@ Implemented:
 - Producer, herbivore, predator, and apex ecosystem relationships
 - Regional extinction and global extinction support
 - Seasonal ecology simulation basis
+- Region ecology profiles now cache derived productivity, habitability, migration ease, and volatility so seeding and simulation use the same environmental frame
+- Primitive lineage templates now provide the Pass 1 startup roster for producers, grazers/foragers, scavenger-omnivores, and predators
+- Phase A readiness reporting now summarizes whether ecology is broad, uneven, and stable enough for later startup passes
 
 ---
 
