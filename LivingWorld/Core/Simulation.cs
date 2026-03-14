@@ -122,7 +122,7 @@ public sealed class Simulation : IDisposable
             BindSelectedCandidate(_world.PlayerEntryCandidates.First().PolityId);
         }
 
-        if (_world.StartupStage == WorldStartupStage.FocalSelection)
+        if (_world.StartupStage == WorldStartupStage.FocalSelection && !ShouldUseInteractiveWatchLoop())
         {
             RenderIfInvalidated(force: true);
             return;
@@ -143,6 +143,14 @@ public sealed class Simulation : IDisposable
         while (completedMonths < months)
         {
             PumpWatchInput();
+            if (_world.StartupStage == WorldStartupStage.FocalSelection)
+            {
+                _wasPausedInInteractiveLoop = true;
+                RenderIfInvalidated();
+                Thread.Sleep(IdleLoopSleepMilliseconds);
+                continue;
+            }
+
             long now = _watchLoopStopwatch.ElapsedMilliseconds;
             if (_watchUiState.IsPaused)
             {

@@ -2,7 +2,7 @@
   "profiles": {
     "LivingWorld": {
       "commandName": "Project",
-      "commandLineArgs": "--pause-before-start --years 1000 --delay-ms 250"
+      "commandLineArgs": "--pause-before-start --years 2000 --delay-ms 250"
     }
   }
 }
