@@ -2,6 +2,12 @@
 
 LivingWorld keeps simulation logic, event storage, propagation, formatting, and console playback separate.
 
+The canonical runtime architecture is now driven entirely by `PrehistoryRuntimePhase`. Bootstrap and prehistory ticks happen inside `BootstrapWorldFrame` and `PrehistoryRunning`, decision points are owned by `ReadinessCheckpoint`, the startup handoff freezes inside `FocalSelection`, and live simulation runs under `ActivePlay` unless it stops early via `GenerationFailure`. `PrehistoryRuntimeStatus` captures the orchestration metadata (phase labels, subphase text, activity summaries, checkpoint results) while the raw world data (regions, species, polities, and events) remains the simulation truth that evaluation and presentation overlay. Legacy `WorldStartupStage` labels survive only as transitional subphase summaries inside generation and diagnostics, not as the source of run-control.
+
+Startup presentation now follows that runtime truth. `StartupProgressRenderer` owns the console until `FocalSelection`, `ChronicleWatchRenderer` freezes the world while your candidate pool is displayed, a `Handoff summary` describes the selected polity, `ActivePlayHandoffState` records the choice, and `World.BeginActiveSimulation` stamps the `LiveChronicleStartYear` before the chronicle resumes. `GenerationFailure` is now an explicit terminal state that surfaces an honest failure message instead of faking a viable start.
+
+Checkpoint evaluation now sits on top of that runtime highway through `PrehistoryCheckpointCoordinator`. The coordinator enters `ReadinessCheckpoint`, invokes the transitional `LegacyCheckpointCompatibilityAdapter` (which still runs the old readiness/candidate generators), and records `PrehistoryCheckpointOutcome` results before handing control back to the raw simulation. Legacy evaluation details (readiness reports, candidate rejection reasons, pool snapshots, diagnostics) stay in `PrehistoryEvaluationSnapshot`, while `LegacyPlayerEntryOutcomeEvaluatorAdapter` isolates the earlier candidate-outcome rules. This keeps raw geography, species, and polity truth untouched while the checkpoint layer decides whether to continue prehistory, stop for selection, force selection, or resolve `GenerationFailure`.
+
 The startup direction is now explicitly primitive-life-first:
 
 1. biological world foundation
@@ -46,7 +52,7 @@ Major systems:
 - polity stage progression
 
 Only some of those systems are active in the default startup stage.
-`World.StartupStage` now gates the default path so Pass 1 worlds run ecological foundation first, Pass 2 worlds continue through mutation/divergence/speciation, Pass 3 bootstrap reaches actual social/polity actors, and Pass 4 evaluates world readiness, enters focal selection, and only then begins active play.
+`World.StartupStage` now provides generator-facing subphase labels (Pass 1 through Pass 4) for diagnostics and presentation without gating the runtime path. The canonical phase flow (`PrehistoryRuntimePhase`) now determines when monthly ticks run, when checkpoints fire, and when `FocalSelection` or `GenerationFailure` pauses the pipeline.
 
 ## Settlement-Grounded Locality
 
@@ -209,6 +215,9 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 - `WatchScreenBuilder` renders top-level and detail inspection screens from that filtered world view instead of from omniscient raw state
 - `ChronicleWatchRenderer` remains responsible for low-flicker console drawing, the fixed top panel, chronicle retention, and viewport slicing
 - `StartupProgressRenderer` is a separate low-flicker console owner used only during world generation; it renders phase/subphase labels, world-age progress, and compact phase-specific metrics without touching chronicle entries
+
+When `FocalSelection` arrives, `StartupProgressRenderer` clears its frame and `ChronicleWatchRenderer` takes over. The launch pad freezes time, shows the candidate pool, and displays an explicit `Handoff summary` before `ActivePlayHandoffState` records the selected polity and the live chronicle resumes at `LiveChronicleStartYear`. If the checkpoint instead reports `GenerationFailure`, the panel surfaces a clear failure summary and the world remains paused instead of pretending a viable start exists.
+
 - `Simulation` now acts as the watch-loop coordinator: it polls input every iteration, advances months only when the next step time has arrived, and renders only when invalidated
 - initial focus selection now runs after regional populations are initialized, so the selector can prefer a live starting polity rather than blindly taking the first id
 

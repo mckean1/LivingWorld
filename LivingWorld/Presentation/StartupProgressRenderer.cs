@@ -99,16 +99,28 @@ public sealed class StartupProgressRenderer : IDisposable
         PrehistoryRuntimeStatus runtime = world.PrehistoryRuntime;
         StartupWorldAgeConfiguration age = world.StartupAgeConfiguration;
         string border = new('=', 78);
-        List<string> lines =
-        [
-            border,
-            " World Generation",
-            $" Phase: {runtime.PhaseLabel}",
-            $" Activity: {runtime.SubphaseLabel}",
-            $" Status: {runtime.ActivitySummary}",
-            $" World Age: {runtime.WorldAgeYears} years | Preset: {age.Preset} | Window: {age.MinPrehistoryYears}-{age.TargetPrehistoryYears}-{age.MaxPrehistoryYears}",
-            $" Readiness: {(runtime.AreReadinessChecksActive ? "active" : "warming up")} | Checkpoint: {runtime.LastCheckpointOutcome?.Kind.ToString() ?? "pending"} | Attempt: {world.StartupGenerationAttempt + 1}"
-        ];
+        string phaseDescription = runtime.PhaseLabel;
+        if (string.IsNullOrWhiteSpace(phaseDescription))
+        {
+            phaseDescription = runtime.CurrentPhase.ToString();
+        }
+
+        List<string> lines = [border, " World Generation"];
+        lines.Add($" Runtime phase: {runtime.CurrentPhase} | {phaseDescription}");
+        if (!string.IsNullOrWhiteSpace(runtime.SubphaseLabel))
+        {
+            lines.Add($" Subphase: {runtime.SubphaseLabel}");
+        }
+
+        lines.Add($" Activity: {runtime.ActivitySummary}");
+        lines.Add(
+            $" World Age: {runtime.WorldAgeYears} years | Preset: {age.Preset} | Window: {age.MinPrehistoryYears}-{age.TargetPrehistoryYears}-{age.MaxPrehistoryYears}");
+
+        string readinessState = runtime.AreReadinessChecksActive ? "Readiness: active" : "Readiness: warming up";
+        string checkpointKind = runtime.LastCheckpointOutcome?.Kind.ToString() ?? "pending";
+        string checkpointDetail = runtime.LastCheckpointOutcome?.Summary;
+        string checkpointSummary = checkpointDetail is null ? checkpointKind : $"{checkpointKind} ({checkpointDetail})";
+        lines.Add($"{readinessState} | Checkpoint: {checkpointSummary} | Attempt: {world.StartupGenerationAttempt + 1}");
 
         if (!string.IsNullOrWhiteSpace(runtime.TransitionSummary))
         {

@@ -15,7 +15,7 @@ public sealed class WatchInputController
 
     public bool HandleKey(ConsoleKeyInfo keyInfo, World world, ChronicleFocus focus)
     {
-        if (world.StartupStage == WorldStartupStage.FocalSelection)
+        if (world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
         {
             return keyInfo.Key switch
             {

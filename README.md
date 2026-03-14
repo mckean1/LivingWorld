@@ -46,6 +46,10 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 - ecology spread pacing is now centralized in `EcosystemSettings` so founder size, migration thresholds, prey support, and cooldowns can be tuned without rewriting the pipeline
 - early-world liveliness is now tuned through centralized homeland-support, polity-spacing, focal-viability, and starting-anchor settings rather than scattered magic numbers
 
+## Runtime Architecture
+
+LivingWorld now drives the startup handoff with the canonical `PrehistoryRuntimePhase` ladder: `BootstrapWorldFrame`, `PrehistoryRunning`, `ReadinessCheckpoint`, `FocalSelection`, `ActivePlay`, and `GenerationFailure`. `PrehistoryRuntimeStatus` captures the phase/subphase labels, activity summary, and checkpoint metadata while `PrehistoryEvaluationSnapshot` keeps readiness reports, candidate diagnostics, and rejection reasons separate from the raw world truth. `StartupProgressRenderer` owns the console until `FocalSelection`, rendering the canonical phase text, world-age progress, readiness window status, and metrics without writing to the chronicle. Once checkpoint logic resolves, `FocalSelection` freezes monthly advancement, `ChronicleWatchRenderer` shows the candidate pool and a `Handoff summary`, and only after `ActivePlayHandoffState` records the chosen polity and `World.BeginActiveSimulation` stamps the `LiveChronicleStartYear` does the live chronicle begin. If the checkpoint instead returns `GenerationFailure`, the UI surfaces an honest failure banner rather than fabricating a fallback start. Legacy `WorldStartupStage` labels remain purely diagnostic and help with verbose generator reporting, not runtime control.
+
 ## Core Principles
 
 - Full-world simulation, focused player presentation

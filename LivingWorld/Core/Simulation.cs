@@ -117,12 +117,12 @@ public sealed class Simulation : IDisposable
 
     public void RunMonths(int months)
     {
-        if (_world.StartupStage == WorldStartupStage.FocalSelection && !ShouldUseInteractiveWatchLoop())
+        if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection && !ShouldUseInteractiveWatchLoop())
         {
             BindSelectedCandidate(_world.PlayerEntryCandidates.First().PolityId);
         }
 
-        if (_world.StartupStage == WorldStartupStage.FocalSelection && !ShouldUseInteractiveWatchLoop())
+        if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection && !ShouldUseInteractiveWatchLoop())
         {
             RenderIfInvalidated(force: true);
             return;
@@ -143,7 +143,7 @@ public sealed class Simulation : IDisposable
         while (completedMonths < months)
         {
             PumpWatchInput();
-            if (_world.StartupStage == WorldStartupStage.FocalSelection)
+            if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
             {
                 _wasPausedInInteractiveLoop = true;
                 RenderIfInvalidated();
@@ -222,7 +222,7 @@ public sealed class Simulation : IDisposable
     {
         _foodSystem.UpdateRegionEcology(_world);
         RunSeasonalBiologyIfNeeded();
-        if (!IsSocietalOrActivePlay())
+        if (!IsActivePlayPhase())
         {
             return;
         }
@@ -251,17 +251,14 @@ public sealed class Simulation : IDisposable
         long ecosystemStartedAt = Stopwatch.GetTimestamp();
         _ecosystemSystem.UpdateSeason(_world);
         _performanceTracker.AddEcosystemTime(Stopwatch.GetElapsedTime(ecosystemStartedAt));
-        if (_world.StartupStage == WorldStartupStage.EvolutionaryExpansion
-            || _world.StartupStage == WorldStartupStage.SentienceActivation
-            || _world.StartupStage == WorldStartupStage.SocietalSimulation
-            || _world.StartupStage == WorldStartupStage.ActivePlay)
+        if (IsActivePlayPhase())
         {
             long mutationStartedAt = Stopwatch.GetTimestamp();
             _mutationSystem.UpdateSeason(_world);
             _performanceTracker.AddMutationTime(Stopwatch.GetElapsedTime(mutationStartedAt));
         }
 
-        if (IsSocietalOrActivePlay())
+        if (IsActivePlayPhase())
         {
             _huntingSystem.UpdateSeason(_world);
         }
@@ -271,7 +268,7 @@ public sealed class Simulation : IDisposable
 
     private void RunYearEndSystems()
     {
-        if (!IsSocietalOrActivePlay())
+        if (!IsActivePlayPhase())
         {
             RenderYearBoundaryOutput();
             ResetAnnualStats();
@@ -348,9 +345,8 @@ public sealed class Simulation : IDisposable
 
     private void RunBootstrapInitialization()
     {
-        if (_world.StartupStage != WorldStartupStage.SocietalSimulation
-            && _world.StartupStage != WorldStartupStage.FocalSelection
-            && _world.StartupStage != WorldStartupStage.ActivePlay)
+        PrehistoryRuntimePhase initialPhase = _world.PrehistoryRuntime.CurrentPhase;
+        if (initialPhase is PrehistoryRuntimePhase.ActivePlay or PrehistoryRuntimePhase.GenerationFailure)
         {
             _world.BeginActiveSimulation();
             return;
@@ -367,22 +363,23 @@ public sealed class Simulation : IDisposable
         _materialEconomySystem.SeedBootstrapBaseline(_world);
         SeedBootstrapHardshipStates();
         ResetBootstrapRuntimeCounters();
-        if (_world.StartupStage == WorldStartupStage.FocalSelection)
+
+        PrehistoryRuntimePhase refreshedPhase = _world.PrehistoryRuntime.CurrentPhase;
+        if (refreshedPhase == PrehistoryRuntimePhase.FocalSelection)
         {
             _watchUiState.SetPaused(true);
             _watchUiState.SetActiveMainView(WatchViewType.FocalSelection);
             return;
         }
 
+        if (refreshedPhase is PrehistoryRuntimePhase.ActivePlay or PrehistoryRuntimePhase.GenerationFailure)
+        {
+            _world.BeginActiveSimulation();
+            return;
+        }
+
         _world.BeginActiveSimulation();
-        _world.StartupStage = WorldStartupStage.ActivePlay;
-        _world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
-        _world.PrehistoryRuntime.IsPrehistoryAdvancing = false;
-        _world.PrehistoryRuntime.AreReadinessChecksActive = true;
-        _world.PrehistoryRuntime.PhaseLabel = "Active play";
-        _world.PrehistoryRuntime.SubphaseLabel = "Chronicle active";
-        _world.PrehistoryRuntime.ActivitySummary = "The live chronicle has begun.";
-        _world.PrehistoryRuntime.TransitionSummary = null;
+        MarkActivePlayRuntimeState();
     }
 
     private void SeedBootstrapHardshipStates()
@@ -624,7 +621,7 @@ public sealed class Simulation : IDisposable
         while (Console.KeyAvailable)
         {
             ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
-            if (_world.StartupStage == WorldStartupStage.FocalSelection)
+            if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
             {
                 handledAny |= HandleFocalSelectionInput(keyInfo);
                 continue;
@@ -669,7 +666,7 @@ public sealed class Simulation : IDisposable
             }
         }
 
-        if (_world.StartupStage == WorldStartupStage.FocalSelection && _world.PlayerEntryCandidates.Count > 0)
+        if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection && _world.PlayerEntryCandidates.Count > 0)
         {
             PlayerEntryCandidateSummary candidate = _world.PlayerEntryCandidates[0];
             _chronicleFocus.SetFocus(candidate.PolityId, candidate.LineageId);
@@ -716,14 +713,7 @@ public sealed class Simulation : IDisposable
             _world.Time.Year,
             polity.YearsSinceFounded,
             $"{summary.PolityName} | {summary.SpeciesName} | {summary.HomeRegionName} | {summary.CurrentCondition}");
-        _world.StartupStage = WorldStartupStage.ActivePlay;
-        _world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
-        _world.PrehistoryRuntime.IsPrehistoryAdvancing = false;
-        _world.PrehistoryRuntime.AreReadinessChecksActive = true;
-        _world.PrehistoryRuntime.PhaseLabel = "Active play";
-        _world.PrehistoryRuntime.SubphaseLabel = "Chronicle active";
-        _world.PrehistoryRuntime.ActivitySummary = "The live chronicle has begun.";
-        _world.PrehistoryRuntime.TransitionSummary = null;
+        MarkActivePlayRuntimeState();
         _chronicleFocus.SetFocus(polity);
         _watchUiState.SetActiveMainView(WatchViewType.Chronicle);
         _watchUiState.SetPaused(false);
@@ -731,11 +721,24 @@ public sealed class Simulation : IDisposable
         _renderInvalidated = true;
     }
 
+    private void MarkActivePlayRuntimeState()
+    {
+        _world.StartupStage = WorldStartupStage.ActivePlay;
+        var runtime = _world.PrehistoryRuntime;
+        runtime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
+        runtime.IsPrehistoryAdvancing = false;
+        runtime.AreReadinessChecksActive = true;
+        runtime.PhaseLabel = "Active play";
+        runtime.SubphaseLabel = "Chronicle active";
+        runtime.ActivitySummary = "The live chronicle has begun.";
+        runtime.TransitionSummary = null;
+    }
+
     private int ResolveInteractiveStepIntervalMilliseconds()
         => Math.Max(MinimumInteractiveStepIntervalMilliseconds, _options.ChroniclePlaybackDelayMilliseconds);
 
-    private bool IsSocietalOrActivePlay()
-        => _world.StartupStage is WorldStartupStage.SocietalSimulation or WorldStartupStage.ActivePlay;
+    private bool IsActivePlayPhase()
+        => _world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.ActivePlay;
 
     private void PrintDebugYearEvents()
     {

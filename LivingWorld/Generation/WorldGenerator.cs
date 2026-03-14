@@ -19,6 +19,7 @@ public sealed class WorldGenerator
     private readonly WorldGenerationSettings _settings;
     private readonly PrehistoryRuntimeOrchestrator _prehistoryRuntimeOrchestrator = new();
     private readonly StartupProgressRenderer? _progressRenderer;
+    private readonly PrehistoryCheckpointCoordinator _checkpointCoordinator;
 
     public WorldGenerator(int seed, WorldGenerationSettings? settings = null, StartupProgressRenderer? progressRenderer = null)
     {
@@ -28,6 +29,11 @@ public sealed class WorldGenerator
         _regionNames = new Queue<string>(BuildShuffledNames(WorldGenerationCatalog.CreateRegionNames()));
         _primitiveTemplates = WorldGenerationCatalog.CreatePrimitiveLineageTemplates();
         _progressRenderer = progressRenderer;
+        _checkpointCoordinator = new(
+            _prehistoryRuntimeOrchestrator,
+            new LegacyCheckpointCompatibilityAdapter(_settings),
+            new LegacyPlayerEntryOutcomeEvaluatorAdapter(),
+            _settings);
     }
 
     public World Generate()
@@ -509,16 +515,14 @@ public sealed class WorldGenerator
         ReportProgress(world);
 
         SocialEmergenceSystem socialEmergenceSystem = new(_seed + 727, _settings);
-        PlayerEntryCandidateGenerator candidateGenerator = new(_settings);
 
-        PrehistoryCheckpointOutcome initialOutcome = PerformReadinessCheckpoint(
+        PrehistoryCheckpointOutcome initialOutcome = _checkpointCoordinator.Evaluate(
             world,
-            candidateGenerator,
-            allowEmergencyFallback: false,
             phaseLabel: "Evaluating world readiness",
             subphaseLabel: "Building focal candidates",
             activitySummary: "Evaluating whether the world is mature enough to surface healthy starting candidates.",
-            completionSummary: "world_readiness_passed");
+            completionSummary: "world_readiness_passed",
+            allowEmergencyFallback: false);
 
         if (HandlePostCheckpointOutcome(world, initialOutcome))
         {
@@ -533,14 +537,13 @@ public sealed class WorldGenerator
                 && ((world.Time.Year - world.StartupAgeConfiguration.MinPrehistoryYears) % Math.Max(1, _settings.ReadinessEvaluationIntervalYears) == 0);
             if (shouldEvaluate)
             {
-                PrehistoryCheckpointOutcome checkpointOutcome = PerformReadinessCheckpoint(
+                PrehistoryCheckpointOutcome checkpointOutcome = _checkpointCoordinator.Evaluate(
                     world,
-                    candidateGenerator,
-                    allowEmergencyFallback: false,
                     phaseLabel: "Evaluating world readiness",
                     subphaseLabel: "Checking stop conditions",
                     activitySummary: "Evaluating whether the world is ready for player entry or needs more historical time.",
-                    completionSummary: "world_readiness_passed");
+                    completionSummary: "world_readiness_passed",
+                    allowEmergencyFallback: false);
 
                 if (HandlePostCheckpointOutcome(world, checkpointOutcome))
                 {
@@ -552,14 +555,13 @@ public sealed class WorldGenerator
                 && world.PlayerEntryCandidates.Count >= world.StartupAgeConfiguration.CandidateCountTarget
                 && world.PhaseCReadinessReport.IsReady)
             {
-                PrehistoryCheckpointOutcome targetOutcome = PerformReadinessCheckpoint(
+                PrehistoryCheckpointOutcome targetOutcome = _checkpointCoordinator.Evaluate(
                     world,
-                    candidateGenerator,
-                    allowEmergencyFallback: false,
                     phaseLabel: "Evaluating world readiness",
                     subphaseLabel: "Testing target-age handoff",
                     activitySummary: "Checking whether the world can stop at target age with a healthy candidate pool.",
-                    completionSummary: "target_age_readiness_passed");
+                    completionSummary: "target_age_readiness_passed",
+                    allowEmergencyFallback: false);
 
                 if (HandlePostCheckpointOutcome(world, targetOutcome))
                 {
@@ -586,34 +588,18 @@ public sealed class WorldGenerator
             }
         }
 
-        PrehistoryCheckpointOutcome finalOutcome = PerformReadinessCheckpoint(
+        PrehistoryCheckpointOutcome finalOutcome = _checkpointCoordinator.Evaluate(
             world,
-            candidateGenerator,
-            allowEmergencyFallback: true,
             phaseLabel: "Evaluating world readiness",
             subphaseLabel: "Final candidate pass",
             activitySummary: "Running the final candidate pass at max age and checking whether the world still needs rescue paths.",
-            completionSummary: "max_prehistory_age_reached");
+            completionSummary: "max_prehistory_age_reached",
+            allowEmergencyFallback: true);
         HandlePostCheckpointOutcome(world, finalOutcome);
     }
 
     private void ReportProgress(World world)
         => _progressRenderer?.Render(world);
-
-    private void BuildPlayerEntryCandidates(World world, PlayerEntryCandidateGenerator generator, bool allowEmergencyFallback)
-    {
-        IReadOnlyList<PlayerEntryCandidateSummary> candidates = generator.Generate(world, allowEmergencyFallback, out Dictionary<int, string> rejectionReasons);
-        world.PlayerEntryCandidates.Clear();
-        world.PlayerEntryCandidates.AddRange(candidates);
-        world.CandidateRejectionReasons.Clear();
-        foreach ((int polityId, string reason) in rejectionReasons)
-        {
-            world.CandidateRejectionReasons[polityId] = reason;
-        }
-    }
-
-    private int DeriveAttemptSeed(int attempt)
-        => MixSeed(_seed, attempt, 6151);
 
     private void RefreshStartupEvaluationState(World world, IReadOnlyList<string>? regenerationReasons = null)
     {
@@ -621,7 +607,7 @@ public sealed class WorldGenerator
         RefreshStartupDiagnostics(world, regenerationReasons);
     }
 
-    private void RefreshStartupDiagnostics(World world, IReadOnlyList<string>? regenerationReasons = null)
+    private static void RefreshStartupDiagnostics(World world, IReadOnlyList<string>? regenerationReasons = null)
     {
         StartupOutcomeDiagnostics diagnostics = world.StartupOutcomeDiagnostics;
         world.StartupDiagnostics.Clear();
@@ -656,56 +642,8 @@ public sealed class WorldGenerator
         }
     }
 
-    private PrehistoryCheckpointOutcome PerformReadinessCheckpoint(
-        World world,
-        PlayerEntryCandidateGenerator generator,
-        bool allowEmergencyFallback,
-        string phaseLabel,
-        string subphaseLabel,
-        string activitySummary,
-        string completionSummary)
-    {
-        _prehistoryRuntimeOrchestrator.BeginReadinessCheckpoint(world, phaseLabel, subphaseLabel, activitySummary);
-        BuildPlayerEntryCandidates(world, generator, allowEmergencyFallback);
-        world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
-        RefreshStartupEvaluationState(world);
-        UpdateCandidatePoolSnapshot(world, allowEmergencyFallback);
-        PrehistoryCheckpointOutcome outcome = DetermineCheckpointOutcome(world, allowEmergencyFallback, completionSummary);
-        _prehistoryRuntimeOrchestrator.RecordCheckpointOutcome(world, outcome, transitionSummary: outcome.Summary);
-        ReportProgress(world);
-        return outcome;
-    }
-
-    private PrehistoryCheckpointOutcome DetermineCheckpointOutcome(World world, bool allowEmergencyFallback, string completionSummary)
-    {
-        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, _settings, allowEmergencyFallback, out List<string> rejectionReasons);
-        string? details = FormatCheckpointDetails(rejectionReasons);
-        if (accepted)
-        {
-            PrehistoryCheckpointOutcomeKind kind = allowEmergencyFallback
-                ? PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection
-                : PrehistoryCheckpointOutcomeKind.EnterFocalSelection;
-            string summary = allowEmergencyFallback ? "candidate_fallback_after_max_age" : completionSummary;
-            return new PrehistoryCheckpointOutcome(kind, summary, details);
-        }
-
-        if (allowEmergencyFallback && world.PlayerEntryCandidates.Count == 0)
-        {
-            return PrehistoryCheckpointOutcome.Failure("generation_failed_no_candidates", details);
-        }
-
-        return PrehistoryCheckpointOutcome.Continue("prehistory_continues", details);
-    }
-
-    private void UpdateCandidatePoolSnapshot(World world, bool emergencyFallback)
-    {
-        int total = world.PlayerEntryCandidates.Count;
-        int fallback = world.PlayerEntryCandidates.Count(candidate => candidate.IsFallbackCandidate);
-        int organic = total - fallback;
-        string summary = emergencyFallback ? "Emergency fallback candidate pool" : "Organic candidate pool";
-        world.PrehistoryEvaluation.CandidatePoolSnapshot = new(total, organic, fallback, emergencyFallback, $"{summary} at year {world.Time.Year}");
-        world.PrehistoryEvaluation.LatestObserverSnapshot = new(world.Time.Year, $"Candidate pool {total} entries", new[] { summary });
-    }
+    private int DeriveAttemptSeed(int attempt)
+        => MixSeed(_seed, attempt, 6151);
 
     private static string? FormatCheckpointDetails(IReadOnlyList<string> rejectionReasons)
         => rejectionReasons.Count == 0 ? null : string.Join(", ", rejectionReasons);

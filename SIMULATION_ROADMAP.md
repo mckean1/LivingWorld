@@ -73,6 +73,7 @@ Planned:
 - keep raw simulation truth separate from evaluator-owned startup decisions
 - treat prehistory as the canonical startup path into active play
 - preserve honest failure states when the world does not produce true viable starts
+- formalize checkpoint coordination with `PrehistoryCheckpointCoordinator`, `LegacyCheckpointCompatibilityAdapter`, and `LegacyPlayerEntryOutcomeEvaluatorAdapter` so reader-facing readiness/candidate logic cannot mutate the core world state and GenerationFailure remains explicit
 
 ### PR-2 - Observer Snapshot Layer
 

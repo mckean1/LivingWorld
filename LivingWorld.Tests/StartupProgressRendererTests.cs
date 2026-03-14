@@ -27,8 +27,9 @@ public sealed class StartupProgressRendererTests
 
         IReadOnlyList<string> lines = StartupProgressRenderer.BuildDisplayLines(world, includeDiagnostics: false);
 
-        Assert.Contains(" Phase: Running evolutionary history", lines);
-        Assert.Contains(" Activity: Diverging regional lineages", lines);
+        Assert.Contains(" Runtime phase: PrehistoryRunning | Running evolutionary history", lines);
+        Assert.Contains(" Subphase: Diverging regional lineages", lines);
+        Assert.Contains(" Activity: Diverging isolated lineages into new branches and adaptation paths.", lines);
         Assert.Contains(lines, line => line.Contains("World Age: 180 years", StringComparison.Ordinal));
         Assert.Contains(" Transition: Phase A complete: ecosystems stabilized.", lines);
     }
@@ -105,5 +106,24 @@ public sealed class StartupProgressRendererTests
 
         Assert.False(renderer.HasActiveFrame);
         Assert.Empty(renderer.SnapshotLastRenderedLines());
+    }
+
+    [Fact]
+    public void BuildDisplayLines_ShowsGenerationFailureMessage()
+    {
+        World world = new(new WorldTime(35, 6))
+        {
+            StartupStage = WorldStartupStage.FocalSelection
+        };
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.GenerationFailure;
+        world.PrehistoryRuntime.WorldAgeYears = 35;
+        world.PrehistoryRuntime.PhaseLabel = "World generation failure";
+        world.PrehistoryRuntime.SubphaseLabel = "No viable starts";
+        world.PrehistoryRuntime.ActivitySummary = "The simulation could not produce viable player starts.";
+        world.PrehistoryRuntime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.Failure("generation_failed_no_candidates", "no_cand");
+
+        IReadOnlyList<string> lines = StartupProgressRenderer.BuildDisplayLines(world, includeDiagnostics: false);
+        Assert.Contains(" Runtime phase: GenerationFailure | World generation failure", lines);
+        Assert.Contains(" Metrics: world generation failed to surface viable starts", lines);
     }
 }

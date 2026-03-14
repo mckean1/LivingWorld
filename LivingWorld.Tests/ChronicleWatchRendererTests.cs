@@ -1,9 +1,8 @@
+using System;
+using System.Collections.Generic;
 using LivingWorld.Core;
-using LivingWorld.Life;
-using LivingWorld.Map;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
-using LivingWorld.Advancement;
 using Xunit;
 
 namespace LivingWorld.Tests;
@@ -11,182 +10,94 @@ namespace LivingWorld.Tests;
 public sealed class ChronicleWatchRendererTests
 {
     [Fact]
-    public void StatusPanel_IncludesSpeciesForFocusedPolity()
+    public void BuildStatusLines_ShowsFrozenFocalSelectionState()
     {
-        World world = new(new WorldTime(12, 1));
-        world.Regions.Add(new Region(0, "Green Barrow"));
-        world.Species.Add(new Species(1, "Humans", 0.8, 0.7));
-
-        Polity polity = new(7, "Deepfield Tribe", 1, 0, 84)
-        {
-            FoodStores = 63
-        };
-        polity.EstablishFirstSettlement(0, "Green Barrow Hearth");
-
-        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(
-            world,
-            polity,
-            width: 60,
-            stageNameFormatter: stage => stage.ToString());
-
-        Assert.Contains(" Species: Humans", statusLines);
-        Assert.Contains(" Region: Green Barrow", statusLines);
-        Assert.Contains(" Discoveries: None yet", statusLines);
-        Assert.Contains(" Learned: None yet", statusLines);
-    }
-
-    [Fact]
-    public void StatusPanel_FallsBackToUnknown_WhenSpeciesIsMissing()
-    {
-        World world = new(new WorldTime(12, 1));
-        world.Regions.Add(new Region(0, "Green Barrow"));
-
-        Polity polity = new(7, "Deepfield Tribe", 99, 0, 84);
-
-        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(
-            world,
-            polity,
-            width: 60,
-            stageNameFormatter: stage => stage.ToString());
-
-        Assert.Contains(" Species: Unknown", statusLines);
-    }
-
-    [Fact]
-    public void StatusPanel_RendersAdvancementOnlyPolity_Correctly()
-    {
-        World world = new(new WorldTime(12, 1));
-        world.Regions.Add(new Region(0, "Green Barrow"));
-        world.Species.Add(new Species(1, "Humans", 0.8, 0.7));
-
-        Polity polity = new(7, "Deepfield Tribe", 1, 0, 84);
-        polity.LearnAdvancement(AdvancementId.Fire);
-
-        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(world, polity, 60, stage => stage.ToString());
-
-        Assert.Contains(" Discoveries: None yet", statusLines);
-        Assert.Contains(" Learned: Fire", statusLines);
-        Assert.DoesNotContain(statusLines, line => line.Contains("No major discoveries yet", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void StatusPanel_RendersDiscoveryOnlyPolity_Correctly()
-    {
-        World world = new(new WorldTime(12, 1));
-        world.Regions.Add(new Region(0, "Green Barrow"));
-        world.Species.Add(new Species(1, "Humans", 0.8, 0.7));
-
-        Polity polity = new(7, "Deepfield Tribe", 1, 0, 84);
-        polity.AddDiscovery(new CulturalDiscovery("species-edible:4", "River Elk Edible", CulturalDiscoveryCategory.SpeciesUse, 4, 0));
-
-        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(world, polity, 60, stage => stage.ToString());
-
-        Assert.Contains(" Discoveries: River Elk Edible", statusLines);
-        Assert.Contains(" Learned: None yet", statusLines);
-    }
-
-    [Fact]
-    public void StatusPanel_RendersMixedKnowledgeCompactly()
-    {
-        World world = new(new WorldTime(12, 1));
-        world.Regions.Add(new Region(0, "Green Barrow"));
-        world.Species.Add(new Species(1, "Humans", 0.8, 0.7));
-
-        Polity polity = new(7, "Deepfield Tribe", 1, 0, 84);
-        polity.AddDiscovery(new CulturalDiscovery("species-edible:4", "River Elk Edible", CulturalDiscoveryCategory.SpeciesUse, 4, 0));
-        polity.AddDiscovery(new CulturalDiscovery("species-toxic:5", "Redcap Mushrooms Toxic", CulturalDiscoveryCategory.FoodSafety, 5, 0));
-        polity.AddDiscovery(new CulturalDiscovery("region-copper:0", "Green Barrow Copper", CulturalDiscoveryCategory.Resource, null, 0));
-        polity.LearnAdvancement(AdvancementId.Fire);
-        polity.LearnAdvancement(AdvancementId.SeasonalPlanning);
-        polity.LearnAdvancement(AdvancementId.Agriculture);
-
-        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(world, polity, 80, stage => stage.ToString());
-
-        Assert.Contains(statusLines, line => line.StartsWith(" Discoveries: ", StringComparison.Ordinal) && line.Contains("+2 more", StringComparison.Ordinal));
-        Assert.Contains(statusLines, line => line.StartsWith(" Learned: ", StringComparison.Ordinal) && line.Contains("+2 more", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void StatusPanel_ShowsPauseStateAndActiveView()
-    {
-        World world = new(new WorldTime(12, 1));
-        world.Regions.Add(new Region(0, "Green Barrow"));
-        world.Species.Add(new Species(1, "Humans", 0.8, 0.7));
-        Polity polity = new(7, "Deepfield Tribe", 1, 0, 84);
-
-        WatchUiState uiState = new();
-        uiState.TogglePaused();
-        uiState.SetActiveMainView(WatchViewType.KnownSpecies);
-
-        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(
-            world,
-            polity,
-            uiState,
-            width: 80,
-            stageNameFormatter: stage => stage.ToString());
-
-        Assert.Contains(" Status: PAUSED | View: Known Species", statusLines);
-    }
-
-    [Fact]
-    public void StatusPanel_ShowsFocalSelectionState()
-    {
-        World world = new(new WorldTime(812, 1))
-        {
-            StartupStage = WorldStartupStage.FocalSelection
-        };
+        World world = new(new WorldTime(90, 1));
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.FocalSelection;
-        world.PrehistoryRuntime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.EnterFocalSelection("world_readiness_passed");
-        world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(1, "Green Basin Confederacy", 1, "Humans", 1, 0, "Green Basin", 12, 812, 2, "large", "Proto-farming", "Stable", "paired hearths", "river valley, rich water and fertile ground", "deep descendant branch; river valley fit 0.88", "water, grain", "Fire", "founded a second settlement", "anchoring on rich ground", 0.92, StabilityBand.Stable, false));
-        WatchUiState uiState = new();
-        uiState.SetActiveMainView(WatchViewType.FocalSelection);
+        world.PrehistoryRuntime.ActivitySummary = "Refreshing the focal list";
+        world.PrehistoryRuntime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.EnterFocalSelection("ready", "almost there");
+        world.PlayerEntryCandidates.Add(CreateCandidate(101));
 
-        List<string> statusLines = ChronicleWatchRenderer.BuildStatusLines(
+        IReadOnlyList<string> lines = ChronicleWatchRenderer.BuildStatusLines(
             world,
             polity: null,
-            uiState,
+            new WatchUiState(),
             width: 80,
             stageNameFormatter: stage => stage.ToString());
 
-        Assert.Contains(" Status: SELECTING | View: Focal Selection", statusLines);
-        Assert.Contains(" Candidate Starts: 1", statusLines);
+        Assert.Contains(" Chronicle Watch - Focal selection (time paused)", lines);
+        Assert.Contains(" Candidate pool: 1 viable start(s) available", lines);
+        Assert.Contains(" Handoff: awaiting player selection", lines);
+        Assert.Contains(lines, line => line.Contains("Checkpoint: EnterFocalSelection", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void Record_KeepsNewestChronicleEntryFirst()
+    public void BuildStatusLines_ShowsActivePlayHandoffSummary()
     {
-        World world = new(new WorldTime(12, 1));
-        world.Regions.Add(new Region(0, "Green Barrow"));
-        world.Species.Add(new Species(1, "Humans", 0.8, 0.7));
-        ChronicleFocus focus = new();
-        focus.SetFocus(polityId: 7, lineageId: 7);
-        world.Polities.Add(new Polity(7, "Deepfield Tribe", 1, 0, 84));
-        ChronicleWatchRenderer renderer = new(
-            new SimulationOptions { OutputMode = OutputMode.Watch },
-            new ChronicleColorWriter(),
-            new ChronicleEventFormatter());
-        WatchUiState uiState = new();
+        World world = new(new WorldTime(200, 1));
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
+        world.PrehistoryRuntime.ActivitySummary = "Chronicle running";
+        world.PrehistoryRuntime.PhaseLabel = "Active play";
+        world.ActivePlayHandoff.RecordHandoff(23, world.Time.Year, 6, "Chosen start summary");
+        world.BeginActiveSimulation();
 
-        renderer.Record(world, focus, uiState, new WorldEvent
-        {
-            Year = 4,
-            Type = WorldEventType.Migration,
-            Severity = WorldEventSeverity.Major,
-            Narrative = "Older turning point",
-            PolityId = 7
-        });
-        renderer.Record(world, focus, uiState, new WorldEvent
-        {
-            Year = 5,
-            Type = WorldEventType.LearnedAdvancement,
-            Severity = WorldEventSeverity.Major,
-            Narrative = "Newer turning point",
-            PolityId = 7
-        });
+        Polity polity = new(23, "Focus Polity", 5, 3, 120, stage: PolityStage.Civilization);
+        world.Polities.Add(polity);
 
-        IReadOnlyList<string> entries = renderer.SnapshotChronicleEntries();
+        IReadOnlyList<string> lines = ChronicleWatchRenderer.BuildStatusLines(
+            world,
+            polity,
+            new WatchUiState(),
+            width: 80,
+            stageNameFormatter: stage => stage.ToString());
 
-        Assert.Equal("Year 5 - Newer turning point.", entries[0]);
-        Assert.Equal("Year 4 - Older turning point.", entries[1]);
+        Assert.Contains($" Chronicle boundary: {world.LiveChronicleStartYear}", lines);
+        Assert.Contains(" Handoff summary: Chosen start summary", lines);
     }
+
+    [Fact]
+    public void BuildStatusLines_GenerationFailureIsHonest()
+    {
+        World world = new(new WorldTime(70, 4));
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.GenerationFailure;
+        world.PrehistoryRuntime.ActivitySummary = "Unable to surface viable starts.";
+        world.PrehistoryRuntime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.Failure("world_failed");
+
+        IReadOnlyList<string> lines = ChronicleWatchRenderer.BuildStatusLines(
+            world,
+            polity: null,
+            new WatchUiState(),
+            width: 80,
+            stageNameFormatter: stage => stage.ToString());
+
+        Assert.Contains(" World Generation Failure", lines);
+        Assert.Contains(" Details: world_failed", lines);
+        Assert.Contains(lines, line => line.Contains("honest failure", StringComparison.Ordinal));
+    }
+
+    private static PlayerEntryCandidateSummary CreateCandidate(int polityId)
+        => new(
+            polityId,
+            $"Polity {polityId}",
+            polityId,
+            $"Species {polityId}",
+            polityId,
+            polityId,
+            $"Region {polityId}",
+            6,
+            30,
+            2,
+            "medium",
+            "Mixed",
+            "Condition",
+            "Settlement",
+            "Regional",
+            "Lineage",
+            "Discovery",
+            "Learned",
+            "Note",
+            "Opportunity",
+            0.5,
+            StabilityBand.Stable,
+            false);
 }

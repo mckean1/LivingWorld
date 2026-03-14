@@ -125,34 +125,53 @@ public sealed class ChronicleWatchRenderer : IDisposable
         Func<PolityStage, string> stageNameFormatter)
     {
         string border = new('=', width);
-        List<string> lines = [border];
+        PrehistoryRuntimeStatus runtime = world.PrehistoryRuntime;
+        string phaseDescription = string.IsNullOrWhiteSpace(runtime.PhaseLabel)
+            ? runtime.CurrentPhase.ToString()
+            : runtime.PhaseLabel;
+        List<string> lines = [border, $" Phase: {runtime.CurrentPhase} | {phaseDescription}"];
         string status = uiState.IsPaused ? "PAUSED" : "RUNNING";
         string view = WatchViewCatalog.DescribeView(uiState.ActiveView);
-        if (world.StartupStage == WorldStartupStage.FocalSelection)
+        if (runtime.CurrentPhase == PrehistoryRuntimePhase.GenerationFailure)
         {
-            lines.Add(" Chronicle Watch");
-            lines.Add($" Status: SELECTING | View: {view}");
-            lines.Add($" World Age: {world.Time.Year} | Preset: {world.StartupAgeConfiguration.Preset}");
-            lines.Add($" Candidate Starts: {world.PlayerEntryCandidates.Count}");
-            if (uiState.ShowDiagnostics)
-            {
-                string checkpointLabel = world.PrehistoryRuntime.LastCheckpointOutcome?.Kind.ToString() ?? "Pending";
-                string? checkpointDetails = world.PrehistoryRuntime.LastCheckpointOutcome?.Summary;
-                string checkpointLine = checkpointDetails is null
-                    ? $" Checkpoint: {checkpointLabel}"
-                    : $" Checkpoint: {checkpointLabel} ({checkpointDetails})";
-                lines.Add(checkpointLine);
-            }
+            lines.Add(" World Generation Failure");
+            string failureSummary = runtime.LastCheckpointOutcome?.Summary ?? "No viable starts surfaced.";
+            lines.Add($" Status: {runtime.ActivitySummary}");
+            lines.Add($" Details: {failureSummary}");
+            lines.Add(" Note: this is an honest failure, no viable candidates were produced.");
             lines.Add(border);
             return lines;
         }
 
+        if (runtime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
+        {
+            lines.Add(" Chronicle Watch - Focal selection (time paused)");
+            lines.Add($" Status: SELECTING | View: {view}");
+            lines.Add($" World Age: {world.Time.Year} | Preset: {world.StartupAgeConfiguration.Preset} (locked until choice)");
+            lines.Add($" Candidate pool: {world.PlayerEntryCandidates.Count} viable start(s) available");
+            string checkpointLabel = runtime.LastCheckpointOutcome?.Kind.ToString() ?? "Pending";
+            string? checkpointDetails = runtime.LastCheckpointOutcome?.Summary;
+            string checkpointLine = checkpointDetails is null
+                ? $" Checkpoint: {checkpointLabel}"
+                : $" Checkpoint: {checkpointLabel} ({checkpointDetails})";
+            lines.Add(checkpointLine);
+            string handoffHint = world.ActivePlayHandoff.SelectedPolityId is null
+                ? " Handoff: awaiting player selection"
+                : $" Handoff: bound to polity {world.ActivePlayHandoff.SelectedPolityId}";
+            lines.Add(handoffHint);
+            lines.Add($" Activity: {runtime.ActivitySummary}");
+            lines.Add(border);
+            return lines;
+        }
+
+        int? liveChronicleYear = world.LiveChronicleStartYear ?? world.Time.Year;
         if (polity is null)
         {
             lines.Add(" Chronicle Watch");
             lines.Add($" Status: {status} | View: {view}");
             lines.Add($" Year: {world.Time.Year}");
             lines.Add(" Focus: No surviving focal polity");
+            lines.Add($" Chronicle boundary: {liveChronicleYear}");
             lines.Add(border);
             return lines;
         }
@@ -173,6 +192,9 @@ public sealed class ChronicleWatchRenderer : IDisposable
         lines.Add($" Discoveries: {knowledgeSummary.Discoveries}");
         lines.Add($" Learned: {knowledgeSummary.Learned}");
         lines.Add($" Year: {world.Time.Year}");
+        lines.Add($" Chronicle boundary: {liveChronicleYear}");
+        string handoffSummary = world.ActivePlayHandoff.CandidateSummarySnapshot ?? "Selected candidate summary unavailable";
+        lines.Add($" Handoff summary: {handoffSummary}");
         lines.Add(border);
 
         return lines;
@@ -239,7 +261,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
         HideCursor();
 
         bool dimensionsChanged = layout.Width != _lastWidth || layout.Height != _lastHeight;
-        string renderOwner = $"{world.StartupStage}|{world.SelectedFocalPolityId}|{layout.SeparatorTop}|{layout.FooterTop}";
+        string renderOwner = $"{world.PrehistoryRuntime.CurrentPhase}|{world.SelectedFocalPolityId}|{layout.SeparatorTop}|{layout.FooterTop}";
         bool ownerChanged = !string.Equals(renderOwner, _lastRenderOwner, StringComparison.Ordinal);
         if (dimensionsChanged || ownerChanged)
         {

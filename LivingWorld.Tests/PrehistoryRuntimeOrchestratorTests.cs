@@ -47,4 +47,33 @@ public sealed class PrehistoryRuntimeOrchestratorTests
         Assert.True(world.PrehistoryRuntime.AreReadinessChecksActive);
         Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
     }
+
+    [Fact]
+    public void RecordCheckpointOutcomeContinueKeepsPrehistoryRunning()
+    {
+        World world = new(new WorldTime());
+        PrehistoryRuntimeOrchestrator orchestrator = new();
+        orchestrator.Initialize(world, StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld));
+        orchestrator.BeginPrehistoryRunning(world);
+
+        orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.Continue("still running"));
+
+        Assert.Equal(PrehistoryRuntimePhase.PrehistoryRunning, world.PrehistoryRuntime.CurrentPhase);
+        Assert.True(world.PrehistoryRuntime.IsPrehistoryAdvancing);
+    }
+
+    [Fact]
+    public void RecordGenerationFailureDefinesTerminalPhase()
+    {
+        World world = new(new WorldTime());
+        PrehistoryRuntimeOrchestrator orchestrator = new();
+        orchestrator.Initialize(world, StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld));
+
+        orchestrator.RecordGenerationFailure(world, "no candidates");
+
+        Assert.Equal(PrehistoryRuntimePhase.GenerationFailure, world.PrehistoryRuntime.CurrentPhase);
+        Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
+        Assert.Equal(PrehistoryCheckpointOutcomeKind.GenerationFailure, world.PrehistoryRuntime.LastCheckpointOutcome?.Kind);
+        Assert.Equal("no candidates", world.PrehistoryRuntime.LastCheckpointOutcome?.Summary);
+    }
 }
