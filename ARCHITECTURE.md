@@ -81,6 +81,7 @@ World seeding is now split into a few explicit pieces so density tuning stays de
 - `PhaseCReadinessEvaluator` now measures organic social trajectories, settlements, polities, and focal candidates separately from fallback-created actors so readiness cannot drift into "healthy on paper, rescued in practice"
 - `StartupOutcomeDiagnosticsEvaluator` provides organic-vs-fallback startup counts, emergency candidate counts, candidate rejection totals, bottleneck reasons, and regeneration reasons for debug inspection and startup balancing
 - `PhaseBDiagnosticsEvaluator` provides deeper inspection for shallow-seed failures: ancestry depth, branch count, divergence maturity, adapted-biome spread, extinction/replacement texture, and sentience-capable root breadth
+- `PrehistoryRuntimeStatus` now also carries player-facing startup phase, subphase, activity, and transition text so long-running bootstrap work can be rendered without exposing raw internal logs
 
 This keeps the startup world explicit rather than burying scale changes in scattered magic numbers.
 
@@ -206,6 +207,7 @@ The watch UI is now a thin observation layer over the simulation rather than a c
 - `WatchInspectionData` builds that knowledge snapshot from the focal polity's visible horizon and discovery records
 - `WatchScreenBuilder` renders top-level and detail inspection screens from that filtered world view instead of from omniscient raw state
 - `ChronicleWatchRenderer` remains responsible for low-flicker console drawing, the fixed top panel, chronicle retention, and viewport slicing
+- `StartupProgressRenderer` is a separate low-flicker console owner used only during world generation; it renders phase/subphase labels, world-age progress, and compact phase-specific metrics without touching chronicle entries
 - `Simulation` now acts as the watch-loop coordinator: it polls input every iteration, advances months only when the next step time has arrived, and renders only when invalidated
 - initial focus selection now runs after regional populations are initialized, so the selector can prefer a live starting polity rather than blindly taking the first id
 
@@ -216,6 +218,7 @@ Simulation now also performs an explicit bootstrap seeding pass before active pl
 Visible time no longer resets to year 0 after bootstrap. Instead, the chosen polity enters active play at the real simulated world age, while the live chronicle starts at an explicit boundary marker so prehistory stays in structured history and summaries rather than leaking into the active watch feed.
 Weak-world startup outcomes are now filtered more aggressively too: max-age worlds that only produce fallback-quality starts after serious readiness failures are regenerated instead of being surfaced as normal player starts.
 Debug startup summaries now also expose organic groups/societies/settlements/polities, fallback counts, emergency candidate admissions, candidate rejection totals, and regeneration causes so repeated startup sweeps can be judged on simulation health instead of only on whether a world technically produced one start.
+Before that handoff, the player now sees a dedicated startup panel instead of an empty console: world generation updates that panel in place at major phase boundaries and periodic deep-time checkpoints, and the panel is cleared before focal selection or active play takes ownership of the watch viewport.
 
 ## Focus And Continuity
 

@@ -103,6 +103,8 @@ Implemented:
 - candidate summaries now classify starts from current polity state instead of founder-origin labels, so subsistence, settlement-network shape, and present pressure reflect what the polity actually became by player entry
 - polity settlement expansion now respects subsistence mode, network age, and fragmentation pressure so healthy starts stop flattening into oversized late-bootstrap settlement spreads
 - diversity trimming now works on richer current-polity summaries, making lineage/root breadth and regional differentiation more likely to survive the final candidate cut
+- dedicated startup progress rendering now shows world-frame, ecology, evolution, society, and player-entry phases in place while prehistory runs, including world age, readiness window context, and phase-appropriate live metrics
+- startup progress text is now isolated from the live chronicle path: the generator renders its own panel, the handoff clears before watch/focal-selection ownership takes over, and startup status lines cannot linger in the active chronicle viewport
 
 Intentionally deferred after Pass 4:
 - richer player-entry presets and custom world-age editing
@@ -110,6 +112,7 @@ Intentionally deferred after Pass 4:
 - dedicated civilization/species/world history screens built on the preserved structured prehistory
 
 This completes the intended primitive-life-first startup path end to end: Pass 1 creates a living ecology, Pass 2 creates branching biological history, Pass 3 creates early social/political actors with real maturation pressure, and Pass 4 now expects normal starts to come from organic simulated outcomes rather than repeated fallback-polity rescue behavior.
+World generation also no longer appears blank during long startup runs: the player now sees a compact in-place progress panel instead of waiting on an empty console.
 
 Post-Pass-4 startup-richness validation now also has a compact deterministic sweep (`YoungWorld`, `4x4`, reduced bootstrap caps) for seeds `31, 32, 33, 34, 35, 7, 11, 13, 43`.
 During this pass that sweep improved from `5/9` accepted worlds to `7/9`, weak seeds `31` and `11` moved from rejection into organic acceptance, accepted worlds kept `0` fallback candidates, and sentience-capable root breadth improved from mostly `1` root to `2-3` roots in most accepted runs.

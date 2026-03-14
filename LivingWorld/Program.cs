@@ -19,10 +19,13 @@ class Program
         }
 
         int seed = ResolveSeed(programOptions.Seed);
-        WorldGenerator generator = new(seed);
-        World world = generator.Generate();
-
         SimulationOptions options = CreateSimulationOptions(programOptions);
+        using StartupProgressRenderer? startupProgressRenderer = options.OutputMode == OutputMode.Watch
+            ? new StartupProgressRenderer(options)
+            : null;
+        WorldGenerator generator = new(seed, progressRenderer: startupProgressRenderer);
+        World world = generator.Generate();
+        startupProgressRenderer?.ClearForHandoff();
         using Simulation simulation = new(world, options);
 
         if (ShouldPromptBeforeStart(options))

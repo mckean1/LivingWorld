@@ -30,6 +30,7 @@ Canonical events now retain explicit origin metadata as well, and `World` now st
 The renderer now also sanitizes the chronicle buffer itself to full historical lines, so summary fragments and stale selection text cannot survive the startup handoff.
 That startup path now also tracks explicit organic-vs-fallback startup diagnostics, so bootstrap rerolls can tell the difference between a healthy simulated start and a rescued weak world.
 The latest startup-richness pass also makes Phase B branch/replacement texture and current-polity candidate differentiation explicit parts of that bootstrap contract instead of leaving them as accidental byproducts.
+The startup UI pass adds a second renderer to that contract: `StartupProgressRenderer` owns the console during world generation, while `ChronicleWatchRenderer` only takes over after handoff into focal selection or active play.
 
 ## Monthly Systems
 
@@ -121,6 +122,7 @@ In watch mode:
 - do not narrate bootstrap-created baseline state as live history
 - do not narrate prehistory candidate-building or readiness-stop context as live chronicle history
 - do not treat fallback-only or emergency-only startup candidates as equivalent to organic starts; startup diagnostics and gating must keep those paths explicit
+- do not mix startup progress lines with the live chronicle buffer; startup status is a separate render path and must be cleared on handoff
 - do not allow status-panel or focal-selection summary fragments into the chronicle buffer; chronicle entries must remain complete historical lines
 - settlement starvation and failed-aid logging therefore key off starvation-stage transitions rather than repeating each monthly starving result
 - do not let responsive internal economy identity promote directly into chronicle reputation; visible `known for` and trade-good turns now require minimum settlement age, sustained monthly confirmation, and stronger thresholds than the hidden economy layer

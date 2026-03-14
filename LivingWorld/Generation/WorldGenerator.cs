@@ -1,6 +1,7 @@
 using LivingWorld.Core;
 using LivingWorld.Life;
 using LivingWorld.Map;
+using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
 
@@ -14,14 +15,16 @@ public sealed class WorldGenerator
     private readonly List<PrimitiveLineageTemplate> _primitiveTemplates;
     private readonly WorldGenerationSettings _settings;
     private readonly PrehistoryRuntimeController _prehistoryRuntimeController = new();
+    private readonly StartupProgressRenderer? _progressRenderer;
 
-    public WorldGenerator(int seed, WorldGenerationSettings? settings = null)
+    public WorldGenerator(int seed, WorldGenerationSettings? settings = null, StartupProgressRenderer? progressRenderer = null)
     {
         _seed = seed;
         _random = new Random(seed);
         _settings = settings ?? new WorldGenerationSettings();
         _regionNames = new Queue<string>(BuildShuffledNames(WorldGenerationCatalog.CreateRegionNames()));
         _primitiveTemplates = WorldGenerationCatalog.CreatePrimitiveLineageTemplates();
+        _progressRenderer = progressRenderer;
     }
 
     public World Generate()
@@ -53,7 +56,7 @@ public sealed class WorldGenerator
             }
 
             int attemptSeed = DeriveAttemptSeed(attempt);
-            WorldGenerator attemptGenerator = new(attemptSeed, _settings);
+            WorldGenerator attemptGenerator = new(attemptSeed, _settings, _progressRenderer);
             World regeneratedWorld = attemptGenerator.GenerateSingleAttempt(attempt);
             if (attemptGenerator.ShouldSurfaceFocalSelection(regeneratedWorld, out List<string> regeneratedRejectionReasons))
             {
@@ -86,11 +89,41 @@ public sealed class WorldGenerator
             StartupGenerationAttempt = attempt
         };
         _prehistoryRuntimeController.Initialize(world, StartupWorldAgeConfiguration.ForPreset(_settings.StartupWorldAgePreset));
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Generating world frame",
+            "Preparing continent and climate",
+            "Laying out the continent, biomes, and primitive ecological starting points.");
+        ReportProgress(world);
 
         GenerateRegions(world);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Generating world frame",
+            "Laying out regions",
+            "Defining the world map and regional environmental profiles.");
+        ReportProgress(world);
         ConnectRegions(world);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Generating world frame",
+            "Connecting land and river corridors",
+            "Linking regions so ecological spread and migration can follow real geography.");
+        ReportProgress(world);
         GeneratePrimitiveLineages(world);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Seeding primitive life",
+            "Creating foundational lineages",
+            "Seeding the earliest primitive lineages across the new world.");
+        ReportProgress(world);
         AssignInitialPrimitiveRanges(world);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Seeding primitive life",
+            "Establishing initial ranges",
+            "Placing primitive life into viable habitats before long ecological stabilization.");
+        ReportProgress(world);
         StabilizePrimitiveEcology(world);
         InitializeEvolutionaryLineages(world);
         AdvanceEvolutionaryHistory(world);
@@ -255,6 +288,12 @@ public sealed class WorldGenerator
     private void StabilizePrimitiveEcology(World world)
     {
         _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseA_BiologicalFoundation);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Stabilizing ecosystems",
+            "Growing primitive ecologies",
+            "Expanding primitive ecosystems across fertile regions and balancing food webs.");
+        ReportProgress(world);
         FoodSystem foodSystem = new();
         EcosystemSystem ecosystemSystem = new();
         ecosystemSystem.InitializeRegionalPopulations(world);
@@ -267,6 +306,15 @@ public sealed class WorldGenerator
                 ecosystemSystem.UpdateSeason(world);
                 ecosystemSystem.ResolveSeasonalCleanup(world);
                 world.PhaseAReadinessReport = PhaseAReadinessEvaluator.Evaluate(world, _settings);
+                if (month % 12 == 0 || world.PhaseAReadinessReport.IsReady)
+                {
+                    _prehistoryRuntimeController.Describe(
+                        world,
+                        "Stabilizing ecosystems",
+                        "Testing biological foundation",
+                        "Checking whether primitive ecosystems have spread broadly enough to support deeper history.");
+                    ReportProgress(world);
+                }
                 if (month >= _settings.PhaseAMinimumBootstrapMonths && world.PhaseAReadinessReport.IsReady)
                 {
                     break;
@@ -277,6 +325,13 @@ public sealed class WorldGenerator
         }
 
         _prehistoryRuntimeController.RefreshAge(world);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Stabilizing ecosystems",
+            "Phase A complete",
+            "Phase A complete: primitive ecosystems stabilized enough to support evolutionary history.",
+            "Phase A complete: ecosystems stabilized.");
+        ReportProgress(world);
     }
 
     private static void InitializeEvolutionaryLineages(World world)
@@ -319,6 +374,13 @@ public sealed class WorldGenerator
     private void AdvanceEvolutionaryHistory(World world)
     {
         _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseB_EvolutionaryHistory);
+        world.StartupStage = WorldStartupStage.EvolutionaryExpansion;
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Running evolutionary history",
+            "Diverging regional lineages",
+            "Diverging isolated lineages into new branches and adaptation paths.");
+        ReportProgress(world);
         MutationSystem mutationSystem = new(seed: _seed + 177);
         FoodSystem foodSystem = new();
         EcosystemSystem ecosystemSystem = new();
@@ -341,6 +403,18 @@ public sealed class WorldGenerator
             RefreshEvolutionaryLineageSnapshots(world);
             world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
             world.PhaseBDiagnostics = PhaseBDiagnosticsEvaluator.Evaluate(world, _settings);
+            _prehistoryRuntimeController.RefreshAge(world);
+            if (year == 1 || year % 25 == 0 || world.PhaseBReadinessReport.IsReady)
+            {
+                _prehistoryRuntimeController.Describe(
+                    world,
+                    "Running evolutionary history",
+                    world.PhaseBReadinessReport.IsReady ? "Checking mature biological history" : "Deepening biological branching",
+                    world.PhaseBReadinessReport.IsReady
+                        ? "Testing whether the world's biological history has matured enough for sentience-capable branches."
+                        : "Letting isolated populations branch, adapt, go extinct, and recolonize over deep time.");
+                ReportProgress(world);
+            }
             if (year >= _settings.PhaseBMinimumBootstrapYears && world.PhaseBReadinessReport.IsReady)
             {
                 break;
@@ -351,6 +425,13 @@ public sealed class WorldGenerator
         world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
         world.PhaseBDiagnostics = PhaseBDiagnosticsEvaluator.Evaluate(world, _settings);
         _prehistoryRuntimeController.RefreshAge(world);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Running evolutionary history",
+            "Phase B complete",
+            "Phase B complete: evolutionary history matured into a deeper biological world.",
+            "Phase B complete: evolutionary history matured.");
+        ReportProgress(world);
     }
 
     private void AdvanceCivilizationalEmergence(World world)
@@ -358,6 +439,12 @@ public sealed class WorldGenerator
         SocialEmergenceSystem socialEmergenceSystem = new(_seed + 313, _settings);
         _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseC_CivilizationalEmergence);
         world.StartupStage = WorldStartupStage.SentienceActivation;
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Developing sentient societies",
+            "Activating sentient branches",
+            "Identifying sentience-capable branches and grounding the first social trajectories.");
+        ReportProgress(world);
         EnsureSentienceCapableSeedBranches(world);
         world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
         world.PhaseBDiagnostics = PhaseBDiagnosticsEvaluator.Evaluate(world, _settings);
@@ -371,6 +458,16 @@ public sealed class WorldGenerator
                 polity.YearsInCurrentRegion++;
             }
 
+            _prehistoryRuntimeController.RefreshAge(world);
+            if (year == 1 || year % 10 == 0 || world.PhaseCReadinessReport.IsReady)
+            {
+                _prehistoryRuntimeController.Describe(
+                    world,
+                    "Developing sentient societies",
+                    "Growing groups, settlements, and polities",
+                    "Growing early societies, settlements, and the first plausible polity starts.");
+                ReportProgress(world);
+            }
             if (year >= _settings.PhaseCMinimumBootstrapYears && world.PhaseCReadinessReport.IsReady)
             {
                 break;
@@ -388,12 +485,25 @@ public sealed class WorldGenerator
         socialEmergenceSystem.UpdateYear(world);
         world.PhaseCReadinessReport = PhaseCReadinessEvaluator.Evaluate(world, _settings);
         _prehistoryRuntimeController.RefreshAge(world);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Developing sentient societies",
+            "Phase C complete",
+            "Phase C complete: early societies matured into plausible player-entry material.",
+            "Phase C complete: viable societies emerged.");
+        ReportProgress(world);
     }
 
     private void AdvancePlayerEntryEvaluation(World world)
     {
         _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseD_PlayerEntryEvaluation);
         world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Evaluating world readiness",
+            "Building focal candidates",
+            "Evaluating whether the world is mature enough to surface healthy starting candidates.");
+        ReportProgress(world);
 
         SocialEmergenceSystem socialEmergenceSystem = new(_seed + 727, _settings);
         PlayerEntryCandidateGenerator candidateGenerator = new(_settings);
@@ -401,6 +511,7 @@ public sealed class WorldGenerator
         BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
         world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
         RefreshStartupEvaluationState(world);
+        ReportProgress(world);
 
         while (world.Time.Year < world.StartupAgeConfiguration.MaxPrehistoryYears)
         {
@@ -413,6 +524,12 @@ public sealed class WorldGenerator
                 BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
                 world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
                 RefreshStartupEvaluationState(world);
+                _prehistoryRuntimeController.Describe(
+                    world,
+                    "Evaluating world readiness",
+                    "Checking stop conditions",
+                    "Evaluating whether the world is ready for player entry or needs more historical time.");
+                ReportProgress(world);
                 if (world.WorldReadinessReport.IsReady)
                 {
                     _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.ReadinessSatisfied, "world_readiness_passed");
@@ -427,6 +544,12 @@ public sealed class WorldGenerator
                 BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
                 world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
                 RefreshStartupEvaluationState(world);
+                _prehistoryRuntimeController.Describe(
+                    world,
+                    "Evaluating world readiness",
+                    "Testing target-age handoff",
+                    "Checking whether the world can stop at target age with a healthy candidate pool.");
+                ReportProgress(world);
                 if (world.WorldReadinessReport.IsReady)
                 {
                     _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.ReadinessSatisfied, "target_age_readiness_passed");
@@ -442,6 +565,15 @@ public sealed class WorldGenerator
             }
 
             world.Time.Reset(world.Time.Year + 1, world.Time.Month);
+            if ((world.Time.Year - world.StartupAgeConfiguration.MinPrehistoryYears) % Math.Max(1, _settings.ReadinessEvaluationIntervalYears) == 0)
+            {
+                _prehistoryRuntimeController.Describe(
+                    world,
+                    "Evaluating world readiness",
+                    "Advancing late prehistory",
+                    "Letting late prehistory continue so additional settlements, polities, and candidates can mature.");
+                ReportProgress(world);
+            }
         }
 
         if (world.PrehistoryStopReason is null)
@@ -453,6 +585,14 @@ public sealed class WorldGenerator
         BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback);
         world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
         RefreshStartupEvaluationState(world);
+        _prehistoryRuntimeController.Describe(
+            world,
+            "Evaluating world readiness",
+            "Final candidate pass",
+            allowEmergencyFallback
+                ? "Running the final candidate pass at max age and checking whether the world still needs rescue paths."
+                : "Running the final candidate pass and preparing viable starts for handoff.");
+        ReportProgress(world);
 
         if (world.PrehistoryStopReason == PrehistoryStopReason.MaxAgeReached && world.PlayerEntryCandidates.Any(candidate => candidate.IsFallbackCandidate))
         {
@@ -467,8 +607,12 @@ public sealed class WorldGenerator
         {
             _prehistoryRuntimeController.EnterFocalSelection(world);
             world.StartupStage = WorldStartupStage.FocalSelection;
+            ReportProgress(world);
         }
     }
+
+    private void ReportProgress(World world)
+        => _progressRenderer?.Render(world);
 
     private void BuildPlayerEntryCandidates(World world, PlayerEntryCandidateGenerator generator, bool allowEmergencyFallback)
     {

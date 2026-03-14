@@ -14,6 +14,7 @@ The agreed startup plan is now:
 Pass 1 through Pass 4 are implemented now, so the default loop begins from an already-seeded ecological foundation, bootstrap evolutionary history, bootstrap social/political emergence, and a completed player-entry evaluation layer.
 The startup corrective pass now expects that bootstrap to produce multiple organic candidate starts most of the time. Worlds that top out at one fallback/emergency candidate or that never clear biological/social readiness are regenerated instead of being treated as normal entry outcomes.
 The follow-up richness pass deepened Phase B divergence/replacement history and changed Pass 4 candidate summaries to describe the polity's current subsistence/network state instead of just founder-origin labels.
+The latest startup UX pass now makes that bootstrap visible while it runs: a dedicated startup panel maps prehistory runtime state to player-facing phase text, world-age progress, and phase-specific metrics without writing into the live chronicle.
 
 ## Monthly Flow
 
@@ -89,6 +90,7 @@ Year-end focus resolution now also consumes the current year's rolling event cac
 Pass 4 now takes those viable polity candidates, ranks/diversifies them, freezes the world in `FocalSelection`, and starts the live watch only after the player binds to one of them.
 If a max-age world only yields fallback-quality starts after core readiness fails, startup now prefers regeneration over surfacing that world as a normal player-facing selection screen.
 Debug startup summaries now report organic-vs-fallback actor counts, emergency candidate admissions, candidate rejection reasons, and regeneration causes so repeated startup sweeps can be evaluated directly.
+During startup itself, `StartupProgressRenderer` owns the console instead of leaving it blank. It refreshes in place at phase changes and periodic deep-time checkpoints, then clears before focal selection/live watch rendering begins.
 The compact repeated-run validation profile used during this pass improved from `5/9` accepted worlds to `7/9`, while the accepted runs kept `0` fallback candidates and generally widened sentience-capable root breadth to `2-3` roots.
 
 ## Default Watch Output
@@ -101,6 +103,7 @@ Default player mode shows:
 - the currently active watch view in that panel
 - separate `Discoveries` and `Learned` rows in that panel
 - a focal-selection screen before time starts
+- a startup progress panel before focal selection, showing the current phase, world age, readiness-window status, and compact live metrics such as occupied regions, lineage history, social actors, and viable candidates
 - a chronicle viewport beneath the status panel after selection, sized from the available console height
 - newest messages first
 - concise `Major` and `Legendary` history only

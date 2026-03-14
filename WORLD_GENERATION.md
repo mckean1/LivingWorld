@@ -33,6 +33,7 @@ The current startup targets live in `LivingWorld/Generation/WorldGenerationSetti
 - social-maturation knobs for bootstrap sentience-capable branch count, per-lineage social trajectory limits, growth/decline rates, polity-emergence thresholds, and candidate diversity weighting
 - Phase B richness knobs for mutation-potential pressure, founder-isolation bonus, ecology-distance divergence, descendant-retention carry-over, and sentience-complexity/root-breadth progression
 - startup-selection knobs for healthy-candidate score, emergency fallback labeling, and startup regeneration attempts
+- startup progress presentation fields on `PrehistoryRuntimeStatus`, which drive player-facing phase labels, activity text, transition text, and world-age context while generation is still running
 
 These values are intentionally centralized so density tuning can happen without rewriting generation logic.
 
@@ -52,6 +53,7 @@ These values are intentionally centralized so density tuning can happen without 
 12. store `PhaseAReadinessReport`, `PhaseBReadinessReport`, `PhaseCReadinessReport`, and `WorldReadinessReport` for inspection
 13. store startup outcome diagnostics for organic/fallback counts, candidate rejections, bottlenecks, and regeneration causes
 14. freeze the world in `FocalSelection` with compact candidate summaries ready for player choice
+15. render a dedicated startup progress panel during those steps so the player can see current phase, age, readiness-window context, and compact live metrics without chronicle spam
 
 The default startup now intentionally reaches a playable prehistory handoff rather than stopping before player-entry logic exists.
 
@@ -206,6 +208,7 @@ Pass 4 adds:
 After generation:
 
 - the world is frozen in `FocalSelection`, not already running active time
+- while generation is running, a separate startup progress panel owns the console and refreshes in place with phase-specific metrics such as occupied regions, lineage/speciation history, social actors, polities, and viable candidates
 - default player-facing output is a candidate-selection watch screen first, then the live chronicle watch view after a polity is chosen
 - structured history records prehistory underneath, but the live chronicle begins only after the explicit handoff marker
 

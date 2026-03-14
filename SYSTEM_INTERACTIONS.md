@@ -25,6 +25,7 @@ The startup path is now explicitly primitive-life-first:
 Pass 1 through Pass 4 are implemented now. The default generated world reaches ecological readiness, then evolutionary readiness, then social/political readiness, then a player-entry evaluation/readiness stop before active play starts.
 The corrective startup-stabilization pass tightened the interaction rules between those layers: Phase C must now produce organic social depth that Pass 4 agrees is real, and fallback-only candidate pools are treated as regeneration cases rather than as ordinary starts.
 The startup-richness follow-up then widened the contract again: Pass 2 must produce richer branch/adaptation/sentience breadth, and Pass 4 must preserve genuine current-polity differentiation instead of flattening all healthy starts into the same late-bootstrap profile.
+The latest startup UI pass adds explicit visibility to that contract: world generation reports its current phase, age, and maturity through a dedicated startup render path instead of leaving watch mode blank until focal selection appears.
 
 ## Current Major Systems
 
@@ -166,6 +167,7 @@ Implemented:
 - Weak-world startup outcomes are now screened more aggressively so fallback-only, max-age, biologically weak worlds regenerate more often instead of being surfaced as ordinary starts
 - Social-emergence actors now feed player-entry through explicit organic-vs-fallback origin tracking, emergency candidate labeling, and startup outcome diagnostics instead of letting fallback rescue paths disappear into the normal candidate pool
 - Deterministic startup retry seeding now keeps worldgen rerolls stable across runs, which makes repeated-run tuning and startup-regression tests reflect real simulation changes instead of process-randomized retry variance
+- `PrehistoryRuntimeStatus` now provides player-facing phase/subphase/activity text, and `StartupProgressRenderer` consumes that state to show compact worldgen progress metrics while preserving the chronicle boundary
 - Compact repeated-run validation during this pass improved from `5/9` accepted worlds to `7/9`, with accepted runs keeping `0` fallback candidates and usually reaching `2-3` sentience-capable roots
 
 ---
