@@ -9,6 +9,7 @@ public sealed class MutationSettings
     public double DivergenceDecayPerSeason { get; init; } = 0.01;
     public double DivergencePressureDecay { get; init; } = 0.90;
     public double DivergencePressureScale { get; init; } = 0.18;
+    public double ContactDivergenceReductionPerSeason { get; init; } = 0.06;
     public double MinorMutationDivergenceImpact { get; init; } = 1.4;
     public double MajorMutationDivergenceImpact { get; init; } = 2.4;
 
@@ -42,6 +43,12 @@ public sealed class MutationSettings
     public int DescendantStartingReadinessSeasons { get; init; } = 0;
     public int IsolationEventBaseThresholdSeasons { get; init; } = 12;
     public int MinorMutationEventCooldownYears { get; init; } = 3;
+    public double SentienceIntelligenceThreshold { get; init; } = 0.42;
+    public double SentienceSocialityThreshold { get; init; } = 0.36;
+    public int SentienceMinimumHistoryYears { get; init; } = 220;
+    public int SentienceMinimumPopulationSupport { get; init; } = 80;
+    public double SentienceComplexityThreshold { get; init; } = 2.20;
+    public int SentienceCapableLineageSoftCap { get; init; } = 2;
     public double DomesticationDiscoveryInterestThreshold { get; init; } = 0.18;
     public double DomesticationDiscoveryAffinityThreshold { get; init; } = 0.45;
 }

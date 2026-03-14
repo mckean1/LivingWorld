@@ -43,6 +43,7 @@ public sealed class Species
     public double StartingSpreadWeight { get; set; }
     public double MutationPotential { get; set; }
     public double SentiencePotential { get; set; }
+    public int LineageId { get; set; }
     public int? ParentSpeciesId { get; set; }
     public int RootAncestorSpeciesId { get; set; }
     public int? OriginRegionId { get; set; }
@@ -54,6 +55,7 @@ public sealed class Species
     public bool IsGloballyExtinct { get; set; }
     public int? ExtinctionYear { get; set; }
     public int? ExtinctionMonth { get; set; }
+    public SentienceCapabilityState SentienceCapability { get; set; }
     public List<int> DietSpeciesIds { get; } = [];
     public HashSet<RegionBiome> PreferredBiomes { get; } = [];
     public HashSet<int> InitialRangeRegionIds { get; } = [];
@@ -96,11 +98,13 @@ public sealed class Species
         StartingSpreadWeight = 0.50;
         MutationPotential = 0.25;
         SentiencePotential = 0.0;
+        LineageId = id;
         RootAncestorSpeciesId = id;
         OriginYear = 0;
         OriginMonth = 1;
         EarliestSpeciationYear = 0;
         IsGloballyExtinct = false;
+        SentienceCapability = SentienceCapabilityState.None;
     }
 
     public double GetSeasonalReproductionModifier(Season season)

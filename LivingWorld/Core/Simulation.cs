@@ -204,7 +204,7 @@ public sealed class Simulation : IDisposable
     {
         _foodSystem.UpdateRegionEcology(_world);
         RunSeasonalBiologyIfNeeded();
-        if (_world.StartupStage == WorldStartupStage.PrimitiveEcologyFoundation)
+        if (_world.StartupStage != WorldStartupStage.SocietalSimulation)
         {
             return;
         }
@@ -233,12 +233,18 @@ public sealed class Simulation : IDisposable
         long ecosystemStartedAt = Stopwatch.GetTimestamp();
         _ecosystemSystem.UpdateSeason(_world);
         _performanceTracker.AddEcosystemTime(Stopwatch.GetElapsedTime(ecosystemStartedAt));
-        if (_world.StartupStage != WorldStartupStage.PrimitiveEcologyFoundation)
+        if (_world.StartupStage == WorldStartupStage.EvolutionaryExpansion
+            || _world.StartupStage == WorldStartupStage.SentienceActivation
+            || _world.StartupStage == WorldStartupStage.SocietalSimulation)
         {
-            _huntingSystem.UpdateSeason(_world);
             long mutationStartedAt = Stopwatch.GetTimestamp();
             _mutationSystem.UpdateSeason(_world);
             _performanceTracker.AddMutationTime(Stopwatch.GetElapsedTime(mutationStartedAt));
+        }
+
+        if (_world.StartupStage == WorldStartupStage.SocietalSimulation)
+        {
+            _huntingSystem.UpdateSeason(_world);
         }
         _ecosystemSystem.ResolveSeasonalCleanup(_world);
         _performanceTracker.RecordSeason(_ecosystemSystem.LastSeasonMetrics, _mutationSystem.LastSeasonMetrics, _world.Species.Count);
@@ -246,7 +252,7 @@ public sealed class Simulation : IDisposable
 
     private void RunYearEndSystems()
     {
-        if (_world.StartupStage == WorldStartupStage.PrimitiveEcologyFoundation)
+        if (_world.StartupStage != WorldStartupStage.SocietalSimulation)
         {
             RenderYearBoundaryOutput();
             ResetAnnualStats();
@@ -323,7 +329,7 @@ public sealed class Simulation : IDisposable
 
     private void RunBootstrapInitialization()
     {
-        if (_world.StartupStage == WorldStartupStage.PrimitiveEcologyFoundation)
+        if (_world.StartupStage != WorldStartupStage.SocietalSimulation)
         {
             _world.BeginActiveSimulation();
             return;
@@ -763,6 +769,13 @@ public sealed class Simulation : IDisposable
         if (_world.PhaseAReadinessReport.FailureReasons.Count > 0)
         {
             Console.WriteLine($"PhaseA failures: {string.Join(", ", _world.PhaseAReadinessReport.FailureReasons)}");
+        }
+
+        Console.WriteLine(
+            $"PhaseB: Ready={_world.PhaseBReadinessReport.IsReady} Mature={_world.PhaseBReadinessReport.MatureLineageCount} Speciation={_world.PhaseBReadinessReport.SpeciationCount} Extinct={_world.PhaseBReadinessReport.ExtinctLineageCount} Depth={_world.PhaseBReadinessReport.MaxAncestryDepth} Diverged={_world.PhaseBReadinessReport.MatureRegionalDivergenceCount} SentienceCapable={_world.PhaseBReadinessReport.SentienceCapableLineageCount}");
+        if (_world.PhaseBReadinessReport.FailureReasons.Count > 0)
+        {
+            Console.WriteLine($"PhaseB failures: {string.Join(", ", _world.PhaseBReadinessReport.FailureReasons)}");
         }
 
         if (_world.Time.Year is 0 or 5 or 20)

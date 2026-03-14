@@ -36,7 +36,10 @@ public sealed class WorldGenerator
         GeneratePrimitiveLineages(world);
         AssignInitialPrimitiveRanges(world);
         StabilizePrimitiveEcology(world);
+        InitializeEvolutionaryLineages(world);
+        AdvanceEvolutionaryHistory(world);
         world.Time.Reset();
+        world.StartupStage = WorldStartupStage.EvolutionaryExpansion;
 
         return world;
     }
@@ -215,6 +218,153 @@ public sealed class WorldGenerator
 
             world.Time.AdvanceOneMonth();
         }
+    }
+
+    private static void InitializeEvolutionaryLineages(World world)
+    {
+        world.EvolutionaryLineages.Clear();
+        foreach (Species species in world.Species)
+        {
+            species.LineageId = species.Id;
+            species.SentienceCapability = SentienceCapabilityState.None;
+
+            EvolutionaryLineage lineage = new(species.LineageId, species.Id, species.EcologyNiche, species.TrophicRole)
+            {
+                ParentLineageId = null,
+                RootAncestorLineageId = species.LineageId,
+                OriginRegionId = species.OriginRegionId ?? species.InitialRangeRegionIds.FirstOrDefault(),
+                OriginYear = world.Time.Year,
+                Stage = LineageStage.Primitive,
+                TraitProfileSummary = BuildTraitSummary(species, null),
+                HabitatAdaptationSummary = "ancestral fit",
+                AdaptationPressureSummary = "mixed"
+            };
+
+            world.EvolutionaryLineages.Add(lineage);
+
+            foreach (Region region in world.Regions)
+            {
+                RegionSpeciesPopulation? population = region.GetSpeciesPopulation(species.Id);
+                if (population is null)
+                {
+                    continue;
+                }
+
+                population.FounderLineageId = species.LineageId;
+                population.LastContactYear = world.Time.Year;
+                population.AdaptationPressureSummary = "mixed";
+            }
+        }
+    }
+
+    private void AdvanceEvolutionaryHistory(World world)
+    {
+        MutationSystem mutationSystem = new(seed: _seed + 177);
+        FoodSystem foodSystem = new();
+        EcosystemSystem ecosystemSystem = new();
+
+        for (int year = 1; year <= _settings.PhaseBMaximumBootstrapYears; year++)
+        {
+            for (int month = 0; month < 12; month++)
+            {
+                foodSystem.UpdateRegionEcology(world);
+                if ((world.Time.Month % 3) == 0)
+                {
+                    ecosystemSystem.UpdateSeason(world);
+                    mutationSystem.UpdateSeason(world);
+                    ecosystemSystem.ResolveSeasonalCleanup(world);
+                }
+
+                world.Time.AdvanceOneMonth();
+            }
+
+            RefreshEvolutionaryLineageSnapshots(world);
+            world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
+            if (year >= _settings.PhaseBMinimumBootstrapYears && world.PhaseBReadinessReport.IsReady)
+            {
+                break;
+            }
+        }
+
+        RefreshEvolutionaryLineageSnapshots(world);
+        world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
+    }
+
+    private static void RefreshEvolutionaryLineageSnapshots(World world)
+    {
+        foreach (EvolutionaryLineage lineage in world.EvolutionaryLineages)
+        {
+            Species? species = world.Species.FirstOrDefault(candidate => candidate.LineageId == lineage.Id);
+            if (species is null)
+            {
+                continue;
+            }
+
+            List<RegionSpeciesPopulation> activePopulations = world.Regions
+                .Select(region => region.GetSpeciesPopulation(species.Id))
+                .Where(population => population is not null && population.PopulationCount > 0)
+                .Cast<RegionSpeciesPopulation>()
+                .ToList();
+            lineage.CurrentPopulationRegions = activePopulations.Count;
+            lineage.CurrentPopulationCount = activePopulations.Sum(population => population.PopulationCount);
+            lineage.Stage = ResolveLineageStage(species, activePopulations);
+            lineage.IsExtinct = species.IsGloballyExtinct;
+            lineage.ExtinctionYear = species.ExtinctionYear;
+            lineage.ExtinctionMonth = species.ExtinctionMonth;
+            lineage.TraitProfileSummary = BuildTraitSummary(species, activePopulations.FirstOrDefault());
+            lineage.HabitatAdaptationSummary = BuildHabitatSummary(world, species, activePopulations);
+            lineage.AdaptationPressureSummary = activePopulations
+                .OrderByDescending(population => population.DivergencePressure)
+                .Select(population => population.AdaptationPressureSummary)
+                .FirstOrDefault(summary => !string.IsNullOrWhiteSpace(summary))
+                ?? "mixed";
+            lineage.SentienceCapability = species.SentienceCapability;
+        }
+    }
+
+    private static LineageStage ResolveLineageStage(Species species, IReadOnlyCollection<RegionSpeciesPopulation> activePopulations)
+    {
+        if (species.SentienceCapability == SentienceCapabilityState.Capable)
+        {
+            return LineageStage.SentienceCapable;
+        }
+
+        if (activePopulations.Any(population => population.DivergenceScore >= 1.4) || species.ParentSpeciesId is not null)
+        {
+            return species.ParentSpeciesId is not null
+                ? LineageStage.EstablishedSpecies
+                : LineageStage.Diverging;
+        }
+
+        return LineageStage.Primitive;
+    }
+
+    private static string BuildTraitSummary(Species species, RegionSpeciesPopulation? population)
+    {
+        double intelligence = population is null ? species.Intelligence : PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Intelligence);
+        double sociality = population is null ? species.Cooperation : PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Sociality);
+        double endurance = population is null ? PopulationTraitResolver.GetBaselineTrait(species, SpeciesTrait.Endurance) : PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Endurance);
+        double flexibility = population is null ? PopulationTraitResolver.GetBaselineTrait(species, SpeciesTrait.DietFlexibility) : PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.DietFlexibility);
+        return $"Int {intelligence:F2}, Soc {sociality:F2}, End {endurance:F2}, Flex {flexibility:F2}";
+    }
+
+    private static string BuildHabitatSummary(World world, Species species, IReadOnlyCollection<RegionSpeciesPopulation> activePopulations)
+    {
+        RegionBiome? dominantBiome = activePopulations
+            .GroupBy(population => world.Regions[population.RegionId].Biome)
+            .OrderByDescending(group => group.Count())
+            .Select(group => group.Key)
+            .Cast<RegionBiome?>()
+            .FirstOrDefault();
+        if (dominantBiome is null)
+        {
+            return "ancestral fit";
+        }
+
+        double climateTolerance = activePopulations.Count == 0
+            ? species.TemperatureTolerance
+            : activePopulations.Average(population => PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.ClimateTolerance));
+        return $"{dominantBiome} specialist, climate tolerance {climateTolerance:F2}";
     }
 
     private void EnsureBroadProducerCoverage(World world)

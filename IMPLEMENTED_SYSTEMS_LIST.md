@@ -29,29 +29,34 @@ Implemented:
 - early ecological simulation loop with producer support, consumer pressure, predator pressure, founder spread, and local extinction cleanup
 - founder-population migration into adjacent viable regions
 - Phase A ecological readiness and stability reporting
-- bootstrap gating so the default startup path stops at primitive ecology rather than immediately enabling mutation, sentience, polity formation, or player focus
+- bootstrap gating so the default startup path now hands off from ecological readiness into the next pre-social evolution layer instead of assuming civilization-ready species or polities
 
 Intentionally deferred to later startup passes:
-- lineage ancestry trees beyond current species/root bookkeeping
-- mutation/speciation as an active startup-stage system
-- sentience activation
 - society and polity creation
 - focal polity selection and player-entry runtime assumptions
+- active-play chronicle boundary changes
 
 ### Pass 2 - Evolution and Divergence
-**Status:** Planned
+**Status:** Implemented foundation slice
 
-Planned:
-- activate mutation and divergence from surviving primitive founders
-- descendant-lineage emergence and deeper ancestry tracking
-- ecological divergence pressure tied to founder isolation and environmental mismatch
-- keep the world pre-societal while lineages differentiate
+Implemented:
+- explicit `EvolutionaryLineage` records with ancestry, origin, extinction, lineage stage, trait/adaptation summaries, and sentience-capability state
+- startup-stage activation of mutation, divergence, founder-isolation pressure, speciation, and extinction history after Phase A ecology stabilizes
+- population-level mutation history first, with regional divergence/contact tracking and speciation only after sustained viable isolation
+- structured evolutionary history events for mutation, divergence milestones, speciation, adaptation, local extinction, global extinction, and sentience-capability milestones
+- lineage adaptation summaries and a rare sentience-capability progression that can produce pre-social `Capable` branches without creating societies yet
+- `PhaseBReadinessReport` so startup handoff to later social emergence is based on branching history, divergence maturity, extinction history, and sentience-capable potential rather than time alone
+
+Intentionally deferred to later startup passes:
+- full sentient societies, settlements, and polity creation from capable lineages
+- focal polity candidate generation and player-entry runtime
+- active-play chronicle changes for bootstrap biological history
 
 ### Pass 3 - Sentience and Social Formation
 **Status:** Planned
 
 Planned:
-- sentience activation from qualifying lineages
+- social emergence from already-sentience-capable lineages
 - early social groups and continuity before full polity logic
 - transition rules from ecological populations into proto-societal actors
 
@@ -208,6 +213,7 @@ Implemented:
 - Species lineage tracking direction
 - Founder-population-based evolutionary spread
 - Anti-cascade and cooldown safeguards for speciation behavior
+- Explicit evolutionary lineage records, structured biological history, sentience-capability progression, and Phase B startup readiness now build on this phase as the canonical Pass 2 bootstrap layer
 
 ---
 

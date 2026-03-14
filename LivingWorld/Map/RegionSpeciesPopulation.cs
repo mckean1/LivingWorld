@@ -66,6 +66,11 @@ public sealed class RegionSpeciesPopulation
     public string? FounderKind { get; set; }
     public int FounderYear { get; set; } = -1;
     public int FounderMonth { get; set; } = -1;
+    public int IsolationYears { get; set; }
+    public int? FounderLineageId { get; set; }
+    public int LastContactYear { get; set; } = -1;
+    public double ContactPressure { get; set; }
+    public string AdaptationPressureSummary { get; set; } = "mixed";
     public bool RegionAdaptationRecorded
     {
         get => LastAdaptationMilestone > 0;
@@ -93,6 +98,7 @@ public sealed class RegionSpeciesPopulation
         FounderKind = founderKind;
         FounderSourceRegionId = sourceRegionId;
         FounderSourceSpeciesId = sourceSpeciesId;
+        FounderLineageId ??= sourceSpeciesId;
         FounderYear = year;
         FounderMonth = month;
     }
@@ -126,7 +132,10 @@ public sealed class RegionSpeciesPopulation
            && LastSpeciationYear < 0
            && FounderKind is null
            && FounderSourceRegionId is null
-           && FounderSourceSpeciesId is null;
+           && FounderSourceSpeciesId is null
+           && FounderLineageId is null
+           && ContactPressure <= 0
+           && IsolationYears <= 0;
 
     public void MarkLocalExtinction(int year, int month, string reason)
     {

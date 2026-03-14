@@ -1,4 +1,5 @@
 using LivingWorld.Core;
+using LivingWorld.Generation;
 using LivingWorld.Life;
 using LivingWorld.Map;
 using LivingWorld.Societies;
@@ -109,6 +110,7 @@ public sealed class MutationSystemTests
 
         Assert.True(population.MinorMutationCount > 0);
         Assert.True(population.DivergenceScore > 0.20);
+        Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.MinorMutation && evt.SpeciesId == 4);
     }
 
     [Fact]
@@ -135,6 +137,7 @@ public sealed class MutationSystemTests
         Assert.True(population.MajorMutationCount > 0);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.SpeciesPopulationMajorMutation);
         Assert.True(population.DivergenceScore >= 2.4);
+        Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.MajorMutation && evt.SpeciesId == 4);
     }
 
     [Fact]
@@ -379,6 +382,8 @@ public sealed class MutationSystemTests
         Assert.Equal(0, descendantPopulation.IsolationSeasons);
         Assert.Equal(0, descendantPopulation.SpeciationReadinessSeasons);
         Assert.Contains(world.Events, evt => evt.Type == WorldEventType.NewSpeciesAppeared && evt.SpeciesId == descendant.Id);
+        Assert.Contains(world.EvolutionaryLineages, lineage => lineage.SpeciesId == descendant.Id && lineage.ParentLineageId == 4);
+        Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.Speciation && evt.SpeciesId == descendant.Id);
     }
 
     [Fact]
@@ -451,6 +456,113 @@ public sealed class MutationSystemTests
         mutationSystem.UpdateSeason(world);
 
         Assert.DoesNotContain(world.Events, evt => evt.Type == WorldEventType.NewSpeciesAppeared);
+    }
+
+    [Fact]
+    public void ContactPressure_SlowsDivergence_WhenSiblingPopulationRemainsConnected()
+    {
+        World isolatedWorld = CreateWorld(withConnectedPopulation: false);
+        World connectedWorld = CreateWorld(withConnectedPopulation: true);
+        MutationSystem mutationSystem = new(seed: 67);
+
+        RegionSpeciesPopulation isolatedPopulation = GetElkPopulation(isolatedWorld);
+        RegionSpeciesPopulation connectedPopulation = GetElkPopulation(connectedWorld);
+        isolatedPopulation.DivergenceScore = 1.2;
+        connectedPopulation.DivergenceScore = 1.2;
+
+        for (int season = 0; season < 8; season++)
+        {
+            isolatedPopulation.RecentFoodStress = 0.4;
+            connectedPopulation.RecentFoodStress = 0.4;
+            mutationSystem.UpdateSeason(isolatedWorld);
+            mutationSystem.UpdateSeason(connectedWorld);
+        }
+
+        Assert.True(isolatedPopulation.DivergenceScore > connectedPopulation.DivergenceScore);
+        Assert.True(connectedPopulation.ContactPressure > 0);
+    }
+
+    [Fact]
+    public void SentienceCapability_RequiresSustainedPressureAndSupport()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        MutationSystem mutationSystem = new(seed: 71, settings: new MutationSettings
+        {
+            SentienceMinimumHistoryYears = 10,
+            SentienceMinimumPopulationSupport = 30,
+            SentienceComplexityThreshold = 1.2,
+            SentienceCapableLineageSoftCap = 4
+        });
+        Species elk = world.Species.First(species => species.Id == 4);
+        RegionSpeciesPopulation population = GetElkPopulation(world);
+
+        world.Time.Reset(20, 3);
+        population.PopulationCount = 60;
+        population.IntelligenceOffset = 0.25;
+        population.SocialityOffset = 0.18;
+        population.DivergencePressure = 1.3;
+        population.HabitatMismatchMutationPressure = 0.6;
+        population.PredationMutationPressure = 0.4;
+        population.FoodStressMutationPressure = 0.3;
+
+        mutationSystem.UpdateSeason(world);
+
+        Assert.Equal(SentienceCapabilityState.Capable, elk.SentienceCapability);
+        Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.SentienceCapabilityMilestone && evt.SpeciesId == elk.Id);
+    }
+
+    [Fact]
+    public void LocalAndGlobalExtinction_RecordEvolutionaryHistory()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        EcosystemSystem ecosystemSystem = new();
+        Species elk = world.Species.First(species => species.Id == 4);
+        foreach (Region region in world.Regions)
+        {
+            RegionSpeciesPopulation population = region.GetOrCreateSpeciesPopulation(elk.Id);
+            population.PopulationCount = 0;
+            population.HasEverExisted = true;
+            population.LastPopulationBeforeExtinction = 12;
+            population.LastPopulationExitReason = "collapse";
+        }
+
+        ecosystemSystem.ResolveSeasonalCleanup(world);
+
+        Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.LocalExtinction && evt.SpeciesId == elk.Id);
+        Assert.Contains(world.EvolutionaryHistory, evt => evt.Type == EvolutionaryHistoryEventType.GlobalExtinction && evt.SpeciesId == elk.Id);
+        Assert.True(world.GetLineageForSpecies(elk.Id)?.IsExtinct);
+    }
+
+    [Fact]
+    public void PhaseBReadinessReport_RequiresMatureDifferentiatedWorld()
+    {
+        World world = CreateWorld(withConnectedPopulation: false);
+        SeedLineages(world);
+        world.EvolutionaryLineages[0].Stage = LineageStage.EstablishedSpecies;
+        world.EvolutionaryLineages[0].AncestryDepth = 1;
+        world.EvolutionaryLineages[0].SentienceCapability = SentienceCapabilityState.Capable;
+        world.EvolutionaryLineages[1].Stage = LineageStage.EstablishedSpecies;
+        world.EvolutionaryLineages[1].AncestryDepth = 2;
+        world.EvolutionaryLineages[1].IsExtinct = true;
+        world.Regions[0].GetOrCreateSpeciesPopulation(4).DivergenceScore = 1.8;
+        world.Regions[1].GetOrCreateSpeciesPopulation(4).DivergenceScore = 1.7;
+        world.Regions[0].GetOrCreateSpeciesPopulation(6).DivergenceScore = 1.9;
+        world.Regions[1].GetOrCreateSpeciesPopulation(6).DivergenceScore = 1.6;
+        world.AddEvolutionaryHistoryEvent(EvolutionaryHistoryEventType.Speciation, 4, null, 4, 0, "test speciation");
+        world.AddEvolutionaryHistoryEvent(EvolutionaryHistoryEventType.Speciation, 6, null, 6, 1, "test speciation");
+
+        PhaseBReadinessReport report = PhaseBReadinessEvaluator.Evaluate(world, new WorldGenerationSettings
+        {
+            MinimumPhaseBMatureLineageCount = 1,
+            MinimumPhaseBSpeciationCount = 2,
+            MinimumPhaseBExtinctLineageCount = 1,
+            MinimumPhaseBAncestryDepth = 1,
+            MinimumPhaseBMatureRegionalDivergenceCount = 4,
+            MinimumPhaseBSentienceCapableLineageCount = 1,
+            MinimumPhaseBStableRegionCount = 1
+        });
+
+        Assert.True(report.IsReady);
     }
 
     private static World CreateWorld(bool withConnectedPopulation = true)
@@ -542,6 +654,8 @@ public sealed class MutationSystemTests
         world.Species.First(species => species.Id == 4).DietSpeciesIds.Add(3);
         world.Species.First(species => species.Id == 6).DietSpeciesIds.Add(4);
 
+        SeedLineages(world);
+
         EcosystemSystem ecosystemSystem = new();
         ecosystemSystem.InitializeRegionalPopulations(world);
 
@@ -589,5 +703,24 @@ public sealed class MutationSystemTests
         polity.SettlementStatus = SettlementStatus.Settled;
         polity.AddSettlement(region.Id, $"{region.Name} Outpost 2");
         return polity;
+    }
+
+    private static void SeedLineages(World world)
+    {
+        if (world.EvolutionaryLineages.Count > 0)
+        {
+            return;
+        }
+
+        foreach (Species species in world.Species)
+        {
+            species.LineageId = species.Id;
+            world.EvolutionaryLineages.Add(new EvolutionaryLineage(species.Id, species.Id, species.EcologyNiche, species.TrophicRole)
+            {
+                OriginRegionId = species.OriginRegionId ?? world.Regions.First().Id,
+                OriginYear = species.OriginYear,
+                TraitProfileSummary = species.Name
+            });
+        }
     }
 }

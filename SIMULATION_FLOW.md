@@ -3,7 +3,7 @@
 LivingWorld runs the full world in monthly ticks. Player-facing output is live chronicle playback, not a yearly report.
 The watch UI can now swap between chronicle and inspection screens without changing the simulation state it observes.
 
-The default seed world feeding that loop is now a primitive ecological foundation: `36` regions, `7` primitive lineages, and `0` starting polities.
+The default seed world feeding that loop is now a pre-social biological history world: `36` regions, primitive founding lineages, descendant branches from bootstrap evolution, and `0` starting polities.
 The agreed startup plan is now:
 
 1. biological world foundation
@@ -11,7 +11,7 @@ The agreed startup plan is now:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1 is implemented now, so the default loop begins from an already-seeded ecological foundation and defers later startup layers.
+Pass 1 and Pass 2 are implemented now, so the default loop begins from an already-seeded ecological foundation plus bootstrap evolutionary history and still defers later social startup layers.
 
 ## Monthly Flow
 
@@ -36,8 +36,8 @@ Pass 1 is implemented now, so the default loop begins from an already-seeded eco
 16. rendering occurs on invalidation rather than after every loop pass; when paused, input continues while monthly advancement is held
 
 In Pass 1, the active monthly path effectively ends after the ecological layers above.
-Hunting, mutation, and all polity-driven loops are intentionally deferred until later startup passes activate them.
-Animal food therefore does not matter yet for the default startup path; the important opening work is that `AnimalBiomass` and regional consumer presence now come from real primitive populations instead of an assumed civilization-ready world.
+In Pass 2, the active monthly path adds mutation/divergence/speciation and extinction-history upkeep but still defers hunting and all polity-driven loops.
+Animal food therefore still does not matter yet for the default startup path; the important opening work is that `AnimalBiomass`, regional consumer presence, lineage branching, and extinction history all come from real biological simulation instead of an assumed civilization-ready world.
 
 The migration step at item 11 is polity migration, not the regional species exchange consumed by mutation at item 5.
 For now, polity migration relocates the polity's settlement records as one network so settlement-grounded systems remain coherent.

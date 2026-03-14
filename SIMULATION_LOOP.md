@@ -25,8 +25,8 @@ The agreed 4-pass startup plan is:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1 is what currently boots by default. World generation seeds primitive ecology, runs internal stabilization, records a `PhaseAReadinessReport`, and only then hands the world to the active loop.
-Later bootstrap layers such as economy/material baselines still exist, but they are skipped while the world remains in the primitive ecological startup stage.
+Pass 1 and Pass 2 are what currently boot by default. World generation seeds primitive ecology, runs internal Phase A stabilization, initializes lineage history, runs internal mutation/divergence/speciation/bootstrap sentience progression, records `PhaseAReadinessReport` and `PhaseBReadinessReport`, and only then hands the world to the active loop.
+Later bootstrap layers such as economy/material baselines still exist, but they are skipped while the world remains in the pre-social startup stages.
 Canonical events now retain explicit origin metadata as well, so the visible chronicle can refuse non-live setup events even if they share a type with legitimate later transitions.
 
 ## Monthly Systems
@@ -68,7 +68,8 @@ At the start of each month, temporary propagation bonuses tick down.
 Ecosystem migration pacing itself is centralized in `EcosystemSettings`, including source thresholds, suitability gates, founder sizing, predator establishment/failure thresholds, prey-support requirements, and cooldowns.
 
 If the world is still in `WorldStartupStage.PrimitiveEcologyFoundation`, the loop intentionally stops after ecology work.
-That keeps Pass 1 honest: no mutation/speciation, no sentience, no polity-year-end logic, and no player-entry assumptions are activated yet.
+If the world has advanced to `WorldStartupStage.EvolutionaryExpansion`, the loop runs ecology plus mutation/divergence/speciation/sentience-capability work, then still stops before polity-facing systems.
+That keeps Pass 1 and Pass 2 honest: no society, polity-year-end logic, or player-entry assumptions are activated yet.
 
 ## Year-End Systems
 

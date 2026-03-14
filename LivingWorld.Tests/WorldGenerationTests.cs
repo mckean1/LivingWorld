@@ -34,12 +34,16 @@ public sealed class WorldGenerationTests
     {
         World world = new WorldGenerator(seed: 7).Generate();
 
-        Assert.Equal(WorldStartupStage.PrimitiveEcologyFoundation, world.StartupStage);
+        Assert.Equal(WorldStartupStage.EvolutionaryExpansion, world.StartupStage);
         Assert.Equal(36, world.Regions.Count);
-        Assert.Equal(7, world.Species.Count);
+        Assert.True(world.Species.Count >= 7);
+        Assert.Equal(world.Species.Count, world.EvolutionaryLineages.Count);
         Assert.Empty(world.Polities);
-        Assert.All(world.Species, species => Assert.True(species.IsPrimitiveLineage));
+        Assert.True(world.Species.Count(species => species.IsPrimitiveLineage) >= 7);
+        Assert.Contains(world.Species, species => species.ParentSpeciesId is not null);
         Assert.True(world.PhaseAReadinessReport.OccupiedRegions > 0);
+        Assert.True(world.PhaseBReadinessReport.MatureLineageCount >= 0);
+        Assert.NotEmpty(world.EvolutionaryHistory);
         Assert.Equal(0, world.Time.Year);
         Assert.Equal(1, world.Time.Month);
     }
@@ -187,6 +191,17 @@ public sealed class WorldGenerationTests
 
         Assert.False(report.IsReady);
         Assert.Contains(report.FailureReasons, reason => reason.StartsWith("producer_coverage_below_target:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void GeneratedWorld_CapturesEvolutionaryHistoryAndPhaseBReadiness()
+    {
+        World world = new WorldGenerator(seed: 29).Generate();
+
+        Assert.NotEmpty(world.EvolutionaryLineages);
+        Assert.Contains(world.EvolutionaryHistory, evt => evt.Type is EvolutionaryHistoryEventType.MinorMutation or EvolutionaryHistoryEventType.MajorMutation or EvolutionaryHistoryEventType.Speciation);
+        Assert.True(world.PhaseBReadinessReport.MaxAncestryDepth >= 0);
+        Assert.True(world.PhaseBReadinessReport.MatureRegionalDivergenceCount >= 0);
     }
 
     private static World CreateFounderSpreadWorld()

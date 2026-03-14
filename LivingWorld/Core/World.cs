@@ -13,9 +13,12 @@ public sealed class World
     public WorldSimulationPhase SimulationPhase { get; private set; }
     public WorldStartupStage StartupStage { get; set; } = WorldStartupStage.SocietalSimulation;
     public PhaseAReadinessReport PhaseAReadinessReport { get; set; } = PhaseAReadinessReport.Empty;
+    public PhaseBReadinessReport PhaseBReadinessReport { get; set; } = PhaseBReadinessReport.Empty;
 
     public List<Region> Regions { get; } = new();
     public List<Species> Species { get; } = new();
+    public List<EvolutionaryLineage> EvolutionaryLineages { get; } = new();
+    public List<EvolutionaryHistoryEvent> EvolutionaryHistory { get; } = new();
     public List<Polity> Polities { get; } = new();
     public List<LocalPopulationExtinctionRecord> LocalPopulationExtinctions { get; } = new();
 
@@ -169,4 +172,33 @@ public sealed class World
 
     private static Dictionary<string, string> CopyMap(IReadOnlyDictionary<string, string> source)
         => new(source, StringComparer.OrdinalIgnoreCase);
+
+    public EvolutionaryLineage? GetLineage(int lineageId)
+        => EvolutionaryLineages.FirstOrDefault(lineage => lineage.Id == lineageId);
+
+    public EvolutionaryLineage? GetLineageForSpecies(int speciesId)
+        => EvolutionaryLineages.FirstOrDefault(lineage => lineage.SpeciesId == speciesId);
+
+    public void AddEvolutionaryHistoryEvent(
+        EvolutionaryHistoryEventType type,
+        int lineageId,
+        int? parentLineageId,
+        int? speciesId,
+        int? regionId,
+        string summary,
+        string? reason = null,
+        IReadOnlyDictionary<string, string>? data = null)
+    {
+        EvolutionaryHistory.Add(new EvolutionaryHistoryEvent(
+            type,
+            Time.Year,
+            Time.Month,
+            lineageId,
+            parentLineageId,
+            speciesId,
+            regionId,
+            summary,
+            reason,
+            data ?? EvolutionaryHistoryEvent.EmptyData));
+    }
 }

@@ -71,6 +71,7 @@ public sealed class MutationSystem
             }
         }
 
+        RefreshEvolutionaryLineages(world);
         LastSeasonMetrics = new MutationSeasonMetrics(mutationChecks, speciationCandidates, speciationEvents);
     }
 
@@ -80,8 +81,11 @@ public sealed class MutationSystem
         if (exchanged)
         {
             population.IsolationSeasons = Math.Max(0, population.IsolationSeasons - 3);
+            population.IsolationYears = population.IsolationSeasons / 4;
             population.SpeciationReadinessSeasons = Math.Max(0, population.SpeciationReadinessSeasons - 4);
             population.IsolationMutationPressure *= 0.72;
+            population.LastContactYear = world.Time.Year;
+            population.ContactPressure = Math.Clamp(population.ContactPressure + 0.35, 0.0, 1.0);
             return;
         }
 
@@ -93,6 +97,16 @@ public sealed class MutationSystem
         population.IsolationSeasons = connectedPopulationExists
             ? Math.Max(0, population.IsolationSeasons - 1)
             : population.IsolationSeasons + 1;
+        population.IsolationYears = population.IsolationSeasons / 4;
+        if (connectedPopulationExists)
+        {
+            population.LastContactYear = world.Time.Year;
+            population.ContactPressure = Math.Clamp(population.ContactPressure + 0.18, 0.0, 1.0);
+        }
+        else
+        {
+            population.ContactPressure = Math.Max(0.0, population.ContactPressure * 0.84);
+        }
 
         if (population.IsolationSeasons >= _settings.SpeciationIsolationSeasonsThreshold && population.PopulationCount >= _settings.SpeciationMinimumPopulation)
         {
@@ -147,9 +161,11 @@ public sealed class MutationSystem
             population.DivergenceScore +
             (population.DivergencePressure * 0.06) +
             (population.DriftMutationPressure * 0.01) -
+            (population.ContactPressure * _settings.ContactDivergenceReductionPerSeason) -
             _settings.DivergenceDecayPerSeason,
             0.0,
             4.8);
+        population.AdaptationPressureSummary = BuildAdaptationPressureSummary(population);
     }
 
     private bool ShouldMutate(RegionSpeciesPopulation population, out MutationTier tier)
@@ -329,6 +345,7 @@ public sealed class MutationSystem
         }
 
         EmitDivergenceMilestone(world, region, population, species, relatedPolity);
+        RecordMutationHistory(world, region, population, species, tier, dominantPressure, rankedPressures, plan);
     }
 
     private void EmitIsolationMilestone(World world, Region region, RegionSpeciesPopulation population, Species species)
@@ -440,6 +457,28 @@ public sealed class MutationSystem
                 ["habitatMismatchPressure"] = population.HabitatMismatchMutationPressure.ToString("F2"),
                 ["population"] = population.PopulationCount.ToString()
             });
+
+        if (world.GetLineageForSpecies(species.Id) is EvolutionaryLineage lineage)
+        {
+            lineage.HabitatAdaptationSummary = BuildLineageHabitatAdaptationSummary(region, species, population);
+            lineage.AdaptationPressureSummary = population.AdaptationPressureSummary;
+            lineage.Stage = LineageStage.EstablishedSpecies;
+        }
+
+        world.AddEvolutionaryHistoryEvent(
+            EvolutionaryHistoryEventType.AdaptationMilestone,
+            species.LineageId,
+            species.ParentSpeciesId,
+            species.Id,
+            region.Id,
+            $"{species.Name} adapted more strongly to {region.Name}",
+            "regional_adaptation",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["adaptationMilestone"] = adaptationMilestone.ToString(),
+                ["suitabilityGain"] = suitabilityGain.ToString("F2"),
+                ["adaptationSignal"] = adaptationSignal
+            });
     }
 
     private void EmitDivergenceMilestone(World world, Region region, RegionSpeciesPopulation population, Species species, Polity? relatedPolity)
@@ -483,6 +522,28 @@ public sealed class MutationSystem
                 ["divergenceScore"] = population.DivergenceScore.ToString("F2"),
                 ["minorMutations"] = population.MinorMutationCount.ToString(),
                 ["majorMutations"] = population.MajorMutationCount.ToString()
+            });
+
+        if (world.GetLineageForSpecies(species.Id) is EvolutionaryLineage lineage)
+        {
+            lineage.MaxObservedDivergenceMilestone = Math.Max(lineage.MaxObservedDivergenceMilestone, milestone);
+            lineage.Stage = milestone >= 2 ? LineageStage.EstablishedSpecies : LineageStage.Diverging;
+            lineage.AdaptationPressureSummary = population.AdaptationPressureSummary;
+        }
+
+        world.AddEvolutionaryHistoryEvent(
+            EvolutionaryHistoryEventType.DivergenceMilestone,
+            species.LineageId,
+            species.ParentSpeciesId,
+            species.Id,
+            region.Id,
+            $"{species.Name} reached divergence milestone {milestone} in {region.Name}",
+            "accumulated_divergence",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["milestone"] = milestone.ToString(),
+                ["divergenceScore"] = population.DivergenceScore.ToString("F2"),
+                ["contactPressure"] = population.ContactPressure.ToString("F2")
             });
     }
 
@@ -835,12 +896,14 @@ public sealed class MutationSystem
         descendantPopulation.LastIsolationEventMilestone = 0;
         descendantPopulation.LastDivergenceMilestone = 0;
         descendantPopulation.LastAdaptationMilestone = 0;
+        descendantPopulation.FounderLineageId = descendant.LineageId;
         descendantPopulation.MarkEstablished(world.Time.Year, world.Time.Month, "speciation", region.Id, species.Id);
         descendantPopulation.HasEverExisted = true;
 
         string pressureSummary = rankedPressures.Count == 0
             ? "mixed pressure"
             : string.Join(", ", rankedPressures.Take(3).Select(candidate => $"{candidate.Name}:{candidate.Value:F2}"));
+        descendantPopulation.AdaptationPressureSummary = pressureSummary;
         string narrative = $"{descendant.Name} appeared in {region.Name} as a new descendant of {species.Name}";
         Polity? relatedPolity = FindRelevantPolity(world, region, species.Id);
         (int? polityId, string? polityName, int? relatedPolityId, string? relatedPolityName, int? relatedPolitySpeciesId, string? relatedPolitySpeciesName) =
@@ -884,6 +947,8 @@ public sealed class MutationSystem
                 ["pressureSummary"] = pressureSummary,
                 ["earliestSpeciationYear"] = descendant.EarliestSpeciationYear.ToString()
             });
+
+        RegisterSpeciationLineage(world, region, species, descendant, pressureSummary, descendantPopulationCount);
 
         _lastRootSpeciationYearByRegion[(region.Id, species.RootAncestorSpeciesId)] = world.Time.Year;
         speciationContext.RegisterNewSpecies(descendant, region.Id, descendantPopulationCount);
@@ -1022,6 +1087,7 @@ public sealed class MutationSystem
             IsToxicToEat = parent.IsToxicToEat,
             DomesticationAffinity = Math.Clamp(parent.DomesticationAffinity - (population.AggressionOffset * 0.08) - (population.SizeOffset * 0.04), 0.02, 0.95),
             CultivationAffinity = parent.CultivationAffinity,
+            LineageId = newSpeciesId,
             ParentSpeciesId = parent.Id,
             RootAncestorSpeciesId = parent.RootAncestorSpeciesId,
             OriginRegionId = region.Id,
@@ -1029,6 +1095,7 @@ public sealed class MutationSystem
             OriginMonth = world.Time.Month,
             OriginCause = "regional_speciation",
             EarliestSpeciationYear = world.Time.Year + _settings.DescendantSpeciesStabilizationYears + ResolveSpeciationJitterYears(newSpeciesId, region.Id),
+            SentienceCapability = SentienceCapabilityState.None,
             OriginPressureSummary = rankedPressures.Count == 0
                 ? "mixed pressure"
                 : string.Join(", ", rankedPressures.Take(3).Select(candidate => $"{candidate.Name}:{candidate.Value:F2}"))
@@ -1047,6 +1114,263 @@ public sealed class MutationSystem
         descendant.PreferredBiomes.Add(region.Biome);
         descendant.InitialRangeRegionIds.Add(region.Id);
         return descendant;
+    }
+
+    private void RefreshEvolutionaryLineages(World world)
+    {
+        foreach (Species species in world.Species)
+        {
+            EvolutionaryLineage? lineage = world.GetLineageForSpecies(species.Id);
+            if (lineage is null)
+            {
+                lineage = new EvolutionaryLineage(species.LineageId, species.Id, species.EcologyNiche, species.TrophicRole)
+                {
+                    ParentLineageId = species.ParentSpeciesId,
+                    RootAncestorLineageId = species.ParentSpeciesId ?? species.LineageId,
+                    OriginRegionId = species.OriginRegionId,
+                    OriginYear = species.OriginYear,
+                    TraitProfileSummary = BuildSpeciesTraitSummary(species),
+                    HabitatAdaptationSummary = "ancestral fit"
+                };
+                world.EvolutionaryLineages.Add(lineage);
+            }
+
+            List<RegionSpeciesPopulation> activePopulations = world.Regions
+                .Select(region => region.GetSpeciesPopulation(species.Id))
+                .Where(population => population is not null && population.PopulationCount > 0)
+                .Cast<RegionSpeciesPopulation>()
+                .ToList();
+            lineage.CurrentPopulationRegions = activePopulations.Count;
+            lineage.CurrentPopulationCount = activePopulations.Sum(population => population.PopulationCount);
+            lineage.IsExtinct = species.IsGloballyExtinct;
+            lineage.ExtinctionYear = species.ExtinctionYear;
+            lineage.ExtinctionMonth = species.ExtinctionMonth;
+            lineage.Stage = ResolveLineageStage(species, activePopulations);
+            lineage.SentienceCapability = species.SentienceCapability;
+            lineage.TraitProfileSummary = BuildSpeciesTraitSummary(species, activePopulations.FirstOrDefault());
+            lineage.HabitatAdaptationSummary = activePopulations
+                .OrderByDescending(population => population.HabitatSuitability)
+                .Select(population => BuildLineageHabitatAdaptationSummary(world.Regions[population.RegionId], species, population))
+                .FirstOrDefault()
+                ?? lineage.HabitatAdaptationSummary;
+            lineage.AdaptationPressureSummary = activePopulations
+                .OrderByDescending(population => population.DivergencePressure)
+                .Select(population => population.AdaptationPressureSummary)
+                .FirstOrDefault(summary => !string.IsNullOrWhiteSpace(summary))
+                ?? lineage.AdaptationPressureSummary;
+
+            EvaluateSentienceCapability(world, species, lineage, activePopulations);
+        }
+    }
+
+    private void EvaluateSentienceCapability(World world, Species species, EvolutionaryLineage lineage, IReadOnlyCollection<RegionSpeciesPopulation> activePopulations)
+    {
+        double intelligence = activePopulations.Count == 0
+            ? species.Intelligence
+            : activePopulations.Average(population => PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Intelligence));
+        double sociality = activePopulations.Count == 0
+            ? species.Cooperation
+            : activePopulations.Average(population => PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Sociality));
+        double ecologicalComplexity = activePopulations.Count == 0
+            ? 0.0
+            : activePopulations.Average(population =>
+                population.DivergencePressure +
+                population.HabitatMismatchMutationPressure +
+                population.PredationMutationPressure +
+                population.FoodStressMutationPressure);
+        int viablePopulationSupport = activePopulations.Sum(population => population.PopulationCount);
+        int lineageAge = Math.Max(0, world.Time.Year - species.OriginYear);
+        int capableCount = world.EvolutionaryLineages.Count(candidate => !candidate.IsExtinct && candidate.SentienceCapability == SentienceCapabilityState.Capable);
+
+        SentienceCapabilityState nextState = SentienceCapabilityState.None;
+        if (intelligence >= _settings.SentienceIntelligenceThreshold * 0.82
+            && sociality >= _settings.SentienceSocialityThreshold * 0.82
+            && ecologicalComplexity >= _settings.SentienceComplexityThreshold * 0.58
+            && viablePopulationSupport >= _settings.SentienceMinimumPopulationSupport / 2
+            && lineageAge >= _settings.SentienceMinimumHistoryYears / 2)
+        {
+            nextState = SentienceCapabilityState.Latent;
+        }
+
+        if (intelligence >= _settings.SentienceIntelligenceThreshold * 0.92
+            && sociality >= _settings.SentienceSocialityThreshold * 0.90
+            && ecologicalComplexity >= _settings.SentienceComplexityThreshold * 0.82
+            && viablePopulationSupport >= (int)(_settings.SentienceMinimumPopulationSupport * 0.72)
+            && lineageAge >= (int)(_settings.SentienceMinimumHistoryYears * 0.72))
+        {
+            nextState = SentienceCapabilityState.Emerging;
+        }
+
+        if (capableCount < _settings.SentienceCapableLineageSoftCap
+            && intelligence >= _settings.SentienceIntelligenceThreshold
+            && sociality >= _settings.SentienceSocialityThreshold
+            && ecologicalComplexity >= _settings.SentienceComplexityThreshold
+            && viablePopulationSupport >= _settings.SentienceMinimumPopulationSupport
+            && lineageAge >= _settings.SentienceMinimumHistoryYears)
+        {
+            nextState = SentienceCapabilityState.Capable;
+        }
+
+        if (nextState <= species.SentienceCapability)
+        {
+            return;
+        }
+
+        species.SentienceCapability = nextState;
+        lineage.SentienceCapability = nextState;
+        lineage.Stage = nextState == SentienceCapabilityState.Capable || lineage.Stage == LineageStage.SentienceCapable
+            ? LineageStage.SentienceCapable
+            : lineage.Stage == LineageStage.Primitive
+                ? LineageStage.EstablishedSpecies
+                : lineage.Stage;
+        lineage.SentienceMilestoneYear = world.Time.Year;
+        world.AddEvolutionaryHistoryEvent(
+            EvolutionaryHistoryEventType.SentienceCapabilityMilestone,
+            lineage.Id,
+            lineage.ParentLineageId,
+            species.Id,
+            species.OriginRegionId,
+            $"{species.Name} reached sentience capability state {nextState}",
+            "sentience_progression",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["state"] = nextState.ToString(),
+                ["intelligence"] = intelligence.ToString("F2"),
+                ["sociality"] = sociality.ToString("F2"),
+                ["ecologicalComplexity"] = ecologicalComplexity.ToString("F2"),
+                ["populationSupport"] = viablePopulationSupport.ToString()
+            });
+    }
+
+    private static LineageStage ResolveLineageStage(Species species, IReadOnlyCollection<RegionSpeciesPopulation> activePopulations)
+    {
+        if (species.SentienceCapability == SentienceCapabilityState.Capable)
+        {
+            return LineageStage.SentienceCapable;
+        }
+
+        if (species.ParentSpeciesId is not null || activePopulations.Any(population => population.DivergenceScore >= 1.6))
+        {
+            return species.ParentSpeciesId is not null
+                ? LineageStage.EstablishedSpecies
+                : LineageStage.Diverging;
+        }
+
+        return LineageStage.Primitive;
+    }
+
+    private void RecordMutationHistory(
+        World world,
+        Region region,
+        RegionSpeciesPopulation population,
+        Species species,
+        MutationTier tier,
+        MutationPressureContribution dominantPressure,
+        IReadOnlyList<MutationPressureContribution> rankedPressures,
+        MutationPlan plan)
+    {
+        if (world.GetLineageForSpecies(species.Id) is not EvolutionaryLineage lineage)
+        {
+            return;
+        }
+
+        lineage.MutationEventCount++;
+        if (tier == MutationTier.Major)
+        {
+            lineage.MajorMutationEventCount++;
+        }
+
+        lineage.AdaptationPressureSummary = population.AdaptationPressureSummary;
+        lineage.TraitProfileSummary = BuildSpeciesTraitSummary(species, population);
+        world.AddEvolutionaryHistoryEvent(
+            tier == MutationTier.Major ? EvolutionaryHistoryEventType.MajorMutation : EvolutionaryHistoryEventType.MinorMutation,
+            lineage.Id,
+            lineage.ParentLineageId,
+            species.Id,
+            region.Id,
+            $"{species.Name} mutated in {region.Name}",
+            $"pressure_{dominantPressure.Name}",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["tier"] = tier.ToString(),
+                ["pressureSummary"] = string.Join(", ", rankedPressures.Take(3).Select(candidate => $"{candidate.Name}:{candidate.Value:F2}")),
+                ["traitChanges"] = string.Join(", ", plan.Changes.Select(change => $"{change.Trait}:{change.Delta:+0.00;-0.00}")),
+                ["divergenceScore"] = population.DivergenceScore.ToString("F2")
+            });
+    }
+
+    private void RegisterSpeciationLineage(World world, Region region, Species parent, Species descendant, string pressureSummary, int descendantPopulationCount)
+    {
+        EvolutionaryLineage? parentLineage = world.GetLineageForSpecies(parent.Id);
+        EvolutionaryLineage descendantLineage = new(descendant.LineageId, descendant.Id, descendant.EcologyNiche, descendant.TrophicRole)
+        {
+            ParentLineageId = parent.LineageId,
+            RootAncestorLineageId = parentLineage?.RootAncestorLineageId ?? parent.LineageId,
+            OriginRegionId = region.Id,
+            OriginYear = world.Time.Year,
+            Stage = LineageStage.EstablishedSpecies,
+            TraitProfileSummary = BuildSpeciesTraitSummary(descendant),
+            HabitatAdaptationSummary = region.Biome.ToString(),
+            AdaptationPressureSummary = pressureSummary,
+            AncestryDepth = (parentLineage?.AncestryDepth ?? 0) + 1
+        };
+        world.EvolutionaryLineages.Add(descendantLineage);
+
+        if (parentLineage is not null)
+        {
+            parentLineage.Stage = LineageStage.EstablishedSpecies;
+            parentLineage.SpeciationCount++;
+            parentLineage.DescendantLineageIds.Add(descendantLineage.Id);
+        }
+
+        world.AddEvolutionaryHistoryEvent(
+            EvolutionaryHistoryEventType.Speciation,
+            descendantLineage.Id,
+            descendantLineage.ParentLineageId,
+            descendant.Id,
+            region.Id,
+            $"{descendant.Name} speciated from {parent.Name} in {region.Name}",
+            "regional_speciation",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["parentSpeciesId"] = parent.Id.ToString(),
+                ["descendantPopulation"] = descendantPopulationCount.ToString(),
+                ["pressureSummary"] = pressureSummary
+            });
+    }
+
+    private static string BuildAdaptationPressureSummary(RegionSpeciesPopulation population)
+    {
+        List<(string Name, double Value)> pressures =
+        [
+            ("climate mismatch", population.HabitatMismatchMutationPressure),
+            ("food instability", population.FoodStressMutationPressure),
+            ("predation", population.PredationMutationPressure),
+            ("crowding", population.CrowdingMutationPressure),
+            ("isolation", population.IsolationMutationPressure)
+        ];
+
+        return string.Join(", ", pressures
+            .Where(entry => entry.Value >= 0.18)
+            .OrderByDescending(entry => entry.Value)
+            .Take(2)
+            .Select(entry => entry.Name));
+    }
+
+    private static string BuildLineageHabitatAdaptationSummary(Region region, Species species, RegionSpeciesPopulation population)
+    {
+        double climateTolerance = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.ClimateTolerance);
+        double dietFlexibility = PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.DietFlexibility);
+        return $"{region.Biome} fit {population.HabitatSuitability:F2}, climate {climateTolerance:F2}, diet {dietFlexibility:F2}";
+    }
+
+    private static string BuildSpeciesTraitSummary(Species species, RegionSpeciesPopulation? population = null)
+    {
+        double intelligence = population is null ? species.Intelligence : PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Intelligence);
+        double sociality = population is null ? species.Cooperation : PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Sociality);
+        double endurance = population is null ? PopulationTraitResolver.GetBaselineTrait(species, SpeciesTrait.Endurance) : PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Endurance);
+        double size = population is null ? PopulationTraitResolver.GetBaselineTrait(species, SpeciesTrait.Size) : PopulationTraitResolver.GetEffectiveTrait(species, population, SpeciesTrait.Size);
+        return $"Int {intelligence:F2}, Soc {sociality:F2}, End {endurance:F2}, Size {size:F2}";
     }
 
     private bool ShouldEmitMutationEvent(World world, RegionSpeciesPopulation population, MutationTier tier, double impact)

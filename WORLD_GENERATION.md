@@ -10,11 +10,11 @@ The agreed startup path is:
 3. sentience and social formation
 4. polity start and player entry
 
-This document describes Pass 1, which is the current default startup output.
+This document describes the current default startup output, which now includes Pass 1 ecological foundation and Pass 2 evolutionary history bootstrap before any social layer begins.
 
 ## Default Scale
 
-The current Pass 1 targets live in `LivingWorld/Generation/WorldGenerationSettings.cs`:
+The current startup targets live in `LivingWorld/Generation/WorldGenerationSettings.cs`:
 
 - `RegionCount = 36`
 - `InitialSpeciesCount = 7`
@@ -23,7 +23,10 @@ The current Pass 1 targets live in `LivingWorld/Generation/WorldGenerationSettin
 - `ContinentHeight = 6`
 - `PhaseAMinimumBootstrapMonths = 18`
 - `PhaseAMaximumBootstrapMonths = 60`
+- `PhaseBMinimumBootstrapYears = 180`
+- `PhaseBMaximumBootstrapYears = 900`
 - readiness thresholds for occupied regions, producer coverage, consumer coverage, and predator coverage
+- readiness thresholds for mature lineage count, speciation count, ancestry depth, divergence maturity, sentience-capable count, and stable regions
 
 These values are intentionally centralized so density tuning can happen without rewriting generation logic.
 
@@ -36,10 +39,11 @@ These values are intentionally centralized so density tuning can happen without 
 5. assign each primitive lineage a suitability-based clustered starting range
 6. initialize regional primitive populations from those ranges
 7. run an internal Phase A ecological bootstrap loop until readiness is achieved or the bootstrap month cap is reached
-8. store a `PhaseAReadinessReport` for inspection and later startup passes
+8. initialize explicit evolutionary lineage records from the surviving primitive carriers
+9. run an internal Phase B evolutionary bootstrap loop with mutation, divergence, speciation, extinction, and sentience-capability progression until readiness is achieved or the bootstrap year cap is reached
+10. store `PhaseAReadinessReport` and `PhaseBReadinessReport` for inspection and later startup passes
 
-Pass 1 intentionally does not generate sentient species, societies, or polities.
-Those layers remain deferred to later startup passes.
+The default startup still intentionally stops before societies or polities exist.
 
 ## Region Model
 
@@ -107,12 +111,36 @@ Readiness is not time-based only.
 
 Later startup passes should use that report to decide whether the ecological foundation is ready to hand off.
 
+## Phase B Bootstrap And Readiness
+
+After Phase A succeeds, startup now creates explicit lineage records and runs an evolutionary bootstrap.
+
+That layer adds:
+
+- ancestry-preserving `EvolutionaryLineage` records
+- regional mutation and divergence accumulation
+- contact moderation so connected sibling populations diverge more slowly
+- founder-driven speciation only after sustained isolation, viability, and persistence
+- local and global extinction history retention
+- emergent habitat/trait adaptation summaries
+- rare sentience-capability progression from ecological pressure plus continuity
+
+`PhaseBReadinessReport` currently tracks:
+
+- mature lineage count
+- speciation count
+- extinct lineage count
+- max ancestry depth
+- mature regional divergence count
+- sentience-capable lineage count
+- stable ecosystem region count
+- failure reasons
+
 ## Deferred To Later Passes
 
-Pass 1 does not yet implement:
+The startup path still does not yet implement:
 
-- mutation/speciation activation in the startup path
-- sentience activation
+- full sentient societies from sentience-capable branches
 - society or polity generation
 - focal-polity selection
 - player-entry runtime assumptions
@@ -128,7 +156,7 @@ After generation:
 World generation does not produce a separate player-facing yearly report path.
 
 Regional primitive populations now exist before any later-stage society logic could run.
-Those populations carry founder/source and stress/trend slots already, so later mutation/speciation and sentience passes can grow from real ecological history rather than replacing the startup model.
+Those populations now also carry founder/contact/divergence state, so mutation/speciation and sentience-capability progression grow from real ecological history rather than replacing the startup model.
 
 ## Phase 13/14 Generation Support
 

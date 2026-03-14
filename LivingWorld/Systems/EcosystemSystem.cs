@@ -453,6 +453,25 @@ public sealed class EcosystemSystem
                         population.LastPopulationBeforeExtinction,
                         population.StressScore,
                         population.HabitatSuitability));
+
+                    if (world.GetLineageForSpecies(species.Id) is EvolutionaryLineage lineage)
+                    {
+                        lineage.LocalExtinctionCount++;
+                        world.AddEvolutionaryHistoryEvent(
+                            EvolutionaryHistoryEventType.LocalExtinction,
+                            lineage.Id,
+                            lineage.ParentLineageId,
+                            species.Id,
+                            region.Id,
+                            $"{species.Name} disappeared from {region.Name}",
+                            population.LastPopulationExitReason ?? "local_extinction",
+                            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                            {
+                                ["populationBefore"] = population.LastPopulationBeforeExtinction.ToString(),
+                                ["stressScore"] = population.StressScore.ToString("F2"),
+                                ["habitatSuitability"] = population.HabitatSuitability.ToString("F2")
+                            });
+                    }
                 }
 
                 population.RecentPredationPressure = 0;
@@ -489,6 +508,27 @@ public sealed class EcosystemSystem
                 species.ExtinctionYear = world.Time.Year;
                 species.ExtinctionMonth = world.Time.Month;
 
+                if (world.GetLineageForSpecies(species.Id) is EvolutionaryLineage lineage)
+                {
+                    lineage.IsExtinct = true;
+                    lineage.ExtinctionYear = world.Time.Year;
+                    lineage.ExtinctionMonth = world.Time.Month;
+                    lineage.GlobalExtinctionCount++;
+                    world.AddEvolutionaryHistoryEvent(
+                        EvolutionaryHistoryEventType.GlobalExtinction,
+                        lineage.Id,
+                        lineage.ParentLineageId,
+                        species.Id,
+                        null,
+                        $"{species.Name} went globally extinct",
+                        "global_extinction",
+                        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["originYear"] = lineage.OriginYear.ToString(),
+                            ["regionsAtEnd"] = lineage.CurrentPopulationRegions.ToString()
+                        });
+                }
+
                 world.AddEvent(
                     WorldEventType.GlobalSpeciesExtinction,
                     WorldEventSeverity.Legendary,
@@ -504,6 +544,12 @@ public sealed class EcosystemSystem
                 species.IsGloballyExtinct = false;
                 species.ExtinctionYear = null;
                 species.ExtinctionMonth = null;
+                if (world.GetLineageForSpecies(species.Id) is EvolutionaryLineage lineage)
+                {
+                    lineage.IsExtinct = false;
+                    lineage.ExtinctionYear = null;
+                    lineage.ExtinctionMonth = null;
+                }
             }
         }
     }
