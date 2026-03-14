@@ -86,7 +86,7 @@ Intentionally deferred to Pass 4:
 
 Implemented:
 - startup world-age presets with variable prehistory duration, target age as a soft centerpoint, and readiness strictness / candidate-count tuning
-- explicit prehistory runtime state flow across biological foundation, evolutionary history, social emergence, player-entry evaluation, focal selection, and active play
+- explicit outer prehistory runtime flow that now tracks BootstrapWorldFrame → PrehistoryRunning (with legacy biological/evolutionary/social subphase detail) → ReadinessCheckpoint → FocalSelection → ActivePlay or GenerationFailure, with checkpoint outcomes (ContinuePrehistory / EnterFocalSelection / ForceEnterFocalSelection / GenerationFailure) capturing evaluator decisions instead of mutating the raw simulation truth
 - `WorldReadinessReport` for player-entry handoff using biological, social, civilizational, candidate, and stability categories instead of raw age alone
 - focal candidate generation from real simulated post-prehistory polities with viability filters, score-plus-diversity ranking, and weak-world emergency fallback thresholds
 - compact player-facing candidate summaries covering lineage/species, region, age, settlement depth, subsistence style, current condition, discoveries, learned capability, and a recent historical note

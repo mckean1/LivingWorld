@@ -107,7 +107,7 @@ public sealed class StartupProgressRenderer : IDisposable
             $" Activity: {runtime.SubphaseLabel}",
             $" Status: {runtime.ActivitySummary}",
             $" World Age: {runtime.WorldAgeYears} years | Preset: {age.Preset} | Window: {age.MinPrehistoryYears}-{age.TargetPrehistoryYears}-{age.MaxPrehistoryYears}",
-            $" Readiness: {(runtime.AreReadinessChecksActive ? "active" : "warming up")} | Stop: {runtime.StopReason?.ToString() ?? "still running"} | Attempt: {world.StartupGenerationAttempt + 1}"
+            $" Readiness: {(runtime.AreReadinessChecksActive ? "active" : "warming up")} | Checkpoint: {runtime.LastCheckpointOutcome?.Kind.ToString() ?? "pending"} | Attempt: {world.StartupGenerationAttempt + 1}"
         ];
 
         if (!string.IsNullOrWhiteSpace(runtime.TransitionSummary))
@@ -134,11 +134,11 @@ public sealed class StartupProgressRenderer : IDisposable
 
     private void RenderRedirected(World world, IReadOnlyList<string> lines)
     {
-        string phaseKey = $"{world.PrehistoryRuntime.CurrentState}|{world.PrehistoryRuntime.SubphaseLabel}";
+        string phaseKey = world.PrehistoryRuntime.GetStateKey();
         bool shouldWrite = !string.Equals(phaseKey, _lastRedirectedPhaseKey, StringComparison.Ordinal)
             || world.PrehistoryRuntime.WorldAgeYears == 0
             || world.PrehistoryRuntime.WorldAgeYears >= _lastRedirectedAge + 25
-            || world.PrehistoryRuntime.StopReason is not null;
+            || world.PrehistoryRuntime.LastCheckpointOutcome is not null;
         if (!shouldWrite)
         {
             return;
@@ -156,15 +156,15 @@ public sealed class StartupProgressRenderer : IDisposable
 
     private static IReadOnlyList<string> BuildMetricLines(World world)
     {
-        return world.PrehistoryRuntime.CurrentState switch
+        return world.PrehistoryRuntime.CurrentPhase switch
         {
-            PrehistoryRuntimeState.BootstrapWorldFrame => BuildWorldFrameMetrics(world),
-            PrehistoryRuntimeState.PhaseA_BiologicalFoundation => BuildPhaseAMetrics(world),
-            PrehistoryRuntimeState.PhaseB_EvolutionaryHistory => BuildPhaseBMetrics(world),
-            PrehistoryRuntimeState.PhaseC_CivilizationalEmergence => BuildPhaseCMetrics(world),
-            PrehistoryRuntimeState.PhaseD_PlayerEntryEvaluation => BuildPhaseDMetrics(world),
-            PrehistoryRuntimeState.FocalSelection => BuildPhaseDMetrics(world),
-            _ => [" Metrics: live chronicle active"]
+            PrehistoryRuntimePhase.BootstrapWorldFrame => BuildWorldFrameMetrics(world),
+            PrehistoryRuntimePhase.PrehistoryRunning => BuildPrehistoryRunningMetrics(world),
+            PrehistoryRuntimePhase.ReadinessCheckpoint => BuildPrehistoryRunningMetrics(world),
+            PrehistoryRuntimePhase.FocalSelection => BuildPhaseDMetrics(world),
+            PrehistoryRuntimePhase.ActivePlay => [" Metrics: live chronicle active"],
+            PrehistoryRuntimePhase.GenerationFailure => [" Metrics: world generation failed to surface viable starts"],
+            _ => BuildPrehistoryRunningMetrics(world)
         };
     }
 
@@ -234,6 +234,19 @@ public sealed class StartupProgressRenderer : IDisposable
         ];
     }
 
+    private static IReadOnlyList<string> BuildPrehistoryRunningMetrics(World world)
+    {
+        return world.StartupStage switch
+        {
+            WorldStartupStage.PrimitiveEcologyFoundation => BuildPhaseAMetrics(world),
+            WorldStartupStage.EvolutionaryExpansion => BuildPhaseBMetrics(world),
+            WorldStartupStage.SentienceActivation => BuildPhaseCMetrics(world),
+            WorldStartupStage.SocietalSimulation => BuildPhaseCMetrics(world),
+            WorldStartupStage.PlayerEntryEvaluation => BuildPhaseDMetrics(world),
+            _ => [" Metrics: live chronicle active"]
+        };
+    }
+
     private static int CountEvolutionaryEvents(World world, EvolutionaryHistoryEventType type)
         => world.EvolutionaryHistory.Count(entry => entry.Type == type);
 
@@ -251,7 +264,7 @@ public sealed class StartupProgressRenderer : IDisposable
         };
 
     private static string BuildStateKey(World world, IReadOnlyList<string> lines)
-        => $"{world.PrehistoryRuntime.CurrentState}|{world.PrehistoryRuntime.SubphaseLabel}|{world.PrehistoryRuntime.WorldAgeYears}|{lines.Count}";
+        => $"{world.PrehistoryRuntime.GetStateKey()}|{lines.Count}";
 
     private void HideCursor()
     {

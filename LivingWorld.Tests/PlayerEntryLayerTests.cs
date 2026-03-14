@@ -23,19 +23,19 @@ public sealed class PlayerEntryLayerTests
     }
 
     [Fact]
-    public void PrehistoryRuntimeController_DoesNotEnableReadinessBeforeMinimumAge()
+    public void PrehistoryRuntimeOrchestrator_DoesNotEnableReadinessBeforeMinimumAge()
     {
         World world = new(new WorldTime(200, 1), WorldSimulationPhase.Bootstrap);
         StartupWorldAgeConfiguration config = StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld);
-        PrehistoryRuntimeController controller = new();
+        PrehistoryRuntimeOrchestrator orchestrator = new();
 
-        controller.Initialize(world, config);
-        controller.RefreshAge(world);
+        orchestrator.Initialize(world, config);
+        orchestrator.RefreshAge(world);
 
         Assert.False(world.PrehistoryRuntime.AreReadinessChecksActive);
 
         world.Time.Reset(config.MinPrehistoryYears, 1);
-        controller.RefreshAge(world);
+        orchestrator.RefreshAge(world);
 
         Assert.True(world.PrehistoryRuntime.AreReadinessChecksActive);
     }
@@ -46,11 +46,11 @@ public sealed class PlayerEntryLayerTests
         World world = new WorldGenerator(seed: 31).Generate();
 
         Assert.Equal(WorldStartupStage.FocalSelection, world.StartupStage);
-        Assert.Equal(PrehistoryRuntimeState.FocalSelection, world.PrehistoryRuntime.CurrentState);
+        Assert.Equal(PrehistoryRuntimePhase.FocalSelection, world.PrehistoryRuntime.CurrentPhase);
         Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
         Assert.NotEmpty(world.PlayerEntryCandidates);
         Assert.InRange(world.PlayerEntryCandidates.Count, 1, 8);
-        Assert.NotNull(world.PrehistoryStopReason);
+        Assert.NotNull(world.PrehistoryRuntime.LastCheckpointOutcome);
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public sealed class PlayerEntryLayerTests
         WorldGenerationSettings settings = new();
         World world = CreateWeakFallbackWorld();
 
-        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, out List<string> rejectionReasons);
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, allowEmergencyFallback: false, out List<string> rejectionReasons);
 
         Assert.False(accepted);
         Assert.Contains("max_age_stop_only_produced_fallback_pool", rejectionReasons);
@@ -107,7 +107,7 @@ public sealed class PlayerEntryLayerTests
         };
         World world = CreateWeakFallbackWorld();
 
-        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, out List<string> rejectionReasons);
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, allowEmergencyFallback: false, out List<string> rejectionReasons);
 
         Assert.False(accepted);
         Assert.NotEmpty(rejectionReasons);
@@ -140,7 +140,7 @@ public sealed class PlayerEntryLayerTests
             0.18,
             new[] { "fallback_only_polities", "fallback_only_focal_candidates" });
 
-        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, out List<string> rejectionReasons);
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, allowEmergencyFallback: false, out List<string> rejectionReasons);
 
         Assert.False(accepted);
         Assert.Contains("no_organic_polities_available", rejectionReasons);
@@ -201,7 +201,7 @@ public sealed class PlayerEntryLayerTests
 
         WorldReadinessReport report = WorldReadinessEvaluator.Evaluate(world, settings);
         world.WorldReadinessReport = report;
-        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, out List<string> rejectionReasons);
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, settings, allowEmergencyFallback: false, out List<string> rejectionReasons);
 
         Assert.False(report.IsReady);
         Assert.Contains(report.FailureReasons, reason => reason.StartsWith("organic_polity_count_below_target:", StringComparison.Ordinal));
@@ -325,7 +325,8 @@ public sealed class PlayerEntryLayerTests
 
         Assert.Equal(WorldStartupStage.ActivePlay, world.StartupStage);
         Assert.NotNull(world.SelectedFocalPolityId);
-        Assert.NotNull(world.PlayerEntryWorldYear);
+        Assert.NotNull(world.ActivePlayHandoff.PlayerEntryWorldYear);
+        Assert.NotNull(world.ActivePlayHandoff.PlayerEntryPolityAge);
         Assert.NotNull(world.LiveChronicleStartYear);
         Assert.True(world.IsEventVisibleInLiveChronicle(new WorldEvent
         {
@@ -456,7 +457,7 @@ public sealed class PlayerEntryLayerTests
     {
         World world = CreateCandidateWorld();
         world.StartupStage = WorldStartupStage.FocalSelection;
-        world.PrehistoryStopReason = PrehistoryStopReason.ReadinessSatisfied;
+        world.PrehistoryRuntime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.EnterFocalSelection("world_readiness_passed");
         world.PlayerEntryCandidates.Clear();
         world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(
             1,
@@ -614,7 +615,7 @@ public sealed class PlayerEntryLayerTests
     private static World CreateWeakFallbackWorld()
     {
         World world = CreateSelectionWorld();
-        world.PrehistoryStopReason = PrehistoryStopReason.MaxAgeReached;
+        world.PrehistoryRuntime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.ForceEnterFocalSelection("max_prehistory_age_reached");
         world.PlayerEntryCandidates.Clear();
         world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(
             1,

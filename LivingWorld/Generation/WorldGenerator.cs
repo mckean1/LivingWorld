@@ -4,6 +4,9 @@ using LivingWorld.Map;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace LivingWorld.Generation;
 
@@ -14,7 +17,7 @@ public sealed class WorldGenerator
     private readonly Queue<string> _regionNames;
     private readonly List<PrimitiveLineageTemplate> _primitiveTemplates;
     private readonly WorldGenerationSettings _settings;
-    private readonly PrehistoryRuntimeController _prehistoryRuntimeController = new();
+    private readonly PrehistoryRuntimeOrchestrator _prehistoryRuntimeOrchestrator = new();
     private readonly StartupProgressRenderer? _progressRenderer;
 
     public WorldGenerator(int seed, WorldGenerationSettings? settings = null, StartupProgressRenderer? progressRenderer = null)
@@ -39,7 +42,7 @@ public sealed class WorldGenerator
             if (attempt == 0)
             {
                 World generatedWorld = GenerateSingleAttempt(attempt);
-                if (ShouldSurfaceFocalSelection(generatedWorld, out List<string> attemptRejectionReasons))
+                if (ShouldSurfaceFocalSelection(generatedWorld, allowEmergencyFallback: false, out List<string> attemptRejectionReasons))
                 {
                     if (priorRegenerationReasons.Count > 0)
                     {
@@ -58,7 +61,7 @@ public sealed class WorldGenerator
             int attemptSeed = DeriveAttemptSeed(attempt);
             WorldGenerator attemptGenerator = new(attemptSeed, _settings, _progressRenderer);
             World regeneratedWorld = attemptGenerator.GenerateSingleAttempt(attempt);
-            if (attemptGenerator.ShouldSurfaceFocalSelection(regeneratedWorld, out List<string> regeneratedRejectionReasons))
+            if (attemptGenerator.ShouldSurfaceFocalSelection(regeneratedWorld, allowEmergencyFallback: false, out List<string> regeneratedRejectionReasons))
             {
                 if (priorRegenerationReasons.Count > 0)
                 {
@@ -88,8 +91,8 @@ public sealed class WorldGenerator
             StartupStage = WorldStartupStage.PrimitiveEcologyFoundation,
             StartupGenerationAttempt = attempt
         };
-        _prehistoryRuntimeController.Initialize(world, StartupWorldAgeConfiguration.ForPreset(_settings.StartupWorldAgePreset));
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.Initialize(world, StartupWorldAgeConfiguration.ForPreset(_settings.StartupWorldAgePreset));
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Generating world frame",
             "Preparing continent and climate",
@@ -97,28 +100,28 @@ public sealed class WorldGenerator
         ReportProgress(world);
 
         GenerateRegions(world);
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Generating world frame",
             "Laying out regions",
             "Defining the world map and regional environmental profiles.");
         ReportProgress(world);
         ConnectRegions(world);
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Generating world frame",
             "Connecting land and river corridors",
             "Linking regions so ecological spread and migration can follow real geography.");
         ReportProgress(world);
         GeneratePrimitiveLineages(world);
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Seeding primitive life",
             "Creating foundational lineages",
             "Seeding the earliest primitive lineages across the new world.");
         ReportProgress(world);
         AssignInitialPrimitiveRanges(world);
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Seeding primitive life",
             "Establishing initial ranges",
@@ -287,8 +290,8 @@ public sealed class WorldGenerator
 
     private void StabilizePrimitiveEcology(World world)
     {
-        _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseA_BiologicalFoundation);
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Stabilizing ecosystems",
             "Growing primitive ecologies",
@@ -308,7 +311,7 @@ public sealed class WorldGenerator
                 world.PhaseAReadinessReport = PhaseAReadinessEvaluator.Evaluate(world, _settings);
                 if (month % 12 == 0 || world.PhaseAReadinessReport.IsReady)
                 {
-                    _prehistoryRuntimeController.Describe(
+                    _prehistoryRuntimeOrchestrator.Describe(
                         world,
                         "Stabilizing ecosystems",
                         "Testing biological foundation",
@@ -324,8 +327,8 @@ public sealed class WorldGenerator
             world.Time.AdvanceOneMonth();
         }
 
-        _prehistoryRuntimeController.RefreshAge(world);
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.RefreshAge(world);
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Stabilizing ecosystems",
             "Phase A complete",
@@ -373,9 +376,9 @@ public sealed class WorldGenerator
 
     private void AdvanceEvolutionaryHistory(World world)
     {
-        _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseB_EvolutionaryHistory);
+        _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
         world.StartupStage = WorldStartupStage.EvolutionaryExpansion;
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Running evolutionary history",
             "Diverging regional lineages",
@@ -403,10 +406,10 @@ public sealed class WorldGenerator
             RefreshEvolutionaryLineageSnapshots(world);
             world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
             world.PhaseBDiagnostics = PhaseBDiagnosticsEvaluator.Evaluate(world, _settings);
-            _prehistoryRuntimeController.RefreshAge(world);
+            _prehistoryRuntimeOrchestrator.RefreshAge(world);
             if (year == 1 || year % 25 == 0 || world.PhaseBReadinessReport.IsReady)
             {
-                _prehistoryRuntimeController.Describe(
+                _prehistoryRuntimeOrchestrator.Describe(
                     world,
                     "Running evolutionary history",
                     world.PhaseBReadinessReport.IsReady ? "Checking mature biological history" : "Deepening biological branching",
@@ -424,8 +427,8 @@ public sealed class WorldGenerator
         RefreshEvolutionaryLineageSnapshots(world);
         world.PhaseBReadinessReport = PhaseBReadinessEvaluator.Evaluate(world, _settings);
         world.PhaseBDiagnostics = PhaseBDiagnosticsEvaluator.Evaluate(world, _settings);
-        _prehistoryRuntimeController.RefreshAge(world);
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.RefreshAge(world);
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Running evolutionary history",
             "Phase B complete",
@@ -437,9 +440,9 @@ public sealed class WorldGenerator
     private void AdvanceCivilizationalEmergence(World world)
     {
         SocialEmergenceSystem socialEmergenceSystem = new(_seed + 313, _settings);
-        _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseC_CivilizationalEmergence);
+        _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
         world.StartupStage = WorldStartupStage.SentienceActivation;
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Developing sentient societies",
             "Activating sentient branches",
@@ -458,10 +461,10 @@ public sealed class WorldGenerator
                 polity.YearsInCurrentRegion++;
             }
 
-            _prehistoryRuntimeController.RefreshAge(world);
+            _prehistoryRuntimeOrchestrator.RefreshAge(world);
             if (year == 1 || year % 10 == 0 || world.PhaseCReadinessReport.IsReady)
             {
-                _prehistoryRuntimeController.Describe(
+                _prehistoryRuntimeOrchestrator.Describe(
                     world,
                     "Developing sentient societies",
                     "Growing groups, settlements, and polities",
@@ -484,8 +487,8 @@ public sealed class WorldGenerator
 
         socialEmergenceSystem.UpdateYear(world);
         world.PhaseCReadinessReport = PhaseCReadinessEvaluator.Evaluate(world, _settings);
-        _prehistoryRuntimeController.RefreshAge(world);
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.RefreshAge(world);
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Developing sentient societies",
             "Phase C complete",
@@ -496,9 +499,9 @@ public sealed class WorldGenerator
 
     private void AdvancePlayerEntryEvaluation(World world)
     {
-        _prehistoryRuntimeController.Transition(world, PrehistoryRuntimeState.PhaseD_PlayerEntryEvaluation);
+        _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
         world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
-        _prehistoryRuntimeController.Describe(
+        _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Evaluating world readiness",
             "Building focal candidates",
@@ -508,32 +511,40 @@ public sealed class WorldGenerator
         SocialEmergenceSystem socialEmergenceSystem = new(_seed + 727, _settings);
         PlayerEntryCandidateGenerator candidateGenerator = new(_settings);
 
-        BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
-        world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
-        RefreshStartupEvaluationState(world);
-        ReportProgress(world);
+        PrehistoryCheckpointOutcome initialOutcome = PerformReadinessCheckpoint(
+            world,
+            candidateGenerator,
+            allowEmergencyFallback: false,
+            phaseLabel: "Evaluating world readiness",
+            subphaseLabel: "Building focal candidates",
+            activitySummary: "Evaluating whether the world is mature enough to surface healthy starting candidates.",
+            completionSummary: "world_readiness_passed");
+
+        if (HandlePostCheckpointOutcome(world, initialOutcome))
+        {
+            return;
+        }
 
         while (world.Time.Year < world.StartupAgeConfiguration.MaxPrehistoryYears)
         {
-            _prehistoryRuntimeController.RefreshAge(world);
+            _prehistoryRuntimeOrchestrator.RefreshAge(world);
             bool readinessWindowOpen = world.PrehistoryRuntime.AreReadinessChecksActive;
             bool shouldEvaluate = readinessWindowOpen
                 && ((world.Time.Year - world.StartupAgeConfiguration.MinPrehistoryYears) % Math.Max(1, _settings.ReadinessEvaluationIntervalYears) == 0);
             if (shouldEvaluate)
             {
-                BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
-                world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
-                RefreshStartupEvaluationState(world);
-                _prehistoryRuntimeController.Describe(
+                PrehistoryCheckpointOutcome checkpointOutcome = PerformReadinessCheckpoint(
                     world,
-                    "Evaluating world readiness",
-                    "Checking stop conditions",
-                    "Evaluating whether the world is ready for player entry or needs more historical time.");
-                ReportProgress(world);
-                if (world.WorldReadinessReport.IsReady)
+                    candidateGenerator,
+                    allowEmergencyFallback: false,
+                    phaseLabel: "Evaluating world readiness",
+                    subphaseLabel: "Checking stop conditions",
+                    activitySummary: "Evaluating whether the world is ready for player entry or needs more historical time.",
+                    completionSummary: "world_readiness_passed");
+
+                if (HandlePostCheckpointOutcome(world, checkpointOutcome))
                 {
-                    _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.ReadinessSatisfied, "world_readiness_passed");
-                    break;
+                    return;
                 }
             }
 
@@ -541,19 +552,18 @@ public sealed class WorldGenerator
                 && world.PlayerEntryCandidates.Count >= world.StartupAgeConfiguration.CandidateCountTarget
                 && world.PhaseCReadinessReport.IsReady)
             {
-                BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback: false);
-                world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
-                RefreshStartupEvaluationState(world);
-                _prehistoryRuntimeController.Describe(
+                PrehistoryCheckpointOutcome targetOutcome = PerformReadinessCheckpoint(
                     world,
-                    "Evaluating world readiness",
-                    "Testing target-age handoff",
-                    "Checking whether the world can stop at target age with a healthy candidate pool.");
-                ReportProgress(world);
-                if (world.WorldReadinessReport.IsReady)
+                    candidateGenerator,
+                    allowEmergencyFallback: false,
+                    phaseLabel: "Evaluating world readiness",
+                    subphaseLabel: "Testing target-age handoff",
+                    activitySummary: "Checking whether the world can stop at target age with a healthy candidate pool.",
+                    completionSummary: "target_age_readiness_passed");
+
+                if (HandlePostCheckpointOutcome(world, targetOutcome))
                 {
-                    _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.ReadinessSatisfied, "target_age_readiness_passed");
-                    break;
+                    return;
                 }
             }
 
@@ -567,7 +577,7 @@ public sealed class WorldGenerator
             world.Time.Reset(world.Time.Year + 1, world.Time.Month);
             if ((world.Time.Year - world.StartupAgeConfiguration.MinPrehistoryYears) % Math.Max(1, _settings.ReadinessEvaluationIntervalYears) == 0)
             {
-                _prehistoryRuntimeController.Describe(
+                _prehistoryRuntimeOrchestrator.Describe(
                     world,
                     "Evaluating world readiness",
                     "Advancing late prehistory",
@@ -576,39 +586,15 @@ public sealed class WorldGenerator
             }
         }
 
-        if (world.PrehistoryStopReason is null)
-        {
-            _prehistoryRuntimeController.Stop(world, PrehistoryStopReason.MaxAgeReached, "max_prehistory_age_reached");
-        }
-
-        bool allowEmergencyFallback = world.PrehistoryStopReason == PrehistoryStopReason.MaxAgeReached;
-        BuildPlayerEntryCandidates(world, candidateGenerator, allowEmergencyFallback);
-        world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
-        RefreshStartupEvaluationState(world);
-        _prehistoryRuntimeController.Describe(
+        PrehistoryCheckpointOutcome finalOutcome = PerformReadinessCheckpoint(
             world,
-            "Evaluating world readiness",
-            "Final candidate pass",
-            allowEmergencyFallback
-                ? "Running the final candidate pass at max age and checking whether the world still needs rescue paths."
-                : "Running the final candidate pass and preparing viable starts for handoff.");
-        ReportProgress(world);
-
-        if (world.PrehistoryStopReason == PrehistoryStopReason.MaxAgeReached && world.PlayerEntryCandidates.Any(candidate => candidate.IsFallbackCandidate))
-        {
-            world.PrehistoryStopReason = PrehistoryStopReason.ForcedFallback;
-            world.PrehistoryStopSummary = "candidate_fallback_after_max_age";
-            world.PrehistoryRuntime.StopReason = PrehistoryStopReason.ForcedFallback;
-            world.PrehistoryRuntime.StopSummary = world.PrehistoryStopSummary;
-            RefreshStartupEvaluationState(world);
-        }
-
-        if (world.PlayerEntryCandidates.Count > 0)
-        {
-            _prehistoryRuntimeController.EnterFocalSelection(world);
-            world.StartupStage = WorldStartupStage.FocalSelection;
-            ReportProgress(world);
-        }
+            candidateGenerator,
+            allowEmergencyFallback: true,
+            phaseLabel: "Evaluating world readiness",
+            subphaseLabel: "Final candidate pass",
+            activitySummary: "Running the final candidate pass at max age and checking whether the world still needs rescue paths.",
+            completionSummary: "max_prehistory_age_reached");
+        HandlePostCheckpointOutcome(world, finalOutcome);
     }
 
     private void ReportProgress(World world)
@@ -624,13 +610,6 @@ public sealed class WorldGenerator
         {
             world.CandidateRejectionReasons[polityId] = reason;
         }
-    }
-
-    private bool ShouldSurfaceFocalSelection(World world, out List<string> rejectionReasons)
-    {
-        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, _settings, out rejectionReasons);
-        RefreshStartupEvaluationState(world, accepted ? null : rejectionReasons);
-        return accepted;
     }
 
     private int DeriveAttemptSeed(int attempt)
@@ -675,6 +654,95 @@ public sealed class WorldGenerator
         {
             world.StartupDiagnostics.Add($"regeneration_reason:{reason}");
         }
+    }
+
+    private PrehistoryCheckpointOutcome PerformReadinessCheckpoint(
+        World world,
+        PlayerEntryCandidateGenerator generator,
+        bool allowEmergencyFallback,
+        string phaseLabel,
+        string subphaseLabel,
+        string activitySummary,
+        string completionSummary)
+    {
+        _prehistoryRuntimeOrchestrator.BeginReadinessCheckpoint(world, phaseLabel, subphaseLabel, activitySummary);
+        BuildPlayerEntryCandidates(world, generator, allowEmergencyFallback);
+        world.WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+        RefreshStartupEvaluationState(world);
+        UpdateCandidatePoolSnapshot(world, allowEmergencyFallback);
+        PrehistoryCheckpointOutcome outcome = DetermineCheckpointOutcome(world, allowEmergencyFallback, completionSummary);
+        _prehistoryRuntimeOrchestrator.RecordCheckpointOutcome(world, outcome, transitionSummary: outcome.Summary);
+        ReportProgress(world);
+        return outcome;
+    }
+
+    private PrehistoryCheckpointOutcome DetermineCheckpointOutcome(World world, bool allowEmergencyFallback, string completionSummary)
+    {
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, _settings, allowEmergencyFallback, out List<string> rejectionReasons);
+        string? details = FormatCheckpointDetails(rejectionReasons);
+        if (accepted)
+        {
+            PrehistoryCheckpointOutcomeKind kind = allowEmergencyFallback
+                ? PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection
+                : PrehistoryCheckpointOutcomeKind.EnterFocalSelection;
+            string summary = allowEmergencyFallback ? "candidate_fallback_after_max_age" : completionSummary;
+            return new PrehistoryCheckpointOutcome(kind, summary, details);
+        }
+
+        if (allowEmergencyFallback && world.PlayerEntryCandidates.Count == 0)
+        {
+            return PrehistoryCheckpointOutcome.Failure("generation_failed_no_candidates", details);
+        }
+
+        return PrehistoryCheckpointOutcome.Continue("prehistory_continues", details);
+    }
+
+    private void UpdateCandidatePoolSnapshot(World world, bool emergencyFallback)
+    {
+        int total = world.PlayerEntryCandidates.Count;
+        int fallback = world.PlayerEntryCandidates.Count(candidate => candidate.IsFallbackCandidate);
+        int organic = total - fallback;
+        string summary = emergencyFallback ? "Emergency fallback candidate pool" : "Organic candidate pool";
+        world.PrehistoryEvaluation.CandidatePoolSnapshot = new(total, organic, fallback, emergencyFallback, $"{summary} at year {world.Time.Year}");
+        world.PrehistoryEvaluation.LatestObserverSnapshot = new(world.Time.Year, $"Candidate pool {total} entries", new[] { summary });
+    }
+
+    private static string? FormatCheckpointDetails(IReadOnlyList<string> rejectionReasons)
+        => rejectionReasons.Count == 0 ? null : string.Join(", ", rejectionReasons);
+
+    private bool HandlePostCheckpointOutcome(World world, PrehistoryCheckpointOutcome outcome)
+    {
+        if (outcome.Kind == PrehistoryCheckpointOutcomeKind.EnterFocalSelection
+            || outcome.Kind == PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection)
+        {
+            string activity = outcome.Kind == PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection
+                ? "Preparing the final fallback starts for selection."
+                : "Preparing the final candidate starts for selection.";
+            _prehistoryRuntimeOrchestrator.Describe(
+                world,
+                "World generation complete",
+                "Building focal starts",
+                activity,
+                transitionSummary: outcome.Summary);
+            world.StartupStage = WorldStartupStage.FocalSelection;
+            ReportProgress(world);
+            return true;
+        }
+
+        if (outcome.Kind == PrehistoryCheckpointOutcomeKind.GenerationFailure)
+        {
+            _prehistoryRuntimeOrchestrator.RecordGenerationFailure(world, outcome.Summary);
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool ShouldSurfaceFocalSelection(World world, bool allowEmergencyFallback, out List<string> rejectionReasons)
+    {
+        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, _settings, allowEmergencyFallback, out rejectionReasons);
+        RefreshStartupEvaluationState(world, accepted ? null : rejectionReasons);
+        return accepted;
     }
 
     private void EnsureSentienceCapableSeedBranches(World world)

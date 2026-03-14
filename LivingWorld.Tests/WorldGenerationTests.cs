@@ -51,7 +51,7 @@ public sealed class WorldGenerationTests
         Assert.True(world.Time.Year >= world.StartupAgeConfiguration.MinPrehistoryYears);
         Assert.Equal(1, world.Time.Month);
         Assert.NotEmpty(world.PlayerEntryCandidates);
-        Assert.NotNull(world.PrehistoryStopReason);
+        Assert.NotNull(world.PrehistoryRuntime.LastCheckpointOutcome);
     }
 
     [Fact]

@@ -1,10 +1,12 @@
+using System;
+using System.Collections.Generic;
 using LivingWorld.Core;
 
 namespace LivingWorld.Generation;
 
 public static class PlayerEntryOutcomeEvaluator
 {
-    public static bool ShouldSurfaceFocalSelection(World world, WorldGenerationSettings settings, out List<string> rejectionReasons)
+    public static bool ShouldSurfaceFocalSelection(World world, WorldGenerationSettings settings, bool allowEmergencyFallback, out List<string> rejectionReasons)
     {
         rejectionReasons = [];
         int fallbackCandidateCount = world.PlayerEntryCandidates.Count(candidate => candidate.IsFallbackCandidate);
@@ -14,7 +16,7 @@ public static class PlayerEntryOutcomeEvaluator
             && candidate.RankScore >= settings.MinimumHealthyCandidateScore);
         bool biologyWeak = world.WorldReadinessReport.FailureReasons.Contains("biology_not_ready", StringComparer.OrdinalIgnoreCase)
             || world.WorldReadinessReport.FailureReasons.Contains("biology_floor_below_minimum", StringComparer.OrdinalIgnoreCase);
-        bool weakMaxAgeOutcome = world.PrehistoryStopReason is PrehistoryStopReason.MaxAgeReached or PrehistoryStopReason.ForcedFallback;
+        bool weakMaxAgeOutcome = allowEmergencyFallback;
 
         if (world.PhaseCReadinessReport.OrganicPolityCount == 0)
         {
@@ -56,7 +58,7 @@ public static class PlayerEntryOutcomeEvaluator
             rejectionReasons.Add("max_age_stop_only_produced_fallback_pool");
         }
 
-        if (world.PrehistoryStopReason == PrehistoryStopReason.ForcedFallback)
+        if (allowEmergencyFallback && fallbackCandidateCount == 0 && organicCandidateCount == 0)
         {
             rejectionReasons.Add("forced_fallback_stop_rejected");
         }

@@ -9,7 +9,7 @@ The startup direction is now explicitly primitive-life-first:
 3. sentience and social formation
 4. polity start and player entry
 
-Pass 1 through Pass 4 are implemented now. The default generated world reaches ecological readiness first, then runs evolutionary bootstrap, then social emergence bootstrap, then a player-entry evaluation/runtime layer that stops prehistory on readiness or max-age fallback, produces real focal candidates, and waits in a dedicated selection state before active play begins.
+Those passes now live inside a dedicated runtime orchestration layer rather than defining the outer flow itself. Generation begins in a `BootstrapWorldFrame`, moves into a shared `PrehistoryRunning` pipeline (where the familiar biological/evolutionary/social descriptors serve as subphase text), pauses in a `ReadinessCheckpoint` whenever evaluator logic inspects the latest simulation facts, and finally resolves into `FocalSelection`, `ActivePlay`, or a new `GenerationFailure` state through explicit `PrehistoryCheckpointOutcome` results (ContinuePrehistory / EnterFocalSelection / ForceEnterFocalSelection / GenerationFailure). This keeps the universal monthly simulation pipeline shared between prehistory and active play while letting evaluator decisions, candidate composition, and focal selection sit on top of the raw world truth instead of rewriting it.
 The corrective startup-stabilization pass tightened that contract further: normal starts are expected to come from multiple organic candidate polities, while fallback-created or emergency-admitted worlds are explicitly labeled, diagnosed, and usually regenerated instead of being surfaced as healthy defaults.
 The follow-up startup-richness pass tightened Pass 2 through Pass 4 in a different way: it improves weak Phase B seed families by deepening biological branching/replacement history and makes later candidate summaries/ranking depend on current polity state instead of frozen founder-origin labels.
 
@@ -27,6 +27,7 @@ The follow-up startup-richness pass tightened Pass 2 through Pass 4 in a differe
 - current simulation phase (`Bootstrap` vs `Active`)
 - canonical world events
 
+`World` also now owns a `PrehistoryEvaluationSnapshot` that keeps readiness reports, focal-candidate diagnostics, rejection reasons, observer snapshots, and candidate-pool snapshots separate from the core species/polity truth, plus an `ActivePlayHandoffState` for the chosen focal start metadata and a `PrehistoryFocalSelectionPresentationState` that future UI passes can use. The new `PrehistoryRuntimePhase` flow and `PrehistoryCheckpointOutcomeKind` results expose extension points for the upcoming observer snapshots (PR-2), readiness checkpoints (PR-3), candidate-pool composition (PR-4), focal-selection presentation (PR-5), and active-play handoff conversion (PR-6) phases while keeping the shared monthly pipeline intact.
 Major systems:
 
 - world generation

@@ -14,20 +14,44 @@ public sealed class World
     public WorldStartupStage StartupStage { get; set; } = WorldStartupStage.SocietalSimulation;
     public StartupWorldAgeConfiguration StartupAgeConfiguration { get; set; } = StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld);
     public PrehistoryRuntimeStatus PrehistoryRuntime { get; } = new();
-    public WorldReadinessReport WorldReadinessReport { get; set; } = WorldReadinessReport.Empty;
-    public PrehistoryStopReason? PrehistoryStopReason { get; set; }
-    public string? PrehistoryStopSummary { get; set; }
-    public int? SelectedFocalPolityId { get; set; }
-    public int? PlayerEntryWorldYear { get; set; }
-    public int? PlayerEntryPolityAge { get; set; }
-    public string? InitialCandidateSummarySnapshot { get; set; }
+    public PrehistoryEvaluationSnapshot PrehistoryEvaluation { get; } = new();
+    public PrehistoryCandidatePoolSnapshot? CandidatePoolSnapshot => PrehistoryEvaluation.CandidatePoolSnapshot;
+    public PrehistoryObserverSnapshot? LatestObserverSnapshot => PrehistoryEvaluation.LatestObserverSnapshot;
+    public ActivePlayHandoffState ActivePlayHandoff { get; } = new();
+    public PrehistoryFocalSelectionPresentationState FocalSelectionPresentation { get; } = new();
+    public WorldReadinessReport WorldReadinessReport
+    {
+        get => PrehistoryEvaluation.WorldReadinessReport;
+        set => PrehistoryEvaluation.WorldReadinessReport = value;
+    }
+    public int? SelectedFocalPolityId
+    {
+        get => ActivePlayHandoff.SelectedPolityId;
+        set => ActivePlayHandoff.SetSelectedPolity(value);
+    }
     public int? LiveChronicleStartTick { get; private set; }
     public int? LiveChronicleStartYear { get; private set; }
     public int? LiveChronicleStartMonth { get; private set; }
-    public PhaseAReadinessReport PhaseAReadinessReport { get; set; } = PhaseAReadinessReport.Empty;
-    public PhaseBReadinessReport PhaseBReadinessReport { get; set; } = PhaseBReadinessReport.Empty;
-    public PhaseBDiagnostics PhaseBDiagnostics { get; set; } = PhaseBDiagnostics.Empty;
-    public PhaseCReadinessReport PhaseCReadinessReport { get; set; } = PhaseCReadinessReport.Empty;
+    public PhaseAReadinessReport PhaseAReadinessReport
+    {
+        get => PrehistoryEvaluation.PhaseAReadinessReport;
+        set => PrehistoryEvaluation.PhaseAReadinessReport = value;
+    }
+    public PhaseBReadinessReport PhaseBReadinessReport
+    {
+        get => PrehistoryEvaluation.PhaseBReadinessReport;
+        set => PrehistoryEvaluation.PhaseBReadinessReport = value;
+    }
+    public PhaseBDiagnostics PhaseBDiagnostics
+    {
+        get => PrehistoryEvaluation.PhaseBDiagnostics;
+        set => PrehistoryEvaluation.PhaseBDiagnostics = value;
+    }
+    public PhaseCReadinessReport PhaseCReadinessReport
+    {
+        get => PrehistoryEvaluation.PhaseCReadinessReport;
+        set => PrehistoryEvaluation.PhaseCReadinessReport = value;
+    }
 
     public List<Region> Regions { get; } = new();
     public List<Species> Species { get; } = new();
@@ -38,12 +62,16 @@ public sealed class World
     public List<SocialSettlement> SocialSettlements { get; } = new();
     public List<CivilizationalHistoryEvent> CivilizationalHistory { get; } = new();
     public List<FocalCandidateProfile> FocalCandidateProfiles { get; } = new();
-    public List<PlayerEntryCandidateSummary> PlayerEntryCandidates { get; } = new();
+    public List<PlayerEntryCandidateSummary> PlayerEntryCandidates => PrehistoryEvaluation.PlayerEntryCandidates;
     public List<Polity> Polities { get; } = new();
     public List<LocalPopulationExtinctionRecord> LocalPopulationExtinctions { get; } = new();
-    public Dictionary<int, string> CandidateRejectionReasons { get; } = new();
-    public List<string> StartupDiagnostics { get; } = new();
-    public StartupOutcomeDiagnostics StartupOutcomeDiagnostics { get; set; } = StartupOutcomeDiagnostics.Empty;
+    public Dictionary<int, string> CandidateRejectionReasons => PrehistoryEvaluation.CandidateRejectionReasons;
+    public List<string> StartupDiagnostics => PrehistoryEvaluation.StartupDiagnostics;
+    public StartupOutcomeDiagnostics StartupOutcomeDiagnostics
+    {
+        get => PrehistoryEvaluation.StartupOutcomeDiagnostics;
+        set => PrehistoryEvaluation.StartupOutcomeDiagnostics = value;
+    }
     public int StartupGenerationAttempt { get; set; }
 
     public List<WorldEvent> Events { get; } = new();

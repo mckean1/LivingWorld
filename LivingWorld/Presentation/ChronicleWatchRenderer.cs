@@ -1,3 +1,4 @@
+using System;
 using LivingWorld.Core;
 using LivingWorld.Societies;
 
@@ -135,7 +136,12 @@ public sealed class ChronicleWatchRenderer : IDisposable
             lines.Add($" Candidate Starts: {world.PlayerEntryCandidates.Count}");
             if (uiState.ShowDiagnostics)
             {
-                lines.Add($" Stop: {world.PrehistoryStopReason?.ToString() ?? "Pending"}");
+                string checkpointLabel = world.PrehistoryRuntime.LastCheckpointOutcome?.Kind.ToString() ?? "Pending";
+                string? checkpointDetails = world.PrehistoryRuntime.LastCheckpointOutcome?.Summary;
+                string checkpointLine = checkpointDetails is null
+                    ? $" Checkpoint: {checkpointLabel}"
+                    : $" Checkpoint: {checkpointLabel} ({checkpointDetails})";
+                lines.Add(checkpointLine);
             }
             lines.Add(border);
             return lines;

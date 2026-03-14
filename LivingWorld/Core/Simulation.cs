@@ -376,7 +376,13 @@ public sealed class Simulation : IDisposable
 
         _world.BeginActiveSimulation();
         _world.StartupStage = WorldStartupStage.ActivePlay;
-        _world.PrehistoryRuntime.CurrentState = PrehistoryRuntimeState.ActivePlay;
+        _world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
+        _world.PrehistoryRuntime.IsPrehistoryAdvancing = false;
+        _world.PrehistoryRuntime.AreReadinessChecksActive = true;
+        _world.PrehistoryRuntime.PhaseLabel = "Active play";
+        _world.PrehistoryRuntime.SubphaseLabel = "Chronicle active";
+        _world.PrehistoryRuntime.ActivitySummary = "The live chronicle has begun.";
+        _world.PrehistoryRuntime.TransitionSummary = null;
     }
 
     private void SeedBootstrapHardshipStates()
@@ -705,12 +711,19 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        _world.SelectedFocalPolityId = polityId;
-        _world.PlayerEntryWorldYear = _world.Time.Year;
-        _world.PlayerEntryPolityAge = polity.YearsSinceFounded;
-        _world.InitialCandidateSummarySnapshot = $"{summary.PolityName} | {summary.SpeciesName} | {summary.HomeRegionName} | {summary.CurrentCondition}";
+        _world.ActivePlayHandoff.RecordHandoff(
+            polityId,
+            _world.Time.Year,
+            polity.YearsSinceFounded,
+            $"{summary.PolityName} | {summary.SpeciesName} | {summary.HomeRegionName} | {summary.CurrentCondition}");
         _world.StartupStage = WorldStartupStage.ActivePlay;
-        _world.PrehistoryRuntime.CurrentState = PrehistoryRuntimeState.ActivePlay;
+        _world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
+        _world.PrehistoryRuntime.IsPrehistoryAdvancing = false;
+        _world.PrehistoryRuntime.AreReadinessChecksActive = true;
+        _world.PrehistoryRuntime.PhaseLabel = "Active play";
+        _world.PrehistoryRuntime.SubphaseLabel = "Chronicle active";
+        _world.PrehistoryRuntime.ActivitySummary = "The live chronicle has begun.";
+        _world.PrehistoryRuntime.TransitionSummary = null;
         _chronicleFocus.SetFocus(polity);
         _watchUiState.SetActiveMainView(WatchViewType.Chronicle);
         _watchUiState.SetPaused(false);

@@ -1,3 +1,4 @@
+using System;
 using LivingWorld.Advancement;
 using LivingWorld.Core;
 using LivingWorld.Economy;
@@ -217,13 +218,16 @@ public static class WatchScreenBuilder
     private static IReadOnlyList<string> BuildWorldOverviewLines(World world, WatchKnowledgeSnapshot knowledge, WorldLookup lookup)
     {
         Polity? focalPolity = knowledge.FocalPolity;
+        PrehistoryCheckpointOutcome? checkpoint = world.PrehistoryRuntime.LastCheckpointOutcome;
+        string checkpointLabel = checkpoint?.Kind.ToString() ?? "Pending";
+        string? checkpointSummary = checkpoint?.Summary;
         List<string> lines =
         [
             "World Overview",
             string.Empty,
             $" Year: {world.Time.Year} ({world.Time.Season})",
             $" Prehistory Preset: {world.StartupAgeConfiguration.Preset}",
-            $" Prehistory Stop: {world.PrehistoryStopReason?.ToString() ?? "Still running"}",
+            $" Prehistory Checkpoint: {checkpointLabel}{(string.IsNullOrEmpty(checkpointSummary) ? string.Empty : $" ({checkpointSummary})")}",
             $" Live Chronicle Starts: {(world.LiveChronicleStartYear.HasValue ? $"y{world.LiveChronicleStartYear} m{world.LiveChronicleStartMonth}" : "not started")}",
             $" Known Regions: {knowledge.KnownRegions.Count}",
             $" Known Species: {knowledge.KnownSpecies.Count}",
@@ -332,7 +336,13 @@ public static class WatchScreenBuilder
         {
             lines.Add(string.Empty);
             lines.Add(" Diagnostics:");
-            lines.Add($"  Stop: {world.PrehistoryStopReason?.ToString() ?? "Pending"}");
+            PrehistoryCheckpointOutcome? checkpoint = world.PrehistoryRuntime.LastCheckpointOutcome;
+            string checkpointLabel = checkpoint?.Kind.ToString() ?? "Pending";
+            string? checkpointSummary = checkpoint?.Summary;
+            string checkpointLine = string.IsNullOrEmpty(checkpointSummary)
+                ? $"  Checkpoint: {checkpointLabel}"
+                : $"  Checkpoint: {checkpointLabel} ({checkpointSummary})";
+            lines.Add(checkpointLine);
             lines.Add($"  Scores: bio {world.WorldReadinessReport.BiologicalScore:F2} | social {world.WorldReadinessReport.SocialScore:F2} | civ {world.WorldReadinessReport.CivilizationalScore:F2} | cand {world.WorldReadinessReport.CandidateScore:F2} | stable {world.WorldReadinessReport.StabilityScore:F2}");
             lines.Add($"  Fallback Candidate: {(selected.IsFallbackCandidate ? "yes" : "no")}");
             if (world.WorldReadinessReport.FailureReasons.Count > 0)

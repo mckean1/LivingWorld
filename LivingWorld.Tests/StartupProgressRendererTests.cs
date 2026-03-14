@@ -14,7 +14,8 @@ public sealed class StartupProgressRendererTests
         {
             StartupGenerationAttempt = 1
         };
-        world.PrehistoryRuntime.CurrentState = PrehistoryRuntimeState.PhaseB_EvolutionaryHistory;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
+        world.StartupStage = WorldStartupStage.EvolutionaryExpansion;
         world.PrehistoryRuntime.WorldAgeYears = 180;
         world.PrehistoryRuntime.AreReadinessChecksActive = true;
         world.PrehistoryRuntime.PhaseLabel = "Running evolutionary history";
@@ -36,7 +37,8 @@ public sealed class StartupProgressRendererTests
     public void BuildDisplayLines_ShowsCandidateMetricsWithoutDuplicateLines()
     {
         World world = new(new WorldTime(920, 1));
-        world.PrehistoryRuntime.CurrentState = PrehistoryRuntimeState.PhaseD_PlayerEntryEvaluation;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ReadinessCheckpoint;
+        world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
         world.PrehistoryRuntime.WorldAgeYears = 920;
         world.PrehistoryRuntime.AreReadinessChecksActive = true;
         world.PrehistoryRuntime.PhaseLabel = "Evaluating world readiness";
@@ -59,7 +61,8 @@ public sealed class StartupProgressRendererTests
     public void Render_DoesNotPolluteChronicleEntries()
     {
         World world = new(new WorldTime(240, 1));
-        world.PrehistoryRuntime.CurrentState = PrehistoryRuntimeState.PhaseC_CivilizationalEmergence;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
+        world.StartupStage = WorldStartupStage.SentienceActivation;
         world.PrehistoryRuntime.WorldAgeYears = 240;
         world.PrehistoryRuntime.PhaseLabel = "Developing sentient societies";
         world.PrehistoryRuntime.SubphaseLabel = "Growing groups, settlements, and polities";
@@ -85,7 +88,7 @@ public sealed class StartupProgressRendererTests
         {
             StartupStage = WorldStartupStage.FocalSelection
         };
-        world.PrehistoryRuntime.CurrentState = PrehistoryRuntimeState.FocalSelection;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.FocalSelection;
         world.PrehistoryRuntime.WorldAgeYears = 400;
         world.PrehistoryRuntime.PhaseLabel = "World generation complete";
         world.PrehistoryRuntime.SubphaseLabel = "Building focal starts";
