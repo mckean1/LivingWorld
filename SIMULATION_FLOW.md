@@ -7,6 +7,8 @@ Startup presentation now mirrors that runtime truth. `StartupProgressRenderer` o
 
 Checkpoint evaluation now happens via `PrehistoryCheckpointCoordinator`. It enters `ReadinessCheckpoint`, invokes the transitional `LegacyCheckpointCompatibilityAdapter` (which still runs the legacy readiness and candidate logic), applies the returned `PrehistoryCheckpointEvaluationResult` into `World.Prehistory.Evaluation`, and records explicit `PrehistoryCheckpointOutcome` results (`ContinuePrehistory`, `EnterFocalSelection`, `ForceEnterFocalSelection`, or `GenerationFailure`) before handing control back to the shared monthly pipeline. This keeps the pure world truth intact while the evaluation layer decides whether to continue prehistory, freeze for selection, or resolve a failure.
 
+That checkpoint layer now has an implemented factual observer substrate. `PrehistoryObserverState` retains recent monthly `PeopleMonthlySnapshot` truth, and `PrehistoryObserverService` can build `PeopleHistoryWindowSnapshot`, `RegionEvaluationSnapshot`, and `NeighborContextSnapshot` evidence from current world state without mutating the world. Current-month movement and trade contact are recorded explicitly rather than inferred from yearly counters.
+
 The default seed world feeding that loop is now a biologically and socially grounded bootstrap world: `36` regions, primitive founding lineages, descendant branches from bootstrap evolution, and early pre-player polities created by social emergence.
 The agreed startup plan is now:
 

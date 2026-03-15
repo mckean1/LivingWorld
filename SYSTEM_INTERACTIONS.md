@@ -26,6 +26,7 @@ Pass 1 through Pass 4 are implemented now. The default generated world reaches e
 The corrective startup-stabilization pass tightened the interaction rules between those layers: Phase C must now produce organic social depth that Pass 4 agrees is real, and fallback-only candidate pools are treated as regeneration cases rather than as ordinary starts.
 The startup-richness follow-up then widened the contract again: Pass 2 must produce richer branch/adaptation/sentience breadth, and Pass 4 must preserve genuine current-polity differentiation instead of flattening all healthy starts into the same late-bootstrap profile.
 The latest startup UI pass adds explicit visibility to that contract: world generation reports its current phase, age, and maturity through a dedicated startup render path instead of leaving watch mode blank until focal selection appears.
+The PR-2 observer layer is now also implemented: it stores recent monthly truth in `PrehistoryObserverState` and exposes descriptive `PeopleHistoryWindowSnapshot`, `RegionEvaluationSnapshot`, and `NeighborContextSnapshot` artifacts for later readiness/candidate modules without leaking evaluator conclusions into the artifacts themselves.
 
 ## Current Major Systems
 

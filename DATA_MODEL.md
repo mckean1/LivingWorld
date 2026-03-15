@@ -36,6 +36,12 @@ Event responsibilities:
 - `ConfigureEventPropagation(...)` attaches the propagation coordinator
 - `EventRecorded` publishes each stored event to sinks
 
+Observer-facing prehistory fields:
+
+- `PrehistoryObserver`
+  - retains recent monthly `PeopleMonthlySnapshot` history per polity/people id
+  - supports evaluator-ready rollups without storing conclusions in the base world model
+
 ## Polity
 
 `Polity` represents a social group.
@@ -63,6 +69,33 @@ Propagation support fields:
 - `LastLearnedAgricultureEventId`
 
 These are lightweight runtime fields used so one event can influence later system behavior without creating hidden randomness.
+
+Additional monthly observer-facing fields now also exist on `Polity` for factual capture rather than yearly summary leakage:
+
+- `TradePartnersThisMonth`
+- `MovedThisMonth`
+
+Those are reset on the monthly boundary and are distinct from yearly aggregates such as `TradePartnerCountThisYear`, `MovedThisYear`, and `MovesThisYear`.
+
+## Prehistory Observer Snapshot Types
+
+The PR-2 observer layer adds factual artifacts that sit above raw world state but below readiness/candidate conclusions:
+
+- `PeopleMonthlySnapshot`
+  - one retained monthly truth record per observed people/polity
+  - stores current-month movement, trade contact, settlement condition, support, spatial footprint, shocks, continuity, and neighbor counts
+- `PeopleHistoryWindowSnapshot`
+  - rollup view over recent monthly truth windows (`3`, `6`, `12`, `24` months)
+  - includes window availability, current state, historical rollups, shock markers, and descriptive health summaries
+- `RegionEvaluationSnapshot`
+  - combines global region facts with people-relative relationship/context facts
+- `NeighborContextSnapshot`
+  - captures relevant neighbor pressure, exchange context, lineage/contact overlap, and aggregate metrics
+
+Important rule:
+
+- these artifacts are descriptive evidence only
+- they do not store readiness verdicts, viability scores, selection recommendations, or other evaluator conclusions
 
 ## Settlement
 

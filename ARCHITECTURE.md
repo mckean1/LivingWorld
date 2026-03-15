@@ -41,7 +41,7 @@ The follow-up startup-richness pass tightened Pass 2 through Pass 4 in a differe
 - `World.Prehistory.ActivePlayHandoff` owns explicit handoff metadata
 - `World.Prehistory.FocalSelectionPresentation` keeps future presentation hints
 
-Compatibility forwarding properties remain on `World` for the PR-1 transition, but the durable ownership boundary is now explicit. The new `PrehistoryRuntimePhase` flow and `PrehistoryCheckpointOutcomeKind` results expose extension points for the upcoming observer snapshots (PR-2), readiness checkpoints (PR-3), candidate-pool composition (PR-4), focal-selection presentation (PR-5), and active-play handoff conversion (PR-6) phases while keeping the shared monthly pipeline intact.
+Compatibility forwarding properties remain on `World` for the PR-1 transition, but the durable ownership boundary is now explicit. The new `PrehistoryRuntimePhase` flow and `PrehistoryCheckpointOutcomeKind` results now sit beside an implemented PR-2 observer layer: `PrehistoryObserverState` retains recent monthly `PeopleMonthlySnapshot` truth, and `PrehistoryObserverService` can project `PeopleHistoryWindowSnapshot`, `RegionEvaluationSnapshot`, and `NeighborContextSnapshot` artifacts without mutating the base world. That leaves PR-3 readiness checkpoints, PR-4 candidate-pool composition, PR-5 focal-selection presentation, and PR-6 active-play handoff conversion as the next layers on top of shared simulation truth.
 Major systems:
 
 - world generation

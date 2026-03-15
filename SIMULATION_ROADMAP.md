@@ -80,12 +80,13 @@ Implemented:
 
 ### PR-2 - Observer Snapshot Layer
 
-Planned:
-- implement `PeopleHistoryWindowSnapshot`
-- implement `RegionEvaluationSnapshot`
-- implement `NeighborContextSnapshot`
-- use these as the factual evaluator inputs for readiness and candidate evaluation
-- keep evaluator conclusions out of the snapshot artifacts themselves
+Implemented:
+- `PrehistoryObserverState` now retains recent monthly `PeopleMonthlySnapshot` truth
+- `PrehistoryObserverService` now projects `PeopleHistoryWindowSnapshot`
+- `PrehistoryObserverService` now projects `RegionEvaluationSnapshot`
+- `PrehistoryObserverService` now projects `NeighborContextSnapshot`
+- snapshots keep evaluator conclusions out of the artifacts themselves and stay descriptive/value-bearing only
+- current-month trade and movement truth are captured explicitly instead of leaking yearly counters into observer evidence
 
 ### PR-3 - Readiness and Stop Logic
 

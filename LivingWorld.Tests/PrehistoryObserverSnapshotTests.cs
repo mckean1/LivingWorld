@@ -90,9 +90,9 @@ public sealed class PrehistoryObserverSnapshotTests
             CreateSnapshot(0, supportCrash: true, displacement: true, settlementLoss: true, collapse: true, identityBreak: true, activeIdentityBreak: true, continuousIdentityMonthsObserved: 0),
             CreateSnapshot(1, continuousIdentityMonthsObserved: 1),
             CreateSnapshot(2, continuousIdentityMonthsObserved: 2),
-            CreateSnapshot(3, continuousIdentityMonthsObserved: 3),
-            CreateSnapshot(4, continuousIdentityMonthsObserved: 4),
             CreateSnapshot(3, supportCrash: true, displacement: true, settlementLoss: true, collapse: true, identityBreak: true, activeIdentityBreak: true, continuousIdentityMonthsObserved: 0),
+            CreateSnapshot(4, continuousIdentityMonthsObserved: 4),
+            CreateSnapshot(5, continuousIdentityMonthsObserved: 5),
             CreateSnapshot(6, supportCrash: false, displacement: false, settlementLoss: false, collapse: false, identityBreak: false, activeIdentityBreak: false, continuousIdentityMonthsObserved: 1)
         ];
 
@@ -103,7 +103,7 @@ public sealed class PrehistoryObserverSnapshotTests
         Assert.Equal(0, snapshot.HistoryShockMarkers.SupportCrashMonthsLast3Months);
         Assert.Equal(1, snapshot.HistoryShockMarkers.SupportCrashMonthsLast6Months);
         Assert.Equal(2, snapshot.HistoryShockMarkers.SupportCrashMonthsLast12Months);
-        Assert.Equal(1, snapshot.SocialContinuityHistoryRollup.MonthsSinceIdentityBreak);
+        Assert.Equal(3, snapshot.SocialContinuityHistoryRollup.MonthsSinceIdentityBreak);
 
         PeopleHistoryWindowSnapshot currentShock = new PeopleHistoryWindowSnapshotBuilder().Build([
             CreateSnapshot(10, supportCrash: false, displacement: false, continuousIdentityMonthsObserved: 4),

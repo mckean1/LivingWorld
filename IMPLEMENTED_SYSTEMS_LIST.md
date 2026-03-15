@@ -64,19 +64,22 @@ Legacy `WorldStartupStage` labels now exist only for generator-level diagnostics
 
 ### PR-2 - Observer Snapshot Layer
 
-**Status:** Planned
+**Status:** Implemented
 
-Planned:
-- implement `PeopleHistoryWindowSnapshot`
-- implement `RegionEvaluationSnapshot`
-- implement `NeighborContextSnapshot`
-- make snapshots factual, observer-facing, and post-tick
-- ensure these artifacts contain evidence and state only, not evaluator conclusions such as selection score, qualification result, or recommendations
+Implemented:
+- `PrehistoryObserverState` now retains recent monthly `PeopleMonthlySnapshot` history
+- `PrehistoryObserverService` now builds `PeopleHistoryWindowSnapshot`
+- `PrehistoryObserverService` now builds `RegionEvaluationSnapshot`
+- `PrehistoryObserverService` now builds `NeighborContextSnapshot`
+- snapshots are factual, observer-facing, and non-mutating
+- current-month movement and trade-contact truth are captured explicitly rather than inferred from yearly counters
+- rolled health summaries, shock markers, region relationships, and neighbor exchange/pressure context are now available as descriptive evidence for later readiness logic
 
-Canonical snapshot direction:
+Canonical snapshot direction now implemented:
 - `PeopleHistoryWindowSnapshot` is the rolled evaluator-ready people history artifact built from monthly truth
 - `RegionEvaluationSnapshot` is the factual region-scoped observer layer with global region truth plus people-relative regional truth
 - `NeighborContextSnapshot` is the factual people-scoped neighbor, opportunity, pressure, and contact context layer
+- these artifacts contain evidence and state only, not evaluator conclusions such as selection score, qualification result, or recommendations
 
 ### PR-3 - Readiness and Stop-Condition System
 
