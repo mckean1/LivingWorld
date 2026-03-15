@@ -20,9 +20,11 @@ public sealed class PrehistoryRuntimeOrchestratorTests
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.EnterFocalSelection("ready"));
         Assert.Equal(PrehistoryRuntimePhase.FocalSelection, world.PrehistoryRuntime.CurrentPhase);
         Assert.Equal(PrehistoryRuntimeDetailView.FocalSelection, world.PrehistoryRuntime.DetailView);
+        Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
 
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.ForceEnterFocalSelection("fallback"));
         Assert.Equal(PrehistoryRuntimePhase.FocalSelection, world.PrehistoryRuntime.CurrentPhase);
+        Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
 
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.Failure("failed"));
         Assert.Equal(PrehistoryRuntimePhase.GenerationFailure, world.PrehistoryRuntime.CurrentPhase);

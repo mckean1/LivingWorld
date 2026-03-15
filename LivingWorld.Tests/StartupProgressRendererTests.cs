@@ -72,8 +72,33 @@ public sealed class StartupProgressRendererTests
             .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("=", StringComparison.Ordinal))
             .ToList();
 
-        Assert.Contains(meaningfulLines, line => line.Contains("Candidates: viable 3 | organic 3 | fallback 0", StringComparison.Ordinal));
+        Assert.Contains(meaningfulLines, line => line.Contains("Candidates: viable 3 | surfaced 3 | organic 3 | fallback 0", StringComparison.Ordinal));
         Assert.Equal(meaningfulLines.Count, meaningfulLines.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void BuildDisplayLines_DistinguishesViableDepthFromSurfacedPool()
+    {
+        World world = new(new WorldTime(1200, 1));
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ReadinessCheckpoint;
+        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.CandidateEvaluation;
+        world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
+        world.PrehistoryRuntime.WorldAgeYears = 1200;
+        world.PrehistoryRuntime.AreReadinessChecksActive = true;
+        world.WorldReadinessReport = new WorldReadinessReport(
+            new WorldAgeGateReport(1200, 700, 1000, 1400, PrehistoryAgeGateStatus.TargetAgeReached),
+            PrehistoryCheckpointOutcomeKind.EnterFocalSelection,
+            WorldReadinessReport.Empty.CategoryResults,
+            new CandidatePoolReadinessSummary(5, 3, 4, 5, 0, 3, 3, 4, 3, false, "5 viable starts discovered; 3 surfaced for selection."),
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            false,
+            false,
+            new WorldReadinessSummaryData("World ready for focal selection.", "5 viable starts (3 surfaced)", "Readiness gates passed for a truthful normal stop.", 6, 0, 0));
+
+        IReadOnlyList<string> lines = StartupProgressRenderer.BuildDisplayLines(world, includeDiagnostics: false);
+
+        Assert.Contains(lines, line => line.Contains("Candidates: viable 5 | surfaced 3 | organic 5 | fallback 0", StringComparison.Ordinal));
     }
 
     [Fact]

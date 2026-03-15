@@ -97,6 +97,11 @@ public sealed class StartupProgressRenderer : IDisposable
     public static List<string> BuildDisplayLines(World world, bool includeDiagnostics)
     {
         PrehistoryRuntimeStatus runtime = world.PrehistoryRuntime;
+        if (runtime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
+        {
+            return FocalSelectionPresentationBuilder.BuildStartupLines(world, includeDiagnostics).ToList();
+        }
+
         StartupWorldAgeConfiguration age = world.StartupAgeConfiguration;
         string border = new('=', 78);
         string phaseDescription = runtime.PhaseLabel;

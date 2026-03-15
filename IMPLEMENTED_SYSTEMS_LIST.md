@@ -170,26 +170,22 @@ Canonical truth floor remains hard:
 
 ### PR-5 - Focal Selection Presentation Contract
 
-**Status:** Planned
+**Status:** Implemented
 
-Planned:
-- replace the current thin or debug-style startup presentation with a truth-forward player-facing focal selection screen
-- present real viable starts clearly without hiding weakness
-- surface:
-  - identity header
-  - maturity band
-  - stability mode
-  - archetype summary
-  - qualification reason
-  - evidence sentence
-  - core state strip
-  - opportunity and pressure summary
-  - warnings
-  - strengths
-  - risks
-  - structured detail sections
-- use descriptive score tiers by default rather than raw numeric scores
-- support ready, thin, forced, and weak-world banner states
+Implemented:
+- focal selection now renders as a player-facing presentation contract instead of falling back to generic Phase D startup metrics or a thin debug picker
+- the presentation consumes surfaced PR-4 candidate summaries directly rather than recomputing viability, maturity, ranking, or evaluator conclusions in the UI
+- each surfaced candidate now shows:
+  - polity, species, and home region identity
+  - maturity band, stability mode, and archetype summary
+  - population band, settlement count, subsistence style, and current condition
+  - qualification reason and evidence sentence
+  - pressure or opportunity context plus recent historical note where useful
+  - visible strengths, warnings, and risks
+  - structured sections for Identity and Form, Homeland and Movement, Neighbors and Pressure, Opportunity and Risk, and Why This Start Qualified
+- score presentation is now descriptive by default in player-facing focal selection, using score-tier language instead of raw numeric totals
+- truthful banner framing now surfaces ready, thin, forced, and weak-world states without hiding weakness
+- single-candidate pools still render through the full focal selection contract instead of collapsing into a stub
 
 ### PR-6 - Active-Play Handoff and Control Conversion
 

@@ -121,11 +121,12 @@ Implemented:
 
 ### PR-5 - Focal Selection Experience
 
-Planned:
-- present real viable starts as a player-facing screen rather than a thin debug picker
-- surface qualification reason, evidence sentence, maturity band, stability mode, strengths, warnings, risks, and opportunity and pressure context
-- use descriptive score tiers by default
-- support ready, thin, forced, and weak-world framing without hiding truth
+Implemented:
+- focal selection now presents real viable starts through a player-facing screen rather than a thin debug picker
+- the screen consumes surfaced candidate summaries directly and shows qualification reason, evidence sentence, maturity band, stability mode, strengths, warnings, risks, and opportunity and pressure context without recomputing evaluator logic in the UI
+- candidate cards now use stable structured sections so single-candidate and multi-candidate pools render cleanly in watch mode and startup handoff
+- score presentation now defaults to descriptive score tiers in player-facing output
+- ready, thin, forced, and weak-world framing now render truthfully without hiding weakness
 
 ### PR-6 - Active-Play Handoff
 
