@@ -130,13 +130,22 @@ Authoritative PR-3 result flow:
 
 ### PR-4 - Candidate Viability, Maturity Bands, and Pool Composition
 
-**Status:** Planned
+**Status:** Implemented
 
-Planned:
-- implement candidate viability gates from observer artifacts
-- implement maturity-band mapping from real simulated condition
-- implement viable-candidate scoring based on coherent strength and playability rather than abstract advancement
-- use score dimensions:
+Implemented:
+- `PrehistoryCandidateSelectionEvaluator` now owns the canonical PR-4 layer above PR-2 observer artifacts and PR-3 readiness results
+- surfaced candidates in the checkpoint/runtime path are no longer built from legacy `FocalCandidateProfile` shortcuts
+- candidate viability now applies explicit hard gates and preserves PR-3 veto truth:
+  - current support must pass
+  - continuity must be `Established` or `Deep`
+  - movement coherence must be `Coherent` or `Strong`, or rootedness must be `Rooted` or `DeeplyRooted`
+  - current-month catastrophic vetoes still block viability outright
+- maturity bands now use the canonical set grounded in social/spatial/political condition:
+  - `Mobile`
+  - `Anchored`
+  - `Settling`
+  - `EmergentPolity`
+- viable-only scoring now uses explicit evaluator dimensions:
   - Survival Strength
   - Continuity Depth
   - Spatial Identity
@@ -144,10 +153,19 @@ Planned:
   - External Entanglement
   - Strategic Opportunity
   - limited Fragility penalty
-- build final candidate pools through seed + diversify + fill
-- support diversity tags, near-duplicate suppression, soft caps, and honest thin-world handling
+- pool composition now follows seed + diversify + fill with soft diversity caps, near-duplicate suppression, and honest thin-world handling
+- surfaced candidate summaries now retain PR-5-ready structured evaluator data:
+  - viability result
+  - maturity band
+  - stability mode
+  - archetype summary
+  - qualification reason
+  - evidence sentence
+  - strengths, warnings, risks
+  - score breakdown
+  - diversity tags
 
-Canonical truth floor:
+Canonical truth floor remains hard:
 - no candidate should be surfaced as viable unless the hard viability gates actually pass
 
 ### PR-5 - Focal Selection Presentation Contract

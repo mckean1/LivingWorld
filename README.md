@@ -52,6 +52,8 @@ LivingWorld now drives the startup handoff with the canonical `PrehistoryRuntime
 
 PR-3 now makes readiness and stop resolution canonical instead of legacy-scored. `WorldReadinessReport` sits above factual observer evidence and below runtime phase transition. It evaluates Biological, Social Emergence, World Structure, Candidate, Variety, and Agency readiness through explicit `Pass` / `Warning` / `Blocker` reports; uses the canonical `current / 6 / 12 / 24` month evidence windows plus `3 / 6 / 12` month shock windows; enforces hard current-month candidate vetoes and the non-negotiable candidate truth floor; and resolves checkpoints honestly to `ContinuePrehistory`, `EnterFocalSelection`, `ForceEnterFocalSelection`, or `GenerationFailure`. Maximum age no longer fakes success: weak or thin worlds can only force entry with real viable starts, and worlds with zero viable candidates fail honestly.
 
+PR-4 now makes the candidate layer canonical instead of profile-shortcut driven. `PrehistoryCandidateSelectionEvaluator` sits above the observer snapshot and PR-3 readiness result, applies the hard viability gates, maps `Mobile` / `Anchored` / `Settling` / `EmergentPolity` from current simulated condition, scores only viable starts, and composes the surfaced pool through seed + diversify + fill. The focal-selection screen now reads structured candidate data such as qualification reason, evidence sentence, strengths, warnings, and score breakdown without recomputing evaluator logic in the presentation layer.
+
 ## Core Principles
 
 - Full-world simulation, focused player presentation

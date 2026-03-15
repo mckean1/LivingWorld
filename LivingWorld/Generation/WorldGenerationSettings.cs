@@ -142,6 +142,32 @@ public sealed class WorldGenerationSettings
 
     public double CandidateDiversityConditionBonus { get; init; } = 0.04;
 
+    public double CandidateScoreWeightSurvivalStrength { get; init; } = 0.24;
+
+    public double CandidateScoreWeightContinuityDepth { get; init; } = 0.18;
+
+    public double CandidateScoreWeightSpatialIdentity { get; init; } = 0.18;
+
+    public double CandidateScoreWeightAgencyAndInternalOrganization { get; init; } = 0.16;
+
+    public double CandidateScoreWeightExternalEntanglement { get; init; } = 0.10;
+
+    public double CandidateScoreWeightStrategicOpportunity { get; init; } = 0.14;
+
+    public double CandidateScoreWeightFragilityPenalty { get; init; } = 0.42;
+
+    public int CandidatePoolSeedCount { get; init; } = 1;
+
+    public int CandidatePoolSoftCapPerMaturityBand { get; init; } = 2;
+
+    public int CandidatePoolSoftCapPerArchetypeBucket { get; init; } = 2;
+
+    public int CandidatePoolSoftCapPerHomeBucket { get; init; } = 2;
+
+    public int CandidatePoolSoftCapPerStabilityMode { get; init; } = 2;
+
+    public double CandidateNearDuplicateSimilarityThreshold { get; init; } = 0.72;
+
     public int MaxStartupRegenerationAttempts { get; init; } = 4;
 
     public double MinimumBiologicalReadinessFloor { get; init; } = 0.52;

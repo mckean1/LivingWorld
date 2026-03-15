@@ -322,15 +322,34 @@ public static class WatchScreenBuilder
         lines.Add($" {selected.PolityName}");
         lines.Add($" {selected.SpeciesName} of {selected.HomeRegionName}");
         lines.Add($" Age {selected.PolityAge} | Settlements {selected.SettlementCount} | Population {selected.PopulationBand}");
-        lines.Add($" {selected.SubsistenceStyle} | {selected.CurrentCondition}");
+        lines.Add($" {selected.MaturityBand} | {selected.SubsistenceStyle} | {selected.CurrentCondition}");
         lines.Add($" Network: {selected.SettlementProfile}");
         lines.Add($" Region: {selected.RegionalProfile}");
         lines.Add($" Lineage: {selected.LineageProfile}");
+        if (!string.IsNullOrWhiteSpace(selected.QualificationReason))
+        {
+            lines.Add($" Qualification: {selected.QualificationReason}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(selected.EvidenceSentence))
+        {
+            lines.Add($" Evidence: {selected.EvidenceSentence}");
+        }
+
         lines.Add(string.Empty);
         lines.Add($" Discoveries: {selected.DiscoverySummary}");
         lines.Add($" Learned: {selected.LearnedSummary}");
         lines.Add($" History: {selected.RecentHistoricalNote}");
         lines.Add($" Pressure / Opportunity: {selected.DefiningPressureOrOpportunity}");
+        if (selected.SafeStrengths.Count > 0)
+        {
+            lines.Add($" Strengths: {string.Join(", ", selected.SafeStrengths)}");
+        }
+
+        if (selected.SafeWarnings.Count > 0)
+        {
+            lines.Add($" Warnings: {string.Join(", ", selected.SafeWarnings)}");
+        }
 
         if (uiState.ShowDiagnostics)
         {

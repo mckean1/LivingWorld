@@ -113,13 +113,11 @@ Implemented:
 
 ### PR-4 - Candidate Viability, Maturity Bands, and Pool Composition
 
-Planned:
-- implement candidate viability gates from observer artifacts
-- implement maturity-band mapping from real simulated condition
-- score only viable candidates
-- score for coherent strength and playability rather than abstract advancement
-- use seed + diversify + fill pool composition
-- preserve honest thin-world handling without inventing candidates
+Implemented:
+- `PrehistoryCandidateSelectionEvaluator` now owns canonical candidate viability, maturity mapping, viable-only scoring, and pool composition in the runtime checkpoint path
+- maturity bands now use `Mobile`, `Anchored`, `Settling`, and `EmergentPolity`
+- surfaced pools now use seed + diversify + fill with near-duplicate suppression, soft diversity caps, and honest thin-world behavior
+- PR-5 should consume the new structured surfaced candidate summaries instead of recomputing evaluator logic in the UI
 
 ### PR-5 - Focal Selection Experience
 

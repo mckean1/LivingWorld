@@ -5,13 +5,13 @@ namespace LivingWorld.Generation;
 
 public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluationAdapter
 {
-    private readonly PlayerEntryCandidateGenerator _candidateGenerator;
+    private readonly PrehistoryCandidateSelectionEvaluator _candidateSelectionEvaluator;
     private readonly PrehistoryObserverService _observerService;
     private readonly PrehistoryReadinessEvaluator _readinessEvaluator;
 
     public PrehistoryCheckpointEvaluationAdapter(WorldGenerationSettings settings)
     {
-        _candidateGenerator = new PlayerEntryCandidateGenerator(settings);
+        _candidateSelectionEvaluator = new PrehistoryCandidateSelectionEvaluator(settings);
         _observerService = new PrehistoryObserverService();
         _readinessEvaluator = new PrehistoryReadinessEvaluator(settings);
     }
@@ -20,12 +20,13 @@ public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluatio
     {
         PrehistoryObserverSnapshot observerSnapshot = _observerService.Observe(world);
         IReadOnlyDictionary<int, CandidateReadinessEvaluation> candidateEvaluations = _readinessEvaluator.EvaluateCandidateReadiness(world, observerSnapshot);
-        IReadOnlyList<PlayerEntryCandidateSummary> candidates = _candidateGenerator.Generate(world, candidateEvaluations, out Dictionary<int, string> rejectionReasons);
+        PrehistoryCandidateSelectionResult candidateSelection = _candidateSelectionEvaluator.Evaluate(world, observerSnapshot, candidateEvaluations);
+        IReadOnlyList<PlayerEntryCandidateSummary> candidates = candidateSelection.Candidates;
         PrehistoryReadinessEvaluation readiness = _readinessEvaluator.Evaluate(world, observerSnapshot, candidateEvaluations, candidates);
         StartupOutcomeDiagnostics diagnostics = StartupOutcomeDiagnosticsEvaluator.Evaluate(
             world,
             candidates,
-            rejectionReasons,
+            candidateSelection.RejectionReasons,
             readiness.Report,
             regenerationReasons);
 
@@ -35,7 +36,7 @@ public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluatio
             StartupOutcomeDiagnostics = diagnostics,
             StartupDiagnostics = BuildDiagnostics(readiness.Report, regenerationReasons),
             PlayerEntryCandidates = candidates,
-            CandidateRejectionReasons = rejectionReasons,
+            CandidateRejectionReasons = candidateSelection.RejectionReasons,
             CandidatePoolSnapshot = new PrehistoryCandidatePoolSnapshot(
                 readiness.Report.CandidatePoolSummary.TotalSurfaceableCandidates,
                 readiness.Report.CandidatePoolSummary.OrganicViableCandidateCount,

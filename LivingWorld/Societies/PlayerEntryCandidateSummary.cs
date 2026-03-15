@@ -27,4 +27,22 @@ public sealed record PlayerEntryCandidateSummary(
     StabilityBand StabilityBand,
     bool IsFallbackCandidate,
     bool IsEmergencyAdmitted = false,
-    string CandidateOriginReason = "");
+    string CandidateOriginReason = "",
+    CandidateViabilityResult? Viability = null,
+    CandidateMaturityBand MaturityBand = CandidateMaturityBand.Anchored,
+    string StabilityMode = "",
+    string ArchetypeSummary = "",
+    string QualificationReason = "",
+    string EvidenceSentence = "",
+    IReadOnlyList<string>? Strengths = null,
+    IReadOnlyList<string>? Warnings = null,
+    IReadOnlyList<string>? Risks = null,
+    CandidateScoreBreakdown? ScoreBreakdown = null,
+    IReadOnlyList<string>? DiversityTags = null,
+    string DuplicateSuppressionKey = "")
+{
+    public IReadOnlyList<string> SafeStrengths => Strengths ?? Array.Empty<string>();
+    public IReadOnlyList<string> SafeWarnings => Warnings ?? Array.Empty<string>();
+    public IReadOnlyList<string> SafeRisks => Risks ?? Array.Empty<string>();
+    public IReadOnlyList<string> SafeDiversityTags => DiversityTags ?? Array.Empty<string>();
+}
