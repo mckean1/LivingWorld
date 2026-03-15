@@ -23,6 +23,7 @@ public enum SupportStabilityState
 
 public enum MovementCoherenceState
 {
+    Strong,
     Coherent,
     Mixed,
     Scattered
@@ -30,7 +31,8 @@ public enum MovementCoherenceState
 
 public enum RootednessState
 {
-    Anchored,
+    DeeplyRooted,
+    Rooted,
     SoftAnchored,
     Displaced
 }

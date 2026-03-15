@@ -83,30 +83,50 @@ Canonical snapshot direction now implemented:
 
 ### PR-3 - Readiness and Stop-Condition System
 
-**Status:** Planned
+**Status:** Implemented
 
-Planned:
-- implement preset-driven `MinPrehistoryYears`, `TargetPrehistoryYears`, and `MaxPrehistoryYears`
-- implement category-based readiness evaluation
-- use canonical readiness categories:
+Implemented:
+- canonical preset-driven `MinPrehistoryYears`, `TargetPrehistoryYears`, and `MaxPrehistoryYears` now drive the player-entry stop window
+- `WorldReadinessReport` is now the authoritative PR-3 readiness artifact between factual observer truth and runtime phase transition
+- checkpoint resolution now consumes the canonical stop outcomes directly:
+  - `ContinuePrehistory`
+  - `EnterFocalSelection`
+  - `ForceEnterFocalSelection`
+  - `GenerationFailure`
+- readiness now evaluates the six canonical categories:
   - Biological Readiness
   - Social Emergence Readiness
   - World Structure Readiness
   - Candidate Readiness
   - Variety Readiness
   - Agency Readiness
-- support explicit checkpoint outcomes:
-  - `ContinuePrehistory`
-  - `EnterFocalSelection`
-  - `ForceEnterFocalSelection`
-  - `GenerationFailure`
-- preserve hard truth floors for candidate viability even at maximum age
+- category reports now use explicit `Pass` / `Warning` / `Blocker` semantics, with strictness differences materially affecting stop behavior
+- evaluator-owned candidate readiness now derives support stability/recovery, demographic viability, movement coherence, rootedness, continuity, settlement durability, political durability, and recent shocks from observer evidence instead of pushing those conclusions into observer snapshots
+- hard current-month vetoes now surface explicitly in blocker output:
+  - severe unsupported current month
+  - active identity break
+  - catastrophically scattered current footprint
+  - population below minimum demographic viability
+  - catastrophic unresolved displacement
+- candidate truth floors now stay hard at all ages:
+  - current support must pass
+  - continuity must be at least `Established`
+  - movement coherence must be at least `Coherent` or rootedness must reach the minimum rooting floor
+- evidence windows now follow the canonical model:
+  - current month for vetoes
+  - last `6` months for recent condition and recovery
+  - last `12` months for readiness baseline
+  - last `24` months for deep-history confirmation
+  - shock windows of `3`, `6`, and `12` months
+- weak-world and thin-world states now surface honestly inside `WorldReadinessReport`
+- maximum-age honesty is now explicit:
+  - viable but weak/thin worlds can `ForceEnterFocalSelection`
+  - max-age worlds with zero viable candidates now resolve to `GenerationFailure`
+  - the system never invents candidates or weakens hard viability truth to dodge failure
 
-Canonical rules:
-- prehistory may not stop before minimum age
-- prehistory may stop after minimum age when genuinely ready
-- prehistory must resolve by maximum age
-- maximum-age handling must remain honest and must not invent candidates or relax hard candidate truth
+Authoritative PR-3 result flow:
+- runtime now consumes readiness results from the canonical PR-3 evaluator path through `PrehistoryCheckpointEvaluationAdapter`
+- `LegacyCheckpointCompatibilityAdapter` remains only as a narrow compatibility seam for older tests and legacy diagnostics; it is no longer the source of readiness or stop decisions
 
 ### PR-4 - Candidate Viability, Maturity Bands, and Pool Composition
 

@@ -27,14 +27,20 @@ public sealed class LegacyCheckpointCompatibilityAdapter : ICheckpointEvaluation
     {
         PrehistoryObserverSnapshot observerSnapshot = _observerService.Observe(world);
         IReadOnlyList<PlayerEntryCandidateSummary> candidates = _candidateGenerator.Generate(world, allowEmergencyFallback, out Dictionary<int, string> rejectionReasons);
-        StartupOutcomeDiagnostics diagnostics = StartupOutcomeDiagnosticsEvaluator.Evaluate(world, regenerationReasons);
+        WorldReadinessReport readinessReport = WorldReadinessEvaluator.Evaluate(world, _settings);
+        StartupOutcomeDiagnostics diagnostics = StartupOutcomeDiagnosticsEvaluator.Evaluate(
+            world,
+            candidates: candidates,
+            candidateRejectionReasons: rejectionReasons,
+            worldReadinessReport: readinessReport,
+            regenerationReasons: regenerationReasons);
         int total = candidates.Count;
         int fallback = candidates.Count(candidate => candidate.IsFallbackCandidate);
         int organic = total - fallback;
         string summary = allowEmergencyFallback ? "Emergency fallback candidate pool" : "Organic candidate pool";
         return new PrehistoryCheckpointEvaluationResult
         {
-            WorldReadinessReport = WorldReadinessEvaluator.Evaluate(world, _settings),
+            WorldReadinessReport = readinessReport,
             StartupOutcomeDiagnostics = diagnostics,
             StartupDiagnostics = LegacyStartupDiagnosticsBuilder.Build(world, diagnostics, regenerationReasons),
             PlayerEntryCandidates = candidates,

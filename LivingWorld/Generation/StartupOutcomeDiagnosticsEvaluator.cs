@@ -5,8 +5,16 @@ namespace LivingWorld.Generation;
 
 public static class StartupOutcomeDiagnosticsEvaluator
 {
-    public static StartupOutcomeDiagnostics Evaluate(World world, IReadOnlyList<string>? regenerationReasons = null)
+    public static StartupOutcomeDiagnostics Evaluate(
+        World world,
+        IReadOnlyList<PlayerEntryCandidateSummary>? candidates = null,
+        IReadOnlyDictionary<int, string>? candidateRejectionReasons = null,
+        WorldReadinessReport? worldReadinessReport = null,
+        IReadOnlyList<string>? regenerationReasons = null)
     {
+        IReadOnlyList<PlayerEntryCandidateSummary> effectiveCandidates = candidates ?? world.PlayerEntryCandidates;
+        IReadOnlyDictionary<int, string> effectiveRejectionReasons = candidateRejectionReasons ?? world.CandidateRejectionReasons;
+        WorldReadinessReport effectiveReadinessReport = worldReadinessReport ?? world.WorldReadinessReport;
         Dictionary<int, Polity> politiesById = world.Polities.ToDictionary(polity => polity.Id);
 
         int organicFocalCandidateCount = world.FocalCandidateProfiles.Count(profile =>
@@ -16,7 +24,7 @@ public static class StartupOutcomeDiagnosticsEvaluator
             profile.IsViable
             && politiesById.TryGetValue(profile.PolityId, out Polity? polity)
             && polity.IsFallbackCreated);
-        Dictionary<string, int> candidateRejectionCounts = world.CandidateRejectionReasons.Values
+        Dictionary<string, int> candidateRejectionCounts = effectiveRejectionReasons.Values
             .GroupBy(reason => reason, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
 
@@ -24,21 +32,21 @@ public static class StartupOutcomeDiagnosticsEvaluator
         bottlenecks.AddRange(world.PhaseBReadinessReport.FailureReasons.Select(reason => $"phase_b:{reason}"));
         bottlenecks.AddRange(world.PhaseBDiagnostics.WeaknessReasons.Select(reason => $"phase_b_diag:{reason}"));
         bottlenecks.AddRange(world.PhaseCReadinessReport.FailureReasons.Select(reason => $"phase_c:{reason}"));
-        bottlenecks.AddRange(world.WorldReadinessReport.FailureReasons.Select(reason => $"entry:{reason}"));
+        bottlenecks.AddRange(effectiveReadinessReport.FailureReasons.Select(reason => $"entry:{reason}"));
 
         if (world.Polities.All(polity => polity.IsFallbackCreated || polity.Population <= 0))
         {
             bottlenecks.Add("no_organic_polities");
         }
 
-        if (world.PlayerEntryCandidates.All(candidate => candidate.IsFallbackCandidate))
+        if (effectiveCandidates.Count > 0 && effectiveCandidates.All(candidate => candidate.IsFallbackCandidate))
         {
             bottlenecks.Add("no_organic_player_entry_candidates");
         }
 
-        if (world.PlayerEntryCandidates.Count < 2)
+        if (effectiveCandidates.Count < 2)
         {
-            bottlenecks.Add($"candidate_pool_size:{world.PlayerEntryCandidates.Count}");
+            bottlenecks.Add($"candidate_pool_size:{effectiveCandidates.Count}");
         }
 
         return new StartupOutcomeDiagnostics(
@@ -52,9 +60,9 @@ public static class StartupOutcomeDiagnosticsEvaluator
             world.Polities.Count(polity => polity.Population > 0 && polity.IsFallbackCreated),
             organicFocalCandidateCount,
             fallbackFocalCandidateCount,
-            world.PlayerEntryCandidates.Count(candidate => !candidate.IsFallbackCandidate),
-            world.PlayerEntryCandidates.Count(candidate => candidate.IsFallbackCandidate),
-            world.PlayerEntryCandidates.Count(candidate => candidate.IsEmergencyAdmitted),
+            effectiveCandidates.Count(candidate => !candidate.IsFallbackCandidate),
+            effectiveCandidates.Count(candidate => candidate.IsFallbackCandidate),
+            effectiveCandidates.Count(candidate => candidate.IsEmergencyAdmitted),
             candidateRejectionCounts,
             bottlenecks
                 .Distinct(StringComparer.OrdinalIgnoreCase)

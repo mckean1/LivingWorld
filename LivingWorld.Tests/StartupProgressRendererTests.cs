@@ -47,7 +47,23 @@ public sealed class StartupProgressRendererTests
         world.PrehistoryRuntime.PhaseLabel = "Evaluating world readiness";
         world.PrehistoryRuntime.SubphaseLabel = "Building focal candidates";
         world.PrehistoryRuntime.ActivitySummary = "Evaluating whether the world is mature enough to surface healthy starting candidates.";
-        world.WorldReadinessReport = new WorldReadinessReport(true, 920, 0.9, 0.86, 0.88, 0.82, 0.8, 3, [], new Dictionary<string, bool>(), 3, 0, 2);
+        world.WorldReadinessReport = new WorldReadinessReport(
+            new WorldAgeGateReport(920, 700, 1000, 1400, PrehistoryAgeGateStatus.MinimumAgeReached),
+            PrehistoryCheckpointOutcomeKind.ContinuePrehistory,
+            [
+                new(WorldReadinessCategoryKind.BiologicalReadiness, ReadinessAssessmentStatus.Pass, ReadinessCategoryStrictness.Medium, "bio", Array.Empty<string>(), Array.Empty<string>()),
+                new(WorldReadinessCategoryKind.SocialEmergenceReadiness, ReadinessAssessmentStatus.Pass, ReadinessCategoryStrictness.Strict, "social", Array.Empty<string>(), Array.Empty<string>()),
+                new(WorldReadinessCategoryKind.WorldStructureReadiness, ReadinessAssessmentStatus.Warning, ReadinessCategoryStrictness.Strict, "structure", Array.Empty<string>(), ["thin"]),
+                new(WorldReadinessCategoryKind.CandidateReadiness, ReadinessAssessmentStatus.Warning, ReadinessCategoryStrictness.Strict, "candidate", Array.Empty<string>(), ["thin"]),
+                new(WorldReadinessCategoryKind.VarietyReadiness, ReadinessAssessmentStatus.Warning, ReadinessCategoryStrictness.Soft, "variety", Array.Empty<string>(), ["thin"]),
+                new(WorldReadinessCategoryKind.AgencyReadiness, ReadinessAssessmentStatus.Pass, ReadinessCategoryStrictness.Soft, "agency", Array.Empty<string>(), Array.Empty<string>())
+            ],
+            new CandidatePoolReadinessSummary(3, 3, 2, 3, 0, 2, 2, 3, 2, false, "3 viable starts"),
+            Array.Empty<string>(),
+            ["thin_world"],
+            true,
+            false,
+            new WorldReadinessSummaryData("World not ready yet; prehistory continues.", "3 viable starts", "Readiness remains weak or incomplete.", 3, 3, 0));
         world.StartupOutcomeDiagnostics = new StartupOutcomeDiagnostics(4, 0, 3, 0, 5, 0, 2, 0, 3, 0, 3, 0, 0, new Dictionary<string, int>(), ["none"], []);
         world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(1, "River Hearth", 10, "Humans", 10, 0, "Green Basin", 12, 920, 2, "mid-sized", "Mixed hunter-forager", "Stable", "paired hearths", "river valley", "deep branch", "Fire", "Fire", "expanded river camps", "good water", 0.92, StabilityBand.Stable, false));
 
@@ -56,7 +72,7 @@ public sealed class StartupProgressRendererTests
             .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("=", StringComparison.Ordinal))
             .ToList();
 
-        Assert.Contains(meaningfulLines, line => line.Contains("Candidates: viable 1 | organic 3 | fallback 0", StringComparison.Ordinal));
+        Assert.Contains(meaningfulLines, line => line.Contains("Candidates: viable 3 | organic 3 | fallback 0", StringComparison.Ordinal));
         Assert.Equal(meaningfulLines.Count, meaningfulLines.Distinct(StringComparer.Ordinal).Count());
     }
 

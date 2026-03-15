@@ -13,9 +13,8 @@ public sealed class CheckpointCoordinatorTests
     public void ContinuePrehistoryKeepsPhaseAdvancing()
     {
         World world = CreatePrehistoryWorld();
-        StubCheckpointAdapter adapter = new(CreateCandidate(1));
-        StubCandidateOutcomeEvaluator outcomeEvaluator = new(shouldSurface: false);
-        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter, outcomeEvaluator);
+        StubCheckpointAdapter adapter = new(PrehistoryCheckpointOutcomeKind.ContinuePrehistory, CreateCandidate(1));
+        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter);
 
         PrehistoryCheckpointOutcome outcome = coordinator.Evaluate(
             world,
@@ -35,9 +34,8 @@ public sealed class CheckpointCoordinatorTests
     public void EnterFocalSelectionPausesAdvancement()
     {
         World world = CreatePrehistoryWorld();
-        StubCheckpointAdapter adapter = new(CreateCandidate(2));
-        StubCandidateOutcomeEvaluator outcomeEvaluator = new(shouldSurface: true);
-        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter, outcomeEvaluator);
+        StubCheckpointAdapter adapter = new(PrehistoryCheckpointOutcomeKind.EnterFocalSelection, CreateCandidate(2));
+        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter);
 
         PrehistoryCheckpointOutcome outcome = coordinator.Evaluate(
             world,
@@ -56,9 +54,8 @@ public sealed class CheckpointCoordinatorTests
     public void ForceEnterFocalSelectionAppliesForcedFlag()
     {
         World world = CreatePrehistoryWorld();
-        StubCheckpointAdapter adapter = new(CreateCandidate(3));
-        StubCandidateOutcomeEvaluator outcomeEvaluator = new(shouldSurface: true);
-        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter, outcomeEvaluator);
+        StubCheckpointAdapter adapter = new(PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection, CreateCandidate(3));
+        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter);
 
         PrehistoryCheckpointOutcome outcome = coordinator.Evaluate(
             world,
@@ -76,9 +73,8 @@ public sealed class CheckpointCoordinatorTests
     public void GenerationFailureIsRepresentedWhenNoCandidates()
     {
         World world = CreatePrehistoryWorld();
-        StubCheckpointAdapter adapter = new();
-        StubCandidateOutcomeEvaluator outcomeEvaluator = new(shouldSurface: false);
-        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter, outcomeEvaluator);
+        StubCheckpointAdapter adapter = new(PrehistoryCheckpointOutcomeKind.GenerationFailure);
+        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter);
 
         PrehistoryCheckpointOutcome outcome = coordinator.Evaluate(
             world,
@@ -97,9 +93,8 @@ public sealed class CheckpointCoordinatorTests
     {
         World world = CreatePrehistoryWorld();
         PlayerEntryCandidateSummary candidate = CreateCandidate(5);
-        StubCheckpointAdapter adapter = new(candidate);
-        StubCandidateOutcomeEvaluator outcomeEvaluator = new(shouldSurface: false);
-        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter, outcomeEvaluator);
+        StubCheckpointAdapter adapter = new(PrehistoryCheckpointOutcomeKind.ContinuePrehistory, candidate);
+        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter);
 
         coordinator.Evaluate(
             world,
@@ -112,12 +107,10 @@ public sealed class CheckpointCoordinatorTests
         Assert.Contains(candidate, world.PlayerEntryCandidates);
     }
 
-    private static PrehistoryCheckpointCoordinator CreateCoordinator(ICheckpointEvaluationAdapter adapter, ICandidateOutcomeEvaluator outcomeEvaluator)
+    private static PrehistoryCheckpointCoordinator CreateCoordinator(ICheckpointEvaluationAdapter adapter)
         => new(
             new PrehistoryRuntimeOrchestrator(),
-            adapter,
-            outcomeEvaluator,
-            new WorldGenerationSettings());
+            adapter);
 
     private static World CreatePrehistoryWorld()
     {
@@ -158,46 +151,42 @@ public sealed class CheckpointCoordinatorTests
 
     private sealed class StubCheckpointAdapter : ICheckpointEvaluationAdapter
     {
+        private readonly PrehistoryCheckpointOutcomeKind _resolution;
         private readonly IReadOnlyList<PlayerEntryCandidateSummary> _candidates;
         private readonly IReadOnlyDictionary<int, string> _rejectionReasons;
 
-        public StubCheckpointAdapter(params PlayerEntryCandidateSummary[] candidates)
-            : this(candidates, new Dictionary<int, string>())
+        public StubCheckpointAdapter(PrehistoryCheckpointOutcomeKind resolution, params PlayerEntryCandidateSummary[] candidates)
+            : this(resolution, candidates, new Dictionary<int, string>())
         {
         }
 
-        public StubCheckpointAdapter(IReadOnlyList<PlayerEntryCandidateSummary> candidates, IReadOnlyDictionary<int, string> rejectionReasons)
+        public StubCheckpointAdapter(PrehistoryCheckpointOutcomeKind resolution, IReadOnlyList<PlayerEntryCandidateSummary> candidates, IReadOnlyDictionary<int, string> rejectionReasons)
         {
+            _resolution = resolution;
             _candidates = candidates;
             _rejectionReasons = rejectionReasons;
         }
 
         public PrehistoryCheckpointEvaluationResult Evaluate(World world, bool allowEmergencyFallback, IReadOnlyList<string>? regenerationReasons)
         {
+            WorldReadinessReport report = new(
+                new WorldAgeGateReport(900, 700, 1000, 1400, PrehistoryAgeGateStatus.MinimumAgeReached),
+                _resolution,
+                WorldReadinessReport.Empty.CategoryResults,
+                new CandidatePoolReadinessSummary(_candidates.Count, _candidates.Count, _candidates.Count, _candidates.Count, 0, _candidates.Select(candidate => candidate.SpeciesId).Distinct().Count(), _candidates.Select(candidate => candidate.LineageId).Distinct().Count(), _candidates.Select(candidate => candidate.HomeRegionId).Distinct().Count(), _candidates.Select(candidate => candidate.SubsistenceStyle).Distinct(StringComparer.OrdinalIgnoreCase).Count(), _candidates.Count < 2, $"{_candidates.Count} candidates"),
+                _resolution == PrehistoryCheckpointOutcomeKind.GenerationFailure ? ["no_viable_candidates"] : Array.Empty<string>(),
+                Array.Empty<string>(),
+                false,
+                _candidates.Count < 2,
+                new WorldReadinessSummaryData($"Stub {_resolution}", $"{_candidates.Count} viable starts", "Stub condition", 0, 0, _resolution == PrehistoryCheckpointOutcomeKind.GenerationFailure ? 1 : 0));
             return new PrehistoryCheckpointEvaluationResult
             {
-                WorldReadinessReport = WorldReadinessReport.Empty,
+                WorldReadinessReport = report,
                 StartupOutcomeDiagnostics = StartupOutcomeDiagnostics.Empty,
                 StartupDiagnostics = Array.Empty<string>(),
                 PlayerEntryCandidates = _candidates,
                 CandidateRejectionReasons = _rejectionReasons
             };
-        }
-    }
-
-    private sealed class StubCandidateOutcomeEvaluator : ICandidateOutcomeEvaluator
-    {
-        private readonly bool _shouldSurface;
-
-        public StubCandidateOutcomeEvaluator(bool shouldSurface)
-        {
-            _shouldSurface = shouldSurface;
-        }
-
-        public bool ShouldSurfaceFocalSelection(World world, WorldGenerationSettings settings, bool allowEmergencyFallback, out List<string> rejectionReasons)
-        {
-            rejectionReasons = new();
-            return _shouldSurface;
         }
     }
 }

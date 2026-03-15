@@ -97,6 +97,26 @@ Important rule:
 - these artifacts are descriptive evidence only
 - they do not store readiness verdicts, viability scores, selection recommendations, or other evaluator conclusions
 
+PR-3 now adds the evaluator-owned layer above those factual artifacts instead of mixing conclusions into them:
+
+- `WorldReadinessReport`
+  - world-level age-gate status
+  - final checkpoint resolution
+  - per-category `Pass` / `Warning` / `Blocker` readiness results
+  - candidate-pool summary
+  - global blockers and warnings
+  - weak-world and thin-world flags
+  - concise player-facing startup summary data
+
+The canonical readiness categories are:
+
+- Biological Readiness
+- Social Emergence Readiness
+- World Structure Readiness
+- Candidate Readiness
+- Variety Readiness
+- Agency Readiness
+
 ## Settlement
 
 `Settlement` is a lightweight locality record owned by a `Polity`.

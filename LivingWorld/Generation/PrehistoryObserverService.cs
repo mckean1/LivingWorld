@@ -540,7 +540,17 @@ public sealed class PeopleHistoryWindowSnapshotBuilder
             last6.Count(snapshot => snapshot.IdentityBreakThisMonth),
             last12.Count(snapshot => snapshot.IdentityBreakThisMonth));
 
-        EvaluatorHealthSummary health = BuildHealth(current, last6, last12, last24, demography, support, spatial, rootedness, continuity);
+        EvaluatorHealthSummary health = PrehistoryReadinessEvidenceEvaluator.EvaluateHealth(
+            current,
+            last3,
+            last6,
+            last12,
+            last24,
+            demography,
+            support,
+            spatial,
+            rootedness,
+            continuity);
 
         return new PeopleHistoryWindowSnapshot(
             new PeopleSnapshotHeader(current.PeopleId, current.PeopleName, current.SpeciesId, current.LineageId, current.WorldYear, current.WorldMonth),
@@ -556,124 +566,6 @@ public sealed class PeopleHistoryWindowSnapshotBuilder
             actionable,
             shocks,
             health);
-    }
-
-    private static EvaluatorHealthSummary BuildHealth(
-        PeopleMonthlySnapshot current,
-        IReadOnlyList<PeopleMonthlySnapshot> last6,
-        IReadOnlyList<PeopleMonthlySnapshot> last12,
-        IReadOnlyList<PeopleMonthlySnapshot> last24,
-        DemographyHistoryRollup demography,
-        SupportHistoryRollup support,
-        SpatialHistoryRollup spatial,
-        RootednessHistoryRollup rootedness,
-        SocialContinuityHistoryRollup continuity)
-    {
-        bool recoveringNow = current.StarvingSettlementCount == 0
-            && current.SupportAdequacy >= 0.85
-            && (support.SupportCrashMonthsLast6Months > 0
-                || support.ShortageMonthsLast6Months > 0)
-            && current.SupportAdequacy >= support.AverageSupportAdequacyLast6Months;
-        SupportStabilityState supportState = current.SupportAdequacy <= 0.45
-            || current.StarvingSettlementCount > 0
-            || current.FoodSatisfaction < 0.45
-            ? SupportStabilityState.Collapsed
-            : recoveringNow
-                ? SupportStabilityState.Recovering
-                : support.ShortageMonthsLast12Months >= Math.Max(3, last12.Count / 3)
-                    || support.SupportCrashMonthsLast12Months > 0
-                    ? SupportStabilityState.Volatile
-                    : SupportStabilityState.Stable;
-        double footprintSupportRatio = current.OccupiedRegionIds.Count == 0
-            ? current.SupportAdequacy
-            : current.SupportAdequacy / Math.Max(1, current.OccupiedRegionIds.Count);
-        int coherentMonthsLast6 = last6.Count(snapshot => snapshot.ConnectedFootprintShare >= 0.75 && snapshot.RouteCoverageShare >= 0.60 && snapshot.ScatterShare <= 0.25);
-        int coherentMonthsLast12 = last12.Count(snapshot => snapshot.ConnectedFootprintShare >= 0.75 && snapshot.RouteCoverageShare >= 0.60 && snapshot.ScatterShare <= 0.25);
-        int scatteredMonthsLast6 = last6.Count(snapshot => snapshot.ScatterShare >= 0.40 || snapshot.RouteCoverageShare < 0.40 || snapshot.ConnectedFootprintShare <= 0.50);
-        int scatteredMonthsLast12 = last12.Count(snapshot => snapshot.ScatterShare >= 0.40 || snapshot.RouteCoverageShare < 0.40 || snapshot.ConnectedFootprintShare <= 0.50);
-        MovementCoherenceState movementState = current.ScatterShare >= 0.45
-            || current.ConnectedFootprintShare <= 0.50
-            || current.RouteCoverageShare < 0.35
-            ? MovementCoherenceState.Scattered
-            : current.ConnectedFootprintShare >= 0.75
-                && current.RouteCoverageShare >= 0.60
-                && current.ScatterShare <= 0.25
-                && coherentMonthsLast6 >= Math.Max(1, last6.Count / 2)
-                ? MovementCoherenceState.Coherent
-                : MovementCoherenceState.Mixed;
-        bool recoveringFromRecentDisplacement = !current.DisplacementThisMonth
-            && current.IsAnchoredThisMonth
-            && rootedness.DisplacementMonthsLast6Months > 0;
-        RootednessState rootednessState = current.DisplacementThisMonth
-            || (rootedness.DisplacementMonthsLast6Months >= Math.Max(2, last6.Count / 2)
-                && rootedness.AnchoredMonthsLast6Months == 0)
-            ? RootednessState.Displaced
-            : current.IsStrongAnchoredThisMonth
-                || (rootedness.StrongAnchoredMonthsLast12Months >= Math.Max(2, last12.Count / 3)
-                    && rootedness.EstablishedSettlementMonthsLast12Months >= Math.Max(2, last12.Count / 3)
-                    && rootedness.AverageHomeClusterShareLast12Months >= 0.60)
-                ? RootednessState.Anchored
-                : RootednessState.SoftAnchored;
-        ContinuityState continuityState = current.ActiveIdentityBreakNow
-            ? ContinuityState.Broken
-            : continuity.ObservedContinuousIdentityMonths < 6
-                ? ContinuityState.New
-                : continuity.IdentityBreakCountLast12Months > 0 || continuity.MonthsSinceIdentityBreak < 12
-                ? ContinuityState.Fragile
-                : continuity.ObservedContinuousIdentityMonths >= 24 && continuity.IdentityBreakCountLast24Months == 0
-                    ? ContinuityState.Deep
-                    : ContinuityState.Established;
-
-        return new EvaluatorHealthSummary(
-            new DemographicHealthSummary(
-                demography.CurrentPopulation,
-                demography.AveragePopulationLast6Months,
-                demography.AveragePopulationLast12Months,
-                demography.DeclineMonthsLast12Months,
-                demography.MinimumPopulationLast12Months,
-                last12.Count(snapshot => snapshot.StarvingSettlementCount > 0)),
-            new SupportStabilityHealth(
-                supportState,
-                current.SupportAdequacy,
-                support.AverageSupportAdequacyLast6Months,
-                support.AverageSupportAdequacyLast12Months,
-                support.AverageFoodSatisfactionLast12Months,
-                support.ShortageMonthsLast6Months,
-                support.ShortageMonthsLast12Months,
-                current.SupportCrashThisMonth,
-                support.SupportCrashMonthsLast6Months,
-                support.SupportCrashMonthsLast12Months,
-                recoveringNow),
-            new MovementCoherenceHealth(
-                movementState,
-                current.ConnectedFootprintShare,
-                current.RouteCoverageShare,
-                current.ScatterShare,
-                footprintSupportRatio,
-                spatial.AverageRouteCoverageShareLast6Months,
-                spatial.AverageRouteCoverageShareLast12Months,
-                coherentMonthsLast6,
-                coherentMonthsLast12,
-                scatteredMonthsLast6,
-                scatteredMonthsLast12),
-            new RootednessHealth(
-                rootednessState,
-                rootedness.AnchoredMonthsLast12Months,
-                rootedness.StrongAnchoredMonthsLast12Months,
-                rootedness.AverageHomeClusterShareLast12Months,
-                rootedness.EstablishedSettlementMonthsLast12Months,
-                current.DisplacementThisMonth,
-                rootedness.DisplacementMonthsLast6Months,
-                rootedness.DisplacementMonthsLast12Months,
-                recoveringFromRecentDisplacement),
-            new ContinuityHealth(
-                continuityState,
-                continuity.ObservedContinuousIdentityMonths,
-                continuity.MonthsSinceIdentityBreak,
-                continuity.IdentityBreakCountLast6Months,
-                continuity.IdentityBreakCountLast12Months,
-                continuity.IdentityBreakCountLast24Months,
-                continuity.ActiveIdentityBreakNow));
     }
 
     private static List<PeopleMonthlySnapshot> SelectWindow(IReadOnlyList<PeopleMonthlySnapshot> orderedHistory, PeopleMonthlySnapshot current, int months)

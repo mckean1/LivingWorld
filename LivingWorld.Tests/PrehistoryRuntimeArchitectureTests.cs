@@ -46,7 +46,7 @@ public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<Prehistor
 
         Assert.Equal(PrehistoryRuntimePhase.GenerationFailure, world.PrehistoryRuntime.CurrentPhase);
         Assert.Equal(PrehistoryCheckpointOutcomeKind.GenerationFailure, world.PrehistoryRuntime.LastCheckpointOutcome?.Kind);
-        Assert.Contains(world.StartupDiagnostics, line => line.StartsWith("regeneration_reason:attempt_0:", StringComparison.Ordinal));
+        Assert.Contains(world.StartupDiagnostics, line => line.StartsWith("regen:attempt_0:", StringComparison.Ordinal));
     }
 
     [Fact]

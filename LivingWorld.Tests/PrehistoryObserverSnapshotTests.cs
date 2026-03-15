@@ -219,7 +219,7 @@ public sealed class PrehistoryObserverSnapshotTests
         PeopleHistoryWindowSnapshot continuityDeep = new PeopleHistoryWindowSnapshotBuilder().Build(
             Enumerable.Range(0, 30).Select(index => CreateSnapshot(index, continuousIdentityMonthsObserved: index + 1)).ToList());
 
-        Assert.Equal(RootednessState.Anchored, anchored.EvaluatorHealthSummary.Rootedness.State);
+        Assert.Equal(RootednessState.DeeplyRooted, anchored.EvaluatorHealthSummary.Rootedness.State);
         Assert.Equal(RootednessState.Displaced, displaced.EvaluatorHealthSummary.Rootedness.State);
         Assert.True(recovering.EvaluatorHealthSummary.Rootedness.RecoveringFromRecentDisplacement);
         Assert.Equal(ContinuityState.New, continuityNew.EvaluatorHealthSummary.Continuity.State);

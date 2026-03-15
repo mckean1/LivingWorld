@@ -90,21 +90,26 @@ Implemented:
 
 ### PR-3 - Readiness and Stop Logic
 
-Planned:
-- implement preset-driven minimum, target, and maximum prehistory ages
-- implement category-based readiness results using:
+Implemented:
+- preset-driven minimum, target, and maximum prehistory ages now drive the stop window
+- `WorldReadinessReport` now owns the canonical PR-3 readiness layer between observer truth and runtime transition
+- readiness categories now resolve with `Pass` / `Warning` / `Blocker` status across:
   - Biological
   - Social Emergence
   - World Structure
   - Candidate
   - Variety
   - Agency
-- support:
+- checkpoints now resolve through the canonical outcomes:
   - `ContinuePrehistory`
   - `EnterFocalSelection`
   - `ForceEnterFocalSelection`
   - `GenerationFailure`
-- keep hard candidate viability truth intact even at maximum age
+- evidence windows now follow the canonical `current / 6 / 12 / 24` month model with `3 / 6 / 12` month shock windows
+- max-age honesty is now enforced:
+  - viable but weak or thin worlds can be forced into focal selection
+  - max-age worlds with zero viable candidates fail honestly
+  - hard candidate viability truth is never weakened to dodge failure
 
 ### PR-4 - Candidate Viability, Maturity Bands, and Pool Composition
 

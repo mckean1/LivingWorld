@@ -237,12 +237,12 @@ public sealed class StartupProgressRenderer : IDisposable
 
     private static IReadOnlyList<string> BuildPhaseDMetrics(World world)
     {
-        StartupOutcomeDiagnostics diagnostics = world.StartupOutcomeDiagnostics;
+        WorldReadinessReport report = world.WorldReadinessReport;
         return
         [
-            $" Candidates: viable {world.PlayerEntryCandidates.Count} | organic {diagnostics.OrganicPlayerEntryCandidateCount} | fallback {diagnostics.FallbackPlayerEntryCandidateCount}",
-            $" Readiness: bio {DescribeReadiness(world.WorldReadinessReport.BiologicalScore)} | social {DescribeReadiness(world.WorldReadinessReport.SocialScore)} | civ {DescribeReadiness(world.WorldReadinessReport.CivilizationalScore)} | candidates {DescribeReadiness(world.WorldReadinessReport.CandidateScore)}",
-            $" Stop check: {(world.WorldReadinessReport.IsReady ? "ready to surface starts" : "still evaluating")} | weak-world warnings {world.StartupOutcomeDiagnostics.BottleneckReasons.Count}"
+            $" Candidates: viable {report.CandidatePoolSummary.ViableCandidateCount} | organic {report.CandidatePoolSummary.OrganicViableCandidateCount} | fallback {report.CandidatePoolSummary.FallbackViableCandidateCount}",
+            $" Readiness: bio {DescribeCategory(report, WorldReadinessCategoryKind.BiologicalReadiness)} | social {DescribeCategory(report, WorldReadinessCategoryKind.SocialEmergenceReadiness)} | structure {DescribeCategory(report, WorldReadinessCategoryKind.WorldStructureReadiness)} | candidates {DescribeCategory(report, WorldReadinessCategoryKind.CandidateReadiness)}",
+            $" Stop check: {report.SummaryData.WorldConditionHeadline} | warnings {report.GlobalWarningReasons.Count}"
         ];
     }
 
@@ -267,13 +267,12 @@ public sealed class StartupProgressRenderer : IDisposable
         => world.EvolutionaryHistory.Count(entry =>
             entry.Type is EvolutionaryHistoryEventType.LocalExtinction or EvolutionaryHistoryEventType.GlobalExtinction);
 
-    private static string DescribeReadiness(double score)
-        => score switch
+    private static string DescribeCategory(WorldReadinessReport report, WorldReadinessCategoryKind category)
+        => report.GetCategory(category).Status switch
         {
-            >= 0.95 => "strong",
-            >= 0.75 => "steady",
-            >= 0.55 => "mixed",
-            _ => "weak"
+            ReadinessAssessmentStatus.Pass => "pass",
+            ReadinessAssessmentStatus.Warning => "warn",
+            _ => "block"
         };
 
     private static string BuildStateKey(World world, IReadOnlyList<string> lines)

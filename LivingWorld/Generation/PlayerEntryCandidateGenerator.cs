@@ -35,6 +35,41 @@ public sealed class PlayerEntryCandidateGenerator
         return ApplyDiversityTrim(candidates, targetCount);
     }
 
+    public IReadOnlyList<PlayerEntryCandidateSummary> Generate(
+        World world,
+        IReadOnlyDictionary<int, CandidateReadinessEvaluation> candidateEvaluations,
+        out Dictionary<int, string> rejectionReasons)
+    {
+        rejectionReasons = new Dictionary<int, string>();
+        List<PlayerEntryCandidateSummary> candidates = [];
+
+        foreach (Polity polity in world.Polities.Where(candidate => candidate.Population > 0))
+        {
+            if (!candidateEvaluations.TryGetValue(polity.Id, out CandidateReadinessEvaluation? readiness))
+            {
+                rejectionReasons[polity.Id] = "missing_candidate_readiness_evidence";
+                continue;
+            }
+
+            if (!readiness.IsViable)
+            {
+                rejectionReasons[polity.Id] = readiness.PrimaryBlockingReason;
+                continue;
+            }
+
+            if (!TryBuildCandidateFromReadiness(world, polity, readiness, out PlayerEntryCandidateSummary? summary, out string rejectionReason))
+            {
+                rejectionReasons[polity.Id] = rejectionReason;
+                continue;
+            }
+
+            candidates.Add(summary!);
+        }
+
+        int targetCount = world.StartupAgeConfiguration.CandidateCountTarget;
+        return ApplyDiversityTrim(candidates, targetCount);
+    }
+
     private bool TryBuildCandidate(
         World world,
         Polity polity,
@@ -88,7 +123,83 @@ public sealed class PlayerEntryCandidateGenerator
                 ? $"emergency_admission:{standardAdmission.RejectionReason}"
                 : string.Empty;
 
-        summary = new PlayerEntryCandidateSummary(
+        summary = BuildCandidateSummary(
+            world,
+            polity,
+            profile,
+            species,
+            finalAdmission.ViabilityScore,
+            profile.StabilityBand,
+            fallbackDerived,
+            emergencyAdmissionUsed,
+            originReason);
+        return true;
+    }
+
+    private bool TryBuildCandidateFromReadiness(
+        World world,
+        Polity polity,
+        CandidateReadinessEvaluation readiness,
+        out PlayerEntryCandidateSummary? summary,
+        out string rejectionReason)
+    {
+        summary = null;
+        rejectionReason = string.Empty;
+
+        FocalCandidateProfile? profile = world.FocalCandidateProfiles.FirstOrDefault(candidate => candidate.PolityId == polity.Id);
+        Species? species = world.Species.FirstOrDefault(candidate => candidate.Id == polity.SpeciesId);
+        if (profile is null || species is null || species.SentienceCapability == SentienceCapabilityState.None)
+        {
+            rejectionReason = "missing_viable_profile_or_lineage";
+            return false;
+        }
+
+        summary = BuildCandidateSummary(
+            world,
+            polity,
+            profile,
+            species,
+            readiness.SupportsNormalEntry ? 1.0 : 0.82,
+            readiness.SupportStability switch
+            {
+                SupportStabilityState.Stable => StabilityBand.Strong,
+                SupportStabilityState.Recovering => StabilityBand.Stable,
+                SupportStabilityState.Volatile => StabilityBand.Strained,
+                _ => StabilityBand.Fragile
+            },
+            polity.IsFallbackCreated,
+            false,
+            polity.IsFallbackCreated ? "fallback_polity" : string.Empty);
+        return true;
+    }
+
+    private PlayerEntryCandidateSummary BuildCandidateSummary(
+        World world,
+        Polity polity,
+        FocalCandidateProfile profile,
+        Species species,
+        double rankScore,
+        StabilityBand stabilityBand,
+        bool fallbackDerived,
+        bool emergencyAdmissionUsed,
+        string originReason)
+    {
+        Region homeRegion = world.Regions[polity.RegionId];
+        EvolutionaryLineage? lineage = world.GetLineage(polity.LineageId);
+        string subsistenceStyle = ResolveSubsistenceStyle(polity, species);
+        string currentCondition = ResolveCurrentCondition(profile, polity);
+        string settlementProfile = ResolveSettlementProfile(polity);
+        string regionalProfile = ResolveRegionalProfile(homeRegion);
+        string lineageProfile = ResolveLineageProfile(species, lineage);
+        string discoverySummary = polity.Discoveries.Count == 0
+            ? "Shared survival lore"
+            : string.Join(", ", polity.Discoveries.Take(2).Select(discovery => SanitizePlayerFacingText(discovery.Summary, "Shared survival lore")));
+        string learnedSummary = polity.Advancements.Count == 0
+            ? "None"
+            : string.Join(", ", polity.Advancements.OrderBy(advancement => advancement).Take(2).Select(advancement => AdvancementCatalog.Get(advancement).Name));
+        string historicalNote = ResolveHistoricalNote(world, polity, profile);
+
+        return new PlayerEntryCandidateSummary(
             polity.Id,
             polity.Name,
             species.Id,
@@ -109,12 +220,11 @@ public sealed class PlayerEntryCandidateGenerator
             learnedSummary,
             historicalNote,
             ResolvePressureLine(polity.CurrentPressureSummary ?? profile.PressureSummary),
-            finalAdmission.ViabilityScore,
-            profile.StabilityBand,
+            rankScore,
+            stabilityBand,
             fallbackDerived,
             emergencyAdmissionUsed,
             originReason);
-        return true;
     }
 
     private CandidateAdmissionEvaluation EvaluateAdmission(FocalCandidateProfile profile, Polity polity, bool allowEmergencyFallback)

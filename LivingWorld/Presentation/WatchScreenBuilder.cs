@@ -343,7 +343,7 @@ public static class WatchScreenBuilder
                 ? $"  Checkpoint: {checkpointLabel}"
                 : $"  Checkpoint: {checkpointLabel} ({checkpointSummary})";
             lines.Add(checkpointLine);
-            lines.Add($"  Scores: bio {world.WorldReadinessReport.BiologicalScore:F2} | social {world.WorldReadinessReport.SocialScore:F2} | civ {world.WorldReadinessReport.CivilizationalScore:F2} | cand {world.WorldReadinessReport.CandidateScore:F2} | stable {world.WorldReadinessReport.StabilityScore:F2}");
+            lines.Add($"  Readiness: bio {world.WorldReadinessReport.GetCategory(WorldReadinessCategoryKind.BiologicalReadiness).Status} | social {world.WorldReadinessReport.GetCategory(WorldReadinessCategoryKind.SocialEmergenceReadiness).Status} | structure {world.WorldReadinessReport.GetCategory(WorldReadinessCategoryKind.WorldStructureReadiness).Status} | candidates {world.WorldReadinessReport.GetCategory(WorldReadinessCategoryKind.CandidateReadiness).Status}");
             lines.Add($"  Fallback Candidate: {(selected.IsFallbackCandidate ? "yes" : "no")}");
             if (world.WorldReadinessReport.FailureReasons.Count > 0)
             {

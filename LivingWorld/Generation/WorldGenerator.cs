@@ -31,9 +31,7 @@ public sealed class WorldGenerator
         _progressRenderer = progressRenderer;
         _checkpointCoordinator = new(
             _prehistoryRuntimeOrchestrator,
-            new LegacyCheckpointCompatibilityAdapter(_settings),
-            new LegacyPlayerEntryOutcomeEvaluatorAdapter(),
-            _settings);
+            new PrehistoryCheckpointEvaluationAdapter(_settings));
     }
 
     public World Generate()
