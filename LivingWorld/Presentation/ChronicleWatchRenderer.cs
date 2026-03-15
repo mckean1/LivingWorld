@@ -182,12 +182,13 @@ public sealed class ChronicleWatchRenderer : IDisposable
 
         ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
         ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
-        int regionId = activeControl?.SourcePolityId == polity.Id && activeControl.CurrentCenterRegionId.HasValue
+        bool isActiveControlPolity = world.IsActiveControlBackingPolity(polity.Id);
+        int regionId = isActiveControlPolity && activeControl?.CurrentCenterRegionId.HasValue == true
             ? activeControl.CurrentCenterRegionId.Value
             : polity.RegionId;
         string regionName = world.Regions.FirstOrDefault(region => region.Id == regionId)?.Name ?? "Unknown Region";
         string speciesName = ChronicleTextFormatter.DescribeSpeciesName(polity, world.Species);
-        ChronicleTextFormatter.StatusKnowledgeSummary knowledgeSummary = activeControl?.SourcePolityId == polity.Id && handoffPackage is not null
+        ChronicleTextFormatter.StatusKnowledgeSummary knowledgeSummary = isActiveControlPolity && handoffPackage is not null
             ? ChronicleTextFormatter.BuildStatusKnowledgeSummary(handoffPackage.Knowledge.Discoveries, handoffPackage.Knowledge.LearnedCapabilities)
             : ChronicleTextFormatter.BuildStatusKnowledgeSummary(polity);
         string foodState = ChronicleTextFormatter.DescribeFoodState(polity);
@@ -204,7 +205,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
         lines.Add($" Learned: {knowledgeSummary.Learned}");
         lines.Add($" Year: {world.Time.Year}");
         lines.Add($" Chronicle boundary: {liveChronicleYear}");
-        if (activeControl is not null && handoffPackage is not null)
+        if (isActiveControlPolity && activeControl is not null && handoffPackage is not null)
         {
             string controlLabel = activeControl.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
             string spatialLabel = activeControl.SpatialModel switch

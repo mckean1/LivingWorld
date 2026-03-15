@@ -126,6 +126,7 @@ PR-6 now adds a canonical package for the transition from surfaced candidate tru
 
 - `ActivePlayHandoffPackage`
   - the full handoff boundary artifact
+  - authoritative bootstrap truth for the active-play entry boundary
 - `ActivePlayPlayerOwnershipState`
   - selected people/species/home-region identity
   - exact handoff year/month
@@ -138,6 +139,10 @@ PR-6 now adds a canonical package for the transition from surfaced candidate tru
   - `Society` versus `Polity`
   - `Network`, `AnchoredHomeRange`, or `TerritorialCore`
   - descriptive governance seed and authority evidence
+- `ActivePlayRuntimeControlState`
+  - runtime/player-control overlay built from the handoff package
+  - authoritative control boundary for active-play entry and watch presentation
+  - points back to the backing polity rather than replacing polity simulation truth
 - `ActivePlayChronicleHandoffState`
   - compact inherited prehistory summary lines for active-play entry
 - `ActivePlayKnowledgeVisibilityState`

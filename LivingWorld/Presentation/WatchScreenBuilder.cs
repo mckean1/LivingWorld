@@ -85,7 +85,7 @@ public static class WatchScreenBuilder
 
         ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
         ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
-        bool isControlledStart = activeControl?.SourcePolityId == polity.Id;
+        bool isControlledStart = world.IsActiveControlBackingPolity(polity.Id);
         int currentRegionId = isControlledStart && activeControl?.CurrentCenterRegionId is int controlledRegionId
             ? controlledRegionId
             : polity.RegionId;

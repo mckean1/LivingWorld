@@ -34,6 +34,10 @@ public sealed class SimulationHandoffTests
         Assert.True(world.ActivePlayHandoff.Package!.PlayerOwnership.StartsPaused);
         Assert.Equal(eventCountAtSelection, world.Events.Count);
         Assert.Equal(world.SelectedFocalPolityId, world.ActivePlayHandoff.Package.PlayerOwnership.SelectedPeopleId);
+        Assert.NotNull(world.ActiveControl);
+        Assert.True(world.IsActiveControlBackingPolity(world.ActivePlayHandoff.Package.StartingControl.SourcePolityId));
+        Assert.Equal(world.ActivePlayHandoff.Package.StartingControl.SourcePolityId, world.ActiveControl!.SourcePolityId);
+        Assert.Equal(world.ActivePlayHandoff.Package.PlayerOwnership.HomeRegionId, world.ActiveControl.HomeRegionId);
     }
 
     private static World CreateFocalSelectionWorld()

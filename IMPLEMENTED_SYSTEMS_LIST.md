@@ -218,6 +218,7 @@ Implemented:
   - `Settling` starts convert to `Polity` only if the full polity gate passes
   - `EmergentPolity` starts fall back to `Society` when structured-authority evidence is too thin
 - spatial control conversion now maps starts truthfully into `Network`, `AnchoredHomeRange`, or `TerritorialCore`
+- `ActiveControl` is now the explicit runtime/player-control overlay, while polity objects remain the backing simulation state beneath that control boundary
 - watch/UI entry surfaces now show the inherited start, converted control type, and compact handoff summary without dumping raw handoff fields into the chronicle
 
 ### PR-7 - Documentation and Canonical Roadmap Sync

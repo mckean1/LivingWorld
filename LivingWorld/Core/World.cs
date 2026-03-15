@@ -240,6 +240,9 @@ public sealed class World
     public EvolutionaryLineage? GetLineageForSpecies(int speciesId)
         => EvolutionaryLineages.FirstOrDefault(lineage => lineage.SpeciesId == speciesId);
 
+    public bool IsActiveControlBackingPolity(int polityId)
+        => ActiveControl?.SourcePolityId == polityId;
+
     public Polity? ResolveActiveControlPolity()
         => ActiveControl is { } activeControl
             ? Polities.FirstOrDefault(polity => polity.Id == activeControl.SourcePolityId)

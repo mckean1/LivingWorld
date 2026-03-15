@@ -55,6 +55,29 @@ public sealed class ChronicleWatchRendererTests
     }
 
     [Fact]
+    public void BuildStatusLines_ForeignPolityDoesNotProjectActiveControlOverlay()
+    {
+        World world = CreateActivePlayWorld();
+        world.BeginActiveSimulation();
+        Polity foreignPolity = new(99, "Foreign Polity", 2, 1, 90, stage: PolityStage.Tribe)
+        {
+            SettlementStatus = SettlementStatus.SemiSettled
+        };
+        foreignPolity.EstablishFirstSettlement(1, "Stone Chorus");
+        world.Polities.Add(foreignPolity);
+
+        IReadOnlyList<string> lines = ChronicleWatchRenderer.BuildStatusLines(
+            world,
+            foreignPolity,
+            new WatchUiState(),
+            width: 80,
+            stageNameFormatter: stage => stage.ToString());
+
+        Assert.DoesNotContain(lines, line => line.StartsWith(" Control:", StringComparison.Ordinal));
+        Assert.Contains(" Handoff summary: Selected candidate summary unavailable", lines);
+    }
+
+    [Fact]
     public void BuildStatusLines_GenerationFailureIsHonest()
     {
         World world = new(new WorldTime(70, 4));

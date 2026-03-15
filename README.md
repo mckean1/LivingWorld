@@ -108,6 +108,18 @@ Default watch mode still shows:
 - a reverse-chronological chronicle beneath it
 - only `Major` and `Legendary` turning points by default
 - key-driven inspection views layered over the same watch console
+
+## Active-Play Handoff Contract
+
+PR-6 now treats `ActiveControl` as an intentional runtime/player-control overlay on top of the underlying polity-backed simulation model.
+
+- canonical focal-selection entry always runs through the full handoff builder path
+- the selected start is the exact end-of-month prehistory state the player chose; handoff conversion does not advance another month
+- active play begins paused so inherited context can be inspected before time resumes
+- the handoff package is the authoritative bootstrap source for entry discoveries, learned capabilities, and known regions/species/polities
+- discoveries remain world knowledge, while learned capabilities remain gained advancements
+- `Society` / `Polity` control conversion and `Network` / `AnchoredHomeRange` / `TerritorialCore` spatial interpretation are descriptive, not strength-inflating rewrites of simulation truth
+- player-facing watch screens consume `ActiveControl` as the runtime control boundary, while polity lookups remain the backing simulation data underneath that overlay
 - an explicit paused/running state in the status panel
 
 The status panel carries secondary context such as the focal polity species so chronicle lines can stay concise and story-like.

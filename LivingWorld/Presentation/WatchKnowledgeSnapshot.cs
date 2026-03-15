@@ -79,7 +79,8 @@ public sealed class WatchKnowledgeSnapshot
                 discoveriesBySpeciesId: []);
         }
 
-        if (TryCreateFromHandoffBootstrap(world, focalPolity, out WatchKnowledgeSnapshot? activePlaySnapshot))
+        if (TryCreateFromHandoffBootstrap(world, focalPolity, out WatchKnowledgeSnapshot? activePlaySnapshot)
+            && activePlaySnapshot is not null)
         {
             return activePlaySnapshot;
         }
@@ -176,7 +177,7 @@ public sealed class WatchKnowledgeSnapshot
         snapshot = null;
         ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
         ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
-        if (handoffPackage is null || activeControl is null || activeControl.SourcePolityId != focalPolity.Id)
+        if (handoffPackage is null || activeControl is null || !world.IsActiveControlBackingPolity(focalPolity.Id))
         {
             return false;
         }
