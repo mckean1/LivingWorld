@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using LivingWorld.Advancement;
 using LivingWorld.Societies;
 
 namespace LivingWorld.Core;
@@ -94,11 +95,18 @@ public sealed record ActivePlayChronicleHandoffState(
     IReadOnlyList<string> SummaryLines);
 
 public sealed record ActivePlayKnowledgeVisibilityState(
-    IReadOnlyList<string> Discoveries,
-    IReadOnlyList<string> LearnedCapabilities,
+    IReadOnlyList<CulturalDiscovery> DiscoveryRecords,
+    IReadOnlyList<AdvancementId> LearnedCapabilityIds,
     IReadOnlyList<int> KnownRegionIds,
     IReadOnlyList<int> KnownSpeciesIds,
-    IReadOnlyList<int> KnownPolityIds);
+    IReadOnlyList<int> KnownPolityIds)
+{
+    public IReadOnlyList<string> Discoveries
+        => DiscoveryRecords.Select(discovery => discovery.Summary).ToArray();
+
+    public IReadOnlyList<string> LearnedCapabilities
+        => LearnedCapabilityIds.Select(id => AdvancementCatalog.Get(id).Name).ToArray();
+}
 
 public sealed record ActivePlayOriginRecord(
     int WorldYear,
@@ -159,59 +167,6 @@ public sealed class ActivePlayHandoffState
     {
         Package = package;
         RuntimeControl = CreateRuntimeControl(package);
-    }
-
-    public void RecordHandoff(int polityId, int worldYear, int polityAge, string summaryHeadline)
-    {
-        ActivePlayHandoffPackage package = new(
-            new ActivePlayPlayerOwnershipState(
-                polityId,
-                $"Polity {polityId}",
-                0,
-                "Unknown species",
-                null,
-                null,
-                worldYear,
-                1,
-                StartsPaused: true),
-            new ActivePlayStartingControlState(
-                polityId,
-                0,
-                0,
-                "Unknown",
-                SupportStabilityState.Stable,
-                ContinuityState.Established,
-                "Unknown",
-                new ActiveControlConversionResult(
-                    ActiveControlKind.Society,
-                    ActiveControlSpatialModel.AnchoredHomeRange,
-                    CandidateMaturityBand.Anchored,
-                    PolityGatePassed: false,
-                    "Legacy handoff record.",
-                    "legacy governance",
-                    "legacy diplomacy",
-                    "legacy authority"),
-                [],
-                [],
-                [],
-                [],
-                []),
-            new ActivePlayChronicleHandoffState(summaryHeadline, [summaryHeadline]),
-            new ActivePlayKnowledgeVisibilityState([], [], [], [], []),
-            new ActivePlayOriginRecord(
-                worldYear,
-                1,
-                polityAge,
-                "Legacy handoff record.",
-                summaryHeadline,
-                "Legacy selected start.",
-                summaryHeadline,
-                "Unknown",
-                summaryHeadline),
-            new ActivePlayWarningState([], [], [], []),
-            DateTime.UtcNow);
-
-        RecordPackage(package);
     }
 
     public void Clear()

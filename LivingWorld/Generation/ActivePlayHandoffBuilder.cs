@@ -359,11 +359,9 @@ public sealed class ActivePlayHandoffBuilder
             polity.Discoveries
                 .OrderBy(discovery => discovery.Category)
                 .ThenBy(discovery => discovery.Summary, StringComparer.Ordinal)
-                .Select(discovery => discovery.Summary)
                 .ToArray(),
             polity.Advancements
                 .OrderBy(advancement => advancement)
-                .Select(advancement => AdvancementCatalog.Get(advancement).Name)
                 .ToArray(),
             knownRegionIds.OrderBy(id => id).ToArray(),
             knownSpeciesIds.OrderBy(id => id).ToArray(),

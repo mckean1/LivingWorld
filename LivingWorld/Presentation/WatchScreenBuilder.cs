@@ -19,7 +19,7 @@ public static class WatchScreenBuilder
         return uiState.ActiveView switch
         {
             WatchViewType.FocalSelection => BuildFocalSelectionLines(world, uiState),
-            WatchViewType.MyPolity => BuildMyPolityLines(world, knowledge.FocalPolity, lookup),
+            WatchViewType.MyPolity => BuildMyPolityLines(world, knowledge, lookup),
             WatchViewType.CurrentRegion => BuildCurrentRegionLines(world, knowledge, lookup),
             WatchViewType.KnownRegions => BuildKnownRegionsLines(knowledge, uiState, lookup),
             WatchViewType.RegionDetail => BuildRegionDetailLines(world, knowledge, uiState.SelectedRegionId, lookup),
@@ -75,14 +75,21 @@ public static class WatchScreenBuilder
     public static string DescribeView(WatchViewType view)
         => WatchViewCatalog.DescribeView(view);
 
-    private static IReadOnlyList<string> BuildMyPolityLines(World world, Polity? polity, WorldLookup lookup)
+    private static IReadOnlyList<string> BuildMyPolityLines(World world, WatchKnowledgeSnapshot knowledge, WorldLookup lookup)
     {
+        Polity? polity = knowledge.FocalPolity;
         if (polity is null)
         {
             return ["No focal polity to inspect."];
         }
 
-        string regionName = lookup.GetRequiredRegion(polity.RegionId, "My Polity view").Name;
+        ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
+        ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
+        bool isControlledStart = activeControl?.SourcePolityId == polity.Id;
+        int currentRegionId = isControlledStart && activeControl?.CurrentCenterRegionId is int controlledRegionId
+            ? controlledRegionId
+            : polity.RegionId;
+        string regionName = lookup.GetRequiredRegion(currentRegionId, "My Polity view").Name;
         string speciesName = lookup.GetRequiredSpecies(polity.SpeciesId, "My Polity view").Name;
         double annualFoodRatio = polity.AnnualFoodNeeded <= 0 ? 1.0 : polity.AnnualFoodConsumed / polity.AnnualFoodNeeded;
         int managedHerdCount = polity.Settlements.Sum(settlement => settlement.ManagedHerds.Count);
@@ -94,9 +101,8 @@ public static class WatchScreenBuilder
         string economyNeeds = DescribeEconomyNeeds(polity.Settlements);
         string tradeGoods = DescribeEconomySignals(polity.Settlements, EconomySummaryLabel.TradeGood);
         string locallyCommon = DescribeEconomySignals(polity.Settlements, EconomySummaryLabel.LocallyCommon);
-        ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
-        ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
-        bool isControlledStart = activeControl?.SourcePolityId == polity.Id;
+        IReadOnlyList<string> visibleDiscoveries = knowledge.VisibleDiscoveries.Select(discovery => discovery.Summary).ToArray();
+        IReadOnlyList<string> learnedCapabilities = knowledge.LearnedCapabilities;
 
         List<string> lines =
         [
@@ -156,8 +162,8 @@ public static class WatchScreenBuilder
 
         AppendSettlementLines(lines, polity.Settlements, lookup);
         lines.Add(string.Empty);
-        lines.Add($" Discoveries: {DescribeDiscoveries(polity)}");
-        lines.Add($" Learned: {DescribeAdvancements(polity)}");
+        lines.Add($" Discoveries: {ChronicleTextFormatter.DescribeDiscoveries(visibleDiscoveries)}");
+        lines.Add($" Learned: {ChronicleTextFormatter.DescribeLearnedAdvancements(learnedCapabilities)}");
         lines.Add(string.Empty);
         lines.Add(" Enter keeps this expanded focal view.");
         return lines;
@@ -1000,7 +1006,13 @@ public static class WatchScreenBuilder
         }
 
         string controlLabel = activeControl.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
+        string spatialLabel = activeControl.SpatialModel switch
+        {
+            ActiveControlSpatialModel.Network => "Network",
+            ActiveControlSpatialModel.AnchoredHomeRange => "AnchoredHomeRange",
+            _ => "TerritorialCore"
+        };
         string homeRegion = handoffPackage.PlayerOwnership.HomeRegionName ?? "unknown homeland";
-        return $"{controlLabel} start from {homeRegion}";
+        return $"{controlLabel} / {spatialLabel} start from {homeRegion}";
     }
 }

@@ -103,39 +103,54 @@ public static class ChronicleTextFormatter
             Discoveries: DescribeDiscoveries(polity),
             Learned: DescribeLearnedAdvancements(polity));
 
-    public static string DescribeDiscoveries(Polity polity)
-    {
-        if (polity.Discoveries.Count == 0)
-        {
-            return "None yet";
-        }
+    public static StatusKnowledgeSummary BuildStatusKnowledgeSummary(
+        IReadOnlyList<string> discoveries,
+        IReadOnlyList<string> learnedCapabilities)
+        => new(
+            Discoveries: DescribeDiscoveries(discoveries),
+            Learned: DescribeLearnedAdvancements(learnedCapabilities));
 
-        string primary = polity.Discoveries
+    public static string DescribeDiscoveries(Polity polity)
+        => DescribeDiscoveries(polity.Discoveries
             .OrderBy(discovery => discovery.Category)
             .ThenBy(discovery => discovery.Summary, StringComparer.Ordinal)
             .Select(discovery => discovery.Summary)
-            .First();
+            .ToArray());
 
-        return polity.Discoveries.Count == 1
-            ? primary
-            : $"{primary}, +{polity.Discoveries.Count - 1} more";
-    }
-
-    public static string DescribeLearnedAdvancements(Polity polity)
+    public static string DescribeDiscoveries(IReadOnlyList<string> discoveries)
     {
-        if (polity.Advancements.Count == 0)
+        if (discoveries.Count == 0)
         {
             return "None yet";
         }
 
-        if (polity.Advancements.Count == 1)
+        string primary = discoveries[0];
+
+        return discoveries.Count == 1
+            ? primary
+            : $"{primary}, +{discoveries.Count - 1} more";
+    }
+
+    public static string DescribeLearnedAdvancements(Polity polity)
+        => DescribeLearnedAdvancements(polity.Advancements
+            .OrderBy(id => id)
+            .Select(id => AdvancementCatalog.Get(id).Name)
+            .ToArray());
+
+    public static string DescribeLearnedAdvancements(IReadOnlyList<string> learnedCapabilities)
+    {
+        if (learnedCapabilities.Count == 0)
         {
-            AdvancementDefinition advancement = AdvancementCatalog.Get(polity.Advancements.First());
-            return advancement.Name;
+            return "None yet";
         }
 
-        string first = AdvancementCatalog.Get(polity.Advancements.OrderBy(id => id).First()).Name;
-        return $"{first}, +{polity.Advancements.Count - 1} more";
+        if (learnedCapabilities.Count == 1)
+        {
+            return learnedCapabilities[0];
+        }
+
+        string first = learnedCapabilities[0];
+        return $"{first}, +{learnedCapabilities.Count - 1} more";
     }
 
     public static string RenderPopulationDelta(int delta)

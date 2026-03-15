@@ -240,6 +240,11 @@ public sealed class World
     public EvolutionaryLineage? GetLineageForSpecies(int speciesId)
         => EvolutionaryLineages.FirstOrDefault(lineage => lineage.SpeciesId == speciesId);
 
+    public Polity? ResolveActiveControlPolity()
+        => ActiveControl is { } activeControl
+            ? Polities.FirstOrDefault(polity => polity.Id == activeControl.SourcePolityId)
+            : null;
+
     public void AddEvolutionaryHistoryEvent(
         EvolutionaryHistoryEventType type,
         int lineageId,

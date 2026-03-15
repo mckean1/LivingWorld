@@ -87,9 +87,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
 
     private ChronicleLayout BuildLayout(World world, ChronicleFocus focus, WatchUiState uiState)
     {
-        Polity? polity = world.ActiveControl is { } activeControl
-            ? world.Polities.FirstOrDefault(candidate => candidate.Id == activeControl.SourcePolityId)
-            : focus.ResolvePolity(world);
+        Polity? polity = world.ResolveActiveControlPolity() ?? focus.ResolvePolity(world);
         int width = ResolveWindowWidth();
         List<string> statusLines = BuildStatusLines(world, polity, uiState, width);
         List<string> footerLines = WatchScreenBuilder.BuildFooterLines(uiState, width);
@@ -182,9 +180,16 @@ public sealed class ChronicleWatchRenderer : IDisposable
             return lines;
         }
 
-        string regionName = world.Regions.FirstOrDefault(region => region.Id == polity.RegionId)?.Name ?? "Unknown Region";
+        ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
+        ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
+        int regionId = activeControl?.SourcePolityId == polity.Id && activeControl.CurrentCenterRegionId.HasValue
+            ? activeControl.CurrentCenterRegionId.Value
+            : polity.RegionId;
+        string regionName = world.Regions.FirstOrDefault(region => region.Id == regionId)?.Name ?? "Unknown Region";
         string speciesName = ChronicleTextFormatter.DescribeSpeciesName(polity, world.Species);
-        ChronicleTextFormatter.StatusKnowledgeSummary knowledgeSummary = ChronicleTextFormatter.BuildStatusKnowledgeSummary(polity);
+        ChronicleTextFormatter.StatusKnowledgeSummary knowledgeSummary = activeControl?.SourcePolityId == polity.Id && handoffPackage is not null
+            ? ChronicleTextFormatter.BuildStatusKnowledgeSummary(handoffPackage.Knowledge.Discoveries, handoffPackage.Knowledge.LearnedCapabilities)
+            : ChronicleTextFormatter.BuildStatusKnowledgeSummary(polity);
         string foodState = ChronicleTextFormatter.DescribeFoodState(polity);
         string foodStores = Math.Round(polity.FoodStores).ToString("F0");
 
@@ -199,8 +204,6 @@ public sealed class ChronicleWatchRenderer : IDisposable
         lines.Add($" Learned: {knowledgeSummary.Learned}");
         lines.Add($" Year: {world.Time.Year}");
         lines.Add($" Chronicle boundary: {liveChronicleYear}");
-        ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
-        ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
         if (activeControl is not null && handoffPackage is not null)
         {
             string controlLabel = activeControl.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";

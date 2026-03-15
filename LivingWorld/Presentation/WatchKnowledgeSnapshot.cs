@@ -1,3 +1,4 @@
+using LivingWorld.Advancement;
 using LivingWorld.Core;
 using LivingWorld.Life;
 using LivingWorld.Map;
@@ -20,6 +21,8 @@ public sealed class WatchKnowledgeSnapshot
         List<Region> knownRegions,
         List<Species> knownSpecies,
         List<Polity> knownPolities,
+        List<CulturalDiscovery> visibleDiscoveries,
+        List<AdvancementId> learnedCapabilityIds,
         Dictionary<int, List<CulturalDiscovery>> discoveriesByRegionId,
         Dictionary<int, List<CulturalDiscovery>> discoveriesBySpeciesId)
     {
@@ -28,6 +31,8 @@ public sealed class WatchKnowledgeSnapshot
         KnownRegions = knownRegions;
         KnownSpecies = knownSpecies;
         KnownPolities = knownPolities;
+        VisibleDiscoveries = visibleDiscoveries;
+        LearnedCapabilityIds = learnedCapabilityIds;
         _knownRegionsById = knownRegions.ToDictionary(region => region.Id);
         _knownSpeciesById = knownSpecies.ToDictionary(species => species.Id);
         _knownPolitiesById = knownPolities.ToDictionary(polity => polity.Id);
@@ -45,11 +50,16 @@ public sealed class WatchKnowledgeSnapshot
 
     public IReadOnlyList<Polity> KnownPolities { get; }
 
+    public IReadOnlyList<CulturalDiscovery> VisibleDiscoveries { get; }
+
+    public IReadOnlyList<AdvancementId> LearnedCapabilityIds { get; }
+
+    public IReadOnlyList<string> LearnedCapabilities
+        => LearnedCapabilityIds.Select(id => AdvancementCatalog.Get(id).Name).ToList();
+
     public static WatchKnowledgeSnapshot Create(World world, ChronicleFocus focus)
     {
-        Polity? focalPolity = world.ActiveControl is { } activeControl
-            ? world.Polities.FirstOrDefault(polity => polity.Id == activeControl.SourcePolityId)
-            : focus.ResolvePolity(world);
+        Polity? focalPolity = world.ResolveActiveControlPolity() ?? focus.ResolvePolity(world);
         return Create(world, focalPolity);
     }
 
@@ -63,6 +73,8 @@ public sealed class WatchKnowledgeSnapshot
                 knownRegions: [],
                 knownSpecies: [],
                 knownPolities: [],
+                visibleDiscoveries: [],
+                learnedCapabilityIds: [],
                 discoveriesByRegionId: [],
                 discoveriesBySpeciesId: []);
         }
@@ -148,6 +160,13 @@ public sealed class WatchKnowledgeSnapshot
             knownRegions,
             knownSpecies,
             knownPolities,
+            focalPolity.Discoveries
+                .OrderBy(discovery => discovery.Category)
+                .ThenBy(discovery => discovery.Summary, StringComparer.Ordinal)
+                .ToList(),
+            focalPolity.Advancements
+                .OrderBy(id => id)
+                .ToList(),
             BuildDiscoveryLookup(focalPolity.Discoveries, discovery => discovery.RegionId),
             BuildDiscoveryLookup(focalPolity.Discoveries, discovery => discovery.SpeciesId));
     }
@@ -162,47 +181,27 @@ public sealed class WatchKnowledgeSnapshot
             return false;
         }
 
-        HashSet<int> knownRegionIds = handoffPackage.Knowledge.KnownRegionIds.ToHashSet();
-        knownRegionIds.Add(focalPolity.RegionId);
-        foreach (int settlementRegionId in focalPolity.Settlements.Select(settlement => settlement.RegionId))
-        {
-            knownRegionIds.Add(settlementRegionId);
-        }
-
-        foreach (int discoveredRegionId in focalPolity.Discoveries.Where(discovery => discovery.RegionId.HasValue).Select(discovery => discovery.RegionId!.Value))
-        {
-            knownRegionIds.Add(discoveredRegionId);
-        }
-
-        HashSet<int> knownSpeciesIds = handoffPackage.Knowledge.KnownSpeciesIds.ToHashSet();
-        knownSpeciesIds.Add(focalPolity.SpeciesId);
-        foreach (int discoveredSpeciesId in focalPolity.Discoveries.Where(discovery => discovery.SpeciesId.HasValue).Select(discovery => discovery.SpeciesId!.Value))
-        {
-            knownSpeciesIds.Add(discoveredSpeciesId);
-        }
-
-        HashSet<int> knownPolityIds = handoffPackage.Knowledge.KnownPolityIds.ToHashSet();
-        knownPolityIds.Add(focalPolity.Id);
-
         List<Region> knownRegions = world.Regions
-            .Where(region => knownRegionIds.Contains(region.Id))
+            .Where(region => handoffPackage.Knowledge.KnownRegionIds.Contains(region.Id))
             .OrderBy(region => region.Name, StringComparer.Ordinal)
             .ToList();
         List<Species> knownSpecies = world.Species
-            .Where(species => knownSpeciesIds.Contains(species.Id))
+            .Where(species => handoffPackage.Knowledge.KnownSpeciesIds.Contains(species.Id))
             .OrderByDescending(species => species.Id == focalPolity.SpeciesId)
             .ThenByDescending(species => species.IsSapient)
             .ThenBy(species => species.Name, StringComparer.Ordinal)
             .ToList();
         List<Polity> knownPolities = world.Polities
-            .Where(polity => polity.Population > 0 && knownPolityIds.Contains(polity.Id))
+            .Where(polity => polity.Population > 0 && handoffPackage.Knowledge.KnownPolityIds.Contains(polity.Id))
             .OrderByDescending(polity => polity.Id == focalPolity.Id)
             .ThenByDescending(polity => polity.Population)
             .ThenBy(polity => polity.Name, StringComparer.Ordinal)
             .ToList();
         Region? currentRegion = activeControl.CurrentCenterRegionId.HasValue
             ? knownRegions.FirstOrDefault(region => region.Id == activeControl.CurrentCenterRegionId.Value)
-            : knownRegions.FirstOrDefault(region => region.Id == focalPolity.RegionId);
+            : handoffPackage.PlayerOwnership.HomeRegionId.HasValue
+                ? knownRegions.FirstOrDefault(region => region.Id == handoffPackage.PlayerOwnership.HomeRegionId.Value)
+                : null;
 
         snapshot = new WatchKnowledgeSnapshot(
             focalPolity,
@@ -210,8 +209,15 @@ public sealed class WatchKnowledgeSnapshot
             knownRegions,
             knownSpecies,
             knownPolities,
-            BuildDiscoveryLookup(focalPolity.Discoveries, discovery => discovery.RegionId),
-            BuildDiscoveryLookup(focalPolity.Discoveries, discovery => discovery.SpeciesId));
+            handoffPackage.Knowledge.DiscoveryRecords
+                .OrderBy(discovery => discovery.Category)
+                .ThenBy(discovery => discovery.Summary, StringComparer.Ordinal)
+                .ToList(),
+            handoffPackage.Knowledge.LearnedCapabilityIds
+                .OrderBy(id => id)
+                .ToList(),
+            BuildDiscoveryLookup(handoffPackage.Knowledge.DiscoveryRecords, discovery => discovery.RegionId),
+            BuildDiscoveryLookup(handoffPackage.Knowledge.DiscoveryRecords, discovery => discovery.SpeciesId));
         return true;
     }
 
