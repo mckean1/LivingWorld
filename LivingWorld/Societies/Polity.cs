@@ -40,6 +40,7 @@ public sealed class Polity
 
     // Migration tracking
     public int PreviousRegionId { get; set; }
+    public bool MovedThisMonth { get; set; }
     public bool MovedThisYear { get; set; }
     public int MovesThisYear { get; set; }
 
@@ -69,6 +70,7 @@ public sealed class Polity
     public int TradePartnerCountThisYear { get; set; }
     public double AnnualTradeNeedMitigated { get; set; }
     public double FoodManagedThisMonth { get; set; }
+    public HashSet<int> TradePartnersThisMonth { get; }
 
     // Agriculture tracking
     public double CultivatedLand { get; set; }
@@ -146,6 +148,7 @@ public sealed class Polity
         LastLearnedAgricultureEventId = null;
 
         PreviousRegionId = regionId;
+        MovedThisMonth = false;
         MovedThisYear = false;
         MovesThisYear = 0;
 
@@ -173,6 +176,7 @@ public sealed class Polity
         TradePartnerCountThisYear = 0;
         AnnualTradeNeedMitigated = 0;
         FoodManagedThisMonth = 0;
+        TradePartnersThisMonth = [];
         StarvationMonthsThisYear = 0;
 
         CultivatedLand = 0;
@@ -223,6 +227,8 @@ public sealed class Polity
         TradePartnerCountThisYear = 0;
         AnnualTradeNeedMitigated = 0;
         FoodManagedThisMonth = 0;
+        MovedThisMonth = false;
+        TradePartnersThisMonth.Clear();
         AnnualCultivatedLandTotal = 0;
         FarmingMonthsThisYear = 0;
         StarvationMonthsThisYear = 0;
@@ -273,6 +279,8 @@ public sealed class Polity
         TradePartnerCountThisYear = 0;
         AnnualTradeNeedMitigated = 0;
         FoodManagedThisMonth = 0;
+        MovedThisMonth = false;
+        TradePartnersThisMonth.Clear();
         AnnualCultivatedLandTotal = 0;
         FarmingMonthsThisYear = 0;
         StarvationMonthsThisYear = 0;
@@ -288,6 +296,12 @@ public sealed class Polity
         }
 
         MaterialMovedThisYear.Clear();
+    }
+
+    public void ResetMonthlyObserverFacts()
+    {
+        MovedThisMonth = false;
+        TradePartnersThisMonth.Clear();
     }
 
     public bool HasAdvancement(AdvancementId advancementId)

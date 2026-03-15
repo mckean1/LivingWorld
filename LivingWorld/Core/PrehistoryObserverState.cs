@@ -17,10 +17,15 @@ public sealed class PrehistoryObserverState
             return null;
         }
 
-        return history
-            .Where(snapshot => snapshot.AbsoluteMonthIndex < absoluteMonthIndex)
-            .OrderByDescending(snapshot => snapshot.AbsoluteMonthIndex)
-            .FirstOrDefault();
+        for (int index = history.Count - 1; index >= 0; index--)
+        {
+            if (history[index].AbsoluteMonthIndex < absoluteMonthIndex)
+            {
+                return history[index];
+            }
+        }
+
+        return null;
     }
 
     public void Upsert(PeopleMonthlySnapshot snapshot)

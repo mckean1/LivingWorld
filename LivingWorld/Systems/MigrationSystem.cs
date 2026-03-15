@@ -43,6 +43,7 @@ public sealed class MigrationSystem
                             : $"{target.Name} Outpost {index + 1}");
                     }
 
+                    polity.MovedThisMonth = true;
                     polity.MovedThisYear = true;
                     polity.MovesThisYear++;
                     double moveCostRate = Math.Clamp(0.25 * polity.Capabilities.TravelCostMultiplier, 0.05, 0.90);

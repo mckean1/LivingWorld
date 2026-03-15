@@ -170,6 +170,8 @@ public sealed class TradeSystem
 
         RegisterPartner(exporter.Id, importer.Id);
         RegisterPartner(importer.Id, exporter.Id);
+        exporter.TradePartnersThisMonth.Add(importer.Id);
+        importer.TradePartnersThisMonth.Add(exporter.Id);
 
         exporter.TradePartnerCountThisYear = _partnersByPolityThisYear[exporter.Id].Count;
         importer.TradePartnerCountThisYear = _partnersByPolityThisYear[importer.Id].Count;

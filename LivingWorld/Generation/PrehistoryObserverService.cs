@@ -15,19 +15,21 @@ public sealed class PrehistoryObserverService
 
     public void CaptureCurrentMonth(World world)
     {
+        ObserverWorldContext context = new(world);
         int absoluteMonthIndex = ObserverMath.ToAbsoluteMonthIndex(world.Time.Year, world.Time.Month);
         foreach (Polity polity in world.Polities
                      .Where(candidate => candidate.Population > 0)
                      .OrderBy(candidate => candidate.Id))
         {
             PeopleMonthlySnapshot? previous = world.Prehistory.Observer.GetLatestBeforeMonth(polity.Id, absoluteMonthIndex);
-            PeopleMonthlySnapshot snapshot = _monthlyExtractor.Create(world, polity, previous);
+            PeopleMonthlySnapshot snapshot = _monthlyExtractor.Create(context, polity, previous);
             world.Prehistory.Observer.Upsert(snapshot);
         }
     }
 
     public PrehistoryObserverSnapshot Observe(World world)
     {
+        ObserverWorldContext context = new(world);
         List<PeopleHistoryWindowSnapshot> peopleHistoryWindows = [];
         List<RegionEvaluationSnapshot> regionEvaluations = [];
         List<NeighborContextSnapshot> neighborContexts = [];
@@ -36,7 +38,7 @@ public sealed class PrehistoryObserverService
                      .Where(candidate => candidate.Population > 0)
                      .OrderBy(candidate => candidate.Id))
         {
-            IReadOnlyList<PeopleMonthlySnapshot> history = GetObservedHistory(world, polity);
+            IReadOnlyList<PeopleMonthlySnapshot> history = GetObservedHistory(context, polity);
             if (history.Count == 0)
             {
                 continue;
@@ -44,41 +46,126 @@ public sealed class PrehistoryObserverService
 
             PeopleHistoryWindowSnapshot peopleHistory = _historyBuilder.Build(history);
             peopleHistoryWindows.Add(peopleHistory);
-            regionEvaluations.AddRange(_regionBuilder.Build(world, polity, peopleHistory, history));
-            neighborContexts.Add(_neighborBuilder.Build(world, polity));
+            regionEvaluations.AddRange(_regionBuilder.Build(context, polity, peopleHistory, history));
+            neighborContexts.Add(_neighborBuilder.Build(context, polity));
         }
 
         return new PrehistoryObserverSnapshot(
-            world.Time.Year,
-            world.Time.Month,
+            context.World.Time.Year,
+            context.World.Time.Month,
             peopleHistoryWindows,
             regionEvaluations,
             neighborContexts,
-            $"Observer snapshot for {peopleHistoryWindows.Count} people at year {world.Time.Year}, month {world.Time.Month}.",
+            $"Observer snapshot for {peopleHistoryWindows.Count} people at year {context.World.Time.Year}, month {context.World.Time.Month}.",
             [$"region_contexts:{regionEvaluations.Count}", $"neighbor_contexts:{neighborContexts.Count}"]);
     }
 
-    private List<PeopleMonthlySnapshot> GetObservedHistory(World world, Polity polity)
+    private List<PeopleMonthlySnapshot> GetObservedHistory(ObserverWorldContext context, Polity polity)
     {
-        int absoluteMonthIndex = ObserverMath.ToAbsoluteMonthIndex(world.Time.Year, world.Time.Month);
-        List<PeopleMonthlySnapshot> history = world.Prehistory.Observer.GetPeopleHistory(polity.Id).ToList();
+        int absoluteMonthIndex = ObserverMath.ToAbsoluteMonthIndex(context.World.Time.Year, context.World.Time.Month);
+        List<PeopleMonthlySnapshot> history = context.World.Prehistory.Observer.GetPeopleHistory(polity.Id).ToList();
         if (history.Any(snapshot => snapshot.AbsoluteMonthIndex == absoluteMonthIndex))
         {
             return history;
         }
 
-        PeopleMonthlySnapshot? previous = world.Prehistory.Observer.GetLatestBeforeMonth(polity.Id, absoluteMonthIndex);
-        history.Add(_monthlyExtractor.Create(world, polity, previous));
+        PeopleMonthlySnapshot? previous = context.World.Prehistory.Observer.GetLatestBeforeMonth(polity.Id, absoluteMonthIndex);
+        history.Add(_monthlyExtractor.Create(context, polity, previous));
         history.Sort(static (left, right) => left.AbsoluteMonthIndex.CompareTo(right.AbsoluteMonthIndex));
         return history;
     }
 }
 
-public sealed class PeopleMonthlySnapshotExtractor
+internal sealed class ObserverWorldContext
 {
-    public PeopleMonthlySnapshot Create(World world, Polity polity, PeopleMonthlySnapshot? previous)
+    private readonly Dictionary<int, Region> _regionsById;
+    private readonly Dictionary<int, Species> _speciesById;
+    private readonly List<Polity> _activePolities;
+    private readonly Dictionary<int, int> _activePopulationByRegionId = [];
+    private readonly Dictionary<int, int> _settlementCountByRegionId = [];
+    private readonly Dictionary<int, HashSet<int>> _occupyingPolityIdsByRegionId = [];
+    private readonly Dictionary<(int PolityId, int RegionId), int> _historicalSignificanceCountByPolityRegion = [];
+    private readonly Dictionary<int, int> _recentExtinctionCountByRegionId = [];
+    private readonly Dictionary<(int LeftRegionId, int RightRegionId), int> _hopDistanceCache = [];
+
+    public ObserverWorldContext(World world)
     {
-        Species species = world.Species.First(candidate => candidate.Id == polity.SpeciesId);
+        World = world;
+        _regionsById = world.Regions.ToDictionary(region => region.Id);
+        _speciesById = world.Species.ToDictionary(species => species.Id);
+        _activePolities = world.Polities
+            .Where(polity => polity.Population > 0)
+            .OrderBy(polity => polity.Id)
+            .ToList();
+
+        foreach (Polity polity in _activePolities)
+        {
+            foreach (int regionId in GetOccupiedRegionIds(polity))
+            {
+                if (!_occupyingPolityIdsByRegionId.TryGetValue(regionId, out HashSet<int>? polityIds))
+                {
+                    polityIds = [];
+                    _occupyingPolityIdsByRegionId[regionId] = polityIds;
+                }
+
+                polityIds.Add(polity.Id);
+            }
+
+            if (_regionsById.ContainsKey(polity.RegionId))
+            {
+                _activePopulationByRegionId[polity.RegionId] = GetActivePopulationInRegion(polity.RegionId) + polity.Population;
+            }
+
+            foreach (Settlement settlement in polity.Settlements)
+            {
+                if (_regionsById.ContainsKey(settlement.RegionId))
+                {
+                    _settlementCountByRegionId[settlement.RegionId] = GetSettlementCountInRegion(settlement.RegionId) + 1;
+                }
+            }
+        }
+
+        foreach (CivilizationalHistoryEvent entry in world.CivilizationalHistory)
+        {
+            if (!entry.PolityId.HasValue || !_regionsById.ContainsKey(entry.RegionId))
+            {
+                continue;
+            }
+
+            (int PolityId, int RegionId) key = (entry.PolityId.Value, entry.RegionId);
+            _historicalSignificanceCountByPolityRegion[key] = GetHistoricalSignificanceCount(entry.PolityId.Value, entry.RegionId) + 1;
+        }
+
+        foreach (LocalPopulationExtinctionRecord extinction in world.LocalPopulationExtinctions)
+        {
+            if (ObserverMath.MonthsBetween(extinction.Year, extinction.Month, world.Time.Year, world.Time.Month) >= 12)
+            {
+                continue;
+            }
+
+            _recentExtinctionCountByRegionId[extinction.RegionId] = GetRecentExtinctionCount(extinction.RegionId) + 1;
+        }
+    }
+
+    public World World { get; }
+
+    public IReadOnlyList<Polity> ActivePolities => _activePolities;
+
+    public Region GetRequiredRegion(int regionId)
+        => _regionsById.TryGetValue(regionId, out Region? region)
+            ? region
+            : throw new InvalidOperationException($"Observer snapshot referenced missing region {regionId}.");
+
+    public bool TryGetRegion(int regionId, out Region? region)
+        => _regionsById.TryGetValue(regionId, out region);
+
+    public Species GetRequiredSpecies(int speciesId)
+        => _speciesById.TryGetValue(speciesId, out Species? species)
+            ? species
+            : throw new InvalidOperationException($"Observer snapshot referenced missing species {speciesId}.");
+
+    public List<int> GetOccupiedRegionIds(Polity polity)
+    {
         List<int> occupiedRegionIds = polity.Settlements
             .Select(settlement => settlement.RegionId)
             .Distinct()
@@ -89,13 +176,75 @@ public sealed class PeopleMonthlySnapshotExtractor
             occupiedRegionIds.Add(polity.RegionId);
         }
 
+        return occupiedRegionIds;
+    }
+
+    public int GetActivePopulationInRegion(int regionId)
+        => _activePopulationByRegionId.TryGetValue(regionId, out int population)
+            ? population
+            : 0;
+
+    public int GetSettlementCountInRegion(int regionId)
+        => _settlementCountByRegionId.TryGetValue(regionId, out int settlementCount)
+            ? settlementCount
+            : 0;
+
+    public int GetOccupyingPeopleCountInRegion(int regionId)
+        => _occupyingPolityIdsByRegionId.TryGetValue(regionId, out HashSet<int>? polityIds)
+            ? polityIds.Count
+            : 0;
+
+    public int GetOtherOccupyingPeopleCountInRegion(int regionId, int polityId)
+    {
+        if (!_occupyingPolityIdsByRegionId.TryGetValue(regionId, out HashSet<int>? polityIds))
+        {
+            return 0;
+        }
+
+        return polityIds.Contains(polityId)
+            ? Math.Max(0, polityIds.Count - 1)
+            : polityIds.Count;
+    }
+
+    public int GetHistoricalSignificanceCount(int polityId, int regionId)
+        => _historicalSignificanceCountByPolityRegion.TryGetValue((polityId, regionId), out int count)
+            ? count
+            : 0;
+
+    public int GetRecentExtinctionCount(int regionId)
+        => _recentExtinctionCountByRegionId.TryGetValue(regionId, out int count)
+            ? count
+            : 0;
+
+    public int GetHopDistance(int sourceRegionId, int targetRegionId)
+    {
+        (int LeftRegionId, int RightRegionId) key = sourceRegionId <= targetRegionId
+            ? (sourceRegionId, targetRegionId)
+            : (targetRegionId, sourceRegionId);
+        if (_hopDistanceCache.TryGetValue(key, out int cachedDistance))
+        {
+            return cachedDistance;
+        }
+
+        int resolvedDistance = ObserverMath.ComputeHopDistance(this, sourceRegionId, targetRegionId);
+        _hopDistanceCache[key] = resolvedDistance;
+        return resolvedDistance;
+    }
+}
+
+internal sealed class PeopleMonthlySnapshotExtractor
+{
+    public PeopleMonthlySnapshot Create(ObserverWorldContext context, Polity polity, PeopleMonthlySnapshot? previous)
+    {
+        List<int> occupiedRegionIds = context.GetOccupiedRegionIds(polity);
+
         int settlementCount = polity.SettlementCount;
         int homeClusterRegionId = occupiedRegionIds[0];
         double homeClusterShare = 1.0;
         int oldestSettlementAgeMonths = 0;
         double averageSettlementAgeMonths = 0.0;
         int surplusSettlements = 0;
-        int stableSettlements = settlementCount == 0 ? 1 : 0;
+        int stableSettlements = 0;
         int deficitSettlements = 0;
         int starvingSettlements = 0;
         double required = polity.FoodNeededThisMonth;
@@ -134,10 +283,11 @@ public sealed class PeopleMonthlySnapshotExtractor
         double foodSurplusShare = required <= 0.0
             ? 0.0
             : Math.Clamp(polity.FoodSurplusThisMonth / required, 0.0, 1.5);
-        double connectedFootprintShare = ObserverMath.ComputeLargestConnectedShare(world, occupiedRegionIds);
+        double connectedFootprintShare = ObserverMath.ComputeLargestConnectedShare(context, occupiedRegionIds);
+        double routeCoverageShare = ComputeRouteCoverageShare(context, occupiedRegionIds, homeClusterRegionId);
         double scatterShare = Math.Clamp(1.0 - connectedFootprintShare, 0.0, 1.0);
-        int maxFootprintHopDistance = ObserverMath.ComputeMaxPairwiseHopDistance(world, occupiedRegionIds);
-        bool movedThisMonth = polity.MovedThisYear && polity.PreviousRegionId != polity.RegionId;
+        int maxFootprintHopDistance = ObserverMath.ComputeMaxPairwiseHopDistance(context, occupiedRegionIds);
+        bool movedThisMonth = polity.MovedThisMonth;
         bool supportCrashThisMonth = previous is not null
             && ((previous.SupportAdequacy >= 0.85 && supportAdequacy <= 0.55)
                 || (previous.StarvingSettlementCount == 0 && starvingSettlements > 0));
@@ -157,7 +307,7 @@ public sealed class PeopleMonthlySnapshotExtractor
             ? 1
             : identityBreakThisMonth
                 ? 0
-                : previous.ContinuousIdentityMonthsObserved + Math.Max(1, ObserverMath.ToAbsoluteMonthIndex(world.Time.Year, world.Time.Month) - previous.AbsoluteMonthIndex);
+                : previous.ContinuousIdentityMonthsObserved + Math.Max(1, ObserverMath.ToAbsoluteMonthIndex(context.World.Time.Year, context.World.Time.Month) - previous.AbsoluteMonthIndex);
         bool anchoredThisMonth = settlementCount > 0 && homeClusterShare >= 0.50 && oldestSettlementAgeMonths >= 6 && !movedThisMonth;
         bool strongAnchoredThisMonth = anchoredThisMonth && homeClusterShare >= 0.75 && oldestSettlementAgeMonths >= 12 && starvingSettlements == 0;
         bool expansionOpportunityThisMonth = settlementCount > 0
@@ -165,17 +315,17 @@ public sealed class PeopleMonthlySnapshotExtractor
             && starvingSettlements == 0
             && polity.MigrationPressure <= 0.35
             && polity.FragmentationPressure <= 0.45;
-        bool tradeContactThisMonth = polity.TradePartnerCountThisYear > 0;
-        List<RelevantNeighborFact> neighbors = ObserverNeighborAnalyzer.GetRelevantNeighbors(world, polity);
+        bool tradeContactThisMonth = polity.TradePartnersThisMonth.Count > 0;
+        List<RelevantNeighborFact> neighbors = ObserverNeighborAnalyzer.GetRelevantNeighbors(context, polity);
 
         return new PeopleMonthlySnapshot(
             polity.Id,
             polity.Name,
             polity.SpeciesId,
             polity.LineageId,
-            world.Time.Year,
-            world.Time.Month,
-            ObserverMath.ToAbsoluteMonthIndex(world.Time.Year, world.Time.Month),
+            context.World.Time.Year,
+            context.World.Time.Month,
+            ObserverMath.ToAbsoluteMonthIndex(context.World.Time.Year, context.World.Time.Month),
             polity.Population,
             polity.RegionId,
             polity.PreviousRegionId,
@@ -188,6 +338,7 @@ public sealed class PeopleMonthlySnapshotExtractor
             starvingSettlements,
             homeClusterShare,
             connectedFootprintShare,
+            routeCoverageShare,
             scatterShare,
             maxFootprintHopDistance,
             stored,
@@ -201,7 +352,7 @@ public sealed class PeopleMonthlySnapshotExtractor
             averageSettlementAgeMonths,
             polity.Discoveries.Count,
             polity.Advancements.Count,
-            polity.TradePartnerCountThisYear,
+            polity.TradePartnersThisMonth.Count,
             polity.MigrationPressure,
             polity.FragmentationPressure,
             polity.SettlementStatus,
@@ -226,6 +377,17 @@ public sealed class PeopleMonthlySnapshotExtractor
             neighbors.Count(neighbor => neighbor.SharesBorder),
             neighbors.Count(neighbor => neighbor.IsReachable),
             neighbors.Count(neighbor => neighbor.ExertsPressure));
+    }
+
+    private static double ComputeRouteCoverageShare(ObserverWorldContext context, IReadOnlyCollection<int> occupiedRegionIds, int homeClusterRegionId)
+    {
+        if (occupiedRegionIds.Count <= 1)
+        {
+            return occupiedRegionIds.Count == 0 ? 0.0 : 1.0;
+        }
+
+        int routeCoveredRegions = occupiedRegionIds.Count(regionId => context.GetHopDistance(homeClusterRegionId, regionId) <= 1);
+        return Math.Clamp(routeCoveredRegions / (double)occupiedRegionIds.Count, 0.0, 1.0);
     }
 }
 
@@ -257,6 +419,7 @@ public sealed class PeopleHistoryWindowSnapshotBuilder
             current.MigrationPressure,
             current.FragmentationPressure,
             current.ConnectedFootprintShare,
+            current.RouteCoverageShare,
             current.ScatterShare,
             current.HomeClusterShare,
             current.IsAnchoredThisMonth,
@@ -299,6 +462,9 @@ public sealed class PeopleHistoryWindowSnapshotBuilder
             ObserverMath.Average(last12, snapshot => snapshot.OccupiedRegionIds.Count),
             current.ConnectedFootprintShare,
             ObserverMath.Average(last12, snapshot => snapshot.ConnectedFootprintShare),
+            current.RouteCoverageShare,
+            ObserverMath.Average(last6, snapshot => snapshot.RouteCoverageShare),
+            ObserverMath.Average(last12, snapshot => snapshot.RouteCoverageShare),
             current.ScatterShare,
             CountTransitions(last12, static (previous, next) => next.CurrentRegionId != previous.CurrentRegionId),
             last24.Count == 0 ? current.MaxFootprintHopDistance : last24.Max(snapshot => snapshot.MaxFootprintHopDistance));
@@ -374,7 +540,7 @@ public sealed class PeopleHistoryWindowSnapshotBuilder
             last6.Count(snapshot => snapshot.IdentityBreakThisMonth),
             last12.Count(snapshot => snapshot.IdentityBreakThisMonth));
 
-        EvaluatorHealthSummary health = BuildHealth(current, last6, last12, demography, support, rootedness, continuity);
+        EvaluatorHealthSummary health = BuildHealth(current, last6, last12, last24, demography, support, spatial, rootedness, continuity);
 
         return new PeopleHistoryWindowSnapshot(
             new PeopleSnapshotHeader(current.PeopleId, current.PeopleName, current.SpeciesId, current.LineageId, current.WorldYear, current.WorldMonth),
@@ -396,62 +562,98 @@ public sealed class PeopleHistoryWindowSnapshotBuilder
         PeopleMonthlySnapshot current,
         IReadOnlyList<PeopleMonthlySnapshot> last6,
         IReadOnlyList<PeopleMonthlySnapshot> last12,
+        IReadOnlyList<PeopleMonthlySnapshot> last24,
         DemographyHistoryRollup demography,
         SupportHistoryRollup support,
+        SpatialHistoryRollup spatial,
         RootednessHistoryRollup rootedness,
         SocialContinuityHistoryRollup continuity)
     {
-        bool recoveringNow = current.SupportAdequacy >= 0.80
-            && last6.Any(snapshot => snapshot.SupportCrashThisMonth || snapshot.FoodShortageShare > 0.10);
-        SupportStabilityState supportState = current.SupportAdequacy <= 0.45 || current.StarvingSettlementCount > 0
+        bool recoveringNow = current.StarvingSettlementCount == 0
+            && current.SupportAdequacy >= 0.85
+            && (support.SupportCrashMonthsLast6Months > 0
+                || support.ShortageMonthsLast6Months > 0)
+            && current.SupportAdequacy >= support.AverageSupportAdequacyLast6Months;
+        SupportStabilityState supportState = current.SupportAdequacy <= 0.45
+            || current.StarvingSettlementCount > 0
+            || current.FoodSatisfaction < 0.45
             ? SupportStabilityState.Collapsed
             : recoveringNow
                 ? SupportStabilityState.Recovering
                 : support.ShortageMonthsLast12Months >= Math.Max(3, last12.Count / 3)
+                    || support.SupportCrashMonthsLast12Months > 0
                     ? SupportStabilityState.Volatile
                     : SupportStabilityState.Stable;
         double footprintSupportRatio = current.OccupiedRegionIds.Count == 0
             ? current.SupportAdequacy
             : current.SupportAdequacy / Math.Max(1, current.OccupiedRegionIds.Count);
-        int coherentMonthsLast6 = last6.Count(snapshot => snapshot.ConnectedFootprintShare >= 0.75 && snapshot.ScatterShare <= 0.25);
-        int scatteredMonthsLast6 = last6.Count(snapshot => snapshot.ScatterShare >= 0.40);
-        int scatteredMonthsLast12 = last12.Count(snapshot => snapshot.ScatterShare >= 0.40);
-        MovementCoherenceState movementState = current.ScatterShare >= 0.40 || current.ConnectedFootprintShare <= 0.50
+        int coherentMonthsLast6 = last6.Count(snapshot => snapshot.ConnectedFootprintShare >= 0.75 && snapshot.RouteCoverageShare >= 0.60 && snapshot.ScatterShare <= 0.25);
+        int coherentMonthsLast12 = last12.Count(snapshot => snapshot.ConnectedFootprintShare >= 0.75 && snapshot.RouteCoverageShare >= 0.60 && snapshot.ScatterShare <= 0.25);
+        int scatteredMonthsLast6 = last6.Count(snapshot => snapshot.ScatterShare >= 0.40 || snapshot.RouteCoverageShare < 0.40 || snapshot.ConnectedFootprintShare <= 0.50);
+        int scatteredMonthsLast12 = last12.Count(snapshot => snapshot.ScatterShare >= 0.40 || snapshot.RouteCoverageShare < 0.40 || snapshot.ConnectedFootprintShare <= 0.50);
+        MovementCoherenceState movementState = current.ScatterShare >= 0.45
+            || current.ConnectedFootprintShare <= 0.50
+            || current.RouteCoverageShare < 0.35
             ? MovementCoherenceState.Scattered
-            : coherentMonthsLast6 >= Math.Max(1, last6.Count / 2)
+            : current.ConnectedFootprintShare >= 0.75
+                && current.RouteCoverageShare >= 0.60
+                && current.ScatterShare <= 0.25
+                && coherentMonthsLast6 >= Math.Max(1, last6.Count / 2)
                 ? MovementCoherenceState.Coherent
                 : MovementCoherenceState.Mixed;
+        bool recoveringFromRecentDisplacement = !current.DisplacementThisMonth
+            && current.IsAnchoredThisMonth
+            && rootedness.DisplacementMonthsLast6Months > 0;
         RootednessState rootednessState = current.DisplacementThisMonth
+            || (rootedness.DisplacementMonthsLast6Months >= Math.Max(2, last6.Count / 2)
+                && rootedness.AnchoredMonthsLast6Months == 0)
             ? RootednessState.Displaced
-            : current.IsStrongAnchoredThisMonth || rootedness.StrongAnchoredMonthsLast12Months >= Math.Max(2, last12.Count / 2)
+            : current.IsStrongAnchoredThisMonth
+                || (rootedness.StrongAnchoredMonthsLast12Months >= Math.Max(2, last12.Count / 3)
+                    && rootedness.EstablishedSettlementMonthsLast12Months >= Math.Max(2, last12.Count / 3)
+                    && rootedness.AverageHomeClusterShareLast12Months >= 0.60)
                 ? RootednessState.Anchored
                 : RootednessState.SoftAnchored;
         ContinuityState continuityState = current.ActiveIdentityBreakNow
             ? ContinuityState.Broken
-            : continuity.IdentityBreakCountLast12Months > 0 || continuity.ObservedContinuousIdentityMonths < 12
+            : continuity.ObservedContinuousIdentityMonths < 6
+                ? ContinuityState.New
+                : continuity.IdentityBreakCountLast12Months > 0 || continuity.MonthsSinceIdentityBreak < 12
                 ? ContinuityState.Fragile
-                : ContinuityState.Continuous;
+                : continuity.ObservedContinuousIdentityMonths >= 24 && continuity.IdentityBreakCountLast24Months == 0
+                    ? ContinuityState.Deep
+                    : ContinuityState.Established;
 
         return new EvaluatorHealthSummary(
             new DemographicHealthSummary(
                 demography.CurrentPopulation,
+                demography.AveragePopulationLast6Months,
                 demography.AveragePopulationLast12Months,
                 demography.DeclineMonthsLast12Months,
+                demography.MinimumPopulationLast12Months,
                 last12.Count(snapshot => snapshot.StarvingSettlementCount > 0)),
             new SupportStabilityHealth(
                 supportState,
                 current.SupportAdequacy,
                 support.AverageSupportAdequacyLast6Months,
                 support.AverageSupportAdequacyLast12Months,
+                support.AverageFoodSatisfactionLast12Months,
+                support.ShortageMonthsLast6Months,
                 support.ShortageMonthsLast12Months,
                 current.SupportCrashThisMonth,
+                support.SupportCrashMonthsLast6Months,
+                support.SupportCrashMonthsLast12Months,
                 recoveringNow),
             new MovementCoherenceHealth(
                 movementState,
                 current.ConnectedFootprintShare,
+                current.RouteCoverageShare,
                 current.ScatterShare,
                 footprintSupportRatio,
+                spatial.AverageRouteCoverageShareLast6Months,
+                spatial.AverageRouteCoverageShareLast12Months,
                 coherentMonthsLast6,
+                coherentMonthsLast12,
                 scatteredMonthsLast6,
                 scatteredMonthsLast12),
             new RootednessHealth(
@@ -459,13 +661,18 @@ public sealed class PeopleHistoryWindowSnapshotBuilder
                 rootedness.AnchoredMonthsLast12Months,
                 rootedness.StrongAnchoredMonthsLast12Months,
                 rootedness.AverageHomeClusterShareLast12Months,
-                rootedness.StableSettlementMonthsLast12Months,
-                current.DisplacementThisMonth),
+                rootedness.EstablishedSettlementMonthsLast12Months,
+                current.DisplacementThisMonth,
+                rootedness.DisplacementMonthsLast6Months,
+                rootedness.DisplacementMonthsLast12Months,
+                recoveringFromRecentDisplacement),
             new ContinuityHealth(
                 continuityState,
                 continuity.ObservedContinuousIdentityMonths,
                 continuity.MonthsSinceIdentityBreak,
+                continuity.IdentityBreakCountLast6Months,
                 continuity.IdentityBreakCountLast12Months,
+                continuity.IdentityBreakCountLast24Months,
                 continuity.ActiveIdentityBreakNow));
     }
 
@@ -507,15 +714,15 @@ public sealed class PeopleHistoryWindowSnapshotBuilder
     }
 }
 
-public sealed class RegionEvaluationSnapshotBuilder
+internal sealed class RegionEvaluationSnapshotBuilder
 {
     public IReadOnlyList<RegionEvaluationSnapshot> Build(
-        World world,
+        ObserverWorldContext context,
         Polity polity,
         PeopleHistoryWindowSnapshot peopleHistory,
         IReadOnlyList<PeopleMonthlySnapshot> rawHistory)
     {
-        Species species = world.Species.First(candidate => candidate.Id == polity.SpeciesId);
+        Species species = context.GetRequiredSpecies(polity.SpeciesId);
         HashSet<int> relevantRegionIds = [peopleHistory.CurrentPeopleState.CurrentRegionId];
         foreach (int regionId in rawHistory.SelectMany(snapshot => snapshot.OccupiedRegionIds))
         {
@@ -525,7 +732,11 @@ public sealed class RegionEvaluationSnapshotBuilder
         relevantRegionIds.Add(polity.PreviousRegionId);
         foreach (int regionId in relevantRegionIds.ToList())
         {
-            Region region = world.Regions.First(candidate => candidate.Id == regionId);
+            if (!context.TryGetRegion(regionId, out Region? region) || region is null)
+            {
+                continue;
+            }
+
             foreach (int connectedRegionId in region.ConnectedRegionIds)
             {
                 relevantRegionIds.Add(connectedRegionId);
@@ -533,26 +744,22 @@ public sealed class RegionEvaluationSnapshotBuilder
         }
 
         return relevantRegionIds
-            .Where(regionId => world.Regions.Any(region => region.Id == regionId))
+            .Where(regionId => context.TryGetRegion(regionId, out _))
             .OrderBy(regionId => regionId)
-            .Select(regionId => BuildSnapshot(world, polity, species, peopleHistory, rawHistory, regionId))
+            .Select(regionId => BuildSnapshot(context, polity, species, peopleHistory, rawHistory, regionId))
             .ToList();
     }
 
     private static RegionEvaluationSnapshot BuildSnapshot(
-        World world,
+        ObserverWorldContext context,
         Polity polity,
         Species species,
         PeopleHistoryWindowSnapshot peopleHistory,
         IReadOnlyList<PeopleMonthlySnapshot> rawHistory,
         int regionId)
     {
-        Region region = world.Regions.First(candidate => candidate.Id == regionId);
-        List<int> currentOccupiedRegions = polity.Settlements.Select(settlement => settlement.RegionId).Distinct().ToList();
-        if (currentOccupiedRegions.Count == 0)
-        {
-            currentOccupiedRegions.Add(polity.RegionId);
-        }
+        Region region = context.GetRequiredRegion(regionId);
+        List<int> currentOccupiedRegions = context.GetOccupiedRegionIds(polity);
 
         RegionSpeciesPopulation? speciesPopulation = region.GetSpeciesPopulation(species.Id);
         double speciesSupportRatio = speciesPopulation is null || polity.Population <= 0
@@ -566,8 +773,8 @@ public sealed class RegionEvaluationSnapshotBuilder
             : Math.Clamp(region.AnimalBiomass / region.MaxAnimalBiomass, 0.0, 1.0);
         double competitionPressure = region.CarryingCapacity <= 0.0
             ? 0.0
-            : Math.Clamp(world.Polities.Where(candidate => candidate.Population > 0 && candidate.RegionId == region.Id).Sum(candidate => candidate.Population) / region.CarryingCapacity, 0.0, 2.0);
-        int recentExtinctionCount = world.LocalPopulationExtinctions.Count(record => record.RegionId == region.Id && ObserverMath.MonthsBetween(record.Year, record.Month, world.Time.Year, world.Time.Month) < 12);
+            : Math.Clamp(context.GetActivePopulationInRegion(region.Id) / region.CarryingCapacity, 0.0, 2.0);
+        int recentExtinctionCount = context.GetRecentExtinctionCount(region.Id);
         double recentInstability = Math.Clamp(
             (recentExtinctionCount * 0.20)
             + Math.Max(0.0, 0.35 - plantBiomassRatio)
@@ -585,18 +792,18 @@ public sealed class RegionEvaluationSnapshotBuilder
             animalBiomassRatio,
             speciesSupportRatio,
             region.ConnectedRegionIds.Count,
-            world.Polities.Sum(candidate => candidate.Settlements.Count(settlement => settlement.RegionId == region.Id)),
-            world.Polities.Count(candidate => candidate.Population > 0 && (candidate.RegionId == region.Id || candidate.Settlements.Any(settlement => settlement.RegionId == region.Id))),
+            context.GetSettlementCountInRegion(region.Id),
+            context.GetOccupyingPeopleCountInRegion(region.Id),
             competitionPressure,
             recentInstability);
 
         bool isOccupied = currentOccupiedRegions.Contains(region.Id);
         bool isFormerHome = region.Id == polity.PreviousRegionId
             || rawHistory.Any(snapshot => snapshot.HomeClusterRegionId == region.Id && !snapshot.OccupiedRegionIds.Contains(region.Id));
-        PeopleRegionRelationshipType relationshipType = ResolveRelationshipType(world, polity, peopleHistory, currentOccupiedRegions, region.Id, isOccupied, isFormerHome);
+        PeopleRegionRelationshipType relationshipType = ResolveRelationshipType(context, polity, peopleHistory, currentOccupiedRegions, region.Id, isOccupied, isFormerHome);
         int presenceMonthsObserved = rawHistory.Count(snapshot => snapshot.OccupiedRegionIds.Contains(region.Id) || snapshot.CurrentRegionId == region.Id);
         double totalSupport = currentOccupiedRegions
-            .Select(occupiedRegionId => world.Regions.First(candidate => candidate.Id == occupiedRegionId).GetSpeciesPopulation(species.Id)?.PopulationCount ?? 0)
+            .Select(occupiedRegionId => context.GetRequiredRegion(occupiedRegionId).GetSpeciesPopulation(species.Id)?.PopulationCount ?? 0)
             .Sum();
         double supportContributionShare = totalSupport <= 0.0
             ? 0.0
@@ -610,11 +817,11 @@ public sealed class RegionEvaluationSnapshotBuilder
             0.0,
             1.5);
         double subsistenceCompatibility = ResolveSubsistenceCompatibility(polity, species, region, plantBiomassRatio, animalBiomassRatio);
-        double frontierInterpretation = currentOccupiedRegions.Any(occupiedRegionId => ObserverMath.ComputeHopDistance(world, occupiedRegionId, region.Id) == 1)
+        double frontierInterpretation = currentOccupiedRegions.Any(occupiedRegionId => context.GetHopDistance(occupiedRegionId, region.Id) == 1)
             ? 1.0
             : 0.0;
-        int contactCount = world.Polities.Count(candidate => candidate.Population > 0 && candidate.Id != polity.Id && (candidate.RegionId == region.Id || candidate.Settlements.Any(settlement => settlement.RegionId == region.Id)));
-        int historicalSignificanceCount = world.CivilizationalHistory.Count(entry => entry.PolityId == polity.Id && entry.RegionId == region.Id);
+        int contactCount = context.GetOtherOccupyingPeopleCountInRegion(region.Id, polity.Id);
+        int historicalSignificanceCount = context.GetHistoricalSignificanceCount(polity.Id, region.Id);
 
         PeopleRegionEvaluation relative = new(
             polity.Id,
@@ -631,11 +838,11 @@ public sealed class RegionEvaluationSnapshotBuilder
             contactCount,
             historicalSignificanceCount);
 
-        return new RegionEvaluationSnapshot(polity.Id, world.Time.Year, world.Time.Month, global, relative);
+        return new RegionEvaluationSnapshot(polity.Id, context.World.Time.Year, context.World.Time.Month, global, relative);
     }
 
     private static PeopleRegionRelationshipType ResolveRelationshipType(
-        World world,
+        ObserverWorldContext context,
         Polity polity,
         PeopleHistoryWindowSnapshot peopleHistory,
         IReadOnlyCollection<int> currentOccupiedRegions,
@@ -660,13 +867,13 @@ public sealed class RegionEvaluationSnapshotBuilder
 
         if (isOccupied)
         {
-            bool adjacentToCore = ObserverMath.ComputeHopDistance(world, peopleHistory.CurrentPeopleState.CurrentRegionId, regionId) <= 1;
+            bool adjacentToCore = context.GetHopDistance(peopleHistory.CurrentPeopleState.CurrentRegionId, regionId) <= 1;
             return adjacentToCore
                 ? PeopleRegionRelationshipType.HomePeriphery
                 : PeopleRegionRelationshipType.Occupied;
         }
 
-        bool adjacentCandidate = currentOccupiedRegions.Any(occupiedRegionId => ObserverMath.ComputeHopDistance(world, occupiedRegionId, regionId) == 1);
+        bool adjacentCandidate = currentOccupiedRegions.Any(occupiedRegionId => context.GetHopDistance(occupiedRegionId, regionId) == 1);
         return adjacentCandidate
             ? PeopleRegionRelationshipType.AdjacentCandidate
             : PeopleRegionRelationshipType.KnownNonOccupied;
@@ -684,11 +891,11 @@ public sealed class RegionEvaluationSnapshotBuilder
     }
 }
 
-public sealed class NeighborContextSnapshotBuilder
+internal sealed class NeighborContextSnapshotBuilder
 {
-    public NeighborContextSnapshot Build(World world, Polity polity)
+    public NeighborContextSnapshot Build(ObserverWorldContext context, Polity polity)
     {
-        List<RelevantNeighborFact> relevantNeighbors = ObserverNeighborAnalyzer.GetRelevantNeighbors(world, polity);
+        List<RelevantNeighborFact> relevantNeighbors = ObserverNeighborAnalyzer.GetRelevantNeighbors(context, polity);
         List<NeighborRelationshipSnapshot> relationships = relevantNeighbors
             .OrderBy(neighbor => neighbor.HopDistance)
             .ThenByDescending(neighbor => neighbor.ExertsPressure)
@@ -727,36 +934,26 @@ public sealed class NeighborContextSnapshotBuilder
             relationships.Count == 0 ? 0.0 : relationships.Average(relationship => relationship.HopDistance),
             relationships.Count == 0 ? 0.0 : relationships.Average(relationship => relationship.RelativePressure));
 
-        return new NeighborContextSnapshot(polity.Id, world.Time.Year, world.Time.Month, summary, relationships, aggregates);
+        return new NeighborContextSnapshot(polity.Id, context.World.Time.Year, context.World.Time.Month, summary, relationships, aggregates);
     }
 }
 
 internal static class ObserverNeighborAnalyzer
 {
-    public static List<RelevantNeighborFact> GetRelevantNeighbors(World world, Polity polity)
+    public static List<RelevantNeighborFact> GetRelevantNeighbors(ObserverWorldContext context, Polity polity)
     {
-        List<int> occupiedRegionIds = polity.Settlements.Select(settlement => settlement.RegionId).Distinct().ToList();
-        if (occupiedRegionIds.Count == 0)
-        {
-            occupiedRegionIds.Add(polity.RegionId);
-        }
+        List<int> occupiedRegionIds = context.GetOccupiedRegionIds(polity);
 
         List<RelevantNeighborFact> relevant = [];
-        foreach (Polity neighbor in world.Polities
-                     .Where(candidate => candidate.Population > 0 && candidate.Id != polity.Id)
-                     .OrderBy(candidate => candidate.Id))
+        foreach (Polity neighbor in context.ActivePolities.Where(candidate => candidate.Id != polity.Id))
         {
-            List<int> neighborRegionIds = neighbor.Settlements.Select(settlement => settlement.RegionId).Distinct().ToList();
-            if (neighborRegionIds.Count == 0)
-            {
-                neighborRegionIds.Add(neighbor.RegionId);
-            }
+            List<int> neighborRegionIds = context.GetOccupiedRegionIds(neighbor);
 
             int hopDistance = occupiedRegionIds
-                .SelectMany(sourceRegionId => neighborRegionIds.Select(targetRegionId => ObserverMath.ComputeHopDistance(world, sourceRegionId, targetRegionId)))
+                .SelectMany(sourceRegionId => neighborRegionIds.Select(targetRegionId => context.GetHopDistance(sourceRegionId, targetRegionId)))
                 .DefaultIfEmpty(int.MaxValue)
                 .Min();
-            int frontierAdjacencyCount = occupiedRegionIds.Sum(sourceRegionId => neighborRegionIds.Count(targetRegionId => sourceRegionId == targetRegionId || ObserverMath.ComputeHopDistance(world, sourceRegionId, targetRegionId) == 1));
+            int frontierAdjacencyCount = occupiedRegionIds.Sum(sourceRegionId => neighborRegionIds.Count(targetRegionId => sourceRegionId == targetRegionId || context.GetHopDistance(sourceRegionId, targetRegionId) == 1));
             bool sharesBorder = frontierAdjacencyCount > 0;
             bool reachable = hopDistance <= 3;
             bool hasFormerSharedSpace = polity.PreviousRegionId == neighbor.RegionId
@@ -764,7 +961,10 @@ internal static class ObserverNeighborAnalyzer
                 || occupiedRegionIds.Contains(neighbor.PreviousRegionId)
                 || neighborRegionIds.Contains(polity.PreviousRegionId);
             bool sharesLineage = polity.LineageId == neighbor.LineageId;
-            bool offersExchangeContext = reachable && (sharesLineage || polity.TradePartnerCountThisYear > 0 || neighbor.TradePartnerCountThisYear > 0);
+            bool monthlyTradeContact = polity.TradePartnersThisMonth.Contains(neighbor.Id)
+                || neighbor.TradePartnersThisMonth.Contains(polity.Id);
+            bool exchangeOpportunity = HasConcreteExchangeOpportunity(polity, neighbor, hopDistance, sharesBorder, hasFormerSharedSpace);
+            bool offersExchangeContext = monthlyTradeContact || exchangeOpportunity;
             double populationRatio = neighbor.Population / Math.Max(1.0, polity.Population);
             bool exertsPressure = reachable
                 && (sharesBorder || hasFormerSharedSpace)
@@ -791,9 +991,14 @@ internal static class ObserverNeighborAnalyzer
                 reasons.Add("shared_lineage");
             }
 
-            if (offersExchangeContext)
+            if (monthlyTradeContact)
             {
-                reasons.Add("exchange_context");
+                reasons.Add("monthly_trade_contact");
+            }
+
+            if (exchangeOpportunity)
+            {
+                reasons.Add("exchange_opportunity");
             }
 
             if (exertsPressure)
@@ -801,7 +1006,12 @@ internal static class ObserverNeighborAnalyzer
                 reasons.Add("pressure");
             }
 
-            if (reasons.Count == 0)
+            bool isRelevant = sharesBorder
+                || hasFormerSharedSpace
+                || exertsPressure
+                || offersExchangeContext
+                || (sharesLineage && reachable && hopDistance <= 2);
+            if (!isRelevant)
             {
                 continue;
             }
@@ -815,8 +1025,7 @@ internal static class ObserverNeighborAnalyzer
                 2.0);
             int contactCount = frontierAdjacencyCount
                 + (hasFormerSharedSpace ? 1 : 0)
-                + (sharesLineage ? 1 : 0)
-                + (offersExchangeContext ? 1 : 0);
+                + (monthlyTradeContact ? 1 : 0);
             relevant.Add(new RelevantNeighborFact(
                 neighbor,
                 hopDistance == int.MaxValue ? 99 : hopDistance,
@@ -835,6 +1044,26 @@ internal static class ObserverNeighborAnalyzer
 
         return relevant;
     }
+
+    private static bool HasConcreteExchangeOpportunity(Polity polity, Polity neighbor, int hopDistance, bool sharesBorder, bool hasFormerSharedSpace)
+    {
+        if (hopDistance > 2 || (!sharesBorder && !hasFormerSharedSpace && hopDistance > 1))
+        {
+            return false;
+        }
+
+        return HasTradeableSurplus(polity) && HasExchangeNeed(neighbor)
+            || HasTradeableSurplus(neighbor) && HasExchangeNeed(polity);
+    }
+
+    private static bool HasTradeableSurplus(Polity polity)
+        => polity.FoodSurplusThisMonth > Math.Max(1.0, polity.FoodNeededThisMonth * 0.05)
+            || polity.Settlements.Any(settlement => settlement.FoodState == FoodState.Surplus);
+
+    private static bool HasExchangeNeed(Polity polity)
+        => polity.FoodShortageThisMonth > Math.Max(1.0, polity.FoodNeededThisMonth * 0.05)
+            || polity.FoodSatisfactionThisMonth < 0.95
+            || polity.Settlements.Any(settlement => settlement.FoodState is FoodState.Deficit or FoodState.Starving);
 }
 
 internal sealed record RelevantNeighborFact(
@@ -866,7 +1095,7 @@ internal static class ObserverMath
     public static double Average(IReadOnlyList<PeopleMonthlySnapshot> history, Func<PeopleMonthlySnapshot, int> selector)
         => history.Count == 0 ? 0.0 : history.Average(snapshot => selector(snapshot));
 
-    public static double ComputeLargestConnectedShare(World world, IReadOnlyCollection<int> regionIds)
+    public static double ComputeLargestConnectedShare(ObserverWorldContext context, IReadOnlyCollection<int> regionIds)
     {
         if (regionIds.Count <= 1)
         {
@@ -887,7 +1116,7 @@ internal static class ObserverMath
             {
                 int current = frontier.Dequeue();
                 size++;
-                Region region = world.Regions.First(candidate => candidate.Id == current);
+                Region region = context.GetRequiredRegion(current);
                 foreach (int connectedRegionId in region.ConnectedRegionIds)
                 {
                     if (remaining.Remove(connectedRegionId))
@@ -903,7 +1132,7 @@ internal static class ObserverMath
         return Math.Clamp(largestComponent / (double)regionIds.Count, 0.0, 1.0);
     }
 
-    public static int ComputeMaxPairwiseHopDistance(World world, IReadOnlyList<int> regionIds)
+    public static int ComputeMaxPairwiseHopDistance(ObserverWorldContext context, IReadOnlyList<int> regionIds)
     {
         if (regionIds.Count <= 1)
         {
@@ -915,7 +1144,7 @@ internal static class ObserverMath
         {
             for (int right = left + 1; right < regionIds.Count; right++)
             {
-                int hopDistance = ComputeHopDistance(world, regionIds[left], regionIds[right]);
+                int hopDistance = context.GetHopDistance(regionIds[left], regionIds[right]);
                 if (hopDistance != int.MaxValue)
                 {
                     max = Math.Max(max, hopDistance);
@@ -926,7 +1155,7 @@ internal static class ObserverMath
         return max;
     }
 
-    public static int ComputeHopDistance(World world, int sourceRegionId, int targetRegionId)
+    public static int ComputeHopDistance(ObserverWorldContext context, int sourceRegionId, int targetRegionId)
     {
         if (sourceRegionId == targetRegionId)
         {
@@ -940,7 +1169,7 @@ internal static class ObserverMath
         while (queue.Count > 0)
         {
             (int regionId, int depth) = queue.Dequeue();
-            Region region = world.Regions.First(candidate => candidate.Id == regionId);
+            Region region = context.GetRequiredRegion(regionId);
             foreach (int neighborId in region.ConnectedRegionIds)
             {
                 if (!visited.Add(neighborId))

@@ -210,6 +210,8 @@ public sealed class Simulation : IDisposable
 
     private void RunTick()
     {
+        ResetMonthlyObserverFacts();
+
         foreach (Polity polity in _world.Polities)
         {
             polity.TickPropagationState();
@@ -226,6 +228,14 @@ public sealed class Simulation : IDisposable
 
         _observerService.CaptureCurrentMonth(_world);
         _world.Time.AdvanceOneMonth();
+    }
+
+    private void ResetMonthlyObserverFacts()
+    {
+        foreach (Polity polity in _world.Polities)
+        {
+            polity.ResetMonthlyObserverFacts();
+        }
     }
 
     private void RunMonthlySystems()

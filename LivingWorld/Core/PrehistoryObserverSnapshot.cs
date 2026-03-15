@@ -37,9 +37,11 @@ public enum RootednessState
 
 public enum ContinuityState
 {
-    Continuous,
+    Broken,
+    New,
     Fragile,
-    Broken
+    Established,
+    Deep
 }
 
 public sealed record PeopleMonthlySnapshot(
@@ -62,6 +64,7 @@ public sealed record PeopleMonthlySnapshot(
     int StarvingSettlementCount,
     double HomeClusterShare,
     double ConnectedFootprintShare,
+    double RouteCoverageShare,
     double ScatterShare,
     int MaxFootprintHopDistance,
     double FoodStores,
@@ -127,6 +130,7 @@ public sealed record CurrentPeopleState(
     double MigrationPressure,
     double FragmentationPressure,
     double ConnectedFootprintShare,
+    double RouteCoverageShare,
     double ScatterShare,
     double HomeClusterShare,
     bool IsAnchored,
@@ -169,6 +173,9 @@ public sealed record SpatialHistoryRollup(
     double AverageOccupiedRegionCountLast12Months,
     double CurrentConnectedFootprintShare,
     double AverageConnectedFootprintShareLast12Months,
+    double CurrentRouteCoverageShare,
+    double AverageRouteCoverageShareLast6Months,
+    double AverageRouteCoverageShareLast12Months,
     double CurrentScatterShare,
     int RegionChangeCountLast12Months,
     int MaxFootprintHopDistanceObserved);
@@ -179,7 +186,7 @@ public sealed record RootednessHistoryRollup(
     int AnchoredMonthsLast24Months,
     int StrongAnchoredMonthsLast12Months,
     double AverageHomeClusterShareLast12Months,
-    int StableSettlementMonthsLast12Months,
+    int EstablishedSettlementMonthsLast12Months,
     int DisplacementMonthsLast6Months,
     int DisplacementMonthsLast12Months);
 
@@ -196,8 +203,8 @@ public sealed record SettlementHistoryRollup(
     int SettlementPresentMonthsLast6Months,
     int SettlementPresentMonthsLast12Months,
     int SettlementPresentMonthsLast24Months,
-    int StableSettlementMonthsLast12Months,
-    int StableSettlementMonthsLast24Months,
+    int EstablishedSettlementMonthsLast12Months,
+    int EstablishedSettlementMonthsLast24Months,
     int SettlementLossCountLast6Months,
     int SettlementLossCountLast12Months,
     int NewSettlementMonthsLast6Months,
@@ -246,8 +253,10 @@ public sealed record HistoryShockMarkers(
 
 public sealed record DemographicHealthSummary(
     int CurrentPopulation,
+    double AveragePopulationLast6Months,
     double AveragePopulationLast12Months,
     int DeclineMonthsLast12Months,
+    int MinimumPopulationLast12Months,
     int StarvingMonthsLast12Months);
 
 public sealed record SupportStabilityHealth(
@@ -255,16 +264,24 @@ public sealed record SupportStabilityHealth(
     double CurrentSupportAdequacy,
     double AverageSupportAdequacyLast6Months,
     double AverageSupportAdequacyLast12Months,
+    double AverageFoodSatisfactionLast12Months,
+    int ShortageMonthsLast6Months,
     int ShortageMonthsLast12Months,
     bool CurrentSupportCrash,
+    int SupportCrashMonthsLast6Months,
+    int SupportCrashMonthsLast12Months,
     bool RecoveringNow);
 
 public sealed record MovementCoherenceHealth(
     MovementCoherenceState State,
     double CurrentConnectedFootprintShare,
+    double CurrentRouteCoverageShare,
     double CurrentScatterShare,
     double CurrentFootprintSupportRatio,
+    double AverageRouteCoverageShareLast6Months,
+    double AverageRouteCoverageShareLast12Months,
     int CoherentMonthsLast6Months,
+    int CoherentMonthsLast12Months,
     int ScatteredMonthsLast6Months,
     int ScatteredMonthsLast12Months);
 
@@ -273,14 +290,19 @@ public sealed record RootednessHealth(
     int AnchoredMonthsLast12Months,
     int StrongAnchoredMonthsLast12Months,
     double AverageHomeClusterShareLast12Months,
-    int StableSettlementMonthsLast12Months,
-    bool CurrentDisplacement);
+    int EstablishedSettlementMonthsLast12Months,
+    bool CurrentDisplacement,
+    int DisplacementMonthsLast6Months,
+    int DisplacementMonthsLast12Months,
+    bool RecoveringFromRecentDisplacement);
 
 public sealed record ContinuityHealth(
     ContinuityState State,
     int ObservedContinuousIdentityMonths,
     int MonthsSinceIdentityBreak,
+    int IdentityBreakCountLast6Months,
     int IdentityBreakCountLast12Months,
+    int IdentityBreakCountLast24Months,
     bool ActiveIdentityBreakNow);
 
 public sealed record EvaluatorHealthSummary(
