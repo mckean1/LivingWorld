@@ -109,11 +109,15 @@ public sealed class PrehistoryCandidateSelectionState
 }
 
 public sealed record PrehistoryCandidatePoolSnapshot(
-    int TotalCandidates,
-    int OrganicCandidates,
-    int FallbackCandidates,
+    int TotalSurfacedCandidates,
+    int OrganicSurfacedCandidates,
+    int FallbackSurfacedCandidates,
+    int TotalViableCandidatesDiscovered,
     bool EmergencyFallbackUsed,
     string Summary)
 {
-    public bool HasFallbackCandidates => FallbackCandidates > 0;
+    public int TotalCandidates => TotalSurfacedCandidates;
+    public int OrganicCandidates => OrganicSurfacedCandidates;
+    public int FallbackCandidates => FallbackSurfacedCandidates;
+    public bool HasFallbackCandidates => FallbackSurfacedCandidates > 0;
 }

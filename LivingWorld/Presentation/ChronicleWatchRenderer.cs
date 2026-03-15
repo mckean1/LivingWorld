@@ -148,7 +148,11 @@ public sealed class ChronicleWatchRenderer : IDisposable
             lines.Add(" Chronicle Watch - Focal selection (time paused)");
             lines.Add($" Status: SELECTING | View: {view}");
             lines.Add($" World Age: {world.Time.Year} | Preset: {world.StartupAgeConfiguration.Preset} (locked until choice)");
-            lines.Add($" Candidate pool: {world.PlayerEntryCandidates.Count} viable start(s) available");
+            int surfacedCount = world.PlayerEntryCandidates.Count;
+            int viableCount = world.WorldReadinessReport.CandidatePoolSummary.TotalViableCandidatesDiscovered;
+            lines.Add(viableCount > surfacedCount
+                ? $" Candidate pool: {surfacedCount} surfaced of {viableCount} viable start(s)"
+                : $" Candidate pool: {surfacedCount} viable start(s) available");
             string checkpointLabel = runtime.LastCheckpointOutcome?.Kind.ToString() ?? "Pending";
             string? checkpointDetails = runtime.LastCheckpointOutcome?.Summary;
             string checkpointLine = checkpointDetails is null

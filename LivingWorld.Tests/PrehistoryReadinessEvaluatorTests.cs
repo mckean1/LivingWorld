@@ -17,6 +17,7 @@ public sealed class PrehistoryReadinessEvaluatorTests
             world,
             EmptyObserver(world),
             CandidateEvaluations(CreateCandidateEvaluation(isViable: true, supportsNormalEntry: true)),
+            [CreateCandidateSummary(1)],
             [CreateCandidateSummary(1)]).Report;
 
         Assert.Equal(PrehistoryCheckpointOutcomeKind.ContinuePrehistory, report.FinalCheckpointResolution);
@@ -33,6 +34,7 @@ public sealed class PrehistoryReadinessEvaluatorTests
             world,
             ObserverWithNeighbor(world, 1),
             CandidateEvaluations(CreateCandidateEvaluation(isViable: true, supportsNormalEntry: true)),
+            [CreateCandidateSummary(1), CreateCandidateSummary(2, regionId: 2, lineageId: 2, subsistence: "Proto-farming")],
             [CreateCandidateSummary(1), CreateCandidateSummary(2, regionId: 2, lineageId: 2, subsistence: "Proto-farming")]).Report;
 
         Assert.Equal(PrehistoryCheckpointOutcomeKind.EnterFocalSelection, report.FinalCheckpointResolution);
@@ -50,6 +52,7 @@ public sealed class PrehistoryReadinessEvaluatorTests
             world,
             EmptyObserver(world),
             CandidateEvaluations(CreateCandidateEvaluation(isViable: true, supportsNormalEntry: true)),
+            [CreateCandidateSummary(1)],
             [CreateCandidateSummary(1)]).Report;
 
         Assert.Equal(PrehistoryCheckpointOutcomeKind.ContinuePrehistory, report.FinalCheckpointResolution);
@@ -66,6 +69,7 @@ public sealed class PrehistoryReadinessEvaluatorTests
             world,
             EmptyObserver(world),
             CandidateEvaluations(CreateCandidateEvaluation(isViable: false, supportsNormalEntry: false, blocker: "current_support_must_pass")),
+            Array.Empty<PlayerEntryCandidateSummary>(),
             Array.Empty<PlayerEntryCandidateSummary>()).Report;
 
         Assert.Equal(PrehistoryCheckpointOutcomeKind.ContinuePrehistory, report.FinalCheckpointResolution);
@@ -82,6 +86,7 @@ public sealed class PrehistoryReadinessEvaluatorTests
             world,
             EmptyObserver(world),
             CandidateEvaluations(CreateCandidateEvaluation(isViable: true, supportsNormalEntry: true)),
+            [CreateCandidateSummary(1)],
             [CreateCandidateSummary(1)]).Report;
 
         Assert.Equal(PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection, report.FinalCheckpointResolution);
@@ -98,6 +103,7 @@ public sealed class PrehistoryReadinessEvaluatorTests
             world,
             EmptyObserver(world),
             CandidateEvaluations(CreateCandidateEvaluation(isViable: false, supportsNormalEntry: false, blocker: "continuity_below_established")),
+            Array.Empty<PlayerEntryCandidateSummary>(),
             Array.Empty<PlayerEntryCandidateSummary>()).Report;
 
         Assert.Equal(PrehistoryCheckpointOutcomeKind.GenerationFailure, report.FinalCheckpointResolution);
@@ -171,10 +177,37 @@ public sealed class PrehistoryReadinessEvaluatorTests
             world,
             EmptyObserver(world),
             CandidateEvaluations(CreateCandidateEvaluation(isViable: true, supportsNormalEntry: true)),
+            [CreateCandidateSummary(1)],
             [CreateCandidateSummary(1)]).Report;
 
         Assert.Contains("candidate_variety_is_thin", report.GlobalWarningReasons);
         Assert.DoesNotContain("candidate_variety_is_thin", report.GlobalBlockingReasons);
+    }
+
+    [Fact]
+    public void Report_DistinguishesFullViableDepthFromSurfacedPool()
+    {
+        World world = CreateWorld(age: 1200);
+        PrehistoryReadinessEvaluator evaluator = new(new WorldGenerationSettings());
+        PlayerEntryCandidateSummary first = CreateCandidateSummary(1, regionId: 1, lineageId: 1, subsistence: "Mixed", supportsNormalEntry: true);
+        PlayerEntryCandidateSummary second = CreateCandidateSummary(2, regionId: 2, lineageId: 2, subsistence: "Proto-farming", supportsNormalEntry: true);
+        PlayerEntryCandidateSummary third = CreateCandidateSummary(3, regionId: 3, lineageId: 3, subsistence: "Foraging-focused", supportsNormalEntry: true);
+
+        WorldReadinessReport report = evaluator.Evaluate(
+            world,
+            ObserverWithNeighbor(world, 1),
+            CandidateEvaluations(
+                CreateCandidateEvaluation(polityId: 1, isViable: true, supportsNormalEntry: true),
+                CreateCandidateEvaluation(polityId: 2, isViable: true, supportsNormalEntry: true),
+                CreateCandidateEvaluation(polityId: 3, isViable: true, supportsNormalEntry: true)),
+            [first, second, third],
+            [first, second]).Report;
+
+        Assert.Equal(3, report.CandidatePoolSummary.TotalViableCandidatesDiscovered);
+        Assert.Equal(2, report.CandidatePoolSummary.TotalSurfacedCandidates);
+        Assert.False(report.IsThinWorld);
+        Assert.Contains("3 viable starts", report.SummaryData.CandidateHeadline, StringComparison.Ordinal);
+        Assert.Contains("2 surfaced", report.SummaryData.CandidateHeadline, StringComparison.Ordinal);
     }
 
     private static World CreateWorld(int age)
@@ -201,11 +234,11 @@ public sealed class PrehistoryReadinessEvaluatorTests
     private static IReadOnlyDictionary<int, CandidateReadinessEvaluation> CandidateEvaluations(params CandidateReadinessEvaluation[] evaluations)
         => evaluations.ToDictionary(evaluation => evaluation.PolityId);
 
-    private static CandidateReadinessEvaluation CreateCandidateEvaluation(bool isViable, bool supportsNormalEntry, string? blocker = null)
-        => new(1, "Candidate 1", isViable, supportsNormalEntry, isViable, SupportStabilityState.Stable, DemographicViabilityState.Viable, PopulationTrendState.Flat, MovementCoherenceState.Coherent, RootednessState.Rooted, ContinuityState.Established, true, true, false, false, Array.Empty<string>(), blocker is null ? Array.Empty<string>() : [blocker], Array.Empty<string>(), "summary");
+    private static CandidateReadinessEvaluation CreateCandidateEvaluation(int polityId = 1, bool isViable = true, bool supportsNormalEntry = true, string? blocker = null)
+        => new(polityId, $"Candidate {polityId}", isViable, supportsNormalEntry, isViable, SupportStabilityState.Stable, DemographicViabilityState.Viable, PopulationTrendState.Flat, MovementCoherenceState.Coherent, RootednessState.Rooted, ContinuityState.Established, true, true, false, false, Array.Empty<string>(), blocker is null ? Array.Empty<string>() : [blocker], Array.Empty<string>(), "summary");
 
-    private static PlayerEntryCandidateSummary CreateCandidateSummary(int polityId, int regionId = 1, int lineageId = 1, string subsistence = "Mixed")
-        => new(polityId, $"Polity {polityId}", polityId, $"Species {polityId}", lineageId, regionId, $"Region {regionId}", 12, 1000, 2, "Medium", subsistence, "Stable", "Rooted", "Temperate", "Deep", "Discovery", "Learned", "History", "Pressure", 0.9, StabilityBand.Stable, false);
+    private static PlayerEntryCandidateSummary CreateCandidateSummary(int polityId, int regionId = 1, int lineageId = 1, string subsistence = "Mixed", bool supportsNormalEntry = true)
+        => new(polityId, $"Polity {polityId}", polityId, $"Species {polityId}", lineageId, regionId, $"Region {regionId}", 12, 1000, 2, "Medium", subsistence, "Stable", "Rooted", "Temperate", "Deep", "Discovery", "Learned", "History", "Pressure", 0.9, StabilityBand.Stable, false, Viability: new CandidateViabilityResult(true, supportsNormalEntry, Array.Empty<CandidateViabilityGate>(), Array.Empty<string>(), Array.Empty<string>(), string.Empty, "summary"));
 
     private static Polity CreatePolity(int id, int population, int polityAge)
         => new(id, $"Polity {id}", 1, 1, population, lineageId: 1) { YearsSinceFounded = polityAge };

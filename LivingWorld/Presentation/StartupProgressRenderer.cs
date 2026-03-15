@@ -240,7 +240,7 @@ public sealed class StartupProgressRenderer : IDisposable
         WorldReadinessReport report = world.WorldReadinessReport;
         return
         [
-            $" Candidates: viable {report.CandidatePoolSummary.ViableCandidateCount} | organic {report.CandidatePoolSummary.OrganicViableCandidateCount} | fallback {report.CandidatePoolSummary.FallbackViableCandidateCount}",
+            $" Candidates: viable {report.CandidatePoolSummary.TotalViableCandidatesDiscovered} | surfaced {report.CandidatePoolSummary.TotalSurfacedCandidates} | organic {report.CandidatePoolSummary.OrganicViableCandidateCount} | fallback {report.CandidatePoolSummary.FallbackViableCandidateCount}",
             $" Readiness: bio {DescribeCategory(report, WorldReadinessCategoryKind.BiologicalReadiness)} | social {DescribeCategory(report, WorldReadinessCategoryKind.SocialEmergenceReadiness)} | structure {DescribeCategory(report, WorldReadinessCategoryKind.WorldStructureReadiness)} | candidates {DescribeCategory(report, WorldReadinessCategoryKind.CandidateReadiness)}",
             $" Stop check: {report.SummaryData.WorldConditionHeadline} | warnings {report.GlobalWarningReasons.Count}"
         ];

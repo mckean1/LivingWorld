@@ -49,6 +49,7 @@ public sealed class LegacyCheckpointCompatibilityAdapter : ICheckpointEvaluation
                 total,
                 organic,
                 fallback,
+                total,
                 allowEmergencyFallback,
                 $"{summary} at year {world.Time.Year}"),
             LatestObserverSnapshot = observerSnapshot

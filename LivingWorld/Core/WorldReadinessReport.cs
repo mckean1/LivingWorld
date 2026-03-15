@@ -59,8 +59,8 @@ public sealed record WorldReadinessCategoryReport(
 }
 
 public sealed record CandidatePoolReadinessSummary(
-    int TotalSurfaceableCandidates,
-    int ViableCandidateCount,
+    int TotalViableCandidatesDiscovered,
+    int TotalSurfacedCandidates,
     int NormalReadyCandidateCount,
     int OrganicViableCandidateCount,
     int FallbackViableCandidateCount,
@@ -69,7 +69,10 @@ public sealed record CandidatePoolReadinessSummary(
     int DistinctHomeRegionCount,
     int DistinctSubsistenceStyleCount,
     bool IsThinWorld,
-    string Summary);
+    string Summary)
+{
+    public int ViableCandidateCount => TotalViableCandidatesDiscovered;
+}
 
 public sealed record WorldReadinessSummaryData(
     string Headline,
@@ -92,7 +95,7 @@ public sealed record WorldReadinessReport(
 {
     public bool IsReady => FinalCheckpointResolution is PrehistoryCheckpointOutcomeKind.EnterFocalSelection or PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection;
     public int WorldAgeYears => AgeGate.WorldAgeYears;
-    public int ViableCandidateCount => CandidatePoolSummary.ViableCandidateCount;
+    public int ViableCandidateCount => CandidatePoolSummary.TotalViableCandidatesDiscovered;
     public IReadOnlyList<string> FailureReasons => GlobalBlockingReasons;
 
     public WorldReadinessCategoryReport GetCategory(WorldReadinessCategoryKind category)

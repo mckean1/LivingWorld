@@ -22,7 +22,7 @@ public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluatio
         IReadOnlyDictionary<int, CandidateReadinessEvaluation> candidateEvaluations = _readinessEvaluator.EvaluateCandidateReadiness(world, observerSnapshot);
         PrehistoryCandidateSelectionResult candidateSelection = _candidateSelectionEvaluator.Evaluate(world, observerSnapshot, candidateEvaluations);
         IReadOnlyList<PlayerEntryCandidateSummary> candidates = candidateSelection.Candidates;
-        PrehistoryReadinessEvaluation readiness = _readinessEvaluator.Evaluate(world, observerSnapshot, candidateEvaluations, candidates);
+        PrehistoryReadinessEvaluation readiness = _readinessEvaluator.Evaluate(world, observerSnapshot, candidateEvaluations, candidateSelection.AllViableCandidates, candidates);
         StartupOutcomeDiagnostics diagnostics = StartupOutcomeDiagnosticsEvaluator.Evaluate(
             world,
             candidates,
@@ -38,9 +38,10 @@ public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluatio
             PlayerEntryCandidates = candidates,
             CandidateRejectionReasons = candidateSelection.RejectionReasons,
             CandidatePoolSnapshot = new PrehistoryCandidatePoolSnapshot(
-                readiness.Report.CandidatePoolSummary.TotalSurfaceableCandidates,
-                readiness.Report.CandidatePoolSummary.OrganicViableCandidateCount,
-                readiness.Report.CandidatePoolSummary.FallbackViableCandidateCount,
+                readiness.Report.CandidatePoolSummary.TotalSurfacedCandidates,
+                candidates.Count(candidate => !candidate.IsFallbackCandidate),
+                candidates.Count(candidate => candidate.IsFallbackCandidate),
+                readiness.Report.CandidatePoolSummary.TotalViableCandidatesDiscovered,
                 false,
                 readiness.Report.CandidatePoolSummary.Summary),
             LatestObserverSnapshot = observerSnapshot
@@ -53,7 +54,8 @@ public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluatio
         [
             $"checkpoint_resolution:{report.FinalCheckpointResolution}",
             $"age_gate:{report.AgeGate.Status}",
-            $"viable_candidates:{report.CandidatePoolSummary.ViableCandidateCount}",
+            $"viable_candidates:{report.CandidatePoolSummary.TotalViableCandidatesDiscovered}",
+            $"surfaced_candidates:{report.CandidatePoolSummary.TotalSurfacedCandidates}",
             $"weak_world:{report.IsWeakWorld}",
             $"thin_world:{report.IsThinWorld}"
         ];

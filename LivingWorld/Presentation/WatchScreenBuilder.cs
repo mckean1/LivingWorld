@@ -295,7 +295,7 @@ public static class WatchScreenBuilder
         [
             "Focal Selection",
             string.Empty,
-            $" World age {world.Time.Year} | {world.StartupAgeConfiguration.Preset} | {candidateCount} candidate {(candidateCount == 1 ? "start" : "starts")}"
+            BuildFocalSelectionHeader(world, candidateCount)
         ];
 
         if (candidateCount == 0)
@@ -322,7 +322,7 @@ public static class WatchScreenBuilder
         lines.Add($" {selected.PolityName}");
         lines.Add($" {selected.SpeciesName} of {selected.HomeRegionName}");
         lines.Add($" Age {selected.PolityAge} | Settlements {selected.SettlementCount} | Population {selected.PopulationBand}");
-        lines.Add($" {selected.MaturityBand} | {selected.SubsistenceStyle} | {selected.CurrentCondition}");
+        lines.Add($" {selected.MaturityBand.ToDisplayLabel()} | {selected.SubsistenceStyle} | {selected.CurrentCondition}");
         lines.Add($" Network: {selected.SettlementProfile}");
         lines.Add($" Region: {selected.RegionalProfile}");
         lines.Add($" Lineage: {selected.LineageProfile}");
@@ -376,6 +376,17 @@ public static class WatchScreenBuilder
         }
 
         return lines;
+    }
+
+    private static string BuildFocalSelectionHeader(World world, int surfacedCandidateCount)
+    {
+        int viableCandidateCount = world.WorldReadinessReport.CandidatePoolSummary.TotalViableCandidatesDiscovered;
+        if (viableCandidateCount > surfacedCandidateCount)
+        {
+            return $" World age {world.Time.Year} | {world.StartupAgeConfiguration.Preset} | {surfacedCandidateCount} surfaced of {viableCandidateCount} viable starts";
+        }
+
+        return $" World age {world.Time.Year} | {world.StartupAgeConfiguration.Preset} | {surfacedCandidateCount} candidate {(surfacedCandidateCount == 1 ? "start" : "starts")}";
     }
 
     private static IReadOnlyList<string> BuildRegionDetailLines(World world, WatchKnowledgeSnapshot knowledge, int? regionId, WorldLookup lookup)

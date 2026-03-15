@@ -127,11 +127,71 @@ public sealed class PrehistoryCandidateSelectionEvaluatorTests
                 CreateCandidateEvaluation(4, isViable: true, supportsNormalEntry: true, politicalDurabilityPasses: true)));
 
         Assert.Equal(3, result.Candidates.Count);
+        Assert.Equal(4, result.AllViableCandidates.Count);
         Assert.Contains(result.Candidates, candidate => candidate.PolityId == 1);
         Assert.Contains(result.Candidates, candidate => candidate.PolityId == 3);
         Assert.Contains(result.Candidates, candidate => candidate.PolityId == 4);
         Assert.DoesNotContain(result.Candidates, candidate => candidate.PolityId == 2);
         Assert.StartsWith("suppressed_near_duplicate_of:1", result.RejectionReasons[2]);
+    }
+
+    [Fact]
+    public void Evaluate_SuppressesNearDuplicateThatWouldOtherwiseSlipInDuringFinalFill()
+    {
+        World world = CreateWorld(candidateTarget: 4);
+        AddCandidate(world, 1, "River Hearth", 0, 220, 12, settlementCount: 2, discoveries: 3);
+        AddCandidate(world, 2, "Twin Reeds", 3, 190, 10, settlementCount: 2, discoveries: 3);
+        AddCandidate(world, 3, "Salt Coast", 2, 210, 11, settlementCount: 3, advancements: 2, discoveries: 4);
+        AddCandidate(world, 4, "River Kin", 3, 188, 9, settlementCount: 2, discoveries: 3);
+        AddCandidate(world, 5, "North Walkers", 1, 170, 8, settlementCount: 0, discoveries: 2);
+        PrehistoryCandidateSelectionEvaluator evaluator = CreateEvaluator();
+
+        PrehistoryCandidateSelectionResult result = evaluator.Evaluate(
+            world,
+            BuildObserver(
+                world,
+                History(1, isAnchored: true, settlementCount: 2, stableSettlementCount: 2),
+                History(2, isAnchored: true, settlementCount: 2, stableSettlementCount: 2),
+                History(3, isAnchored: true, settlementCount: 3, stableSettlementCount: 3, oldestSettlementAgeMonths: 24),
+                History(4, isAnchored: true, settlementCount: 2, stableSettlementCount: 2),
+                History(5, isAnchored: false, settlementCount: 0, stableSettlementCount: 0, occupiedRegionIds: [1, 2])),
+            CandidateEvaluations(
+                CreateCandidateEvaluation(1, isViable: true, supportsNormalEntry: true),
+                CreateCandidateEvaluation(2, isViable: true, supportsNormalEntry: true),
+                CreateCandidateEvaluation(3, isViable: true, supportsNormalEntry: true, politicalDurabilityPasses: true),
+                CreateCandidateEvaluation(4, isViable: true, supportsNormalEntry: true),
+                CreateCandidateEvaluation(5, isViable: true, supportsNormalEntry: true, movement: MovementCoherenceState.Coherent, rootedness: RootednessState.SoftAnchored)));
+
+        Assert.Equal(5, result.AllViableCandidates.Count);
+        Assert.Equal(4, result.Candidates.Count);
+        Assert.Contains(result.Candidates, candidate => candidate.PolityId == 1);
+        Assert.Contains(result.Candidates, candidate => candidate.PolityId == 3);
+        Assert.Contains(result.Candidates, candidate => candidate.PolityId == 4);
+        Assert.Contains(result.Candidates, candidate => candidate.PolityId == 5);
+        Assert.DoesNotContain(result.Candidates, candidate => candidate.PolityId == 2);
+        Assert.Equal("suppressed_near_duplicate_of:4", result.RejectionReasons[2]);
+    }
+
+    [Fact]
+    public void Evaluate_UsesReadableMaturityBandLabelsInPlayerFacingText()
+    {
+        World world = CreateWorld();
+        AddCandidate(world, 1, "Marsh Polity", 2, 220, 10, settlementCount: 3, advancements: 2, discoveries: 4);
+        world.Polities.Single(polity => polity.Id == 1).Stage = PolityStage.Tribe;
+        PrehistoryCandidateSelectionEvaluator evaluator = CreateEvaluator();
+
+        PrehistoryCandidateSelectionResult result = evaluator.Evaluate(
+            world,
+            BuildObserver(world, History(1, isAnchored: true, settlementCount: 3, stableSettlementCount: 3, oldestSettlementAgeMonths: 24)),
+            CandidateEvaluations(CreateCandidateEvaluation(1, isViable: true, supportsNormalEntry: true, politicalDurabilityPasses: true)));
+
+        PlayerEntryCandidateSummary candidate = Assert.Single(result.Candidates);
+        Assert.Equal(CandidateMaturityBand.EmergentPolity, candidate.MaturityBand);
+        Assert.Contains("Emergent polity", candidate.ArchetypeSummary);
+        Assert.Contains("emergent polity", candidate.QualificationReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("emergent polity", candidate.EvidenceSentence, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("EmergentPolity", candidate.QualificationReason, StringComparison.Ordinal);
+        Assert.DoesNotContain("emergentpolity", candidate.EvidenceSentence, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -172,12 +232,15 @@ public sealed class PrehistoryCandidateSelectionEvaluatorTests
         world.Regions.Add(new Region(0, "Stone Basin") { Biome = RegionBiome.RiverValley, Fertility = 0.82, WaterAvailability = 0.76 });
         world.Regions.Add(new Region(1, "North Shelf") { Biome = RegionBiome.Plains, Fertility = 0.61, WaterAvailability = 0.55 });
         world.Regions.Add(new Region(2, "Salt Coast") { Biome = RegionBiome.Coast, Fertility = 0.58, WaterAvailability = 0.73 });
+        world.Regions.Add(new Region(3, "Twin Reeds") { Biome = RegionBiome.RiverValley, Fertility = 0.79, WaterAvailability = 0.80 });
         world.Species.Add(new Species(1, "Stonefolk", 0.5, 0.4) { LineageId = 10, EcologyNiche = "adaptive omnivore" });
         world.Species.Add(new Species(2, "Shelfkin", 0.5, 0.4) { LineageId = 11, EcologyNiche = "frontier forager" });
         world.Species.Add(new Species(3, "Coastborn", 0.5, 0.4) { LineageId = 12, EcologyNiche = "coastal gatherer" });
+        world.Species.Add(new Species(4, "Reedfolk", 0.5, 0.4) { LineageId = 13, EcologyNiche = "river valley forager" });
         world.EvolutionaryLineages.Add(new EvolutionaryLineage(10, 1, "adaptive omnivore", TrophicRole.Omnivore));
         world.EvolutionaryLineages.Add(new EvolutionaryLineage(11, 2, "frontier forager", TrophicRole.Omnivore));
         world.EvolutionaryLineages.Add(new EvolutionaryLineage(12, 3, "coastal gatherer", TrophicRole.Omnivore));
+        world.EvolutionaryLineages.Add(new EvolutionaryLineage(13, 4, "river valley forager", TrophicRole.Omnivore));
         return world;
     }
 

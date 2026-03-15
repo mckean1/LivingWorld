@@ -44,9 +44,9 @@ public static class StartupOutcomeDiagnosticsEvaluator
             bottlenecks.Add("no_organic_player_entry_candidates");
         }
 
-        if (effectiveCandidates.Count < 2)
+        if (effectiveReadinessReport.CandidatePoolSummary.TotalViableCandidatesDiscovered < 2)
         {
-            bottlenecks.Add($"candidate_pool_size:{effectiveCandidates.Count}");
+            bottlenecks.Add($"candidate_pool_size:{effectiveReadinessReport.CandidatePoolSummary.TotalViableCandidatesDiscovered}");
         }
 
         return new StartupOutcomeDiagnostics(

@@ -42,3 +42,19 @@ public sealed record CandidateViabilityResult(
     IReadOnlyList<string> WarningReasons,
     string PrimaryFailureReason,
     string Summary);
+
+public static class CandidatePresentationText
+{
+    public static string ToDisplayLabel(this CandidateMaturityBand maturityBand)
+        => maturityBand switch
+        {
+            CandidateMaturityBand.Mobile => "Mobile",
+            CandidateMaturityBand.Anchored => "Anchored",
+            CandidateMaturityBand.Settling => "Settling",
+            CandidateMaturityBand.EmergentPolity => "Emergent polity",
+            _ => "Anchored"
+        };
+
+    public static string ToLowerDisplayLabel(this CandidateMaturityBand maturityBand)
+        => maturityBand.ToDisplayLabel().ToLowerInvariant();
+}

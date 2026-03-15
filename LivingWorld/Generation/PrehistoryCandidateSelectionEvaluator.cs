@@ -45,6 +45,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
 
         return new PrehistoryCandidateSelectionResult(
             composition.SelectedCandidates.Select(candidate => candidate.Summary).ToArray(),
+            viableCandidates.Select(candidate => candidate.Summary).ToArray(),
             rejectionReasons);
     }
 
@@ -88,7 +89,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         IReadOnlyList<string> risks = BuildRisks(readiness, history, neighborContext);
         List<string> diversityTags =
         [
-            $"maturity:{maturityBand}",
+            $"maturity:{NormalizeBucketKey(maturityBand.ToDisplayLabel())}",
             $"archetype:{archetypeBucket}",
             $"home:{homeBucket}",
             $"stability:{NormalizeBucketKey(stabilityMode)}"
@@ -123,7 +124,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             viability,
             maturityBand,
             stabilityMode,
-            $"{maturityBand.ToString().Replace("Polity", " polity")} {subsistenceStyle.ToLowerInvariant()} in {homeBucket.Replace('_', ' ')}",
+            $"{maturityBand.ToDisplayLabel()} {subsistenceStyle.ToLowerInvariant()} in {homeBucket.Replace('_', ' ')}",
             qualificationReason,
             evidenceSentence,
             strengths,
@@ -202,7 +203,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         int targetCount = Math.Min(world.StartupAgeConfiguration.CandidateCountTarget, ordered.Count);
         List<CandidateAssessment> selected = [];
 
-        SeedStrongest(selected, ordered, targetCount);
+        SeedStrongest(selected, ordered, targetCount, suppressionReasons);
         Diversify(selected, ordered, targetCount, suppressionReasons);
         FillRemaining(selected, ordered, targetCount, suppressionReasons);
 
@@ -214,17 +215,19 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         return new CandidatePoolCompositionResult(selected, suppressionReasons);
     }
 
-    private void SeedStrongest(List<CandidateAssessment> selected, List<CandidateAssessment> ordered, int targetCount)
+    private void SeedStrongest(
+        List<CandidateAssessment> selected,
+        List<CandidateAssessment> ordered,
+        int targetCount,
+        Dictionary<int, string> suppressionReasons)
     {
         int seedCount = Math.Min(Math.Min(_settings.CandidatePoolSeedCount, targetCount), ordered.Count);
-        for (int index = 0; index < seedCount; index++)
+        while (selected.Count < seedCount && ordered.Count > 0)
         {
-            selected.Add(ordered[index]);
-        }
-
-        if (seedCount > 0)
-        {
-            ordered.RemoveRange(0, seedCount);
+            CandidateAssessment seeded = ordered[0];
+            selected.Add(seeded);
+            ordered.RemoveAt(0);
+            SuppressNearDuplicates(selected, ordered, suppressionReasons);
         }
     }
 
@@ -236,6 +239,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
     {
         while (selected.Count < targetCount && remaining.Count > 0)
         {
+            SuppressNearDuplicates(selected, remaining, suppressionReasons);
             CandidateAssessment? next = remaining
                 .Where(candidate => AddsNewCoverage(selected, candidate))
                 .Where(candidate => !IsNearDuplicate(selected, candidate, out _))
@@ -250,17 +254,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
 
             selected.Add(next);
             remaining.Remove(next);
-        }
-
-        foreach (CandidateAssessment candidate in remaining.ToList())
-        {
-            if (!IsNearDuplicate(selected, candidate, out int duplicateOf))
-            {
-                continue;
-            }
-
-            suppressionReasons[candidate.Summary.PolityId] = $"suppressed_near_duplicate_of:{duplicateOf}";
-            remaining.Remove(candidate);
+            SuppressNearDuplicates(selected, remaining, suppressionReasons);
         }
     }
 
@@ -272,6 +266,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
     {
         while (selected.Count < targetCount && remaining.Count > 0)
         {
+            SuppressNearDuplicates(selected, remaining, suppressionReasons);
             CandidateAssessment? next = remaining
                 .Where(candidate => RespectsSoftCaps(selected, candidate))
                 .OrderByDescending(candidate => candidate.Summary.ScoreBreakdown?.Total ?? candidate.Summary.RankScore)
@@ -292,9 +287,33 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             remaining.Remove(next);
         }
 
+        SuppressNearDuplicates(selected, remaining, suppressionReasons);
+
         foreach (CandidateAssessment candidate in remaining)
         {
             suppressionReasons.TryAdd(candidate.Summary.PolityId, "pool_fill:soft_diversity_trim");
+        }
+    }
+
+    private void SuppressNearDuplicates(
+        IReadOnlyList<CandidateAssessment> selected,
+        List<CandidateAssessment> remaining,
+        Dictionary<int, string> suppressionReasons)
+    {
+        if (selected.Count == 0 || remaining.Count == 0)
+        {
+            return;
+        }
+
+        foreach (CandidateAssessment candidate in remaining.ToList())
+        {
+            if (!IsNearDuplicate(selected, candidate, out int duplicateOf))
+            {
+                continue;
+            }
+
+            suppressionReasons[candidate.Summary.PolityId] = $"suppressed_near_duplicate_of:{duplicateOf}";
+            remaining.Remove(candidate);
         }
     }
 
@@ -449,19 +468,21 @@ public sealed class PrehistoryCandidateSelectionEvaluator
 
     private static string ResolveQualificationReason(CandidateViabilityResult viability, CandidateScoreBreakdown? scoreBreakdown, CandidateMaturityBand maturityBand)
     {
+        string maturityLabel = maturityBand.ToLowerDisplayLabel();
         if (!viability.IsViable) return viability.PrimaryFailureReason;
-        if (!viability.SupportsNormalEntry) return $"Truthful but thin {maturityBand.ToString().ToLowerInvariant()} start.";
+        if (!viability.SupportsNormalEntry) return $"Truthful but thin {maturityLabel} start.";
 
         return scoreBreakdown?.Tier switch
         {
-            CandidateScoreTier.Exceptional => $"High-cohesion {maturityBand.ToString().ToLowerInvariant()} start with strong playability.",
-            CandidateScoreTier.Strong => $"Solid {maturityBand.ToString().ToLowerInvariant()} start with clear internal shape.",
-            _ => $"Viable {maturityBand.ToString().ToLowerInvariant()} start with usable early agency."
+            CandidateScoreTier.Exceptional => $"High-cohesion {maturityLabel} start with strong playability.",
+            CandidateScoreTier.Strong => $"Solid {maturityLabel} start with clear internal shape.",
+            _ => $"Viable {maturityLabel} start with usable early agency."
         };
     }
 
     private static string BuildEvidenceSentence(Polity polity, string subsistenceStyle, string homeBucket, CandidateMaturityBand maturityBand, CandidateReadinessEvaluation readiness, NeighborContextSnapshot? neighborContext)
     {
+        string maturityLabel = maturityBand.ToLowerDisplayLabel();
         string support = readiness.SupportStability switch
         {
             SupportStabilityState.Stable => "stable support",
@@ -472,7 +493,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         string external = neighborContext is null || neighborContext.NeighborhoodSummary.RelevantNeighborCount == 0
             ? "light external entanglement"
             : $"{neighborContext.NeighborhoodSummary.RelevantNeighborCount} nearby counterpart{(neighborContext.NeighborhoodSummary.RelevantNeighborCount == 1 ? string.Empty : "s")}";
-        return $"{polity.Name} is a {maturityBand.ToString().ToLowerInvariant()} {subsistenceStyle.ToLowerInvariant()} start on {homeBucket.Replace('_', ' ')}, with {support}, {readiness.Continuity.ToString().ToLowerInvariant()} continuity, and {external}.";
+        return $"{polity.Name} is a {maturityLabel} {subsistenceStyle.ToLowerInvariant()} start on {homeBucket.Replace('_', ' ')}, with {support}, {readiness.Continuity.ToString().ToLowerInvariant()} continuity, and {external}.";
     }
 
     private static IReadOnlyList<string> BuildStrengths(CandidateScoreBreakdown? scoreBreakdown, PeopleHistoryWindowSnapshot history, NeighborContextSnapshot? neighborContext)
@@ -755,6 +776,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
 
 public sealed record PrehistoryCandidateSelectionResult(
     IReadOnlyList<PlayerEntryCandidateSummary> Candidates,
+    IReadOnlyList<PlayerEntryCandidateSummary> AllViableCandidates,
     IReadOnlyDictionary<int, string> RejectionReasons);
 
 internal sealed record CandidateAssessment(

@@ -64,17 +64,18 @@ public sealed class PrehistoryReadinessEvaluator
         World world,
         PrehistoryObserverSnapshot observerSnapshot,
         IReadOnlyDictionary<int, CandidateReadinessEvaluation> candidateEvaluations,
+        IReadOnlyList<PlayerEntryCandidateSummary> allViableCandidates,
         IReadOnlyList<PlayerEntryCandidateSummary> surfacedCandidates)
     {
         WorldAgeGateReport ageGate = BuildAgeGate(world);
-        CandidatePoolReadinessSummary candidatePool = BuildCandidatePoolSummary(surfacedCandidates);
+        CandidatePoolReadinessSummary candidatePool = BuildCandidatePoolSummary(allViableCandidates, surfacedCandidates);
 
         WorldReadinessCategoryReport biological = EvaluateBiological(world);
         WorldReadinessCategoryReport social = EvaluateSocialEmergence(world, ageGate);
         WorldReadinessCategoryReport worldStructure = EvaluateWorldStructure(world, observerSnapshot, candidateEvaluations, ageGate);
-        WorldReadinessCategoryReport candidate = EvaluateCandidateReadiness(candidateEvaluations, surfacedCandidates, ageGate);
-        WorldReadinessCategoryReport variety = EvaluateVariety(surfacedCandidates, ageGate);
-        WorldReadinessCategoryReport agency = EvaluateAgency(world, observerSnapshot, candidateEvaluations, surfacedCandidates, ageGate);
+        WorldReadinessCategoryReport candidate = EvaluateCandidateReadiness(candidateEvaluations, allViableCandidates, ageGate);
+        WorldReadinessCategoryReport variety = EvaluateVariety(allViableCandidates, ageGate);
+        WorldReadinessCategoryReport agency = EvaluateAgency(world, observerSnapshot, candidateEvaluations, allViableCandidates, ageGate);
 
         IReadOnlyList<WorldReadinessCategoryReport> categories =
         [
@@ -88,7 +89,7 @@ public sealed class PrehistoryReadinessEvaluator
 
         List<string> blockers = categories.SelectMany(report => report.Blockers).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         List<string> warnings = categories.SelectMany(report => report.Warnings).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        bool isThinWorld = candidatePool.IsThinWorld || surfacedCandidates.Count < Math.Max(2, _settings.MinimumViablePlayerEntryCandidates);
+        bool isThinWorld = candidatePool.IsThinWorld || allViableCandidates.Count < Math.Max(2, _settings.MinimumViablePlayerEntryCandidates);
         bool isWeakWorld = isThinWorld || categories.Any(report => report.Status != ReadinessAssessmentStatus.Pass);
 
         if (isThinWorld)
@@ -162,25 +163,27 @@ public sealed class PrehistoryReadinessEvaluator
             status);
     }
 
-    private CandidatePoolReadinessSummary BuildCandidatePoolSummary(IReadOnlyList<PlayerEntryCandidateSummary> surfacedCandidates)
+    private CandidatePoolReadinessSummary BuildCandidatePoolSummary(
+        IReadOnlyList<PlayerEntryCandidateSummary> allViableCandidates,
+        IReadOnlyList<PlayerEntryCandidateSummary> surfacedCandidates)
     {
-        int fallbackCount = surfacedCandidates.Count(candidate => candidate.IsFallbackCandidate);
-        int organicCount = surfacedCandidates.Count - fallbackCount;
-        int distinctSpecies = surfacedCandidates.Select(candidate => candidate.SpeciesId).Distinct().Count();
-        int distinctLineages = surfacedCandidates.Select(candidate => candidate.LineageId).Distinct().Count();
-        int distinctRegions = surfacedCandidates.Select(candidate => candidate.HomeRegionId).Distinct().Count();
-        int distinctSubsistenceStyles = surfacedCandidates
+        int fallbackCount = allViableCandidates.Count(candidate => candidate.IsFallbackCandidate);
+        int organicCount = allViableCandidates.Count - fallbackCount;
+        int distinctSpecies = allViableCandidates.Select(candidate => candidate.SpeciesId).Distinct().Count();
+        int distinctLineages = allViableCandidates.Select(candidate => candidate.LineageId).Distinct().Count();
+        int distinctRegions = allViableCandidates.Select(candidate => candidate.HomeRegionId).Distinct().Count();
+        int distinctSubsistenceStyles = allViableCandidates
             .Select(candidate => candidate.SubsistenceStyle)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Count();
-        bool thin = surfacedCandidates.Count < _settings.MinimumViablePlayerEntryCandidates
+        bool thin = allViableCandidates.Count < _settings.MinimumViablePlayerEntryCandidates
             || distinctRegions < 2
             || distinctLineages < 2;
 
         return new CandidatePoolReadinessSummary(
+            allViableCandidates.Count,
             surfacedCandidates.Count,
-            surfacedCandidates.Count,
-            surfacedCandidates.Count(candidate => !candidate.IsFallbackCandidate || !candidate.IsEmergencyAdmitted),
+            allViableCandidates.Count(candidate => candidate.Viability?.SupportsNormalEntry == true),
             organicCount,
             fallbackCount,
             distinctSpecies,
@@ -188,9 +191,11 @@ public sealed class PrehistoryReadinessEvaluator
             distinctRegions,
             distinctSubsistenceStyles,
             thin,
-            surfacedCandidates.Count == 0
-                ? "No viable starts surfaced."
-                : $"{surfacedCandidates.Count} viable starts across {Math.Max(1, distinctRegions)} regions.");
+            allViableCandidates.Count == 0
+                ? "No viable starts discovered."
+                : surfacedCandidates.Count == allViableCandidates.Count
+                    ? $"{allViableCandidates.Count} viable start{(allViableCandidates.Count == 1 ? string.Empty : "s")} discovered across {Math.Max(1, distinctRegions)} regions."
+                    : $"{allViableCandidates.Count} viable start{(allViableCandidates.Count == 1 ? string.Empty : "s")} discovered; {surfacedCandidates.Count} surfaced for selection.");
     }
 
     private WorldReadinessCategoryReport EvaluateBiological(World world)
@@ -309,14 +314,14 @@ public sealed class PrehistoryReadinessEvaluator
 
     private WorldReadinessCategoryReport EvaluateCandidateReadiness(
         IReadOnlyDictionary<int, CandidateReadinessEvaluation> candidateEvaluations,
-        IReadOnlyList<PlayerEntryCandidateSummary> surfacedCandidates,
+        IReadOnlyList<PlayerEntryCandidateSummary> allViableCandidates,
         WorldAgeGateReport ageGate)
     {
         List<string> blockers = [];
         List<string> warnings = [];
 
-        int viableCount = surfacedCandidates.Count;
-        int normalReadyCount = surfacedCandidates.Count(candidate =>
+        int viableCount = allViableCandidates.Count;
+        int normalReadyCount = allViableCandidates.Count(candidate =>
             candidateEvaluations.TryGetValue(candidate.PolityId, out CandidateReadinessEvaluation? evaluation)
             && evaluation.SupportsNormalEntry);
 
@@ -355,15 +360,15 @@ public sealed class PrehistoryReadinessEvaluator
                 : "Candidate readiness is blocked by current truth floors.");
     }
 
-    private WorldReadinessCategoryReport EvaluateVariety(IReadOnlyList<PlayerEntryCandidateSummary> surfacedCandidates, WorldAgeGateReport ageGate)
+    private WorldReadinessCategoryReport EvaluateVariety(IReadOnlyList<PlayerEntryCandidateSummary> allViableCandidates, WorldAgeGateReport ageGate)
     {
         List<string> blockers = [];
         List<string> warnings = [];
 
-        int distinctRegions = surfacedCandidates.Select(candidate => candidate.HomeRegionId).Distinct().Count();
-        int distinctLineages = surfacedCandidates.Select(candidate => candidate.LineageId).Distinct().Count();
-        int distinctStyles = surfacedCandidates.Select(candidate => candidate.SubsistenceStyle).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-        bool varietyThin = surfacedCandidates.Count <= 1 || distinctRegions <= 1 || distinctLineages <= 1 || distinctStyles <= 1;
+        int distinctRegions = allViableCandidates.Select(candidate => candidate.HomeRegionId).Distinct().Count();
+        int distinctLineages = allViableCandidates.Select(candidate => candidate.LineageId).Distinct().Count();
+        int distinctStyles = allViableCandidates.Select(candidate => candidate.SubsistenceStyle).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        bool varietyThin = allViableCandidates.Count <= 1 || distinctRegions <= 1 || distinctLineages <= 1 || distinctStyles <= 1;
 
         if (varietyThin)
         {
@@ -391,13 +396,13 @@ public sealed class PrehistoryReadinessEvaluator
         World world,
         PrehistoryObserverSnapshot observerSnapshot,
         IReadOnlyDictionary<int, CandidateReadinessEvaluation> candidateEvaluations,
-        IReadOnlyList<PlayerEntryCandidateSummary> surfacedCandidates,
+        IReadOnlyList<PlayerEntryCandidateSummary> allViableCandidates,
         WorldAgeGateReport ageGate)
     {
         List<string> blockers = [];
         List<string> warnings = [];
 
-        int agencyReadyCount = surfacedCandidates.Count(candidate =>
+        int agencyReadyCount = allViableCandidates.Count(candidate =>
         {
             if (!candidateEvaluations.TryGetValue(candidate.PolityId, out CandidateReadinessEvaluation? evaluation))
             {
@@ -513,6 +518,10 @@ public sealed class PrehistoryReadinessEvaluator
             1 => "1 viable start",
             _ => $"{candidatePool.ViableCandidateCount} viable starts"
         };
+        if (candidatePool.TotalSurfacedCandidates != candidatePool.TotalViableCandidatesDiscovered)
+        {
+            candidateHeadline = $"{candidateHeadline} ({candidatePool.TotalSurfacedCandidates} surfaced)";
+        }
         string worldCondition = resolution switch
         {
             PrehistoryCheckpointOutcomeKind.GenerationFailure => "No truthful entry exists at max age.",
