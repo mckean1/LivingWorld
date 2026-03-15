@@ -2,11 +2,11 @@
 
 LivingWorld keeps simulation logic, event storage, propagation, formatting, and console playback separate.
 
-The canonical runtime architecture is now driven entirely by `PrehistoryRuntimePhase`. Bootstrap and prehistory ticks happen inside `BootstrapWorldFrame` and `PrehistoryRunning`, decision points are owned by `ReadinessCheckpoint`, the startup handoff freezes inside `FocalSelection`, and live simulation runs under `ActivePlay` unless it stops early via `GenerationFailure`. `PrehistoryRuntimeStatus` captures the orchestration metadata (phase labels, subphase text, activity summaries, checkpoint results) while the raw world data (regions, species, polities, and events) remains the simulation truth that evaluation and presentation overlay. Legacy `WorldStartupStage` labels survive only as transitional subphase summaries inside generation and diagnostics, not as the source of run-control.
+The canonical runtime architecture is now driven entirely by `PrehistoryRuntimePhase`. Bootstrap and prehistory ticks happen inside `BootstrapWorldFrame` and `PrehistoryRunning`, decision points are owned by `ReadinessCheckpoint`, the startup handoff freezes inside `FocalSelection`, and live simulation runs under `ActivePlay` unless it stops early via `GenerationFailure`. `PrehistoryRuntimeStatus` captures the orchestration metadata (phase labels, subphase text, activity summaries, checkpoint results, and runtime detail view) while the raw world data (regions, species, polities, and events) remains the simulation truth that evaluation and presentation overlay. Legacy `WorldStartupStage` labels survive only as transitional generator and diagnostic labels, not as the source of run-control.
 
 Startup presentation now follows that runtime truth. `StartupProgressRenderer` owns the console until `FocalSelection`, `ChronicleWatchRenderer` freezes the world while your candidate pool is displayed, a `Handoff summary` describes the selected polity, `ActivePlayHandoffState` records the choice, and `World.BeginActiveSimulation` stamps the `LiveChronicleStartYear` before the chronicle resumes. `GenerationFailure` is now an explicit terminal state that surfaces an honest failure message instead of faking a viable start.
 
-Checkpoint evaluation now sits on top of that runtime highway through `PrehistoryCheckpointCoordinator`. The coordinator enters `ReadinessCheckpoint`, invokes the transitional `LegacyCheckpointCompatibilityAdapter` (which still runs the old readiness/candidate generators), and records `PrehistoryCheckpointOutcome` results before handing control back to the raw simulation. Legacy evaluation details (readiness reports, candidate rejection reasons, pool snapshots, diagnostics) stay in `PrehistoryEvaluationSnapshot`, while `LegacyPlayerEntryOutcomeEvaluatorAdapter` isolates the earlier candidate-outcome rules. This keeps raw geography, species, and polity truth untouched while the checkpoint layer decides whether to continue prehistory, stop for selection, force selection, or resolve `GenerationFailure`.
+Checkpoint evaluation now sits on top of that runtime highway through `PrehistoryCheckpointCoordinator`. The coordinator enters `ReadinessCheckpoint`, invokes the transitional `LegacyCheckpointCompatibilityAdapter` (which still runs the old readiness/candidate generators), applies the returned `PrehistoryCheckpointEvaluationResult`, and records `PrehistoryCheckpointOutcome` results before handing control back to the raw simulation. `PrehistoryEvaluationSnapshot.LegacyCompatibility` keeps transitional readiness and diagnostic artifacts, while `PrehistoryEvaluationSnapshot.CandidateSelection` owns the surfaced pool, rejection reasons, and pool snapshot. `LegacyPlayerEntryOutcomeEvaluatorAdapter` isolates the earlier candidate-outcome rules. This keeps raw geography, species, and polity truth untouched while the checkpoint layer decides whether to continue prehistory, stop for selection, force selection, or resolve `GenerationFailure`.
 
 The startup direction is now explicitly primitive-life-first:
 
@@ -33,7 +33,15 @@ The follow-up startup-richness pass tightened Pass 2 through Pass 4 in a differe
 - current simulation phase (`Bootstrap` vs `Active`)
 - canonical world events
 
-`World` also now owns a `PrehistoryEvaluationSnapshot` that keeps readiness reports, focal-candidate diagnostics, rejection reasons, observer snapshots, and candidate-pool snapshots separate from the core species/polity truth, plus an `ActivePlayHandoffState` for the chosen focal start metadata and a `PrehistoryFocalSelectionPresentationState` that future UI passes can use. The new `PrehistoryRuntimePhase` flow and `PrehistoryCheckpointOutcomeKind` results expose extension points for the upcoming observer snapshots (PR-2), readiness checkpoints (PR-3), candidate-pool composition (PR-4), focal-selection presentation (PR-5), and active-play handoff conversion (PR-6) phases while keeping the shared monthly pipeline intact.
+`World` now groups startup/runtime ownership under `World.Prehistory`:
+
+- `World.Prehistory.Runtime` owns orchestration state
+- `World.Prehistory.Evaluation.LegacyCompatibility` owns transitional readiness and diagnostic artifacts
+- `World.Prehistory.Evaluation.CandidateSelection` owns surfaced candidate-pool state
+- `World.Prehistory.ActivePlayHandoff` owns explicit handoff metadata
+- `World.Prehistory.FocalSelectionPresentation` keeps future presentation hints
+
+Compatibility forwarding properties remain on `World` for the PR-1 transition, but the durable ownership boundary is now explicit. The new `PrehistoryRuntimePhase` flow and `PrehistoryCheckpointOutcomeKind` results expose extension points for the upcoming observer snapshots (PR-2), readiness checkpoints (PR-3), candidate-pool composition (PR-4), focal-selection presentation (PR-5), and active-play handoff conversion (PR-6) phases while keeping the shared monthly pipeline intact.
 Major systems:
 
 - world generation

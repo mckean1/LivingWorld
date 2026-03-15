@@ -41,61 +41,32 @@ public sealed class WorldGenerator
         ValidateSettings();
 
         World? lastWorld = null;
-        List<string> lastRejectionReasons = [];
         List<string> priorRegenerationReasons = [];
         for (int attempt = 0; attempt < _settings.MaxStartupRegenerationAttempts; attempt++)
         {
-            if (attempt == 0)
+            World attemptWorld = attempt == 0
+                ? GenerateSingleAttempt(attempt, priorRegenerationReasons)
+                : new WorldGenerator(DeriveAttemptSeed(attempt), _settings, _progressRenderer)
+                    .GenerateSingleAttempt(attempt, priorRegenerationReasons);
+
+            if (attemptWorld.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
             {
-                World generatedWorld = GenerateSingleAttempt(attempt);
-                if (ShouldSurfaceFocalSelection(generatedWorld, allowEmergencyFallback: false, out List<string> attemptRejectionReasons))
-                {
-                    if (priorRegenerationReasons.Count > 0)
-                    {
-                        RefreshStartupEvaluationState(generatedWorld, priorRegenerationReasons);
-                    }
-
-                    return generatedWorld;
-                }
-
-                priorRegenerationReasons.AddRange(attemptRejectionReasons.Select(reason => $"attempt_{attempt}:{reason}"));
-                lastWorld = generatedWorld;
-                lastRejectionReasons = attemptRejectionReasons;
-                continue;
+                return attemptWorld;
             }
 
-            int attemptSeed = DeriveAttemptSeed(attempt);
-            WorldGenerator attemptGenerator = new(attemptSeed, _settings, _progressRenderer);
-            World regeneratedWorld = attemptGenerator.GenerateSingleAttempt(attempt);
-            if (attemptGenerator.ShouldSurfaceFocalSelection(regeneratedWorld, allowEmergencyFallback: false, out List<string> regeneratedRejectionReasons))
-            {
-                if (priorRegenerationReasons.Count > 0)
-                {
-                    attemptGenerator.RefreshStartupEvaluationState(regeneratedWorld, priorRegenerationReasons);
-                }
-
-                return regeneratedWorld;
-            }
-
-            priorRegenerationReasons.AddRange(regeneratedRejectionReasons.Select(reason => $"attempt_{attempt}:{reason}"));
-            lastWorld = regeneratedWorld;
-            lastRejectionReasons = regeneratedRejectionReasons;
+            lastWorld = attemptWorld;
+            priorRegenerationReasons.AddRange(BuildRegenerationReasons(attemptWorld, attempt));
         }
 
         if (lastWorld is not null)
         {
-            RefreshStartupEvaluationState(lastWorld, priorRegenerationReasons);
-            _prehistoryRuntimeOrchestrator.RecordGenerationFailure(
-                lastWorld,
-                "generation_failed_after_regeneration_limit",
-                FormatCheckpointDetails(lastRejectionReasons));
             return lastWorld;
         }
 
         throw new InvalidOperationException("Player entry failed before world generation could complete.");
     }
 
-    private World GenerateSingleAttempt(int attempt)
+    private World GenerateSingleAttempt(int attempt, IReadOnlyList<string>? regenerationReasons = null)
     {
         World world = new(new WorldTime(), WorldSimulationPhase.Bootstrap)
         {
@@ -142,7 +113,7 @@ public sealed class WorldGenerator
         InitializeEvolutionaryLineages(world);
         AdvanceEvolutionaryHistory(world);
         AdvanceCivilizationalEmergence(world);
-        AdvancePlayerEntryEvaluation(world);
+        AdvancePlayerEntryEvaluation(world, regenerationReasons);
 
         return world;
     }
@@ -511,7 +482,7 @@ public sealed class WorldGenerator
         ReportProgress(world);
     }
 
-    private void AdvancePlayerEntryEvaluation(World world)
+    private void AdvancePlayerEntryEvaluation(World world, IReadOnlyList<string>? regenerationReasons)
     {
         _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
         _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.CandidateEvaluation);
@@ -531,7 +502,8 @@ public sealed class WorldGenerator
             subphaseLabel: "Building focal candidates",
             activitySummary: "Evaluating whether the world is mature enough to surface healthy starting candidates.",
             completionSummary: "world_readiness_passed",
-            allowEmergencyFallback: false);
+            allowEmergencyFallback: false,
+            regenerationReasons: regenerationReasons);
 
         if (HandlePostCheckpointOutcome(world, initialOutcome))
         {
@@ -552,7 +524,8 @@ public sealed class WorldGenerator
                     subphaseLabel: "Checking stop conditions",
                     activitySummary: "Evaluating whether the world is ready for player entry or needs more historical time.",
                     completionSummary: "world_readiness_passed",
-                    allowEmergencyFallback: false);
+                    allowEmergencyFallback: false,
+                    regenerationReasons: regenerationReasons);
 
                 if (HandlePostCheckpointOutcome(world, checkpointOutcome))
                 {
@@ -570,7 +543,8 @@ public sealed class WorldGenerator
                     subphaseLabel: "Testing target-age handoff",
                     activitySummary: "Checking whether the world can stop at target age with a healthy candidate pool.",
                     completionSummary: "target_age_readiness_passed",
-                    allowEmergencyFallback: false);
+                    allowEmergencyFallback: false,
+                    regenerationReasons: regenerationReasons);
 
                 if (HandlePostCheckpointOutcome(world, targetOutcome))
                 {
@@ -603,25 +577,31 @@ public sealed class WorldGenerator
             subphaseLabel: "Final candidate pass",
             activitySummary: "Running the final candidate pass at max age and checking whether the world still needs rescue paths.",
             completionSummary: "max_prehistory_age_reached",
-            allowEmergencyFallback: true);
+            allowEmergencyFallback: true,
+            regenerationReasons: regenerationReasons);
         HandlePostCheckpointOutcome(world, finalOutcome);
     }
 
     private void ReportProgress(World world)
         => _progressRenderer?.Render(world);
 
-    private void RefreshStartupEvaluationState(World world, IReadOnlyList<string>? regenerationReasons = null)
-    {
-        world.StartupOutcomeDiagnostics = StartupOutcomeDiagnosticsEvaluator.Evaluate(world, regenerationReasons);
-        world.PrehistoryEvaluation.LegacyCompatibility.ReplaceStartupDiagnostics(
-            LegacyStartupDiagnosticsBuilder.Build(world, world.StartupOutcomeDiagnostics, regenerationReasons));
-    }
-
     private int DeriveAttemptSeed(int attempt)
         => MixSeed(_seed, attempt, 6151);
 
-    private static string? FormatCheckpointDetails(IReadOnlyList<string> rejectionReasons)
-        => rejectionReasons.Count == 0 ? null : string.Join(", ", rejectionReasons);
+    private static IReadOnlyList<string> BuildRegenerationReasons(World world, int attempt)
+    {
+        string? details = world.PrehistoryRuntime.LastCheckpointOutcome?.Details;
+        if (!string.IsNullOrWhiteSpace(details))
+        {
+            return details
+                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Select(reason => $"attempt_{attempt}:{reason}")
+                .ToList();
+        }
+
+        string summary = world.PrehistoryRuntime.LastCheckpointOutcome?.Summary ?? "checkpoint_failed";
+        return [$"attempt_{attempt}:{summary}"];
+    }
 
     private bool HandlePostCheckpointOutcome(World world, PrehistoryCheckpointOutcome outcome)
     {
@@ -637,7 +617,6 @@ public sealed class WorldGenerator
                 "Building focal starts",
                 activity,
                 transitionSummary: outcome.Summary);
-            world.StartupStage = WorldStartupStage.FocalSelection;
             ReportProgress(world);
             return true;
         }
@@ -649,13 +628,6 @@ public sealed class WorldGenerator
         }
 
         return false;
-    }
-
-    private bool ShouldSurfaceFocalSelection(World world, bool allowEmergencyFallback, out List<string> rejectionReasons)
-    {
-        bool accepted = PlayerEntryOutcomeEvaluator.ShouldSurfaceFocalSelection(world, _settings, allowEmergencyFallback, out rejectionReasons);
-        RefreshStartupEvaluationState(world, accepted ? null : rejectionReasons);
-        return accepted;
     }
 
     private void EnsureSentienceCapableSeedBranches(World world)

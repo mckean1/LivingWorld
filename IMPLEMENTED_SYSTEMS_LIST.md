@@ -34,7 +34,7 @@ All later roadmap phases are deferred until this program is complete enough to b
 
 ### PR-1 - Prehistory Runtime and Evaluation Architecture
 
-**Status:** In progress (Pass 3 aligned presentation and transitions with the canonical runtime flow)
+**Status:** Implemented as the canonical startup/runtime architecture for PR-1
 
 Planned:
 - keep prehistory as the canonical startup path into active play
@@ -46,13 +46,21 @@ Planned:
 - add `PrehistoryCheckpointCoordinator` plus the transitional `LegacyCheckpointCompatibilityAdapter` and `LegacyPlayerEntryOutcomeEvaluatorAdapter` so the checkpoint layer, candidate pool, and failure handling sit above the world rather than mutating simulation truth.
 - align `StartupProgressRenderer`, `ChronicleWatchRenderer`, and `ActivePlayHandoffState` so the canonical phases drive the player view: the startup panel shows the phase text and metrics, `FocalSelection` pauses monthly ticks while the candidate pool is shown, `ActivePlay` only begins once the handoff is recorded, and `GenerationFailure` surfaces an honest failure summary.
 
+Implemented cleanup:
+- `World` now groups startup/runtime ownership under `World.Prehistory`, with compatibility forwarding properties kept only as a transitional surface.
+- `PrehistoryEvaluationSnapshot` now separates `LegacyCompatibility` artifacts from `CandidateSelection` state so transitional legacy readiness/diagnostic data is isolated from the surfaced candidate pool.
+- `LegacyCheckpointCompatibilityAdapter` now returns a `PrehistoryCheckpointEvaluationResult` instead of mutating `World`, which keeps the checkpoint coordinator as the canonical controller.
+- `WorldGenerator` now resolves regeneration attempts from canonical checkpoint/runtime outcomes instead of calling the old direct focal-selection acceptance path after generation.
+- `PrehistoryRuntimeDetailView` now drives startup metric and presentation selection, so `WorldStartupStage` is no longer required as canonical runtime truth.
+- exhausted regeneration now resolves to an explicit `GenerationFailure` world state that stays frozen without starting the live chronicle boundary.
+
 Legacy `WorldStartupStage` labels now exist only for generator-level diagnostics and presentation-friendly subphase summaries. Runtime orchestration decisions, presentation labels, and evaluation checkpoints all rely on the `PrehistoryRuntimePhase` flow.
 
 ### Transitional seams intentionally kept
 
-- `LegacyCheckpointCompatibilityAdapter` still runs legacy readiness and candidate-generation code so the new checkpoint layer can observe simulation truth without mutating it.
+- `LegacyCheckpointCompatibilityAdapter` still runs legacy readiness and candidate-generation code, but only as a one-way result bridge into `World.Prehistory.Evaluation`.
 - `LegacyPlayerEntryOutcomeEvaluatorAdapter` continues to run the historical candidate-outcome rules until the new readiness module replaces them in PR-3.
-- `WorldStartupStage` and `StartupOutcomeDiagnostics` remain populated for generator diagnostics and balancing while they stop gating runtime behavior.
+- `WorldStartupStage` and `StartupOutcomeDiagnostics` remain populated for generator diagnostics and balancing while they stop gating canonical runtime behavior.
 
 ### PR-2 - Observer Snapshot Layer
 

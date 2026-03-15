@@ -68,12 +68,15 @@ Turn prehistory into the canonical player-entry architecture so that:
 
 ### PR-1 - Prehistory Runtime and Evaluation Architecture
 
-Planned:
+Implemented:
 - keep the same universal monthly simulation pipeline in both prehistory and active play
 - keep raw simulation truth separate from evaluator-owned startup decisions
 - treat prehistory as the canonical startup path into active play
 - preserve honest failure states when the world does not produce true viable starts
 - formalize checkpoint coordination with `PrehistoryCheckpointCoordinator`, `LegacyCheckpointCompatibilityAdapter`, and `LegacyPlayerEntryOutcomeEvaluatorAdapter` so reader-facing readiness/candidate logic cannot mutate the core world state and GenerationFailure remains explicit
+- group startup/runtime ownership under `World.Prehistory`, with `PrehistoryEvaluationSnapshot.LegacyCompatibility` and `PrehistoryEvaluationSnapshot.CandidateSelection` separating transitional legacy artifacts from candidate-pool state
+- drive startup rendering from `PrehistoryRuntimeDetailView` rather than the old pass ladder
+- resolve regeneration attempts from checkpoint/runtime outcomes and keep exhausted attempts as explicit `GenerationFailure` worlds
 
 ### PR-2 - Observer Snapshot Layer
 
