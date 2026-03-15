@@ -7,6 +7,7 @@ public sealed class PrehistoryEvaluationSnapshot
 {
     public PrehistoryLegacyEvaluationArtifacts LegacyCompatibility { get; } = new();
     public PrehistoryCandidateSelectionState CandidateSelection { get; } = new();
+    public WorldGenerationDiagnosticsState GenerationDiagnostics { get; } = new();
     public PrehistoryObserverSnapshot? LatestObserverSnapshot { get; set; }
 
     public WorldReadinessReport WorldReadinessReport

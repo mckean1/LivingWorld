@@ -180,7 +180,7 @@ public sealed class StartupProgressRenderer : IDisposable
             PrehistoryRuntimePhase.ReadinessCheckpoint => BuildRuntimeDetailMetrics(world),
             PrehistoryRuntimePhase.FocalSelection => BuildRuntimeDetailMetrics(world),
             PrehistoryRuntimePhase.ActivePlay => [" Metrics: live chronicle active"],
-            PrehistoryRuntimePhase.GenerationFailure => [" Metrics: world generation failed to surface viable starts"],
+            PrehistoryRuntimePhase.GenerationFailure => BuildGenerationFailureMetrics(world),
             _ => BuildRuntimeDetailMetrics(world)
         };
     }
@@ -263,6 +263,18 @@ public sealed class StartupProgressRenderer : IDisposable
             PrehistoryRuntimeDetailView.FocalSelection => BuildPhaseDMetrics(world),
             _ => [" Metrics: live chronicle active"]
         };
+    }
+
+    private static IReadOnlyList<string> BuildGenerationFailureMetrics(World world)
+    {
+        if (world.GenerationFailurePostmortem is not GenerationFailurePostmortem postmortem)
+        {
+            return [" Metrics: world generation failed to surface viable starts"];
+        }
+
+        return WorldGenerationDiagnosticsFormatter.BuildFinalFailureLines(postmortem)
+            .Select(line => $" {line}")
+            .ToArray();
     }
 
     private static int CountEvolutionaryEvents(World world, EvolutionaryHistoryEventType type)

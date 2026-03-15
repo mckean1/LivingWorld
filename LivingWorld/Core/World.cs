@@ -23,6 +23,9 @@ public sealed class World
     public PrehistoryEvaluationSnapshot PrehistoryEvaluation => Prehistory.Evaluation;
     public PrehistoryCandidatePoolSnapshot? CandidatePoolSnapshot => Prehistory.Evaluation.CandidatePoolSnapshot;
     public PrehistoryObserverSnapshot? LatestObserverSnapshot => Prehistory.Evaluation.LatestObserverSnapshot;
+    public WorldGenerationDiagnosticsState WorldGenerationDiagnostics => PrehistoryEvaluation.GenerationDiagnostics;
+    public IReadOnlyList<GenerationAttemptDiagnosticsSummary> GenerationAttemptHistory => WorldGenerationDiagnostics.AttemptHistory;
+    public GenerationFailurePostmortem? GenerationFailurePostmortem => WorldGenerationDiagnostics.FinalFailurePostmortem;
     public ActivePlayHandoffState ActivePlayHandoff => Prehistory.ActivePlayHandoff;
     public PrehistoryFocalSelectionPresentationState FocalSelectionPresentation => Prehistory.FocalSelectionPresentation;
     public WorldReadinessReport WorldReadinessReport

@@ -1,4 +1,5 @@
 using LivingWorld.Core;
+using LivingWorld.Presentation;
 using LivingWorld.Societies;
 
 namespace LivingWorld.Generation;
@@ -34,7 +35,7 @@ public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluatio
         {
             WorldReadinessReport = readiness.Report,
             StartupOutcomeDiagnostics = diagnostics,
-            StartupDiagnostics = BuildDiagnostics(readiness.Report, regenerationReasons),
+            StartupDiagnostics = BuildDiagnostics(diagnostics, readiness.Report, regenerationReasons),
             PlayerEntryCandidates = candidates,
             CandidateRejectionReasons = candidateSelection.RejectionReasons,
             CandidatePoolSnapshot = new PrehistoryCandidatePoolSnapshot(
@@ -48,24 +49,17 @@ public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluatio
         };
     }
 
-    private static IReadOnlyList<string> BuildDiagnostics(WorldReadinessReport report, IReadOnlyList<string>? regenerationReasons)
+    private static IReadOnlyList<string> BuildDiagnostics(
+        StartupOutcomeDiagnostics diagnostics,
+        WorldReadinessReport report,
+        IReadOnlyList<string>? regenerationReasons)
     {
-        List<string> diagnostics =
-        [
-            $"checkpoint_resolution:{report.FinalCheckpointResolution}",
-            $"age_gate:{report.AgeGate.Status}",
-            $"viable_candidates:{report.CandidatePoolSummary.TotalViableCandidatesDiscovered}",
-            $"surfaced_candidates:{report.CandidatePoolSummary.TotalSurfacedCandidates}",
-            $"weak_world:{report.IsWeakWorld}",
-            $"thin_world:{report.IsThinWorld}"
-        ];
-        diagnostics.AddRange(report.GlobalBlockingReasons.Select(reason => $"blocker:{reason}"));
-        diagnostics.AddRange(report.GlobalWarningReasons.Take(4).Select(reason => $"warning:{reason}"));
+        List<string> summary = WorldGenerationDiagnosticsFormatter.BuildCheckpointDiagnostics(diagnostics, report).ToList();
         if (regenerationReasons is not null)
         {
-            diagnostics.AddRange(regenerationReasons.Select(reason => $"regen:{reason}"));
+            summary.AddRange(regenerationReasons.Select(reason => $"regen:{reason}"));
         }
 
-        return diagnostics;
+        return summary;
     }
 }

@@ -40,24 +40,44 @@ public sealed class WorldGenerator
 
         World? lastWorld = null;
         List<string> priorRegenerationReasons = [];
+        List<GenerationAttemptDiagnosticsSummary> attemptHistory = [];
         for (int attempt = 0; attempt < _settings.MaxStartupRegenerationAttempts; attempt++)
         {
             World attemptWorld = attempt == 0
                 ? GenerateSingleAttempt(attempt, priorRegenerationReasons)
                 : new WorldGenerator(DeriveAttemptSeed(attempt), _settings, _progressRenderer)
                     .GenerateSingleAttempt(attempt, priorRegenerationReasons);
+            GenerationAttemptDiagnosticsSummary attemptSummary = WorldGenerationDiagnosticsEvaluator.BuildAttemptSummary(attemptWorld);
+            attemptHistory.Add(attemptSummary);
+            bool completed = attemptWorld.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection;
+            bool willRegenerate = !completed && attempt + 1 < _settings.MaxStartupRegenerationAttempts;
+            WorldGenerationDiagnosticsEvaluator.ApplyAttemptHistory(attemptWorld, attemptHistory, postmortem: null);
+            EmitAttemptDiagnostics(attemptWorld, attemptSummary, willRegenerate);
 
-            if (attemptWorld.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
+            if (completed)
             {
+                WorldGenerationDiagnosticsEvaluator.ApplyAttemptHistory(attemptWorld, attemptHistory, postmortem: null);
                 return attemptWorld;
             }
 
             lastWorld = attemptWorld;
-            priorRegenerationReasons.AddRange(BuildRegenerationReasons(attemptWorld, attempt));
+            priorRegenerationReasons = WorldGenerationDiagnosticsEvaluator.BuildRegenerationReasons(attemptSummary)
+                .Select(reason => reason.Code)
+                .ToList();
         }
 
         if (lastWorld is not null)
         {
+            GenerationFailurePostmortem? postmortem = lastWorld.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.GenerationFailure
+                ? WorldGenerationDiagnosticsEvaluator.BuildFailurePostmortem(attemptHistory)
+                : null;
+            WorldGenerationDiagnosticsEvaluator.ApplyAttemptHistory(lastWorld, attemptHistory, postmortem);
+            if (postmortem is not null)
+            {
+                lastWorld.Prehistory.LegacyCompatibility.ReplaceStartupDiagnostics(WorldGenerationDiagnosticsFormatter.BuildFinalFailureLines(postmortem));
+                EmitFinalFailureDiagnostics(lastWorld, postmortem);
+            }
+
             return lastWorld;
         }
 
@@ -586,21 +606,6 @@ public sealed class WorldGenerator
     private int DeriveAttemptSeed(int attempt)
         => MixSeed(_seed, attempt, 6151);
 
-    private static IReadOnlyList<string> BuildRegenerationReasons(World world, int attempt)
-    {
-        string? details = world.PrehistoryRuntime.LastCheckpointOutcome?.Details;
-        if (!string.IsNullOrWhiteSpace(details))
-        {
-            return details
-                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                .Select(reason => $"attempt_{attempt}:{reason}")
-                .ToList();
-        }
-
-        string summary = world.PrehistoryRuntime.LastCheckpointOutcome?.Summary ?? "checkpoint_failed";
-        return [$"attempt_{attempt}:{summary}"];
-    }
-
     private bool HandlePostCheckpointOutcome(World world, PrehistoryCheckpointOutcome outcome)
     {
         if (outcome.Kind == PrehistoryCheckpointOutcomeKind.EnterFocalSelection
@@ -626,6 +631,49 @@ public sealed class WorldGenerator
         }
 
         return false;
+    }
+
+    private void EmitAttemptDiagnostics(World world, GenerationAttemptDiagnosticsSummary summary, bool willRegenerate)
+    {
+        IReadOnlyList<string> lines = WorldGenerationDiagnosticsFormatter.BuildAttemptSummaryLines(summary, willRegenerate);
+        world.Prehistory.LegacyCompatibility.ReplaceStartupDiagnostics(lines);
+        world.PrehistoryRuntime.TransitionSummary = WorldGenerationDiagnosticsFormatter.BuildAttemptTransitionSummary(summary, willRegenerate);
+        if (_progressRenderer is not null)
+        {
+            ReportProgress(world);
+        }
+
+        if (_progressRenderer is not null && !Console.IsOutputRedirected)
+        {
+            return;
+        }
+
+        foreach (string line in lines)
+        {
+            Console.WriteLine(line);
+        }
+
+        Console.WriteLine();
+    }
+
+    private void EmitFinalFailureDiagnostics(World world, GenerationFailurePostmortem postmortem)
+    {
+        if (_progressRenderer is not null)
+        {
+            ReportProgress(world);
+        }
+
+        if (_progressRenderer is not null && !Console.IsOutputRedirected)
+        {
+            return;
+        }
+
+        foreach (string line in WorldGenerationDiagnosticsFormatter.BuildFinalFailureLines(postmortem))
+        {
+            Console.WriteLine(line);
+        }
+
+        Console.WriteLine();
     }
 
     private void EnsureSentienceCapableSeedBranches(World world)

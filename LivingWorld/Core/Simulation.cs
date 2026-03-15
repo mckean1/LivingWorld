@@ -108,6 +108,7 @@ public sealed class Simulation : IDisposable
         if (_options.WriteStructuredHistory)
         {
             _historyWriter = new HistoryJsonlWriter(_options.HistoryFilePath);
+            WriteGenerationDiagnosticsHistory();
         }
 
         if (_options.WriteStructuredHistory || _options.OutputMode == OutputMode.Watch)
@@ -358,6 +359,19 @@ public sealed class Simulation : IDisposable
         if (_chronicleWatchRenderer.Record(_world, _chronicleFocus, _watchUiState, worldEvent))
         {
             _renderInvalidated = true;
+        }
+    }
+
+    private void WriteGenerationDiagnosticsHistory()
+    {
+        if (_historyWriter is null)
+        {
+            return;
+        }
+
+        foreach (WorldEvent diagnosticsEvent in WorldGenerationDiagnosticsFormatter.BuildStructuredHistoryEvents(_world))
+        {
+            _historyWriter.Write(diagnosticsEvent);
         }
     }
 

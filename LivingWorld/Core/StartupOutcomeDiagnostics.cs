@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+
 namespace LivingWorld.Core;
 
 public sealed record StartupOutcomeDiagnostics(
@@ -14,10 +17,20 @@ public sealed record StartupOutcomeDiagnostics(
     int OrganicPlayerEntryCandidateCount,
     int FallbackPlayerEntryCandidateCount,
     int EmergencyAdmittedCandidateCount,
-    IReadOnlyDictionary<string, int> CandidateRejectionCounts,
-    IReadOnlyList<string> BottleneckReasons,
-    IReadOnlyList<string> RegenerationReasons)
+    IReadOnlyList<StartupDiagnosticReasonCount> CandidateRejections,
+    IReadOnlyList<StartupDiagnosticReasonCount> Bottlenecks,
+    IReadOnlyList<StartupDiagnosticReason> RegenerationReasons,
+    GenerationFailurePrimaryKind PrimaryFailureKind,
+    GenerationZeroViableCause ZeroViableCause,
+    string ReasonSummary)
 {
+    public IReadOnlyDictionary<string, int> CandidateRejectionCounts { get; } = CandidateRejections
+        .ToDictionary(entry => entry.Code, entry => entry.Count, StringComparer.OrdinalIgnoreCase);
+
+    public IReadOnlyList<string> BottleneckReasons { get; } = Bottlenecks
+        .Select(entry => entry.Code)
+        .ToArray();
+
     public static StartupOutcomeDiagnostics Empty { get; } = new(
         0,
         0,
@@ -32,7 +45,10 @@ public sealed record StartupOutcomeDiagnostics(
         0,
         0,
         0,
-        new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
-        Array.Empty<string>(),
-        Array.Empty<string>());
+        Array.Empty<StartupDiagnosticReasonCount>(),
+        Array.Empty<StartupDiagnosticReasonCount>(),
+        Array.Empty<StartupDiagnosticReason>(),
+        GenerationFailurePrimaryKind.None,
+        GenerationZeroViableCause.None,
+        "No startup diagnostics.");
 }
