@@ -20,7 +20,7 @@ A feature is not fully complete until:
 
 This remains the top roadmap priority for LivingWorld.
 
-The primitive-life-first simulation foundation still underpins startup, but PR-1 through PR-6 already replaced the old outer startup wrapper with the canonical prehistory runtime architecture: `BootstrapWorldFrame` -> `PrehistoryRunning` -> `ReadinessCheckpoint` -> `FocalSelection` -> `ActivePlay` -> `GenerationFailure`. PR-7 completes the documentation and roadmap sync for that implemented baseline.
+The primitive-life-first simulation foundation still underpins startup, but PR-1 through PR-6 already replaced the old outer startup wrapper with the canonical prehistory runtime architecture: `BootstrapWorldFrame` -> `PrehistoryRunning` -> `ReadinessCheckpoint` -> `FocalSelection` -> `ActivePlay` -> `GenerationFailure`. PR-7 completed the documentation and roadmap sync for that implemented baseline.
 
 All later civilization-era roadmap phases remain deferred until this program is complete enough to stop being the repository's critical path.
 
@@ -37,14 +37,14 @@ All later civilization-era roadmap phases remain deferred until this program is 
 **Status:** Implemented as the canonical startup/runtime architecture for PR-1
 
 Implemented:
-- keep prehistory as the canonical startup path into active play
-- keep the universal monthly simulation pipeline shared between prehistory and active play
-- separate raw simulation truth from evaluator-owned startup decisions
-- ensure stop logic, candidate evaluation, focal selection, and player handoff sit above simulation facts rather than rewriting them
-- preserve honest failure states when the world does not produce true viable starts
-- make `PrehistoryRuntimePhase` and `PrehistoryRuntimeStatus` the single source of runtime truth (BootstrapWorldFrame → PrehistoryRunning → ReadinessCheckpoint → FocalSelection → ActivePlay → GenerationFailure), while `World` retains the simulation truth and legacy `WorldStartupStage` stays purely a transitional subphase label and generator diagnostic artifact.
-- add `PrehistoryCheckpointCoordinator` plus the transitional `LegacyCheckpointCompatibilityAdapter` and `LegacyPlayerEntryOutcomeEvaluatorAdapter` so the checkpoint layer, candidate pool, and failure handling sit above the world rather than mutating simulation truth.
-- align `StartupProgressRenderer`, `ChronicleWatchRenderer`, and `ActivePlayHandoffState` so the canonical phases drive the player view: the startup panel shows the phase text and metrics, `FocalSelection` pauses monthly ticks while the candidate pool is shown, `ActivePlay` only begins once the handoff is recorded, and `GenerationFailure` surfaces an honest failure summary.
+- prehistory is now the canonical startup path into active play
+- the universal monthly simulation pipeline is now shared between prehistory and active play
+- raw simulation truth is now separated from evaluator-owned startup decisions
+- stop logic, candidate evaluation, focal selection, and player handoff now sit above simulation facts rather than rewriting them
+- honest failure states are preserved when the world does not produce true viable starts
+- `PrehistoryRuntimePhase` and `PrehistoryRuntimeStatus` now serve as the single source of runtime truth (BootstrapWorldFrame → PrehistoryRunning → ReadinessCheckpoint → FocalSelection → ActivePlay → GenerationFailure), while `World` retains the simulation truth and legacy `WorldStartupStage` stays purely a transitional subphase label and generator diagnostic artifact.
+- `PrehistoryCheckpointCoordinator` plus the transitional `LegacyCheckpointCompatibilityAdapter` and `LegacyPlayerEntryOutcomeEvaluatorAdapter` now keep the checkpoint layer, candidate pool, and failure handling above the world rather than mutating simulation truth.
+- `StartupProgressRenderer`, `ChronicleWatchRenderer`, and `ActivePlayHandoffState` are now aligned so the canonical phases drive the player view: the startup panel shows the phase text and metrics, `FocalSelection` pauses monthly ticks while the candidate pool is shown, `ActivePlay` only begins once the handoff is recorded, and `GenerationFailure` surfaces an honest failure summary.
 
 Implemented cleanup:
 - `World` now groups startup/runtime ownership under `World.Prehistory`, with compatibility forwarding properties kept only as a transitional surface.
@@ -59,7 +59,7 @@ Legacy `WorldStartupStage` labels now exist only for generator-level diagnostics
 ### Transitional seams intentionally kept
 
 - `LegacyCheckpointCompatibilityAdapter` still runs legacy readiness and candidate-generation code, but only as a one-way result bridge into `World.Prehistory.Evaluation`.
-- `LegacyPlayerEntryOutcomeEvaluatorAdapter` continues to run the historical candidate-outcome rules until the new readiness module replaces them in PR-3.
+- `LegacyPlayerEntryOutcomeEvaluatorAdapter` remains only as a compatibility seam for older candidate-outcome rules while PR-3 readiness stays canonical.
 - `WorldStartupStage` and `StartupOutcomeDiagnostics` remain populated for generator diagnostics and balancing while they stop gating canonical runtime behavior.
 
 ### PR-2 - Observer Snapshot Layer

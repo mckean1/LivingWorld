@@ -50,7 +50,7 @@ Implemented core currently includes:
 
 ### Why this is the priority
 
-The current startup path already proves that primitive-life-first world generation can work, but it still needs to be turned into the final long-term architecture for:
+The current startup path now establishes the canonical prehistory runtime, and later prehistory work should deepen it around:
 - honest prehistory stop conditions
 - observer-facing evaluation artifacts
 - viable candidate truth
