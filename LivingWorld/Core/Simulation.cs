@@ -31,6 +31,7 @@ public sealed class Simulation : IDisposable
     private readonly SettlementSystem _settlementSystem;
     private readonly FragmentationSystem _fragmentationSystem;
     private readonly PolityStageSystem _polityStageSystem;
+    private readonly PrehistoryObserverService _observerService;
     private readonly SimulationOptions _options;
     private readonly ChronicleColorWriter _chronicleColorWriter;
     private readonly ChronicleEventFormatter _chronicleEventFormatter;
@@ -68,6 +69,7 @@ public sealed class Simulation : IDisposable
         _settlementSystem = new SettlementSystem();
         _fragmentationSystem = new FragmentationSystem();
         _polityStageSystem = new PolityStageSystem();
+        _observerService = new PrehistoryObserverService();
         _options = options ?? new SimulationOptions();
         _chronicleColorWriter = new ChronicleColorWriter();
         _chronicleEventFormatter = new ChronicleEventFormatter();
@@ -222,6 +224,7 @@ public sealed class Simulation : IDisposable
             RunYearEndSystems();
         }
 
+        _observerService.CaptureCurrentMonth(_world);
         _world.Time.AdvanceOneMonth();
     }
 

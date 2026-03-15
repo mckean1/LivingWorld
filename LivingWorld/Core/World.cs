@@ -19,6 +19,7 @@ public sealed class World
         set => Prehistory.AgeConfiguration = value;
     }
     public PrehistoryRuntimeStatus PrehistoryRuntime => Prehistory.Runtime;
+    public PrehistoryObserverState PrehistoryObserver => Prehistory.Observer;
     public PrehistoryEvaluationSnapshot PrehistoryEvaluation => Prehistory.Evaluation;
     public PrehistoryCandidatePoolSnapshot? CandidatePoolSnapshot => Prehistory.Evaluation.CandidatePoolSnapshot;
     public PrehistoryObserverSnapshot? LatestObserverSnapshot => Prehistory.Evaluation.LatestObserverSnapshot;

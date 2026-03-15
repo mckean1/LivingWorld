@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using LivingWorld.Societies;
 
@@ -106,22 +105,6 @@ public sealed class PrehistoryCandidateSelectionState
         PlayerEntryCandidates.Clear();
         CandidateRejectionReasons.Clear();
         CandidatePoolSnapshot = null;
-    }
-}
-
-public sealed class PrehistoryObserverSnapshot
-{
-    public DateTime SnapshotTimeUtc { get; }
-    public int WorldYear { get; }
-    public string Summary { get; }
-    public IReadOnlyList<string> Notes { get; }
-
-    public PrehistoryObserverSnapshot(int worldYear, string summary, IReadOnlyList<string>? notes = null)
-    {
-        SnapshotTimeUtc = DateTime.UtcNow;
-        WorldYear = worldYear;
-        Summary = summary;
-        Notes = notes ?? Array.Empty<string>();
     }
 }
 

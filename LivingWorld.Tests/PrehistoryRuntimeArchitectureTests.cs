@@ -18,6 +18,8 @@ public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<Prehistor
     public void LegacyCheckpointCompatibilityAdapter_ReturnsEvaluationArtifactsWithoutMutatingWorldState()
     {
         World world = fixture.CreateGeneratedWorld(seed: 43);
+        List<(int PolityId, int ObservationCount)> observerHistoryCounts = world.Polities
+            .ConvertAll(polity => (polity.Id, world.PrehistoryObserver.GetPeopleHistory(polity.Id).Count));
         world.Prehistory.CandidateSelection.Clear();
         world.Prehistory.LegacyCompatibility.ReplaceStartupDiagnostics([]);
         world.WorldReadinessReport = WorldReadinessReport.Empty;
@@ -29,6 +31,10 @@ public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<Prehistor
         Assert.Empty(world.PlayerEntryCandidates);
         Assert.Empty(world.StartupDiagnostics);
         Assert.Equal(WorldReadinessReport.Empty, world.WorldReadinessReport);
+        foreach ((int polityId, int observationCount) in observerHistoryCounts)
+        {
+            Assert.Equal(observationCount, world.PrehistoryObserver.GetPeopleHistory(polityId).Count);
+        }
         Assert.NotEmpty(result.PlayerEntryCandidates);
         Assert.NotNull(result.CandidatePoolSnapshot);
     }

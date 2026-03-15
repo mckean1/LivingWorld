@@ -14,15 +14,18 @@ public sealed class LegacyCheckpointCompatibilityAdapter : ICheckpointEvaluation
 {
     private readonly WorldGenerationSettings _settings;
     private readonly PlayerEntryCandidateGenerator _candidateGenerator;
+    private readonly PrehistoryObserverService _observerService;
 
     public LegacyCheckpointCompatibilityAdapter(WorldGenerationSettings settings)
     {
         _settings = settings;
         _candidateGenerator = new PlayerEntryCandidateGenerator(settings);
+        _observerService = new PrehistoryObserverService();
     }
 
     public PrehistoryCheckpointEvaluationResult Evaluate(World world, bool allowEmergencyFallback, IReadOnlyList<string>? regenerationReasons)
     {
+        PrehistoryObserverSnapshot observerSnapshot = _observerService.Observe(world);
         IReadOnlyList<PlayerEntryCandidateSummary> candidates = _candidateGenerator.Generate(world, allowEmergencyFallback, out Dictionary<int, string> rejectionReasons);
         StartupOutcomeDiagnostics diagnostics = StartupOutcomeDiagnosticsEvaluator.Evaluate(world, regenerationReasons);
         int total = candidates.Count;
@@ -42,7 +45,7 @@ public sealed class LegacyCheckpointCompatibilityAdapter : ICheckpointEvaluation
                 fallback,
                 allowEmergencyFallback,
                 $"{summary} at year {world.Time.Year}"),
-            LatestObserverSnapshot = new PrehistoryObserverSnapshot(world.Time.Year, $"Candidate pool {total} entries", new[] { summary })
+            LatestObserverSnapshot = observerSnapshot
         };
     }
 }

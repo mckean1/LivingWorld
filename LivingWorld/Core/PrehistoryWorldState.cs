@@ -4,6 +4,7 @@ public sealed class PrehistoryWorldState
 {
     public StartupWorldAgeConfiguration AgeConfiguration { get; set; } = StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld);
     public PrehistoryRuntimeStatus Runtime { get; } = new();
+    public PrehistoryObserverState Observer { get; } = new();
     public PrehistoryEvaluationSnapshot Evaluation { get; } = new();
     public PrehistoryLegacyEvaluationArtifacts LegacyCompatibility => Evaluation.LegacyCompatibility;
     public PrehistoryCandidateSelectionState CandidateSelection => Evaluation.CandidateSelection;
