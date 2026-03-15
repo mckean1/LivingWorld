@@ -5,18 +5,25 @@ using Xunit;
 
 namespace LivingWorld.Tests;
 
-public sealed class PrehistoryRuntimeArchitectureTests
+public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<PrehistoryRuntimeArchitectureTests.Fixture>
 {
+    private readonly Fixture fixture;
+
+    public PrehistoryRuntimeArchitectureTests(Fixture fixture)
+    {
+        this.fixture = fixture;
+    }
+
     [Fact]
     public void LegacyCheckpointCompatibilityAdapter_ReturnsEvaluationArtifactsWithoutMutatingWorldState()
     {
-        World world = new WorldGenerator(seed: 43).Generate();
+        World world = fixture.CreateGeneratedWorld(seed: 43);
         world.Prehistory.CandidateSelection.Clear();
         world.Prehistory.LegacyCompatibility.ReplaceStartupDiagnostics([]);
         world.WorldReadinessReport = WorldReadinessReport.Empty;
         world.StartupOutcomeDiagnostics = StartupOutcomeDiagnostics.Empty;
 
-        LegacyCheckpointCompatibilityAdapter adapter = new(new WorldGenerationSettings());
+        LegacyCheckpointCompatibilityAdapter adapter = fixture.CreateLegacyCheckpointCompatibilityAdapter();
         PrehistoryCheckpointEvaluationResult result = adapter.Evaluate(world, allowEmergencyFallback: false, regenerationReasons: null);
 
         Assert.Empty(world.PlayerEntryCandidates);
@@ -29,7 +36,7 @@ public sealed class PrehistoryRuntimeArchitectureTests
     [Fact]
     public void WorldGenerator_ResolvesRegenerationFromCheckpointOutcomeFlow()
     {
-        World world = new WorldGenerator(seed: 19, CreateImpossibleEntrySettings(maxAttempts: 2)).Generate();
+        World world = fixture.CreateImpossibleEntryWorld(seed: 19, maxAttempts: 2);
 
         Assert.Equal(PrehistoryRuntimePhase.GenerationFailure, world.PrehistoryRuntime.CurrentPhase);
         Assert.Equal(PrehistoryCheckpointOutcomeKind.GenerationFailure, world.PrehistoryRuntime.LastCheckpointOutcome?.Kind);
@@ -39,9 +46,9 @@ public sealed class PrehistoryRuntimeArchitectureTests
     [Fact]
     public void Simulation_EntersActivePlayOnlyThroughExplicitHandoff()
     {
-        World world = new WorldGenerator(seed: 43).Generate();
+        World world = fixture.CreateGeneratedWorld(seed: 43);
 
-        using Simulation simulation = new(world, new SimulationOptions { OutputMode = OutputMode.Debug, WriteStructuredHistory = false });
+        using Simulation simulation = new(world, fixture.CreateDebugSimulationOptions());
 
         Assert.Equal(PrehistoryRuntimePhase.FocalSelection, world.PrehistoryRuntime.CurrentPhase);
         Assert.Null(world.SelectedFocalPolityId);
@@ -57,14 +64,14 @@ public sealed class PrehistoryRuntimeArchitectureTests
     [Fact]
     public void GenerationFailureRemainsFrozenWithoutStartingLiveChronicle()
     {
-        World world = new WorldGenerator(seed: 19, CreateImpossibleEntrySettings()).Generate();
+        World world = fixture.CreateImpossibleEntryWorld(seed: 19);
 
         Assert.Equal(PrehistoryRuntimePhase.GenerationFailure, world.PrehistoryRuntime.CurrentPhase);
         Assert.Empty(world.PlayerEntryCandidates);
 
         int year = world.Time.Year;
         int month = world.Time.Month;
-        using Simulation simulation = new(world, new SimulationOptions { OutputMode = OutputMode.Debug, WriteStructuredHistory = false });
+        using Simulation simulation = new(world, fixture.CreateDebugSimulationOptions());
 
         Assert.Null(world.LiveChronicleStartYear);
         simulation.RunMonths(12);
@@ -78,7 +85,7 @@ public sealed class PrehistoryRuntimeArchitectureTests
     [Fact]
     public void StartupProgressRenderer_UsesRuntimeDetailViewWithoutNeedingLegacyStartupStage()
     {
-        World world = new(new WorldTime(180, 1));
+        World world = fixture.CreateRuntimeDetailViewWorld();
         world.StartupStage = WorldStartupStage.PrimitiveEcologyFoundation;
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
         world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.EvolutionaryExpansion;
@@ -95,23 +102,45 @@ public sealed class PrehistoryRuntimeArchitectureTests
         Assert.DoesNotContain(lines, line => line.Contains("producer coverage", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static WorldGenerationSettings CreateImpossibleEntrySettings(int maxAttempts = 1)
-        => new()
-        {
-            StartupWorldAgePreset = StartupWorldAgePreset.YoungWorld,
-            RegionCount = 16,
-            ContinentWidth = 4,
-            ContinentHeight = 4,
-            PhaseAMaximumBootstrapMonths = 24,
-            PhaseBMinimumBootstrapYears = 80,
-            PhaseBMaximumBootstrapYears = 160,
-            PhaseCMinimumBootstrapYears = 60,
-            PhaseCMaximumBootstrapYears = 140,
-            ReadinessEvaluationIntervalYears = 10,
-            MaxStartupRegenerationAttempts = maxAttempts,
-            CandidateMinimumPopulation = 5000,
-            CandidateMinimumPolityAgeYears = 200,
-            MinimumViablePlayerEntryCandidates = 4,
-            MinimumHealthyCandidateCount = 4
-        };
+    public sealed class Fixture
+    {
+        public World CreateGeneratedWorld(int seed)
+            => new WorldGenerator(seed: seed).Generate();
+
+        public World CreateImpossibleEntryWorld(int seed, int maxAttempts = 1)
+            => new WorldGenerator(seed: seed, CreateImpossibleEntrySettings(maxAttempts)).Generate();
+
+        public LegacyCheckpointCompatibilityAdapter CreateLegacyCheckpointCompatibilityAdapter()
+            => new(new WorldGenerationSettings());
+
+        public SimulationOptions CreateDebugSimulationOptions()
+            => new()
+            {
+                OutputMode = OutputMode.Debug,
+                WriteStructuredHistory = false
+            };
+
+        public World CreateRuntimeDetailViewWorld()
+            => new(new WorldTime(180, 1));
+
+        private static WorldGenerationSettings CreateImpossibleEntrySettings(int maxAttempts = 1)
+            => new()
+            {
+                StartupWorldAgePreset = StartupWorldAgePreset.YoungWorld,
+                RegionCount = 16,
+                ContinentWidth = 4,
+                ContinentHeight = 4,
+                PhaseAMaximumBootstrapMonths = 24,
+                PhaseBMinimumBootstrapYears = 80,
+                PhaseBMaximumBootstrapYears = 160,
+                PhaseCMinimumBootstrapYears = 60,
+                PhaseCMaximumBootstrapYears = 140,
+                ReadinessEvaluationIntervalYears = 10,
+                MaxStartupRegenerationAttempts = maxAttempts,
+                CandidateMinimumPopulation = 5000,
+                CandidateMinimumPolityAgeYears = 200,
+                MinimumViablePlayerEntryCandidates = 4,
+                MinimumHealthyCandidateCount = 4
+            };
+    }
 }
