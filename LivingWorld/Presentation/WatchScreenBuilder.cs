@@ -19,7 +19,7 @@ public static class WatchScreenBuilder
         return uiState.ActiveView switch
         {
             WatchViewType.FocalSelection => BuildFocalSelectionLines(world, uiState),
-            WatchViewType.MyPolity => BuildMyPolityLines(knowledge.FocalPolity, lookup),
+            WatchViewType.MyPolity => BuildMyPolityLines(world, knowledge.FocalPolity, lookup),
             WatchViewType.CurrentRegion => BuildCurrentRegionLines(world, knowledge, lookup),
             WatchViewType.KnownRegions => BuildKnownRegionsLines(knowledge, uiState, lookup),
             WatchViewType.RegionDetail => BuildRegionDetailLines(world, knowledge, uiState.SelectedRegionId, lookup),
@@ -75,7 +75,7 @@ public static class WatchScreenBuilder
     public static string DescribeView(WatchViewType view)
         => WatchViewCatalog.DescribeView(view);
 
-    private static IReadOnlyList<string> BuildMyPolityLines(Polity? polity, WorldLookup lookup)
+    private static IReadOnlyList<string> BuildMyPolityLines(World world, Polity? polity, WorldLookup lookup)
     {
         if (polity is null)
         {
@@ -94,6 +94,8 @@ public static class WatchScreenBuilder
         string economyNeeds = DescribeEconomyNeeds(polity.Settlements);
         string tradeGoods = DescribeEconomySignals(polity.Settlements, EconomySummaryLabel.TradeGood);
         string locallyCommon = DescribeEconomySignals(polity.Settlements, EconomySummaryLabel.LocallyCommon);
+        ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
+        bool isControlledStart = handoffPackage?.PlayerOwnership.SelectedPeopleId == polity.Id;
 
         List<string> lines =
         [
@@ -121,9 +123,34 @@ public static class WatchScreenBuilder
             $" Major Pressures: Migration {polity.MigrationPressure:F2} | Fragmentation {polity.FragmentationPressure:F2} | Starvation Months {polity.StarvationMonthsThisYear}",
             $" Trade Links This Year: {polity.TradePartnerCountThisYear}",
             $" Hunting Losses This Year: {polity.HuntingCasualtiesThisYear}",
+        ];
+
+        if (isControlledStart && handoffPackage is not null)
+        {
+            string controlLabel = handoffPackage.StartingControl.Conversion.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
+            string spatialLabel = handoffPackage.StartingControl.Conversion.SpatialModel switch
+            {
+                ActiveControlSpatialModel.Network => "Network",
+                ActiveControlSpatialModel.AnchoredHomeRange => "Anchored home range",
+                _ => "Territorial core"
+            };
+            lines.Add(string.Empty);
+            lines.Add(" Inherited Start");
+            lines.Add($" Control: {controlLabel} | {spatialLabel}");
+            lines.Add($" Why it qualified: {handoffPackage.Origin.QualificationReason}");
+            lines.Add($" Inherited context: {handoffPackage.Origin.RecentHistoricalNote}");
+            lines.Add($" Pressure / opportunity: {handoffPackage.Origin.DefiningPressureOrOpportunity}");
+            if (handoffPackage.Warnings.UnresolvedShocks.Count > 0)
+            {
+                lines.Add($" Unresolved shocks: {string.Join(", ", handoffPackage.Warnings.UnresolvedShocks)}");
+            }
+        }
+
+        lines.AddRange(
+        [
             string.Empty,
             " Settlements:"
-        ];
+        ]);
 
         AppendSettlementLines(lines, polity.Settlements, lookup);
         lines.Add(string.Empty);
@@ -234,6 +261,7 @@ public static class WatchScreenBuilder
             $" Known Polities: {Math.Max(0, knowledge.KnownPolities.Count - 1)}",
             $" Focal Polity: {(focalPolity?.Name ?? "None")}",
             $" Current Known Position: {(knowledge.CurrentRegion?.Name ?? "Unknown region")}",
+            $" Entry State: {DescribeEntryState(world.ActivePlayHandoff.Package)}",
             string.Empty,
             " Recent Visible Major Events:"
         ];
@@ -960,5 +988,17 @@ public static class WatchScreenBuilder
         }
 
         return $"{text[..(width - 3)]}...";
+    }
+
+    private static string DescribeEntryState(ActivePlayHandoffPackage? handoffPackage)
+    {
+        if (handoffPackage is null)
+        {
+            return "not yet handed off";
+        }
+
+        string controlLabel = handoffPackage.StartingControl.Conversion.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
+        string homeRegion = handoffPackage.PlayerOwnership.HomeRegionName ?? "unknown homeland";
+        return $"{controlLabel} start from {homeRegion}";
     }
 }

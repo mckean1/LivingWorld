@@ -189,23 +189,36 @@ Implemented:
 
 ### PR-6 - Active-Play Handoff and Control Conversion
 
-**Status:** Planned
+**Status:** Implemented
 
-Planned:
-- hand off directly from the selected end-of-month prehistory state into active play without advancing another month
-- preserve real current condition, discoveries, learned capabilities, neighbors, routes, settlements, support, continuity, risks, and unresolved shocks
-- begin active play paused
-- preserve a compact inherited prehistory summary instead of dumping the entire prehistory log into the live chronicle
-- preserve discovery-versus-learned truth without granting omniscient visibility
-- convert the selected prehistory `People` into an active control wrapper descriptively rather than as a fake upgrade
-
-Canonical control conversion:
-- default to `Society`
-- only convert to `Polity` when polity-grade organization is already truthfully present
-- mobile starts begin as `Society`
-- anchored starts begin as `Society`
-- settling starts only begin as `Polity` if the full polity gate actually passes
-- emergent-polity starts default to `Polity` unless the structured-authority evidence is still too thin
+Implemented:
+- focal selection now hands off from the exact selected end-of-month prehistory state without advancing another month during conversion
+- `ActivePlayHandoffState` now stores a canonical structured handoff package instead of a thin polity-summary record
+- the package now separates:
+  - player ownership state
+  - starting control state
+  - chronicle handoff state
+  - knowledge / visibility state
+  - origin record
+  - warnings / unresolved-risk state
+- active play now begins paused after handoff, so the inherited start can be inspected before time resumes
+- handoff packages now preserve:
+  - selected people/species/home-region identity
+  - exact handoff month
+  - current condition, support, continuity, maturity, and stability truth
+  - routes, occupied regions, settlement truth, and region-relation truth
+  - neighbor / pressure / opportunity context
+  - unresolved shocks, warnings, and risks
+  - real discoveries and real learned capabilities
+  - visibility-scoped known regions, species, and polities
+  - compact inherited prehistory summary lines for active-play entry
+- control conversion is now descriptive and truth-preserving:
+  - default `Society`
+  - `Mobile` and `Anchored` starts remain `Society`
+  - `Settling` starts convert to `Polity` only if the full polity gate passes
+  - `EmergentPolity` starts fall back to `Society` when structured-authority evidence is too thin
+- spatial control conversion now maps starts truthfully into `Network`, `AnchoredHomeRange`, or `TerritorialCore`
+- watch/UI entry surfaces now show the inherited start, converted control type, and compact handoff summary without dumping raw handoff fields into the chronicle
 
 ### PR-7 - Documentation and Canonical Roadmap Sync
 

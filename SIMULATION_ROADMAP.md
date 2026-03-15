@@ -130,13 +130,14 @@ Implemented:
 
 ### PR-6 - Active-Play Handoff
 
-Planned:
+Implemented:
 - hand off directly from the selected end-of-month prehistory state into active play
 - do not advance an extra month during handoff
 - preserve real current condition, discoveries, learned capabilities, neighbors, routes, settlements, support, continuity, and unresolved shocks
 - start active play paused
 - preserve discovery-versus-learned truth
 - convert the selected prehistory people into a truthful active control wrapper rather than a fake upgrade
+- preserve compact inherited prehistory summary state and entry visibility truth through a canonical handoff package
 
 ### PR-7 - Documentation and Roadmap Sync
 

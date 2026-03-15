@@ -41,6 +41,9 @@ Observer-facing prehistory fields:
 - `PrehistoryObserver`
   - retains recent monthly `PeopleMonthlySnapshot` history per polity/people id
   - supports evaluator-ready rollups without storing conclusions in the base world model
+- `ActivePlayHandoff`
+  - stores the canonical PR-6 handoff package at the transition boundary into active play
+  - separates player ownership state, starting control state, chronicle handoff state, knowledge / visibility state, origin record, and warnings / unresolved-risk state
 
 ## Polity
 
@@ -116,6 +119,41 @@ The canonical readiness categories are:
 - Candidate Readiness
 - Variety Readiness
 - Agency Readiness
+
+## Active-Play Handoff Types
+
+PR-6 now adds a canonical package for the transition from surfaced candidate truth into active play:
+
+- `ActivePlayHandoffPackage`
+  - the full handoff boundary artifact
+- `ActivePlayPlayerOwnershipState`
+  - selected people/species/home-region identity
+  - exact handoff year/month
+  - paused-on-entry truth
+- `ActivePlayStartingControlState`
+  - current condition/support/continuity truth
+  - occupied regions, routes, settlements, and neighbor context
+  - converted control and spatial interpretation
+- `ActiveControlConversionResult`
+  - `Society` versus `Polity`
+  - `Network`, `AnchoredHomeRange`, or `TerritorialCore`
+  - descriptive governance seed and authority evidence
+- `ActivePlayChronicleHandoffState`
+  - compact inherited prehistory summary lines for active-play entry
+- `ActivePlayKnowledgeVisibilityState`
+  - preserved discoveries
+  - preserved learned capabilities
+  - known regions, species, and polities within the truthful visibility horizon
+- `ActivePlayOriginRecord`
+  - qualification reason, evidence summary, candidate-origin note, and inherited recent context
+- `ActivePlayWarningState`
+  - warnings, risks, unresolved shocks, and immediate opportunities
+
+Important model rule:
+
+- the handoff package is not a debug blob
+- it is the canonical domain boundary between prehistory selection and active play
+- it must preserve simulation truth without advancing another month or inventing stronger institutions than the evidence supports
 
 ## Settlement
 

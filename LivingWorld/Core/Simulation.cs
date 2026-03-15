@@ -32,6 +32,7 @@ public sealed class Simulation : IDisposable
     private readonly FragmentationSystem _fragmentationSystem;
     private readonly PolityStageSystem _polityStageSystem;
     private readonly PrehistoryObserverService _observerService;
+    private readonly ActivePlayHandoffBuilder _activePlayHandoffBuilder;
     private readonly SimulationOptions _options;
     private readonly ChronicleColorWriter _chronicleColorWriter;
     private readonly ChronicleEventFormatter _chronicleEventFormatter;
@@ -70,6 +71,7 @@ public sealed class Simulation : IDisposable
         _fragmentationSystem = new FragmentationSystem();
         _polityStageSystem = new PolityStageSystem();
         _observerService = new PrehistoryObserverService();
+        _activePlayHandoffBuilder = new ActivePlayHandoffBuilder();
         _options = options ?? new SimulationOptions();
         _chronicleColorWriter = new ChronicleColorWriter();
         _chronicleEventFormatter = new ChronicleEventFormatter();
@@ -129,10 +131,6 @@ public sealed class Simulation : IDisposable
         if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection && !ShouldUseInteractiveWatchLoop())
         {
             BindSelectedCandidate(_world.PlayerEntryCandidates.First().PolityId);
-        }
-
-        if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection && !ShouldUseInteractiveWatchLoop())
-        {
             RenderIfInvalidated(force: true);
             return;
         }
@@ -734,21 +732,17 @@ public sealed class Simulation : IDisposable
     private void BindSelectedCandidate(int polityId)
     {
         Polity? polity = _world.Polities.FirstOrDefault(candidate => candidate.Id == polityId);
-        PlayerEntryCandidateSummary? summary = _world.PlayerEntryCandidates.FirstOrDefault(candidate => candidate.PolityId == polityId);
-        if (polity is null || summary is null)
+        if (polity is null)
         {
             return;
         }
 
-        _world.ActivePlayHandoff.RecordHandoff(
-            polityId,
-            _world.Time.Year,
-            polity.YearsSinceFounded,
-            $"{summary.PolityName} | {summary.SpeciesName} | {summary.HomeRegionName} | {summary.CurrentCondition}");
+        ActivePlayHandoffPackage handoffPackage = _activePlayHandoffBuilder.Build(_world, polityId);
+        _world.ActivePlayHandoff.RecordPackage(handoffPackage);
         MarkActivePlayRuntimeState();
         _chronicleFocus.SetFocus(polity);
         _watchUiState.SetActiveMainView(WatchViewType.Chronicle);
-        _watchUiState.SetPaused(false);
+        _watchUiState.SetPaused(true);
         _world.BeginActiveSimulation();
         _renderInvalidated = true;
     }

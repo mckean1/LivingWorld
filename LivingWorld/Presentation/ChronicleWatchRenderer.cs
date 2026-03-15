@@ -161,7 +161,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
             lines.Add(checkpointLine);
             string handoffHint = world.ActivePlayHandoff.SelectedPolityId is null
                 ? " Handoff: awaiting player selection"
-                : $" Handoff: bound to polity {world.ActivePlayHandoff.SelectedPolityId}";
+                : $" Handoff: prepared for polity {world.ActivePlayHandoff.SelectedPolityId}";
             lines.Add(handoffHint);
             lines.Add($" Activity: {runtime.ActivitySummary}");
             lines.Add(border);
@@ -197,8 +197,23 @@ public sealed class ChronicleWatchRenderer : IDisposable
         lines.Add($" Learned: {knowledgeSummary.Learned}");
         lines.Add($" Year: {world.Time.Year}");
         lines.Add($" Chronicle boundary: {liveChronicleYear}");
-        string handoffSummary = world.ActivePlayHandoff.CandidateSummarySnapshot ?? "Selected candidate summary unavailable";
-        lines.Add($" Handoff summary: {handoffSummary}");
+        ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
+        if (handoffPackage is not null)
+        {
+            string controlLabel = handoffPackage.StartingControl.Conversion.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
+            string spatialLabel = handoffPackage.StartingControl.Conversion.SpatialModel switch
+            {
+                ActiveControlSpatialModel.Network => "Network",
+                ActiveControlSpatialModel.AnchoredHomeRange => "AnchoredHomeRange",
+                _ => "TerritorialCore"
+            };
+            lines.Add($" Control: {controlLabel} | {spatialLabel}");
+            lines.Add($" Handoff summary: {handoffPackage.Chronicle.SummaryHeadline}");
+        }
+        else
+        {
+            lines.Add(" Handoff summary: Selected candidate summary unavailable");
+        }
         lines.Add(border);
 
         return lines;

@@ -48,6 +48,11 @@ public sealed class WatchKnowledgeSnapshot
     public static WatchKnowledgeSnapshot Create(World world, ChronicleFocus focus)
     {
         Polity? focalPolity = focus.ResolvePolity(world);
+        return Create(world, focalPolity);
+    }
+
+    public static WatchKnowledgeSnapshot Create(World world, Polity? focalPolity)
+    {
         if (focalPolity is null)
         {
             return new WatchKnowledgeSnapshot(

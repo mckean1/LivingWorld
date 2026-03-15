@@ -53,6 +53,9 @@ public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<Prehistor
     public void Simulation_EntersActivePlayOnlyThroughExplicitHandoff()
     {
         World world = fixture.CreateGeneratedWorld(seed: 43);
+        int handoffYear = world.Time.Year;
+        int handoffMonth = world.Time.Month;
+        int eventCountAtSelection = world.Events.Count;
 
         using Simulation simulation = new(world, fixture.CreateDebugSimulationOptions());
 
@@ -65,6 +68,12 @@ public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<Prehistor
         Assert.Equal(PrehistoryRuntimePhase.ActivePlay, world.PrehistoryRuntime.CurrentPhase);
         Assert.NotNull(world.SelectedFocalPolityId);
         Assert.NotNull(world.LiveChronicleStartYear);
+        Assert.Equal(handoffYear, world.Time.Year);
+        Assert.Equal(handoffMonth, world.Time.Month);
+        Assert.True(simulation.IsWatchPaused);
+        Assert.True(world.ActivePlayHandoff.Package?.PlayerOwnership.StartsPaused);
+        Assert.Equal(world.SelectedFocalPolityId, world.ActivePlayHandoff.Package?.PlayerOwnership.SelectedPeopleId);
+        Assert.Equal(eventCountAtSelection, world.Events.Count);
     }
 
     [Fact]
