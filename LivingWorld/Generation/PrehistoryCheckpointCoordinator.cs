@@ -32,7 +32,8 @@ public sealed class PrehistoryCheckpointCoordinator
         IReadOnlyList<string>? regenerationReasons = null)
     {
         _runtimeOrchestrator.BeginReadinessCheckpoint(world, phaseLabel, subphaseLabel, activitySummary);
-        _evaluationAdapter.Evaluate(world, allowEmergencyFallback, regenerationReasons);
+        PrehistoryCheckpointEvaluationResult evaluation = _evaluationAdapter.Evaluate(world, allowEmergencyFallback, regenerationReasons);
+        world.PrehistoryEvaluation.ApplyCheckpointEvaluation(evaluation);
         PrehistoryCheckpointOutcome outcome = DetermineCheckpointOutcome(world, allowEmergencyFallback, completionSummary);
         _runtimeOrchestrator.RecordCheckpointOutcome(world, outcome, transitionSummary: outcome.Summary);
         return outcome;

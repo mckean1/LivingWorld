@@ -15,6 +15,7 @@ public sealed class StartupProgressRendererTests
             StartupGenerationAttempt = 1
         };
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
+        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.EvolutionaryExpansion;
         world.StartupStage = WorldStartupStage.EvolutionaryExpansion;
         world.PrehistoryRuntime.WorldAgeYears = 180;
         world.PrehistoryRuntime.AreReadinessChecksActive = true;
@@ -39,6 +40,7 @@ public sealed class StartupProgressRendererTests
     {
         World world = new(new WorldTime(920, 1));
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ReadinessCheckpoint;
+        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.CandidateEvaluation;
         world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
         world.PrehistoryRuntime.WorldAgeYears = 920;
         world.PrehistoryRuntime.AreReadinessChecksActive = true;
@@ -63,6 +65,7 @@ public sealed class StartupProgressRendererTests
     {
         World world = new(new WorldTime(240, 1));
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
+        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.SocietalEmergence;
         world.StartupStage = WorldStartupStage.SentienceActivation;
         world.PrehistoryRuntime.WorldAgeYears = 240;
         world.PrehistoryRuntime.PhaseLabel = "Developing sentient societies";
@@ -90,6 +93,7 @@ public sealed class StartupProgressRendererTests
             StartupStage = WorldStartupStage.FocalSelection
         };
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.FocalSelection;
+        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.FocalSelection;
         world.PrehistoryRuntime.WorldAgeYears = 400;
         world.PrehistoryRuntime.PhaseLabel = "World generation complete";
         world.PrehistoryRuntime.SubphaseLabel = "Building focal starts";
@@ -116,6 +120,7 @@ public sealed class StartupProgressRendererTests
             StartupStage = WorldStartupStage.FocalSelection
         };
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.GenerationFailure;
+        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.GenerationFailure;
         world.PrehistoryRuntime.WorldAgeYears = 35;
         world.PrehistoryRuntime.PhaseLabel = "World generation failure";
         world.PrehistoryRuntime.SubphaseLabel = "No viable starts";

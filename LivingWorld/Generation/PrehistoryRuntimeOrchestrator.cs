@@ -9,6 +9,7 @@ public sealed class PrehistoryRuntimeOrchestrator
         world.StartupAgeConfiguration = configuration;
         world.PrehistoryRuntime.StartupPreset = configuration.Preset;
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.BootstrapWorldFrame;
+        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.WorldFrame;
         world.PrehistoryRuntime.WorldAgeYears = world.Time.Year;
         world.PrehistoryRuntime.AreReadinessChecksActive = false;
         world.PrehistoryRuntime.IsPrehistoryAdvancing = true;
@@ -54,21 +55,24 @@ public sealed class PrehistoryRuntimeOrchestrator
             case PrehistoryCheckpointOutcomeKind.EnterFocalSelection:
             case PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection:
                 runtime.CurrentPhase = PrehistoryRuntimePhase.FocalSelection;
+                runtime.DetailView = PrehistoryRuntimeDetailView.FocalSelection;
                 runtime.IsPrehistoryAdvancing = false;
                 break;
             case PrehistoryCheckpointOutcomeKind.GenerationFailure:
                 runtime.CurrentPhase = PrehistoryRuntimePhase.GenerationFailure;
+                runtime.DetailView = PrehistoryRuntimeDetailView.GenerationFailure;
                 runtime.IsPrehistoryAdvancing = false;
                 break;
         }
     }
 
-    public void RecordGenerationFailure(World world, string summary)
+    public void RecordGenerationFailure(World world, string summary, string? details = null)
     {
         var runtime = world.PrehistoryRuntime;
         runtime.CurrentPhase = PrehistoryRuntimePhase.GenerationFailure;
+        runtime.DetailView = PrehistoryRuntimeDetailView.GenerationFailure;
         runtime.IsPrehistoryAdvancing = false;
-        runtime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.Failure(summary);
+        runtime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.Failure(summary, details);
         runtime.PhaseLabel = "World generation failure";
         runtime.SubphaseLabel = "No viable starts";
         runtime.ActivitySummary = "The simulation could not produce viable player starts.";
@@ -78,9 +82,15 @@ public sealed class PrehistoryRuntimeOrchestrator
     {
         var runtime = world.PrehistoryRuntime;
         runtime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
+        runtime.DetailView = PrehistoryRuntimeDetailView.ActivePlay;
         runtime.IsPrehistoryAdvancing = false;
         runtime.AreReadinessChecksActive = true;
         Describe(world, "Active play", "Chronicle active", "The live chronicle has begun.");
+    }
+
+    public void SetDetailView(World world, PrehistoryRuntimeDetailView detailView)
+    {
+        world.PrehistoryRuntime.DetailView = detailView;
     }
 
     public void RefreshAge(World world)

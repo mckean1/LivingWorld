@@ -19,12 +19,14 @@ public sealed class PrehistoryRuntimeOrchestratorTests
 
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.EnterFocalSelection("ready"));
         Assert.Equal(PrehistoryRuntimePhase.FocalSelection, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimeDetailView.FocalSelection, world.PrehistoryRuntime.DetailView);
 
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.ForceEnterFocalSelection("fallback"));
         Assert.Equal(PrehistoryRuntimePhase.FocalSelection, world.PrehistoryRuntime.CurrentPhase);
 
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.Failure("failed"));
         Assert.Equal(PrehistoryRuntimePhase.GenerationFailure, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimeDetailView.GenerationFailure, world.PrehistoryRuntime.DetailView);
     }
 
     [Fact]
@@ -44,6 +46,7 @@ public sealed class PrehistoryRuntimeOrchestratorTests
 
         orchestrator.BeginActivePlay(world);
         Assert.Equal(PrehistoryRuntimePhase.ActivePlay, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimeDetailView.ActivePlay, world.PrehistoryRuntime.DetailView);
         Assert.True(world.PrehistoryRuntime.AreReadinessChecksActive);
         Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
     }
@@ -72,6 +75,7 @@ public sealed class PrehistoryRuntimeOrchestratorTests
         orchestrator.RecordGenerationFailure(world, "no candidates");
 
         Assert.Equal(PrehistoryRuntimePhase.GenerationFailure, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimeDetailView.GenerationFailure, world.PrehistoryRuntime.DetailView);
         Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
         Assert.Equal(PrehistoryCheckpointOutcomeKind.GenerationFailure, world.PrehistoryRuntime.LastCheckpointOutcome?.Kind);
         Assert.Equal("no candidates", world.PrehistoryRuntime.LastCheckpointOutcome?.Summary);

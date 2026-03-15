@@ -84,7 +84,12 @@ public sealed class WorldGenerator
 
         if (lastWorld is not null)
         {
-            throw new InvalidOperationException($"Player entry failed after {_settings.MaxStartupRegenerationAttempts} startup attempts: {string.Join(", ", lastRejectionReasons)}");
+            RefreshStartupEvaluationState(lastWorld, priorRegenerationReasons);
+            _prehistoryRuntimeOrchestrator.RecordGenerationFailure(
+                lastWorld,
+                "generation_failed_after_regeneration_limit",
+                FormatCheckpointDetails(lastRejectionReasons));
+            return lastWorld;
         }
 
         throw new InvalidOperationException("Player entry failed before world generation could complete.");
@@ -297,6 +302,7 @@ public sealed class WorldGenerator
     private void StabilizePrimitiveEcology(World world)
     {
         _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.EcologyFoundation);
         _prehistoryRuntimeOrchestrator.Describe(
             world,
             "Stabilizing ecosystems",
@@ -383,6 +389,7 @@ public sealed class WorldGenerator
     private void AdvanceEvolutionaryHistory(World world)
     {
         _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.EvolutionaryExpansion);
         world.StartupStage = WorldStartupStage.EvolutionaryExpansion;
         _prehistoryRuntimeOrchestrator.Describe(
             world,
@@ -447,6 +454,7 @@ public sealed class WorldGenerator
     {
         SocialEmergenceSystem socialEmergenceSystem = new(_seed + 313, _settings);
         _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.SocietalEmergence);
         world.StartupStage = WorldStartupStage.SentienceActivation;
         _prehistoryRuntimeOrchestrator.Describe(
             world,
@@ -506,6 +514,7 @@ public sealed class WorldGenerator
     private void AdvancePlayerEntryEvaluation(World world)
     {
         _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.CandidateEvaluation);
         world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
         _prehistoryRuntimeOrchestrator.Describe(
             world,
@@ -604,42 +613,8 @@ public sealed class WorldGenerator
     private void RefreshStartupEvaluationState(World world, IReadOnlyList<string>? regenerationReasons = null)
     {
         world.StartupOutcomeDiagnostics = StartupOutcomeDiagnosticsEvaluator.Evaluate(world, regenerationReasons);
-        RefreshStartupDiagnostics(world, regenerationReasons);
-    }
-
-    private static void RefreshStartupDiagnostics(World world, IReadOnlyList<string>? regenerationReasons = null)
-    {
-        StartupOutcomeDiagnostics diagnostics = world.StartupOutcomeDiagnostics;
-        world.StartupDiagnostics.Clear();
-        world.StartupDiagnostics.Add($"startup_attempt:{world.StartupGenerationAttempt}");
-        world.StartupDiagnostics.Add(
-            $"organic_counts:groups={diagnostics.OrganicSentientGroupCount},societies={diagnostics.OrganicSocietyCount},settlements={diagnostics.OrganicSettlementCount},polities={diagnostics.OrganicPolityCount},focal_candidates={diagnostics.OrganicFocalCandidateCount},entry_candidates={diagnostics.OrganicPlayerEntryCandidateCount}");
-        world.StartupDiagnostics.Add(
-            $"fallback_counts:groups={diagnostics.FallbackSentientGroupCount},societies={diagnostics.FallbackSocietyCount},settlements={diagnostics.FallbackSettlementCount},polities={diagnostics.FallbackPolityCount},focal_candidates={diagnostics.FallbackFocalCandidateCount},entry_candidates={diagnostics.FallbackPlayerEntryCandidateCount},emergency={diagnostics.EmergencyAdmittedCandidateCount}");
-        world.StartupDiagnostics.Add(
-            $"phase_b_diagnostics:avg_depth={world.PhaseBDiagnostics.AverageAncestryDepth:F2},branching={world.PhaseBDiagnostics.BranchingLineageCount},deep={world.PhaseBDiagnostics.DeepLineageCount},diverged={world.PhaseBDiagnostics.MatureDivergenceLineageCount},adapted_biomes={world.PhaseBDiagnostics.AdaptedBiomeSpan},local_ext={world.PhaseBDiagnostics.LocalExtinctionEventCount},recolonized={world.PhaseBDiagnostics.RecolonizationEventCount},sentient_roots={world.PhaseBDiagnostics.SentienceCapableRootBranchCount}");
-
-        foreach (string weakness in world.PhaseBDiagnostics.WeaknessReasons)
-        {
-            world.StartupDiagnostics.Add($"phase_b_weakness:{weakness}");
-        }
-
-        foreach ((string reason, int count) in diagnostics.CandidateRejectionCounts
-                     .OrderByDescending(entry => entry.Value)
-                     .ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
-        {
-            world.StartupDiagnostics.Add($"candidate_rejection:{reason}:{count}");
-        }
-
-        foreach (string reason in diagnostics.BottleneckReasons)
-        {
-            world.StartupDiagnostics.Add($"bottleneck:{reason}");
-        }
-
-        foreach (string reason in regenerationReasons ?? Array.Empty<string>())
-        {
-            world.StartupDiagnostics.Add($"regeneration_reason:{reason}");
-        }
+        world.PrehistoryEvaluation.LegacyCompatibility.ReplaceStartupDiagnostics(
+            LegacyStartupDiagnosticsBuilder.Build(world, world.StartupOutcomeDiagnostics, regenerationReasons));
     }
 
     private int DeriveAttemptSeed(int attempt)
@@ -669,7 +644,7 @@ public sealed class WorldGenerator
 
         if (outcome.Kind == PrehistoryCheckpointOutcomeKind.GenerationFailure)
         {
-            _prehistoryRuntimeOrchestrator.RecordGenerationFailure(world, outcome.Summary);
+            _prehistoryRuntimeOrchestrator.RecordGenerationFailure(world, outcome.Summary, outcome.Details);
             return true;
         }
 

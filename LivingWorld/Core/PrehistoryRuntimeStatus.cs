@@ -4,6 +4,7 @@ public sealed class PrehistoryRuntimeStatus
 {
     public StartupWorldAgePreset StartupPreset { get; set; } = StartupWorldAgePreset.StandardWorld;
     public PrehistoryRuntimePhase CurrentPhase { get; set; } = PrehistoryRuntimePhase.BootstrapWorldFrame;
+    public PrehistoryRuntimeDetailView DetailView { get; set; } = PrehistoryRuntimeDetailView.WorldFrame;
     public int WorldAgeYears { get; set; }
     public bool AreReadinessChecksActive { get; set; }
     public bool IsPrehistoryAdvancing { get; set; } = true;
@@ -14,5 +15,5 @@ public sealed class PrehistoryRuntimeStatus
     public PrehistoryCheckpointOutcome? LastCheckpointOutcome { get; set; }
 
     public string GetStateKey()
-        => string.Concat(CurrentPhase.ToString(), "|", SubphaseLabel, "|", WorldAgeYears.ToString());
+        => string.Concat(CurrentPhase.ToString(), "|", DetailView.ToString(), "|", SubphaseLabel, "|", WorldAgeYears.ToString());
 }

@@ -5,5 +5,5 @@ namespace LivingWorld.Generation;
 
 public interface ICheckpointEvaluationAdapter
 {
-    void Evaluate(World world, bool allowEmergencyFallback, IReadOnlyList<string>? regenerationReasons);
+    PrehistoryCheckpointEvaluationResult Evaluate(World world, bool allowEmergencyFallback, IReadOnlyList<string>? regenerationReasons);
 }

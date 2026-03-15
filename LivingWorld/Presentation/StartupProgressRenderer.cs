@@ -171,12 +171,12 @@ public sealed class StartupProgressRenderer : IDisposable
         return world.PrehistoryRuntime.CurrentPhase switch
         {
             PrehistoryRuntimePhase.BootstrapWorldFrame => BuildWorldFrameMetrics(world),
-            PrehistoryRuntimePhase.PrehistoryRunning => BuildPrehistoryRunningMetrics(world),
-            PrehistoryRuntimePhase.ReadinessCheckpoint => BuildPrehistoryRunningMetrics(world),
-            PrehistoryRuntimePhase.FocalSelection => BuildPhaseDMetrics(world),
+            PrehistoryRuntimePhase.PrehistoryRunning => BuildRuntimeDetailMetrics(world),
+            PrehistoryRuntimePhase.ReadinessCheckpoint => BuildRuntimeDetailMetrics(world),
+            PrehistoryRuntimePhase.FocalSelection => BuildRuntimeDetailMetrics(world),
             PrehistoryRuntimePhase.ActivePlay => [" Metrics: live chronicle active"],
             PrehistoryRuntimePhase.GenerationFailure => [" Metrics: world generation failed to surface viable starts"],
-            _ => BuildPrehistoryRunningMetrics(world)
+            _ => BuildRuntimeDetailMetrics(world)
         };
     }
 
@@ -246,15 +246,16 @@ public sealed class StartupProgressRenderer : IDisposable
         ];
     }
 
-    private static IReadOnlyList<string> BuildPrehistoryRunningMetrics(World world)
+    private static IReadOnlyList<string> BuildRuntimeDetailMetrics(World world)
     {
-        return world.StartupStage switch
+        return world.PrehistoryRuntime.DetailView switch
         {
-            WorldStartupStage.PrimitiveEcologyFoundation => BuildPhaseAMetrics(world),
-            WorldStartupStage.EvolutionaryExpansion => BuildPhaseBMetrics(world),
-            WorldStartupStage.SentienceActivation => BuildPhaseCMetrics(world),
-            WorldStartupStage.SocietalSimulation => BuildPhaseCMetrics(world),
-            WorldStartupStage.PlayerEntryEvaluation => BuildPhaseDMetrics(world),
+            PrehistoryRuntimeDetailView.WorldFrame => BuildWorldFrameMetrics(world),
+            PrehistoryRuntimeDetailView.EcologyFoundation => BuildPhaseAMetrics(world),
+            PrehistoryRuntimeDetailView.EvolutionaryExpansion => BuildPhaseBMetrics(world),
+            PrehistoryRuntimeDetailView.SocietalEmergence => BuildPhaseCMetrics(world),
+            PrehistoryRuntimeDetailView.CandidateEvaluation => BuildPhaseDMetrics(world),
+            PrehistoryRuntimeDetailView.FocalSelection => BuildPhaseDMetrics(world),
             _ => [" Metrics: live chronicle active"]
         };
     }

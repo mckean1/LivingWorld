@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using LivingWorld.Generation;
 using LivingWorld.Presentation;
 using LivingWorld.Societies;
 using LivingWorld.Systems;
@@ -117,6 +118,12 @@ public sealed class Simulation : IDisposable
 
     public void RunMonths(int months)
     {
+        if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.GenerationFailure)
+        {
+            RenderIfInvalidated(force: true);
+            return;
+        }
+
         if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection && !ShouldUseInteractiveWatchLoop())
         {
             BindSelectedCandidate(_world.PlayerEntryCandidates.First().PolityId);
@@ -143,7 +150,7 @@ public sealed class Simulation : IDisposable
         while (completedMonths < months)
         {
             PumpWatchInput();
-            if (_world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
+            if (_world.PrehistoryRuntime.CurrentPhase is PrehistoryRuntimePhase.FocalSelection or PrehistoryRuntimePhase.GenerationFailure)
             {
                 _wasPausedInInteractiveLoop = true;
                 RenderIfInvalidated();
@@ -346,7 +353,13 @@ public sealed class Simulation : IDisposable
     private void RunBootstrapInitialization()
     {
         PrehistoryRuntimePhase initialPhase = _world.PrehistoryRuntime.CurrentPhase;
-        if (initialPhase is PrehistoryRuntimePhase.ActivePlay or PrehistoryRuntimePhase.GenerationFailure)
+        if (initialPhase == PrehistoryRuntimePhase.GenerationFailure)
+        {
+            _watchUiState.SetPaused(true);
+            return;
+        }
+
+        if (initialPhase == PrehistoryRuntimePhase.ActivePlay)
         {
             _world.BeginActiveSimulation();
             return;
@@ -372,7 +385,13 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        if (refreshedPhase is PrehistoryRuntimePhase.ActivePlay or PrehistoryRuntimePhase.GenerationFailure)
+        if (refreshedPhase == PrehistoryRuntimePhase.GenerationFailure)
+        {
+            _watchUiState.SetPaused(true);
+            return;
+        }
+
+        if (refreshedPhase == PrehistoryRuntimePhase.ActivePlay)
         {
             _world.BeginActiveSimulation();
             return;
@@ -724,14 +743,7 @@ public sealed class Simulation : IDisposable
     private void MarkActivePlayRuntimeState()
     {
         _world.StartupStage = WorldStartupStage.ActivePlay;
-        var runtime = _world.PrehistoryRuntime;
-        runtime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
-        runtime.IsPrehistoryAdvancing = false;
-        runtime.AreReadinessChecksActive = true;
-        runtime.PhaseLabel = "Active play";
-        runtime.SubphaseLabel = "Chronicle active";
-        runtime.ActivitySummary = "The live chronicle has begun.";
-        runtime.TransitionSummary = null;
+        new PrehistoryRuntimeOrchestrator().BeginActivePlay(_world);
     }
 
     private int ResolveInteractiveStepIntervalMilliseconds()

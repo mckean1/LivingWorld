@@ -109,7 +109,7 @@ public sealed class CheckpointCoordinatorTests
             completionSummary: "completion",
             allowEmergencyFallback: false);
 
-        Assert.Contains(candidate, world.PrehistoryEvaluation.PlayerEntryCandidates);
+        Assert.Contains(candidate, world.PlayerEntryCandidates);
     }
 
     private static PrehistoryCheckpointCoordinator CreateCoordinator(ICheckpointEvaluationAdapter adapter, ICandidateOutcomeEvaluator outcomeEvaluator)
@@ -172,21 +172,16 @@ public sealed class CheckpointCoordinatorTests
             _rejectionReasons = rejectionReasons;
         }
 
-        public void Evaluate(World world, bool allowEmergencyFallback, IReadOnlyList<string>? regenerationReasons)
+        public PrehistoryCheckpointEvaluationResult Evaluate(World world, bool allowEmergencyFallback, IReadOnlyList<string>? regenerationReasons)
         {
-            world.PrehistoryEvaluation.PlayerEntryCandidates.Clear();
-            world.PrehistoryEvaluation.PlayerEntryCandidates.AddRange(_candidates);
-            world.PrehistoryEvaluation.CandidateRejectionReasons.Clear();
-            foreach ((int polityId, string reason) in _rejectionReasons)
+            return new PrehistoryCheckpointEvaluationResult
             {
-                world.PrehistoryEvaluation.CandidateRejectionReasons[polityId] = reason;
-            }
-
-            world.WorldReadinessReport = WorldReadinessReport.Empty;
-            world.StartupOutcomeDiagnostics = StartupOutcomeDiagnostics.Empty;
-            world.StartupDiagnostics.Clear();
-            world.PrehistoryEvaluation.CandidatePoolSnapshot = null;
-            world.PrehistoryEvaluation.LatestObserverSnapshot = null;
+                WorldReadinessReport = WorldReadinessReport.Empty,
+                StartupOutcomeDiagnostics = StartupOutcomeDiagnostics.Empty,
+                StartupDiagnostics = Array.Empty<string>(),
+                PlayerEntryCandidates = _candidates,
+                CandidateRejectionReasons = _rejectionReasons
+            };
         }
     }
 

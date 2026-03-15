@@ -12,13 +12,18 @@ public sealed class World
     public WorldTime Time { get; }
     public WorldSimulationPhase SimulationPhase { get; private set; }
     public WorldStartupStage StartupStage { get; set; } = WorldStartupStage.SocietalSimulation;
-    public StartupWorldAgeConfiguration StartupAgeConfiguration { get; set; } = StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld);
-    public PrehistoryRuntimeStatus PrehistoryRuntime { get; } = new();
-    public PrehistoryEvaluationSnapshot PrehistoryEvaluation { get; } = new();
-    public PrehistoryCandidatePoolSnapshot? CandidatePoolSnapshot => PrehistoryEvaluation.CandidatePoolSnapshot;
-    public PrehistoryObserverSnapshot? LatestObserverSnapshot => PrehistoryEvaluation.LatestObserverSnapshot;
-    public ActivePlayHandoffState ActivePlayHandoff { get; } = new();
-    public PrehistoryFocalSelectionPresentationState FocalSelectionPresentation { get; } = new();
+    public PrehistoryWorldState Prehistory { get; } = new();
+    public StartupWorldAgeConfiguration StartupAgeConfiguration
+    {
+        get => Prehistory.AgeConfiguration;
+        set => Prehistory.AgeConfiguration = value;
+    }
+    public PrehistoryRuntimeStatus PrehistoryRuntime => Prehistory.Runtime;
+    public PrehistoryEvaluationSnapshot PrehistoryEvaluation => Prehistory.Evaluation;
+    public PrehistoryCandidatePoolSnapshot? CandidatePoolSnapshot => Prehistory.Evaluation.CandidatePoolSnapshot;
+    public PrehistoryObserverSnapshot? LatestObserverSnapshot => Prehistory.Evaluation.LatestObserverSnapshot;
+    public ActivePlayHandoffState ActivePlayHandoff => Prehistory.ActivePlayHandoff;
+    public PrehistoryFocalSelectionPresentationState FocalSelectionPresentation => Prehistory.FocalSelectionPresentation;
     public WorldReadinessReport WorldReadinessReport
     {
         get => PrehistoryEvaluation.WorldReadinessReport;
