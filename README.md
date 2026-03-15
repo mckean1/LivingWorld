@@ -1,15 +1,14 @@
 # LivingWorld
 
-LivingWorld is a command-line autonomous world simulation where ecosystems, species, and polities evolve over time.
+LivingWorld is a command-line world simulation where ecosystems, species, societies, and polities emerge over time.
 
 The player-facing experience is chronicle-first: the console follows one focal line of history, while the full simulation and structured event history continue underneath.
 
-Default world generation now starts from a fuller but still grounded baseline:
+Default world generation now starts from a simulated prehistory foundation rather than a civilization-ready snapshot:
 
 - `36` connected regions on one early-continent landmass
-- `31` starting species with biome-aware range seeding, including the full default predator and apex roster
-- `10` starting polities distributed across viable, spaced-apart settlement regions
-- fertile regions now usually open with multiple meaningful consumer populations rather than a single token herbivore pocket
+- primitive ecological lineages seeded first, then extended through simulated evolution, social emergence, and player-entry evaluation
+- startup now stops at a truthful focal-selection checkpoint instead of dropping straight into live play
 
 The current simulation phase now treats ecology, hunting, and polity history as one connected layer:
 
@@ -48,11 +47,11 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 
 ## Runtime Architecture
 
-LivingWorld now drives the startup handoff with the canonical `PrehistoryRuntimePhase` ladder: `BootstrapWorldFrame`, `PrehistoryRunning`, `ReadinessCheckpoint`, `FocalSelection`, `ActivePlay`, and `GenerationFailure`. `World.Prehistory` groups the startup/runtime-owned state: `PrehistoryRuntimeStatus` captures phase/subphase labels, runtime detail view, activity summary, and checkpoint metadata; `PrehistoryEvaluationSnapshot.LegacyCompatibility` holds transitional readiness/diagnostic artifacts; and `PrehistoryEvaluationSnapshot.CandidateSelection` holds the surfaced candidate pool and rejection state separate from raw world truth. `StartupProgressRenderer` owns the console until `FocalSelection`, rendering the canonical phase text, world-age progress, readiness window status, and runtime-detail-driven metrics without writing to the chronicle. Once checkpoint logic resolves, `FocalSelection` freezes monthly advancement, `ChronicleWatchRenderer` shows the candidate pool and a `Handoff summary`, and only after the canonical `ActivePlayHandoffState` package is built from the selected end-of-month prehistory state does `World.BeginActiveSimulation` stamp the `LiveChronicleStartYear`. The package preserves the exact handoff month, current support/continuity truth, routes, settlements, neighbors, discoveries, learned capabilities, visibility horizon, unresolved shocks, and a compact inherited prehistory summary. Active play begins paused so the inherited start can be inspected before time resumes. If the checkpoint instead returns `GenerationFailure`, the UI surfaces an honest failure banner, keeps time frozen, and does not start the live chronicle boundary. Legacy `WorldStartupStage` labels remain purely diagnostic and help with verbose generator reporting, not runtime control.
+LivingWorld now enters play through the canonical `PrehistoryRuntimePhase` ladder: `BootstrapWorldFrame`, `PrehistoryRunning`, `ReadinessCheckpoint`, `FocalSelection`, `ActivePlay`, and `GenerationFailure`. `StartupProgressRenderer` owns the console through startup and prehistory, keeping initialization separate from the live chronicle. If the world produces real viable starts, time freezes in `FocalSelection` while the player reviews the surfaced candidate pool. If it does not, runtime stops honestly in `GenerationFailure` instead of inventing a start.
 
-PR-3 now makes readiness and stop resolution canonical instead of legacy-scored. `WorldReadinessReport` sits above factual observer evidence and below runtime phase transition. It evaluates Biological, Social Emergence, World Structure, Candidate, Variety, and Agency readiness through explicit `Pass` / `Warning` / `Blocker` reports; uses the canonical `current / 6 / 12 / 24` month evidence windows plus `3 / 6 / 12` month shock windows; enforces hard current-month candidate vetoes and the non-negotiable candidate truth floor; and resolves checkpoints honestly to `ContinuePrehistory`, `EnterFocalSelection`, `ForceEnterFocalSelection`, or `GenerationFailure`. Maximum age no longer fakes success: weak or thin worlds can only force entry with real viable starts, and worlds with zero viable candidates fail honestly.
+The startup handoff is built from the exact selected end-of-month prehistory state. `ActivePlayHandoffState` preserves identity, current condition, routes, settlements, neighbors, discoveries, learned capabilities, visibility truth, unresolved shocks, and a compact inherited prehistory summary. `World.BeginActiveSimulation` starts the live chronicle only after that handoff package is recorded, and active play begins paused so the inherited start can be inspected before time resumes.
 
-PR-4 now makes the candidate layer canonical instead of profile-shortcut driven. `PrehistoryCandidateSelectionEvaluator` sits above the observer snapshot and PR-3 readiness result, applies the hard viability gates, maps `Mobile` / `Anchored` / `Settling` / `EmergentPolity` from current simulated condition, scores only viable starts, and composes the surfaced pool through seed + diversify + fill. The focal-selection screen now reads structured candidate data such as qualification reason, evidence sentence, strengths, warnings, and score breakdown without recomputing evaluator logic in the presentation layer.
+Readiness and candidate selection stay evaluator-owned. Observer artifacts such as `PeopleHistoryWindowSnapshot`, `RegionEvaluationSnapshot`, and `NeighborContextSnapshot` hold facts only. `WorldReadinessReport` resolves `ContinuePrehistory`, `EnterFocalSelection`, `ForceEnterFocalSelection`, or `GenerationFailure` from those facts, and `PrehistoryCandidateSelectionEvaluator` surfaces viable starts without weakening hard truth or blurring `Discoveries` with `Learned`.
 
 ## Core Principles
 

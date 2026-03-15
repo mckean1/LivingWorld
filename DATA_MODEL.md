@@ -36,14 +36,25 @@ Event responsibilities:
 - `ConfigureEventPropagation(...)` attaches the propagation coordinator
 - `EventRecorded` publishes each stored event to sinks
 
-Observer-facing prehistory fields:
+Prehistory-facing world fields are now grouped canonically under `World.Prehistory`, with compatibility accessors such as `PrehistoryRuntime`, `PrehistoryObserver`, `PrehistoryEvaluation`, `ActivePlayHandoff`, and `FocalSelectionPresentation` remaining available on `World`.
 
-- `PrehistoryObserver`
+That grouped prehistory state owns:
+
+- `World.Prehistory.Runtime`
+  - `PrehistoryRuntimeStatus` for the canonical `PrehistoryRuntimePhase` ladder
+  - phase labels, detail view, activity text, world age, and checkpoint metadata
+- `World.Prehistory.Observer`
   - retains recent monthly `PeopleMonthlySnapshot` history per polity/people id
   - supports evaluator-ready rollups without storing conclusions in the base world model
-- `ActivePlayHandoff`
+- `World.Prehistory.Evaluation`
+  - `LegacyCompatibility` transitional readiness/diagnostic artifacts
+  - `CandidateSelection` surfaced candidate pool, rejection state, and latest observer snapshot
+  - `WorldReadinessReport` as the authoritative checkpoint/readiness artifact
+- `World.Prehistory.ActivePlayHandoff`
   - stores the canonical PR-6 handoff package at the transition boundary into active play
   - separates player ownership state, starting control state, chronicle handoff state, knowledge / visibility state, origin record, and warnings / unresolved-risk state
+- `World.Prehistory.FocalSelectionPresentation`
+  - stores presentation hints for focal-selection rendering without owning evaluator truth
 
 ## Polity
 
@@ -99,6 +110,10 @@ Important rule:
 
 - these artifacts are descriptive evidence only
 - they do not store readiness verdicts, viability scores, selection recommendations, or other evaluator conclusions
+
+Evaluator rule:
+
+- readiness verdicts, viability gates, candidate scoring, pool composition, and checkpoint resolution belong to evaluator-owned artifacts, not to observer snapshots
 
 PR-3 now adds the evaluator-owned layer above those factual artifacts instead of mixing conclusions into them:
 

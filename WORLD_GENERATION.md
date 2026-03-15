@@ -49,10 +49,10 @@ These values are intentionally centralized so density tuning can happen without 
 8. initialize explicit evolutionary lineage records from the surviving primitive carriers
 9. run an internal Phase B evolutionary bootstrap loop with mutation, divergence, speciation, extinction, and sentience-capability progression until readiness is achieved or the bootstrap year cap is reached
 10. run an internal Phase C social bootstrap loop with sentient activation, society formation, settlement pressure, polity formation, and candidate tracking until readiness is achieved or the bootstrap year cap is reached
-11. run an internal Phase D player-entry evaluation loop using startup age presets, periodic readiness checks, organic-vs-fallback candidate labeling, and weak-world regeneration until readiness passes or max age forces a stop
+11. run the canonical player-entry evaluation layer using startup age presets, observer snapshots, readiness checkpoints, candidate composition, and weak-world regeneration until the world truthfully resolves to `FocalSelection` or `GenerationFailure`
 12. store `PhaseAReadinessReport`, `PhaseBReadinessReport`, `PhaseCReadinessReport`, and `WorldReadinessReport` for inspection
 13. store startup outcome diagnostics for organic/fallback counts, candidate rejections, bottlenecks, and regeneration causes
-14. freeze the world in `FocalSelection` with compact candidate summaries ready for player choice
+14. if viable starts exist, freeze the world in `FocalSelection` with compact candidate summaries ready for player choice; otherwise keep the world frozen in `GenerationFailure`
 15. render a dedicated startup progress panel during those steps so the player can see current phase, age, readiness-window context, and compact live metrics without chronicle spam
 
 The default startup now intentionally reaches a playable prehistory handoff rather than stopping before player-entry logic exists.
@@ -183,31 +183,28 @@ That layer adds:
 - historical event density
 - failure reasons
 
-## Deferred To Later Passes
-
-The startup path still does not yet implement:
-
 ## Pass 4 Player Entry Layer
 
-Pass 4 adds:
+Pass 4 is now implemented. It adds:
 
 - `StartupWorldAgeConfiguration` presets (`YoungWorld`, `StandardWorld`, `AncientWorld`) with min/target/max prehistory years, readiness strictness, and candidate-count targets
-- `PrehistoryRuntimeStatus` / `PrehistoryRuntimeState` so startup state is explicit instead of inferred from active play assumptions
-- `WorldReadinessReport` that combines biological continuity, social maturity, civilizational maturity, candidate quality, and stability sanity
-- `PlayerEntryCandidateGenerator` that filters, ranks, and diversity-trims real simulated polities into a compact player-facing pool
+- the canonical `PrehistoryRuntimePhase` ladder (`BootstrapWorldFrame`, `PrehistoryRunning`, `ReadinessCheckpoint`, `FocalSelection`, `ActivePlay`, `GenerationFailure`) so startup state is explicit instead of inferred from active play assumptions
+- `WorldReadinessReport` that evaluates Biological, Social Emergence, World Structure, Candidate, Variety, and Agency readiness from observer evidence
+- canonical candidate surfacing that filters, scores, and composes real simulated polities into a compact player-facing pool
 - current-polity candidate profiling so subsistence, settlement-network shape, and current condition come from what the polity actually became by startup stop, not only from its founder society
 - moderated polity settlement expansion so healthy starts stop converging into identical late-bootstrap settlement spam before candidate selection
 - strict fallback order: normal readiness stop, final candidate search at max age, weaker but still simulated emergency candidates with explicit fallback labels, and generation failure if the world still produces nobody worth starting as
 - alignment between `PhaseCReadinessReport` and `WorldReadinessReport` so fallback-only polities or candidate pools do not pass one layer while failing another
 - startup regeneration preference for biology-weak, fallback-only, or one-candidate weak worlds instead of silently surfacing them as ordinary starts
 - `StartupOutcomeDiagnostics` for organic/fallback counts, emergency admissions, candidate rejection reasons, bottlenecks, and regeneration causes
-- preservation of prehistory as structured history only; the live chronicle begins after focal selection and player binding
+- preservation of prehistory as structured history only; the live chronicle begins only after focal selection, handoff packaging, and player binding
+- truthful active-play handoff from the selected end-of-month state, with active play beginning paused
 
 ## Output Model After Generation
 
 After generation:
 
-- the world is frozen in `FocalSelection`, not already running active time
+- the world is frozen in `FocalSelection` when viable starts exist, or left frozen in `GenerationFailure` when the world truthfully produces none
 - while generation is running, a separate startup progress panel owns the console and refreshes in place with phase-specific metrics such as occupied regions, lineage/speciation history, social actors, polities, and viable candidates
 - default player-facing output is a candidate-selection watch screen first, then the live chronicle watch view after a polity is chosen
 - structured history records prehistory underneath, but the live chronicle begins only after the explicit handoff marker

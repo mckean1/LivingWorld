@@ -8,7 +8,7 @@ This roadmap describes how LivingWorld should deepen the simulation while keepin
 
 LivingWorld is now prioritizing the Prehistory Rework above all later civilization-era roadmap phases.
 
-The current primitive-life-first startup baseline is implemented and useful, but it is not the final intended startup architecture. The next major push is to replace that baseline with the fuller prehistory design so the path from primitive life into active play is more truthful, more simulation-driven, and more narratively coherent.
+The primitive-life-first simulation foundation remains implemented and useful, but the outer player-entry path is now the canonical prehistory runtime rather than the older startup wrapper. The remaining prehistory work continues from that implemented baseline so the path from primitive life into active play stays more truthful, more simulation-driven, and more narratively coherent.
 
 The chronicle remains the main player-facing experience.
 The player should enter an already-living world through an honest simulated prehistory, not through a thin or overly artificial startup wrapper.
@@ -20,7 +20,9 @@ The player should enter an already-living world through an honest simulated preh
 Implemented core currently includes:
 - world generation
 - fuller default seed-world scale with centralized generation settings
-- primitive-life-first startup foundation across ecology, evolution, social emergence, and player-entry evaluation
+- primitive-life-first simulation foundation across ecology, evolution, social emergence, and player-entry evaluation
+- canonical prehistory runtime orchestration through `BootstrapWorldFrame`, `PrehistoryRunning`, `ReadinessCheckpoint`, `FocalSelection`, `ActivePlay`, and `GenerationFailure`
+- truthful focal-selection freeze, canonical active-play handoff packaging, and paused active-play entry
 - ecology and food systems
 - regional species populations and seasonal ecosystem interactions
 - settlement hunting tied to regional wildlife
@@ -141,10 +143,11 @@ Implemented:
 
 ### PR-7 - Documentation and Roadmap Sync
 
-Planned:
-- keep `IMPLEMENTED_SYSTEMS_LIST.md` as the canonical implementation ledger
-- update planning and architecture docs as Prehistory Rework implementation decisions land
-- keep the roadmap aligned with the agreed design baseline throughout implementation
+Implemented:
+- kept `IMPLEMENTED_SYSTEMS_LIST.md` and `SIMULATION_ROADMAP.md` aligned as the canonical implementation and planning sources of truth
+- updated the canonical docs to describe the implemented `PrehistoryRuntimePhase` ladder, `ReadinessCheckpoint`, truthful `FocalSelection` freeze, canonical active-play handoff package, paused active-play entry, and honest `GenerationFailure`
+- removed roadmap/documentation drift that still implied the older outer startup wrapper was the current canonical player-entry flow
+- kept directive system, standing posture system, planning UX, and month-result review/planning flow explicitly deferred and out of the current critical path
 
 ### Explicitly Deferred for Now
 
@@ -236,7 +239,7 @@ All of these should continue to emit structured canonical events first.
 
 ## Implemented Milestone Snapshots
 
-### Primitive-Life-First Startup Baseline
+### Primitive-Life-First Simulation Foundation
 
 Implemented baseline currently includes:
 - Pass 1 biological world foundation
@@ -244,7 +247,7 @@ Implemented baseline currently includes:
 - Pass 3 sentience and social formation
 - Pass 4 polity start and player entry
 
-This is the current implemented startup architecture, but it is now the baseline that the Prehistory Rework will replace.
+These passes remain the simulated prehistory content beneath the canonical Prehistory Rework runtime. They are no longer a competing outer startup architecture; PR-1 through PR-6 already made the runtime/checkpoint/handoff model the canonical player-entry flow.
 
 ### Phase 13 and 14 Status
 

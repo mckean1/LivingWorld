@@ -16,13 +16,13 @@ A feature is not fully complete until:
 
 ## Highest Priority Program - Prehistory Rework
 
-**Status:** Planned as highest-priority implementation program
+**Status:** Active highest-priority program, with PR-1 through PR-7 foundation implemented
 
-This is now the top roadmap priority for LivingWorld.
+This remains the top roadmap priority for LivingWorld.
 
-The earlier primitive-life-first startup path remains the current implemented foundation, but it is no longer the final intended startup architecture. The Prehistory Rework replaces that baseline with the fuller long-term design for simulated prehistory, readiness evaluation, focal selection, and active-play handoff.
+The primitive-life-first simulation foundation still underpins startup, but PR-1 through PR-6 already replaced the old outer startup wrapper with the canonical prehistory runtime architecture: `BootstrapWorldFrame` -> `PrehistoryRunning` -> `ReadinessCheckpoint` -> `FocalSelection` -> `ActivePlay` -> `GenerationFailure`. PR-7 completes the documentation and roadmap sync for that implemented baseline.
 
-All later roadmap phases are deferred until this program is complete enough to become the new canonical player-entry path.
+All later civilization-era roadmap phases remain deferred until this program is complete enough to stop being the repository's critical path.
 
 ### Purpose
 
@@ -36,7 +36,7 @@ All later roadmap phases are deferred until this program is complete enough to b
 
 **Status:** Implemented as the canonical startup/runtime architecture for PR-1
 
-Planned:
+Implemented:
 - keep prehistory as the canonical startup path into active play
 - keep the universal monthly simulation pipeline shared between prehistory and active play
 - separate raw simulation truth from evaluator-owned startup decisions
@@ -223,13 +223,20 @@ Implemented:
 
 ### PR-7 - Documentation and Canonical Roadmap Sync
 
-**Status:** Planned
+**Status:** Implemented
 
-Planned:
-- keep this file as the canonical ledger for the Prehistory Rework
-- sync roadmap and planning docs so the Prehistory Rework clearly sits above later civilization-era phases
-- update startup and simulation docs to reflect the new prehistory architecture
-- keep design decisions aligned with roadmap and planning docs as implementation proceeds
+Implemented:
+- kept `IMPLEMENTED_SYSTEMS_LIST.md` as the canonical implementation ledger and updated it to reflect the implemented PR-1 through PR-7 baseline truthfully
+- synced `SIMULATION_ROADMAP.md` so the Prehistory Rework remains clearly above later civilization-era phases and PR-7 is recorded as completed documentation-sync work
+- updated the canonical architecture/runtime docs to match the implemented startup/runtime truth:
+  - `PrehistoryRuntimePhase` ladder
+  - `ReadinessCheckpoint`
+  - truthful `FocalSelection` freeze at the selected end-of-month state
+  - canonical active-play handoff package
+  - active play beginning paused
+  - honest `GenerationFailure` handling
+- aligned player-facing and subsystem docs around the current observer-versus-evaluator boundary, discovery-versus-learned terminology, and the rule that initialization/prehistory are not the live chronicle
+- kept directive system, standing posture system, planning UX, and month-result review/planning flow explicitly deferred and out of the current critical path
 
 ### Explicitly Deferred / Out of Scope for This Program
 
@@ -243,13 +250,13 @@ These are intentionally not part of the current critical path for the Prehistory
 
 ---
 
-## Current Implemented Foundation
+## Underlying Implemented Simulation Foundation
 
-The following is the current implemented foundation that the Prehistory Rework will replace and absorb.
+The following systems remain the implemented simulation foundation beneath the canonical Prehistory Rework runtime.
 
-## Startup Architecture - Primitive-Life-First 4-Pass Baseline
+## Primitive-Life-First Simulation Content Beneath the Canonical Runtime
 
-This startup path is the current implemented baseline.
+These four passes still describe the simulated prehistory content being produced. They no longer describe a separate outer startup architecture; the outer player-entry flow is now the `PrehistoryRuntimePhase` ladder described above.
 
 The world no longer assumes a static civilization-ready start.
 
@@ -310,12 +317,12 @@ Implemented:
 
 Implemented:
 - startup world-age presets with variable prehistory duration, target age as a soft centerpoint, and readiness strictness and candidate-count tuning
-- explicit prehistory runtime state flow across biological foundation, evolutionary history, social emergence, player-entry evaluation, focal selection, and active play
-- `WorldReadinessReport` for player-entry handoff using biological, social, civilizational, candidate, and stability categories instead of raw age alone
-- focal candidate generation from real simulated post-prehistory polities with viability filters, score-plus-diversity ranking, and weak-world emergency fallback thresholds
+- canonical prehistory runtime orchestration through `BootstrapWorldFrame`, `PrehistoryRunning`, `ReadinessCheckpoint`, `FocalSelection`, `ActivePlay`, and `GenerationFailure`, with biological/evolutionary/social/player-entry passes now treated as simulated subphase content beneath that ladder
+- `WorldReadinessReport` for player-entry handoff using Biological, Social Emergence, World Structure, Candidate, Variety, and Agency readiness categories instead of raw age alone
+- surfaced candidate generation from real simulated post-prehistory polities through the canonical readiness + viability + pool-composition path, with weak-world handling staying honest
 - compact player-facing candidate summaries covering lineage and species, region, age, settlement depth, subsistence style, current condition, discoveries, learned capability, and a recent historical note
 - dedicated `FocalSelection` watch and UI state that freezes time until the player binds to a chosen polity
-- player binding and handoff fields on `World` for selected polity, entry year, polity-age context, stop reason, summary snapshot, and live-chronicle start marker
+- canonical player handoff state on `World.Prehistory` for the selected polity, active control overlay, inherited summary, visibility truth, warning state, and live-chronicle start marker
 - strict chronicle boundary enforcement so prehistory remains structured history and summary material instead of leaking into the live chronicle buffer
 - stricter weak-world handling so max-age, fallback-only, and biologically weak outcomes are rejected more often and rerolled instead of being surfaced as normal starts
 - selection-screen cleanup plus chronicle viewport sanitation so player-facing startup text is narrative-first and stale status or summary fragments cannot leak into the chronicle pane
