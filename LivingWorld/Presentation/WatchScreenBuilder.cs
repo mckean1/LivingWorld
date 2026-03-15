@@ -94,8 +94,9 @@ public static class WatchScreenBuilder
         string economyNeeds = DescribeEconomyNeeds(polity.Settlements);
         string tradeGoods = DescribeEconomySignals(polity.Settlements, EconomySummaryLabel.TradeGood);
         string locallyCommon = DescribeEconomySignals(polity.Settlements, EconomySummaryLabel.LocallyCommon);
+        ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
         ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
-        bool isControlledStart = handoffPackage?.PlayerOwnership.SelectedPeopleId == polity.Id;
+        bool isControlledStart = activeControl?.SourcePolityId == polity.Id;
 
         List<string> lines =
         [
@@ -125,10 +126,10 @@ public static class WatchScreenBuilder
             $" Hunting Losses This Year: {polity.HuntingCasualtiesThisYear}",
         ];
 
-        if (isControlledStart && handoffPackage is not null)
+        if (isControlledStart && activeControl is not null && handoffPackage is not null)
         {
-            string controlLabel = handoffPackage.StartingControl.Conversion.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
-            string spatialLabel = handoffPackage.StartingControl.Conversion.SpatialModel switch
+            string controlLabel = activeControl.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
+            string spatialLabel = activeControl.SpatialModel switch
             {
                 ActiveControlSpatialModel.Network => "Network",
                 ActiveControlSpatialModel.AnchoredHomeRange => "Anchored home range",
@@ -137,6 +138,7 @@ public static class WatchScreenBuilder
             lines.Add(string.Empty);
             lines.Add(" Inherited Start");
             lines.Add($" Control: {controlLabel} | {spatialLabel}");
+            lines.Add($" Governance: {activeControl.GovernanceSeed} | {activeControl.DiplomaticFrame}");
             lines.Add($" Why it qualified: {handoffPackage.Origin.QualificationReason}");
             lines.Add($" Inherited context: {handoffPackage.Origin.RecentHistoricalNote}");
             lines.Add($" Pressure / opportunity: {handoffPackage.Origin.DefiningPressureOrOpportunity}");
@@ -261,7 +263,7 @@ public static class WatchScreenBuilder
             $" Known Polities: {Math.Max(0, knowledge.KnownPolities.Count - 1)}",
             $" Focal Polity: {(focalPolity?.Name ?? "None")}",
             $" Current Known Position: {(knowledge.CurrentRegion?.Name ?? "Unknown region")}",
-            $" Entry State: {DescribeEntryState(world.ActivePlayHandoff.Package)}",
+            $" Entry State: {DescribeEntryState(world.ActiveControl, world.ActivePlayHandoff.Package)}",
             string.Empty,
             " Recent Visible Major Events:"
         ];
@@ -990,14 +992,14 @@ public static class WatchScreenBuilder
         return $"{text[..(width - 3)]}...";
     }
 
-    private static string DescribeEntryState(ActivePlayHandoffPackage? handoffPackage)
+    private static string DescribeEntryState(ActivePlayRuntimeControlState? activeControl, ActivePlayHandoffPackage? handoffPackage)
     {
-        if (handoffPackage is null)
+        if (activeControl is null || handoffPackage is null)
         {
             return "not yet handed off";
         }
 
-        string controlLabel = handoffPackage.StartingControl.Conversion.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
+        string controlLabel = activeControl.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
         string homeRegion = handoffPackage.PlayerOwnership.HomeRegionName ?? "unknown homeland";
         return $"{controlLabel} start from {homeRegion}";
     }

@@ -1,7 +1,6 @@
 using LivingWorld.Advancement;
 using LivingWorld.Core;
 using LivingWorld.Map;
-using LivingWorld.Presentation;
 using LivingWorld.Societies;
 
 namespace LivingWorld.Generation;
@@ -20,7 +19,6 @@ public sealed class ActivePlayHandoffBuilder
             .ToArray()
             ?? Array.Empty<RegionEvaluationSnapshot>();
         PeopleMonthlySnapshot? monthlySnapshot = world.PrehistoryObserver.GetPeopleHistory(polityId).LastOrDefault();
-        WatchKnowledgeSnapshot knowledge = WatchKnowledgeSnapshot.Create(world, polity);
         ActiveControlConversionResult conversion = ResolveConversion(polity, candidate, history);
 
         ActivePlayPlayerOwnershipState playerOwnership = new(
@@ -50,19 +48,11 @@ public sealed class ActivePlayHandoffBuilder
             BuildNeighborTruth(neighbors));
 
         ActivePlayChronicleHandoffState chronicle = BuildChronicleHandoff(candidate, conversion);
-        ActivePlayKnowledgeVisibilityState knowledgeState = new(
-            polity.Discoveries
-                .OrderBy(discovery => discovery.Category)
-                .ThenBy(discovery => discovery.Summary, StringComparer.Ordinal)
-                .Select(discovery => discovery.Summary)
-                .ToArray(),
-            polity.Advancements
-                .OrderBy(advancement => advancement)
-                .Select(advancement => AdvancementCatalog.Get(advancement).Name)
-                .ToArray(),
-            knowledge.KnownRegions.Select(region => region.Id).OrderBy(id => id).ToArray(),
-            knowledge.KnownSpecies.Select(species => species.Id).OrderBy(id => id).ToArray(),
-            knowledge.KnownPolities.Select(knownPolity => knownPolity.Id).OrderBy(id => id).ToArray());
+        ActivePlayKnowledgeVisibilityState knowledgeState = BuildKnowledgeVisibilityState(
+            polity,
+            regionEvaluations,
+            neighbors,
+            monthlySnapshot);
 
         ActivePlayOriginRecord origin = new(
             world.Time.Year,
@@ -313,6 +303,71 @@ public sealed class ActivePlayHandoffBuilder
                 $"Inherited context: {candidate.RecentHistoricalNote}",
                 pressureLine
             ]);
+    }
+
+    private static ActivePlayKnowledgeVisibilityState BuildKnowledgeVisibilityState(
+        Polity polity,
+        IReadOnlyList<RegionEvaluationSnapshot> regionEvaluations,
+        NeighborContextSnapshot? neighbors,
+        PeopleMonthlySnapshot? monthlySnapshot)
+    {
+        HashSet<int> knownRegionIds = regionEvaluations
+            .Select(snapshot => snapshot.Global.RegionId)
+            .ToHashSet();
+        if (knownRegionIds.Count == 0)
+        {
+            foreach (int regionId in monthlySnapshot?.OccupiedRegionIds ?? ResolveOccupiedRegions(polity))
+            {
+                knownRegionIds.Add(regionId);
+            }
+        }
+
+        knownRegionIds.Add(polity.RegionId);
+        foreach (int settlementRegionId in polity.Settlements.Select(settlement => settlement.RegionId))
+        {
+            knownRegionIds.Add(settlementRegionId);
+        }
+
+        foreach (int regionId in polity.Discoveries.Where(discovery => discovery.RegionId.HasValue).Select(discovery => discovery.RegionId!.Value))
+        {
+            knownRegionIds.Add(regionId);
+        }
+
+        HashSet<int> knownSpeciesIds = polity.Discoveries
+            .Where(discovery => discovery.SpeciesId.HasValue)
+            .Select(discovery => discovery.SpeciesId!.Value)
+            .ToHashSet();
+        knownSpeciesIds.Add(polity.SpeciesId);
+        if (neighbors is not null)
+        {
+            foreach (NeighborRelationshipSnapshot relationship in neighbors.NeighborRelationships)
+            {
+                knownSpeciesIds.Add(relationship.SpeciesId);
+            }
+        }
+
+        HashSet<int> knownPolityIds = [polity.Id];
+        if (neighbors is not null)
+        {
+            foreach (NeighborRelationshipSnapshot relationship in neighbors.NeighborRelationships)
+            {
+                knownPolityIds.Add(relationship.NeighborPeopleId);
+            }
+        }
+
+        return new ActivePlayKnowledgeVisibilityState(
+            polity.Discoveries
+                .OrderBy(discovery => discovery.Category)
+                .ThenBy(discovery => discovery.Summary, StringComparer.Ordinal)
+                .Select(discovery => discovery.Summary)
+                .ToArray(),
+            polity.Advancements
+                .OrderBy(advancement => advancement)
+                .Select(advancement => AdvancementCatalog.Get(advancement).Name)
+                .ToArray(),
+            knownRegionIds.OrderBy(id => id).ToArray(),
+            knownSpeciesIds.OrderBy(id => id).ToArray(),
+            knownPolityIds.OrderBy(id => id).ToArray());
     }
 
     private static IReadOnlyList<string> BuildShockSummaries(PeopleHistoryWindowSnapshot? history)

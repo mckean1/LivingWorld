@@ -87,7 +87,9 @@ public sealed class ChronicleWatchRenderer : IDisposable
 
     private ChronicleLayout BuildLayout(World world, ChronicleFocus focus, WatchUiState uiState)
     {
-        Polity? polity = focus.ResolvePolity(world);
+        Polity? polity = world.ActiveControl is { } activeControl
+            ? world.Polities.FirstOrDefault(candidate => candidate.Id == activeControl.SourcePolityId)
+            : focus.ResolvePolity(world);
         int width = ResolveWindowWidth();
         List<string> statusLines = BuildStatusLines(world, polity, uiState, width);
         List<string> footerLines = WatchScreenBuilder.BuildFooterLines(uiState, width);
@@ -197,11 +199,12 @@ public sealed class ChronicleWatchRenderer : IDisposable
         lines.Add($" Learned: {knowledgeSummary.Learned}");
         lines.Add($" Year: {world.Time.Year}");
         lines.Add($" Chronicle boundary: {liveChronicleYear}");
+        ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
         ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
-        if (handoffPackage is not null)
+        if (activeControl is not null && handoffPackage is not null)
         {
-            string controlLabel = handoffPackage.StartingControl.Conversion.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
-            string spatialLabel = handoffPackage.StartingControl.Conversion.SpatialModel switch
+            string controlLabel = activeControl.ControlKind == ActiveControlKind.Polity ? "Polity" : "Society";
+            string spatialLabel = activeControl.SpatialModel switch
             {
                 ActiveControlSpatialModel.Network => "Network",
                 ActiveControlSpatialModel.AnchoredHomeRange => "AnchoredHomeRange",

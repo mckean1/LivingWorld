@@ -30,11 +30,8 @@ public sealed class World
         get => PrehistoryEvaluation.WorldReadinessReport;
         set => PrehistoryEvaluation.WorldReadinessReport = value;
     }
-    public int? SelectedFocalPolityId
-    {
-        get => ActivePlayHandoff.SelectedPolityId;
-        set => ActivePlayHandoff.SetSelectedPolity(value);
-    }
+    public int? SelectedFocalPolityId => ActivePlayHandoff.SelectedPolityId;
+    public ActivePlayRuntimeControlState? ActiveControl => ActivePlayHandoff.RuntimeControl;
     public int? LiveChronicleStartTick { get; private set; }
     public int? LiveChronicleStartYear { get; private set; }
     public int? LiveChronicleStartMonth { get; private set; }

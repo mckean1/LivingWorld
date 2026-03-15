@@ -47,7 +47,9 @@ public sealed class WatchKnowledgeSnapshot
 
     public static WatchKnowledgeSnapshot Create(World world, ChronicleFocus focus)
     {
-        Polity? focalPolity = focus.ResolvePolity(world);
+        Polity? focalPolity = world.ActiveControl is { } activeControl
+            ? world.Polities.FirstOrDefault(polity => polity.Id == activeControl.SourcePolityId)
+            : focus.ResolvePolity(world);
         return Create(world, focalPolity);
     }
 
@@ -63,6 +65,11 @@ public sealed class WatchKnowledgeSnapshot
                 knownPolities: [],
                 discoveriesByRegionId: [],
                 discoveriesBySpeciesId: []);
+        }
+
+        if (TryCreateFromHandoffBootstrap(world, focalPolity, out WatchKnowledgeSnapshot? activePlaySnapshot))
+        {
+            return activePlaySnapshot;
         }
 
         HashSet<int> knownRegionIds = focalPolity.Settlements.Select(settlement => settlement.RegionId).ToHashSet();
@@ -143,6 +150,69 @@ public sealed class WatchKnowledgeSnapshot
             knownPolities,
             BuildDiscoveryLookup(focalPolity.Discoveries, discovery => discovery.RegionId),
             BuildDiscoveryLookup(focalPolity.Discoveries, discovery => discovery.SpeciesId));
+    }
+
+    private static bool TryCreateFromHandoffBootstrap(World world, Polity focalPolity, out WatchKnowledgeSnapshot? snapshot)
+    {
+        snapshot = null;
+        ActivePlayHandoffPackage? handoffPackage = world.ActivePlayHandoff.Package;
+        ActivePlayRuntimeControlState? activeControl = world.ActiveControl;
+        if (handoffPackage is null || activeControl is null || activeControl.SourcePolityId != focalPolity.Id)
+        {
+            return false;
+        }
+
+        HashSet<int> knownRegionIds = handoffPackage.Knowledge.KnownRegionIds.ToHashSet();
+        knownRegionIds.Add(focalPolity.RegionId);
+        foreach (int settlementRegionId in focalPolity.Settlements.Select(settlement => settlement.RegionId))
+        {
+            knownRegionIds.Add(settlementRegionId);
+        }
+
+        foreach (int discoveredRegionId in focalPolity.Discoveries.Where(discovery => discovery.RegionId.HasValue).Select(discovery => discovery.RegionId!.Value))
+        {
+            knownRegionIds.Add(discoveredRegionId);
+        }
+
+        HashSet<int> knownSpeciesIds = handoffPackage.Knowledge.KnownSpeciesIds.ToHashSet();
+        knownSpeciesIds.Add(focalPolity.SpeciesId);
+        foreach (int discoveredSpeciesId in focalPolity.Discoveries.Where(discovery => discovery.SpeciesId.HasValue).Select(discovery => discovery.SpeciesId!.Value))
+        {
+            knownSpeciesIds.Add(discoveredSpeciesId);
+        }
+
+        HashSet<int> knownPolityIds = handoffPackage.Knowledge.KnownPolityIds.ToHashSet();
+        knownPolityIds.Add(focalPolity.Id);
+
+        List<Region> knownRegions = world.Regions
+            .Where(region => knownRegionIds.Contains(region.Id))
+            .OrderBy(region => region.Name, StringComparer.Ordinal)
+            .ToList();
+        List<Species> knownSpecies = world.Species
+            .Where(species => knownSpeciesIds.Contains(species.Id))
+            .OrderByDescending(species => species.Id == focalPolity.SpeciesId)
+            .ThenByDescending(species => species.IsSapient)
+            .ThenBy(species => species.Name, StringComparer.Ordinal)
+            .ToList();
+        List<Polity> knownPolities = world.Polities
+            .Where(polity => polity.Population > 0 && knownPolityIds.Contains(polity.Id))
+            .OrderByDescending(polity => polity.Id == focalPolity.Id)
+            .ThenByDescending(polity => polity.Population)
+            .ThenBy(polity => polity.Name, StringComparer.Ordinal)
+            .ToList();
+        Region? currentRegion = activeControl.CurrentCenterRegionId.HasValue
+            ? knownRegions.FirstOrDefault(region => region.Id == activeControl.CurrentCenterRegionId.Value)
+            : knownRegions.FirstOrDefault(region => region.Id == focalPolity.RegionId);
+
+        snapshot = new WatchKnowledgeSnapshot(
+            focalPolity,
+            currentRegion,
+            knownRegions,
+            knownSpecies,
+            knownPolities,
+            BuildDiscoveryLookup(focalPolity.Discoveries, discovery => discovery.RegionId),
+            BuildDiscoveryLookup(focalPolity.Discoveries, discovery => discovery.SpeciesId));
+        return true;
     }
 
     public bool IsRegionKnown(int regionId)

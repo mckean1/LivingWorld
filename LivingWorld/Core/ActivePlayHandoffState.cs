@@ -126,11 +126,28 @@ public sealed record ActivePlayHandoffPackage(
     ActivePlayWarningState Warnings,
     DateTime HandoffTimestampUtc);
 
+public sealed record ActivePlayRuntimeControlState(
+    int SelectedPeopleId,
+    string SelectedPeopleName,
+    int SourcePolityId,
+    int LineageId,
+    int SelectedSpeciesId,
+    string SelectedSpeciesName,
+    int? HomeRegionId,
+    string? HomeRegionName,
+    int? CurrentCenterRegionId,
+    ActiveControlKind ControlKind,
+    ActiveControlSpatialModel SpatialModel,
+    string GovernanceSeed,
+    string DiplomaticFrame,
+    string AuthorityEvidence);
+
 public sealed class ActivePlayHandoffState
 {
     public ActivePlayHandoffPackage? Package { get; private set; }
+    public ActivePlayRuntimeControlState? RuntimeControl { get; private set; }
 
-    public int? SelectedPolityId => Package?.PlayerOwnership.SelectedPeopleId;
+    public int? SelectedPolityId => RuntimeControl?.SourcePolityId;
     public int? PlayerEntryWorldYear => Package?.Origin.WorldYear;
     public int? PlayerEntryWorldMonth => Package?.Origin.WorldMonth;
     public int? PlayerEntryPolityAge => Package?.Origin.PolityAge;
@@ -141,83 +158,85 @@ public sealed class ActivePlayHandoffState
     public void RecordPackage(ActivePlayHandoffPackage package)
     {
         Package = package;
+        RuntimeControl = CreateRuntimeControl(package);
     }
 
-    public void RecordHandoff(int polityId, int worldYear, int polityAge, string summary)
+    public void RecordHandoff(int polityId, int worldYear, int polityAge, string summaryHeadline)
     {
-        RecordPackage(new ActivePlayHandoffPackage(
+        ActivePlayHandoffPackage package = new(
             new ActivePlayPlayerOwnershipState(
                 polityId,
-                $"People {polityId}",
+                $"Polity {polityId}",
                 0,
                 "Unknown species",
                 null,
                 null,
                 worldYear,
                 1,
-                true),
+                StartsPaused: true),
             new ActivePlayStartingControlState(
                 polityId,
-                polityId,
+                0,
                 0,
                 "Unknown",
                 SupportStabilityState.Stable,
                 ContinuityState.Established,
-                "unknown",
+                "Unknown",
                 new ActiveControlConversionResult(
                     ActiveControlKind.Society,
                     ActiveControlSpatialModel.AnchoredHomeRange,
                     CandidateMaturityBand.Anchored,
-                    false,
-                    "Legacy handoff summary.",
-                    "shared leadership",
-                    "local ties",
-                    "legacy summary only"),
-                Array.Empty<int>(),
-                Array.Empty<int>(),
-                Array.Empty<ActiveControlRegionRelation>(),
-                Array.Empty<ActiveControlSettlementTruth>(),
-                Array.Empty<ActiveControlNeighborTruth>()),
-            new ActivePlayChronicleHandoffState(
-                summary,
-                [summary]),
-            new ActivePlayKnowledgeVisibilityState(
-                Array.Empty<string>(),
-                Array.Empty<string>(),
-                Array.Empty<int>(),
-                Array.Empty<int>(),
-                Array.Empty<int>()),
+                    PolityGatePassed: false,
+                    "Legacy handoff record.",
+                    "legacy governance",
+                    "legacy diplomacy",
+                    "legacy authority"),
+                [],
+                [],
+                [],
+                [],
+                []),
+            new ActivePlayChronicleHandoffState(summaryHeadline, [summaryHeadline]),
+            new ActivePlayKnowledgeVisibilityState([], [], [], [], []),
             new ActivePlayOriginRecord(
                 worldYear,
                 1,
                 polityAge,
-                summary,
-                summary,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                summary),
-            new ActivePlayWarningState(
-                Array.Empty<string>(),
-                Array.Empty<string>(),
-                Array.Empty<string>(),
-                Array.Empty<string>()),
-            DateTime.UtcNow));
+                "Legacy handoff record.",
+                summaryHeadline,
+                "Legacy selected start.",
+                summaryHeadline,
+                "Unknown",
+                summaryHeadline),
+            new ActivePlayWarningState([], [], [], []),
+            DateTime.UtcNow);
+
+        RecordPackage(package);
     }
 
-    public void SetSelectedPolity(int? polityId)
+    public void Clear()
     {
-        if (!polityId.HasValue)
-        {
-            Package = null;
-            return;
-        }
+        Package = null;
+        RuntimeControl = null;
+    }
 
-        if (Package is not null && Package.PlayerOwnership.SelectedPeopleId == polityId.Value)
-        {
-            return;
-        }
-
-        RecordHandoff(polityId.Value, 0, 0, $"Selected polity {polityId.Value}");
+    private static ActivePlayRuntimeControlState CreateRuntimeControl(ActivePlayHandoffPackage package)
+    {
+        ActiveControlRegionRelation? currentCenter = package.StartingControl.RegionRelations.FirstOrDefault(relation => relation.IsCurrentCenter);
+        return new ActivePlayRuntimeControlState(
+            package.PlayerOwnership.SelectedPeopleId,
+            package.PlayerOwnership.SelectedPeopleName,
+            package.StartingControl.SourcePolityId,
+            package.StartingControl.LineageId,
+            package.PlayerOwnership.SelectedSpeciesId,
+            package.PlayerOwnership.SelectedSpeciesName,
+            package.PlayerOwnership.HomeRegionId,
+            package.PlayerOwnership.HomeRegionName,
+            currentCenter?.RegionId ?? package.PlayerOwnership.HomeRegionId,
+            package.StartingControl.Conversion.ControlKind,
+            package.StartingControl.Conversion.SpatialModel,
+            package.StartingControl.Conversion.GovernanceSeed,
+            package.StartingControl.Conversion.DiplomaticFrame,
+            package.StartingControl.Conversion.AuthorityEvidence);
     }
 }
