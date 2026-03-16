@@ -443,7 +443,13 @@ public sealed class SocialEmergenceSystem
                 FragmentSociety(world, society, primaryRegion);
             }
 
-            if (society.Cohesion < 0.16 || snapshot.Stress >= 0.94 || society.Population < 28)
+            bool preserveFounderSubstrate = HasActiveFounderPolitySubstrate(world, society);
+            if (preserveFounderSubstrate && society.Population < 28)
+            {
+                society.Population = 28;
+            }
+
+            if (society.Cohesion < 0.16 || snapshot.Stress >= 0.94 || (society.Population < 28 && !preserveFounderSubstrate))
             {
                 society.IsCollapsed = true;
                 world.AddCivilizationalHistoryEvent(
@@ -1607,6 +1613,19 @@ public sealed class SocialEmergenceSystem
             speciesId: polity.SpeciesId,
             regionId: polity.RegionId,
             regionName: world.Regions[polity.RegionId].Name);
+    }
+
+    private static bool HasActiveFounderPolitySubstrate(World world, EmergingSociety society)
+    {
+        if (!society.FounderPolityId.HasValue)
+        {
+            return false;
+        }
+
+        Polity? founderPolity = world.Polities.FirstOrDefault(candidate => candidate.Id == society.FounderPolityId.Value);
+        return founderPolity is not null
+            && founderPolity.Population > 0
+            && founderPolity.SettlementCount > 0;
     }
 
     private static double ScoreActivationCandidate(World world, Species species, RegionSpeciesPopulation population)

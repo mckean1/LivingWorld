@@ -177,6 +177,15 @@ public sealed class PrehistoryCandidateSelectionEvaluator
 
         blockingReasons.AddRange(gates.Where(gate => !gate.Passed).Select(gate => $"hard_gate:{gate.Key}"));
         blockingReasons.AddRange(readiness.BlockingReasons.Where(reason => !blockingReasons.Contains(reason, StringComparer.OrdinalIgnoreCase)));
+        
+        foreach (CandidateViabilityGate gate in gates.Where(g => g.Passed))
+        {
+            if (readiness.BlockingReasons.Any(b => b.Contains(gate.Key, StringComparison.OrdinalIgnoreCase)))
+            {
+                blockingReasons.Add($"evaluator_mismatch:readiness_blocked_{gate.Key}_but_selection_passed");
+            }
+        }
+        
         string primaryFailureReason = blockingReasons.FirstOrDefault() ?? readiness.PrimaryBlockingReason;
 
         return new CandidateViabilityResult(

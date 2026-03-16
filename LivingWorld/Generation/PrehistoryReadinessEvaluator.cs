@@ -876,8 +876,8 @@ public static class PrehistoryReadinessEvidenceEvaluator
             blockerTraces.Add(new CandidateRuleTrace("continuity_below_established", "continuity", "rolling_history", continuityRuleResult));
         }
 
-        bool movementOrRootingPasses = health.MovementCoherence.State >= MovementCoherenceState.Coherent
-            || health.Rootedness.State >= RootednessState.Rooted;
+        bool movementOrRootingPasses = IsMovementFloorMet(health.MovementCoherence.State)
+            || IsRootedFloorMet(health.Rootedness.State);
         if (!movementOrRootingPasses)
         {
             blockers.Add("movement_or_rooting_below_floor");
@@ -921,6 +921,14 @@ public static class PrehistoryReadinessEvidenceEvaluator
             && politicalDurabilityPasses
             && supportStableEnoughForNormalEntry;
 
+        if (blockers.Contains("movement_or_rooting_below_floor")
+            && (IsMovementFloorMet(health.MovementCoherence.State) || IsRootedFloorMet(health.Rootedness.State)))
+        {
+            string contradiction = $"EVALUATOR_MISMATCH: Candidate {polity.Name} has movement_or_rooting_below_floor blocker but movement={health.MovementCoherence.State} or rootedness={health.Rootedness.State} passes floor. This indicates a logic bug in blocker evaluation.";
+            warnings.Add("evaluator_logic_mismatch_detected");
+            blockerTraces.Add(new CandidateRuleTrace("evaluator_logic_mismatch", "diagnostic", "evaluator_consistency_check", contradiction));
+        }
+
         string summary = viable
             ? supportsNormalEntry
                 ? "Meets hard viability and normal-entry durability gates."
@@ -930,27 +938,27 @@ public static class PrehistoryReadinessEvidenceEvaluator
         bool failedDueToCurrentRawState = blockerTraces.Any(trace => trace.Source is "current_raw_state" or "both");
         bool failedDueToRollingHistory = blockerTraces.Any(trace => trace.Source is "rolling_history" or "both");
 
-        return new CandidateReadinessEvaluation(
-            polity.Id,
-            polity.Name,
-            viable,
-            supportsNormalEntry,
-            currentSupportPasses,
-            health.Support.State,
-            demographicViability,
-            populationTrend,
-            health.MovementCoherence.State,
-            health.Rootedness.State,
-            health.Continuity.State,
-            settlementDurabilityPasses,
-            politicalDurabilityPasses,
-            last3.Any(HasMajorShock),
-            hardVetoes.Count > 0,
-            hardVetoes,
-            blockers,
-            warnings,
-            summary)
+        return new CandidateReadinessEvaluation
         {
+            PolityId = polity.Id,
+            PolityName = polity.Name,
+            IsViable = viable,
+            SupportsNormalEntry = supportsNormalEntry,
+            CurrentSupportPasses = currentSupportPasses,
+            SupportStability = health.Support.State,
+            DemographicViability = demographicViability,
+            PopulationTrend = populationTrend,
+            MovementCoherence = health.MovementCoherence.State,
+            Rootedness = health.Rootedness.State,
+            Continuity = health.Continuity.State,
+            SettlementDurabilityPasses = settlementDurabilityPasses,
+            PoliticalDurabilityPasses = politicalDurabilityPasses,
+            HasImmediateShock = last3.Any(HasMajorShock),
+            HasHardCurrentMonthVeto = hardVetoes.Count > 0,
+            HardVetoReasons = hardVetoes,
+            BlockingReasons = blockers,
+            WarningReasons = warnings,
+            Summary = summary,
             CurrentTruthSnapshot = currentTruthSnapshot,
             Rolling6Months = rollup6,
             Rolling12Months = rollup12,
@@ -1212,4 +1220,10 @@ public static class PrehistoryReadinessEvidenceEvaluator
 
         return streak;
     }
+
+    private static bool IsMovementFloorMet(MovementCoherenceState state)
+        => state is MovementCoherenceState.Strong or MovementCoherenceState.Coherent;
+
+    private static bool IsRootedFloorMet(RootednessState state)
+        => state is RootednessState.DeeplyRooted or RootednessState.Rooted;
 }
