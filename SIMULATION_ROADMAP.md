@@ -309,3 +309,11 @@ Natural later follow-through:
 - prehistory becomes the true simulation-driven bridge into active play
 - richer history tools and multiple perspectives are layered over the same append-only event foundation
 - later civilization-era systems deepen the same world rather than replacing its core storytelling model
+
+## Current Integrity Follow-Through
+
+The active prehistory work now also maintains these explicit contracts:
+- Phase C candidate counts must come from the same observer-backed truth floors that the final evaluator uses
+- bootstrap social history must accumulate recent continuity/rootedness/settlement-persistence evidence before candidate evaluation
+- polity formation must remain downstream of durable society and settlement substrate
+- biological depth should continue to come from real turnover, collapse, replacement, and recolonization rather than branch inflation alone

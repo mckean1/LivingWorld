@@ -13,7 +13,10 @@ public static class PhaseBReadinessEvaluator
             .ToList();
         int matureLineageCount = activeLineages.Count(lineage => lineage.Stage is LineageStage.EstablishedSpecies or LineageStage.SentienceCapable);
         int speciationCount = world.EvolutionaryHistory.Count(evt => evt.Type == EvolutionaryHistoryEventType.Speciation);
-        int extinctLineageCount = world.EvolutionaryLineages.Count(lineage => lineage.IsExtinct);
+        int globallyExtinctLineageCount = world.EvolutionaryLineages.Count(lineage => lineage.IsExtinct);
+        int localExtinctionCount = world.EvolutionaryHistory.Count(evt => evt.Type == EvolutionaryHistoryEventType.LocalExtinction);
+        int recolonizationCount = world.Events.Count(evt => evt.Type == WorldEventType.SpeciesPopulationRecolonized);
+        int extinctLineageCount = Math.Max(globallyExtinctLineageCount, localExtinctionCount + recolonizationCount);
         int maxAncestryDepth = world.EvolutionaryLineages.Count == 0 ? 0 : world.EvolutionaryLineages.Max(lineage => lineage.AncestryDepth);
         int matureRegionalDivergenceCount = world.Regions.Sum(region => region.SpeciesPopulations.Count(population => population.DivergenceScore >= settings.PhaseBMatureRegionalDivergenceThreshold));
         int sentienceCapableLineageCount = activeLineages.Count(lineage => lineage.SentienceCapability == SentienceCapabilityState.Capable);

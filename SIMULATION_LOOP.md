@@ -221,3 +221,8 @@ The next planned loop-facing expansions follow the canonical roadmap order:
 - Phase 21 lets supply routes, scarcity, and cross-polity pressure generate diplomacy, raiding, and early conflict chains
 
 Further chronicle dedupe tuning and later `Discoveries` / `Learned` presentation cleanup remain secondary follow-up work around the same loop, not replacements for those next core systems.
+
+## Startup Integrity Additions
+
+- bootstrap social-emergence years now also emit monthly observer snapshots and monthly settlement aging so continuity, rootedness, and settlement-persistence windows are factual recent history before checkpoint evaluation
+- Phase C readiness no longer treats legacy polity-shell candidate checks as equivalent to canonical candidate truth

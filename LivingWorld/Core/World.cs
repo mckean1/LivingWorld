@@ -72,6 +72,12 @@ public sealed class World
     public List<Polity> Polities { get; } = new();
     public List<LocalPopulationExtinctionRecord> LocalPopulationExtinctions { get; } = new();
     public Dictionary<int, string> CandidateRejectionReasons => PrehistoryEvaluation.CandidateRejectionReasons;
+    public List<PrehistoryCandidateDiagnostics> CandidateDiagnostics => PrehistoryEvaluation.CandidateDiagnostics;
+    public PrehistoryCandidateDiagnosticsSummary CandidateDiagnosticsSummary
+    {
+        get => PrehistoryEvaluation.CandidateDiagnosticsSummary;
+        set => PrehistoryEvaluation.CandidateDiagnosticsSummary = value;
+    }
     public List<string> StartupDiagnostics => PrehistoryEvaluation.StartupDiagnostics;
     public StartupOutcomeDiagnostics StartupOutcomeDiagnostics
     {

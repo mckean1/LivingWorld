@@ -45,7 +45,9 @@ public sealed class PrehistoryCheckpointEvaluationAdapter : ICheckpointEvaluatio
                 readiness.Report.CandidatePoolSummary.TotalViableCandidatesDiscovered,
                 false,
                 readiness.Report.CandidatePoolSummary.Summary),
-            LatestObserverSnapshot = observerSnapshot
+            LatestObserverSnapshot = observerSnapshot,
+            CandidateDiagnostics = candidateSelection.Diagnostics,
+            CandidateDiagnosticsSummary = candidateSelection.DiagnosticsSummary
         };
     }
 

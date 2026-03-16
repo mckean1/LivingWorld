@@ -21,6 +21,7 @@ public sealed class WorldGenerator
     private readonly StartupProgressRenderer? _progressRenderer;
     private readonly WorldGenerationLogWriter? _worldGenerationLogWriter;
     private readonly PrehistoryCheckpointCoordinator _checkpointCoordinator;
+    private readonly PrehistoryObserverService _bootstrapObserverService = new();
 
     public WorldGenerator(
         int seed,
@@ -470,6 +471,7 @@ public sealed class WorldGenerator
                 polity.YearsInCurrentRegion++;
             }
 
+            AdvanceBootstrapSocialMonths(world, 12);
             _prehistoryRuntimeOrchestrator.RefreshAge(world);
             if (year == 1 || year % 10 == 0 || world.PhaseCReadinessReport.IsReady)
             {
@@ -484,8 +486,6 @@ public sealed class WorldGenerator
             {
                 break;
             }
-
-            world.Time.Reset(world.Time.Year + 1, world.Time.Month);
         }
 
         if (_settings.AllowPhaseCFallbackCivilizationalSeeding
@@ -583,7 +583,7 @@ public sealed class WorldGenerator
                 polity.YearsInCurrentRegion++;
             }
 
-            world.Time.Reset(world.Time.Year + 1, world.Time.Month);
+            AdvanceBootstrapSocialMonths(world, 12);
             if ((world.Time.Year - world.StartupAgeConfiguration.MinPrehistoryYears) % Math.Max(1, _settings.ReadinessEvaluationIntervalYears) == 0)
             {
                 _prehistoryRuntimeOrchestrator.Describe(
@@ -604,6 +604,20 @@ public sealed class WorldGenerator
             allowEmergencyFallback: true,
             regenerationReasons: regenerationReasons);
         HandlePostCheckpointOutcome(world, finalOutcome);
+    }
+
+    private void AdvanceBootstrapSocialMonths(World world, int months)
+    {
+        for (int month = 0; month < months; month++)
+        {
+            _bootstrapObserverService.CaptureCurrentMonth(world);
+            foreach (Polity polity in world.Polities.Where(candidate => candidate.Population > 0))
+            {
+                polity.AdvanceSettlementMonths();
+            }
+
+            world.Time.AdvanceOneMonth();
+        }
     }
 
     private void ReportProgress(World world)

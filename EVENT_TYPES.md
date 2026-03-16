@@ -38,6 +38,13 @@ Current implementation uses `learned_advancement` for capability-granting breakt
 - `local_tension`
   - optional local follow-up when an arrival lands in a crowded destination
 
+## Worldgen Diagnostic Output
+
+World generation also writes evaluator-owned candidate diagnostics to the worldgen log. These are not live chronicle events, but they now expose:
+- per-candidate support, continuity, rootedness, movement, settlement-persistence, polity age, and society age evidence
+- exact blocker, warning, hard-veto, and failed-truth-floor lists
+- aggregate rejection counts by reason, failure domain, and source-identity path
+
 ### Settlement And Agriculture
 
 - `settlement_founded`

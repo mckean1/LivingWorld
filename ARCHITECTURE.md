@@ -378,3 +378,10 @@ The canonical next planned sequence is now:
 - Phase 21 - diplomacy, raiding, and conflict foundations grounded in logistics, dependency, and supply disruption
 
 Chronicle dedupe polish and later `Discoveries` / `Learned` list cleanup remain supporting presentation follow-through, not the primary next architecture phases.
+
+## Startup Integrity Additions
+
+- `PrehistoryEvaluationSnapshot.CandidateSelection` now retains per-candidate worldgen diagnostics and aggregate rejection/domain/source-path summaries in addition to the surfaced pool.
+- `PhaseCReadinessEvaluator` now uses canonical observer-backed candidate readiness when that evidence is available, so polity-shell candidates are not counted as truthful viable starts before the final evaluator sees them.
+- bootstrap social emergence now records monthly observer continuity and monthly settlement age across each represented year before readiness checkpoints run.
+- polity formation now requires persistent society continuity and durable settlement tenure, preserving the intended people -> society -> settlement -> polity ladder.

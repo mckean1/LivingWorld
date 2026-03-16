@@ -39,6 +39,13 @@ Implemented chain:
 
 `food_stress -> starvation_risk`
 
+## Startup Integrity Chains
+
+- prolonged ecological stress -> local collapse -> extinction opening -> replacement or recolonization
+- repeated settlement tenure + anchored home-cluster continuity -> rootedness + settlement durability -> truthful candidate viability
+- persistent society continuity + durable settlements -> polity formation -> candidate surfacing
+- candidate evaluation -> exact failed truth floor / blocker set -> diagnosable generation failure
+
 `food_recovery or trade relief -> food_stabilized`
 
 Settlement hardship follows the same pattern at a smaller scale:

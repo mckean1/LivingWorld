@@ -422,3 +422,12 @@ Planned:
 - Continue UI readability cleanup for compact summaries, labels, and drill-in screens
 - Continue reviewing chronicle output to ensure there are no duplicated or redundant player-facing chronicle messages
 - Continue syncing roadmap and documentation whenever a design decision is made so planning stays aligned with agreed direction
+
+# LivingWorld System Interactions
+
+## Prehistory Startup Integrity
+
+- prolonged ecological stress, local collapse, extinction openings, and recolonization now work together to deepen Phase B turnover history
+- bootstrap social emergence now feeds monthly observer continuity, rootedness, and settlement-persistence evidence into the candidate evaluator
+- polity formation now depends on society continuity plus durable settlement tenure, keeping polity identity downstream of real social substrate
+- worldgen diagnostics now preserve exact candidate blockers, warnings, and truth-floor failures so final failure states are traceable back to the underlying systems

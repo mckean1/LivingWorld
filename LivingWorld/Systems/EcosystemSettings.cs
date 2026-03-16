@@ -75,4 +75,10 @@ public sealed class EcosystemSettings
     public double SameNicheReplacementBonus { get; init; } = 0.08;
 
     public int MaxMigrationTargetsPerPopulation { get; init; } = 1;
+
+    public int StressCollapsePressureSeasonsThreshold { get; init; } = 4;
+
+    public double StressCollapseDeclineRate { get; init; } = 0.10;
+
+    public double VolatilityDrivenCollapseRate { get; init; } = 0.06;
 }

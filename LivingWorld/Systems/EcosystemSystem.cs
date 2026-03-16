@@ -183,6 +183,15 @@ public sealed class EcosystemSystem
 
             int births = (int)Math.Round(previousPopulation * Math.Max(0.0, reproductionRate) * Math.Max(0.15, 1.0 - Math.Clamp(carryingRatio, 0.0, 1.35)));
             int naturalLosses = (int)Math.Round(previousPopulation * Math.Max(0.0, declineRate));
+            bool prolongedPressure = population.SeasonsUnderPressure >= _settings.StressCollapsePressureSeasonsThreshold;
+            if (prolongedPressure)
+            {
+                double collapseRate = _settings.StressCollapseDeclineRate
+                    + (region.EffectiveEcologyProfile.EnvironmentalVolatility * _settings.VolatilityDrivenCollapseRate)
+                    + Math.Max(0.0, 0.65 - population.HabitatSuitability) * 0.08
+                    + Math.Max(0.0, 0.70 - foodSupport) * 0.10;
+                naturalLosses += (int)Math.Round(previousPopulation * Math.Clamp(collapseRate, 0.0, 0.32));
+            }
 
             if (species.TrophicRole is TrophicRole.Predator or TrophicRole.Apex && predatorFounderPhase)
             {
@@ -214,6 +223,7 @@ public sealed class EcosystemSystem
                 (population.RecentFoodStress * 0.26) +
                 (population.RecentPredationPressure * 0.18) +
                 (population.RecentHuntingPressure * 0.08) +
+                (prolongedPressure ? 0.12 : 0.0) +
                 Math.Max(0.0, carryingRatio - 1.0) * 0.14,
                 0.0,
                 1.0);

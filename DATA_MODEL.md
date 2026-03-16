@@ -38,6 +38,12 @@ Event responsibilities:
 
 Prehistory-facing world fields are now grouped canonically under `World.Prehistory`, with compatibility accessors such as `PrehistoryRuntime`, `PrehistoryObserver`, `PrehistoryEvaluation`, `ActivePlayHandoff`, and `FocalSelectionPresentation` remaining available on `World`.
 
+## Prehistory Evaluation Additions
+
+- `PrehistoryEvaluationSnapshot.CandidateSelection` now stores surfaced candidate summaries, candidate rejection reasons, per-candidate worldgen diagnostics, and aggregate candidate-diagnostic summaries.
+- `PrehistoryCandidateDiagnostics` captures polity identity, founder-society linkage, source-identity path, maturity band, support/continuity/rootedness/movement states, identity-break history, settlement persistence months, anchored months, home-cluster metrics, polity age, society age, exact blockers/warnings, and failed truth floors.
+- `PhaseCReadinessReport.ViableFocalCandidateCount` now reflects canonical observer-backed candidate viability during social emergence when that evidence is available.
+
 That grouped prehistory state owns:
 
 - `World.Prehistory.Runtime`

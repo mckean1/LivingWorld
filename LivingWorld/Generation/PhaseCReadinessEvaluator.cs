@@ -6,6 +6,12 @@ namespace LivingWorld.Generation;
 public static class PhaseCReadinessEvaluator
 {
     public static PhaseCReadinessReport Evaluate(World world, WorldGenerationSettings settings)
+        => Evaluate(world, settings, candidateEvaluations: null);
+
+    public static PhaseCReadinessReport Evaluate(
+        World world,
+        WorldGenerationSettings settings,
+        IReadOnlyDictionary<int, CandidateReadinessEvaluation>? candidateEvaluations)
     {
         Dictionary<int, Polity> politiesById = world.Polities.ToDictionary(polity => polity.Id);
 
@@ -31,10 +37,17 @@ public static class PhaseCReadinessEvaluator
         int fallbackPolityCount = polityCount - organicPolityCount;
         int organicSocialTrajectoryCount = organicSentientGroupCount + organicPersistentSocietyCount;
 
-        int viableCandidateCount = world.FocalCandidateProfiles.Count(profile => profile.IsViable);
-        int organicViableCandidateCount = world.FocalCandidateProfiles.Count(profile =>
-            profile.IsViable
-            && (!politiesById.TryGetValue(profile.PolityId, out Polity? polity) || !polity.IsFallbackCreated));
+        int viableCandidateCount = candidateEvaluations is null
+            ? world.FocalCandidateProfiles.Count(profile => profile.IsViable)
+            : candidateEvaluations.Values.Count(evaluation => evaluation.IsViable);
+        int organicViableCandidateCount = candidateEvaluations is null
+            ? world.FocalCandidateProfiles.Count(profile =>
+                profile.IsViable
+                && (!politiesById.TryGetValue(profile.PolityId, out Polity? polity) || !polity.IsFallbackCreated))
+            : candidateEvaluations.Values.Count(evaluation =>
+                evaluation.IsViable
+                && politiesById.TryGetValue(evaluation.PolityId, out Polity? polity)
+                && !polity.IsFallbackCreated);
         int fallbackViableCandidateCount = viableCandidateCount - organicViableCandidateCount;
 
         double averagePolityAge = organicPolityCount == 0

@@ -36,6 +36,9 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         List<CandidateAssessment> viableCandidates = assessments
             .Where(assessment => assessment.Summary.Viability?.IsViable == true)
             .ToList();
+        IReadOnlyList<PrehistoryCandidateDiagnostics> diagnostics = assessments
+            .Select(assessment => BuildDiagnostics(world, observerSnapshot, candidateEvaluations, assessment))
+            .ToArray();
         CandidatePoolCompositionResult composition = ComposeCandidatePool(world, viableCandidates);
 
         foreach ((int polityId, string reason) in composition.SuppressionReasons)
@@ -46,7 +49,9 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         return new PrehistoryCandidateSelectionResult(
             composition.SelectedCandidates.Select(candidate => candidate.Summary).ToArray(),
             viableCandidates.Select(candidate => candidate.Summary).ToArray(),
-            rejectionReasons);
+            rejectionReasons,
+            diagnostics,
+            SummarizeDiagnostics(diagnostics, rejectionReasons));
     }
 
     private CandidateAssessment BuildAssessment(
@@ -702,6 +707,122 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         return new CandidateAssessment(summary, new CandidateDiversityProfile(CandidateMaturityBand.Anchored, "unknown", "unknown", "unknown", polity.LineageId, polity.RegionId, "unknown"));
     }
 
+    private static PrehistoryCandidateDiagnostics BuildDiagnostics(
+        World world,
+        PrehistoryObserverSnapshot observerSnapshot,
+        IReadOnlyDictionary<int, CandidateReadinessEvaluation> candidateEvaluations,
+        CandidateAssessment assessment)
+    {
+        PlayerEntryCandidateSummary summary = assessment.Summary;
+        Polity polity = world.Polities.First(candidate => candidate.Id == summary.PolityId);
+        Species species = world.Species.First(candidate => candidate.Id == polity.SpeciesId);
+        PeopleHistoryWindowSnapshot? history = observerSnapshot.PeopleHistoryWindows.FirstOrDefault(snapshot => snapshot.Header.PeopleId == polity.Id);
+        CandidateReadinessEvaluation? readiness = candidateEvaluations.TryGetValue(polity.Id, out CandidateReadinessEvaluation? evaluation)
+            ? evaluation
+            : null;
+        EmergingSociety? founderSociety = polity.FounderSocietyId.HasValue
+            ? world.Societies.FirstOrDefault(candidate => candidate.Id == polity.FounderSocietyId.Value)
+            : null;
+
+        List<string> failedTruthFloors = [];
+        if (summary.Viability is not null)
+        {
+            failedTruthFloors.AddRange(summary.Viability.Gates.Where(gate => !gate.Passed).Select(gate => gate.Key));
+        }
+
+        return new PrehistoryCandidateDiagnostics(
+            polity.Id,
+            polity.Name,
+            species.Id,
+            species.Name,
+            polity.LineageId,
+            polity.RegionId,
+            world.Regions[polity.RegionId].Name,
+            founderSociety?.Id,
+            ResolveSourceIdentityPath(polity, founderSociety),
+            summary.MaturityBand,
+            readiness?.SupportStability ?? SupportStabilityState.Collapsed,
+            readiness?.DemographicViability ?? DemographicViabilityState.Critical,
+            readiness?.PopulationTrend ?? PopulationTrendState.Declining,
+            readiness?.MovementCoherence ?? MovementCoherenceState.Scattered,
+            readiness?.Rootedness ?? RootednessState.Displaced,
+            readiness?.Continuity ?? ContinuityState.Broken,
+            polity.YearsSinceFounded,
+            founderSociety is null ? 0 : Math.Max(0, world.Time.Year - founderSociety.FoundingYear),
+            history?.SocialContinuityHistoryRollup.ObservedContinuousIdentityMonths ?? 0,
+            history?.SocialContinuityHistoryRollup.MonthsSinceIdentityBreak ?? 0,
+            history?.SocialContinuityHistoryRollup.IdentityBreakCountLast12Months ?? 0,
+            history?.SocialContinuityHistoryRollup.IdentityBreakCountLast24Months ?? 0,
+            history?.SettlementHistoryRollup.SettlementPresentMonthsLast12Months ?? 0,
+            history?.SettlementHistoryRollup.EstablishedSettlementMonthsLast12Months ?? 0,
+            history?.RootednessHistoryRollup.AnchoredMonthsLast12Months ?? 0,
+            history?.RootednessHistoryRollup.StrongAnchoredMonthsLast12Months ?? 0,
+            history?.CurrentPeopleState.HomeClusterShare ?? 0.0,
+            history?.RootednessHistoryRollup.AverageHomeClusterShareLast12Months ?? 0.0,
+            history?.CurrentPeopleState.ConnectedFootprintShare ?? 0.0,
+            history?.CurrentPeopleState.RouteCoverageShare ?? 0.0,
+            history?.CurrentPeopleState.ScatterShare ?? 1.0,
+            readiness?.SettlementDurabilityPasses ?? false,
+            readiness?.PoliticalDurabilityPasses ?? false,
+            readiness?.HasHardCurrentMonthVeto ?? false,
+            readiness?.HardVetoReasons ?? Array.Empty<string>(),
+            readiness?.BlockingReasons ?? Array.Empty<string>(),
+            readiness?.WarningReasons ?? Array.Empty<string>(),
+            failedTruthFloors,
+            summary.Viability?.IsViable == true,
+            summary.Viability?.SupportsNormalEntry == true);
+    }
+
+    private static PrehistoryCandidateDiagnosticsSummary SummarizeDiagnostics(
+        IReadOnlyList<PrehistoryCandidateDiagnostics> diagnostics,
+        IReadOnlyDictionary<int, string> rejectionReasons)
+    {
+        Dictionary<string, int> rejectionCounts = rejectionReasons.Values
+            .GroupBy(reason => reason, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, int> domainCounts = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, int> sourceCounts = diagnostics
+            .GroupBy(diagnostic => diagnostic.SourceIdentityPath, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (PrehistoryCandidateDiagnostics diagnostic in diagnostics)
+        {
+            if (diagnostic.IsViable)
+            {
+                continue;
+            }
+
+            Increment(domainCounts, ResolveFailureDomain(diagnostic));
+        }
+
+        return new PrehistoryCandidateDiagnosticsSummary(rejectionCounts, domainCounts, sourceCounts);
+    }
+
+    private static string ResolveFailureDomain(PrehistoryCandidateDiagnostics diagnostic)
+    {
+        if (diagnostic.HasHardCurrentMonthVeto || diagnostic.HardVetoReasons.Count > 0) return "continuity";
+        if (!diagnostic.SettlementDurabilityPasses) return "settlement_persistence";
+        if (!diagnostic.PoliticalDurabilityPasses) return "society_persistence";
+        if (diagnostic.BlockingReasons.Any(reason => reason.Contains("support", StringComparison.OrdinalIgnoreCase))) return "support";
+        if (diagnostic.BlockingReasons.Any(reason => reason.Contains("continuity", StringComparison.OrdinalIgnoreCase))) return "continuity";
+        if (diagnostic.BlockingReasons.Any(reason => reason.Contains("root", StringComparison.OrdinalIgnoreCase) || reason.Contains("movement", StringComparison.OrdinalIgnoreCase))) return "rootedness";
+        if (diagnostic.FailedTruthFloors.Any(reason => reason.Contains("continuity", StringComparison.OrdinalIgnoreCase))) return "continuity";
+        if (diagnostic.FailedTruthFloors.Any(reason => reason.Contains("movement", StringComparison.OrdinalIgnoreCase) || reason.Contains("root", StringComparison.OrdinalIgnoreCase))) return "rootedness";
+        return "other";
+    }
+
+    private static string ResolveSourceIdentityPath(Polity polity, EmergingSociety? founderSociety)
+    {
+        bool hasFounderSociety = founderSociety is not null;
+        bool hasSettlement = polity.SettlementCount > 0;
+        if (hasFounderSociety && hasSettlement) return "society-first";
+        if (hasSettlement) return "settlement-first";
+        return "polity-first";
+    }
+
+    private static void Increment(IDictionary<string, int> counts, string key)
+        => counts[key] = counts.TryGetValue(key, out int current) ? current + 1 : 1;
+
     private static double ScoreSupportState(SupportStabilityState state) => state switch
     {
         SupportStabilityState.Stable => 0.95,
@@ -777,7 +898,9 @@ public sealed class PrehistoryCandidateSelectionEvaluator
 public sealed record PrehistoryCandidateSelectionResult(
     IReadOnlyList<PlayerEntryCandidateSummary> Candidates,
     IReadOnlyList<PlayerEntryCandidateSummary> AllViableCandidates,
-    IReadOnlyDictionary<int, string> RejectionReasons);
+    IReadOnlyDictionary<int, string> RejectionReasons,
+    IReadOnlyList<PrehistoryCandidateDiagnostics> Diagnostics,
+    PrehistoryCandidateDiagnosticsSummary DiagnosticsSummary);
 
 internal sealed record CandidateAssessment(
     PlayerEntryCandidateSummary Summary,

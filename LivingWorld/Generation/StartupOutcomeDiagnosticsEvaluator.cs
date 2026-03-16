@@ -17,13 +17,8 @@ public static class StartupOutcomeDiagnosticsEvaluator
         WorldReadinessReport effectiveReadinessReport = worldReadinessReport ?? world.WorldReadinessReport;
         Dictionary<int, Polity> politiesById = world.Polities.ToDictionary(polity => polity.Id);
 
-        int organicFocalCandidateCount = world.FocalCandidateProfiles.Count(profile =>
-            profile.IsViable
-            && (!politiesById.TryGetValue(profile.PolityId, out Polity? polity) || !polity.IsFallbackCreated));
-        int fallbackFocalCandidateCount = world.FocalCandidateProfiles.Count(profile =>
-            profile.IsViable
-            && politiesById.TryGetValue(profile.PolityId, out Polity? polity)
-            && polity.IsFallbackCreated);
+        int organicFocalCandidateCount = world.PhaseCReadinessReport.OrganicViableFocalCandidateCount;
+        int fallbackFocalCandidateCount = world.PhaseCReadinessReport.FallbackViableFocalCandidateCount;
         IReadOnlyList<StartupDiagnosticReasonCount> candidateRejectionCounts = effectiveRejectionReasons.Values
             .GroupBy(reason => reason, StringComparer.OrdinalIgnoreCase)
             .Select(group => new StartupDiagnosticReasonCount(
@@ -192,7 +187,7 @@ public static class StartupOutcomeDiagnosticsEvaluator
         }
 
         if (candidateRejectionReasons.Count > 0
-            && (world.Polities.Any(polity => polity.Population > 0) || world.FocalCandidateProfiles.Any(profile => profile.IsViable)))
+            && (world.Polities.Any(polity => polity.Population > 0) || world.PhaseCReadinessReport.ViableFocalCandidateCount > 0))
         {
             cause |= GenerationZeroViableCause.CandidateTruthFloorCollapse;
         }

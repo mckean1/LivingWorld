@@ -13,4 +13,6 @@ public sealed class PrehistoryCheckpointEvaluationResult
     public IReadOnlyDictionary<int, string> CandidateRejectionReasons { get; init; } = new Dictionary<int, string>();
     public PrehistoryCandidatePoolSnapshot? CandidatePoolSnapshot { get; init; }
     public PrehistoryObserverSnapshot? LatestObserverSnapshot { get; init; }
+    public IReadOnlyList<PrehistoryCandidateDiagnostics> CandidateDiagnostics { get; init; } = Array.Empty<PrehistoryCandidateDiagnostics>();
+    public PrehistoryCandidateDiagnosticsSummary CandidateDiagnosticsSummary { get; init; } = PrehistoryCandidateDiagnosticsSummary.Empty;
 }

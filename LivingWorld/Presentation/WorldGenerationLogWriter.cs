@@ -258,6 +258,11 @@ public sealed class WorldGenerationLogWriter : IDisposable
         {
             yield return $"Warnings: {string.Join(", ", world.WorldReadinessReport.GlobalWarningReasons)}";
         }
+
+        foreach (string line in BuildCandidateDiagnosticsLines(world))
+        {
+            yield return line;
+        }
     }
 
     private static IEnumerable<string> BuildAttemptDetailLines(World world)
@@ -274,6 +279,10 @@ public sealed class WorldGenerationLogWriter : IDisposable
 
         WorldReadinessReport report = world.WorldReadinessReport;
         yield return $"Readiness: final={report.FinalCheckpointResolution}, weakWorld={report.IsWeakWorld}, thinWorld={report.IsThinWorld}, viable={report.CandidatePoolSummary.TotalViableCandidatesDiscovered}, surfaced={report.CandidatePoolSummary.TotalSurfacedCandidates}, normalReady={report.CandidatePoolSummary.NormalReadyCandidateCount}";
+        foreach (string line in BuildCandidateDiagnosticsLines(world))
+        {
+            yield return line;
+        }
     }
 
     private static IEnumerable<string> BuildYearSummaryLines(World world)
@@ -299,7 +308,7 @@ public sealed class WorldGenerationLogWriter : IDisposable
             case PrehistoryRuntimeDetailView.SocietalEmergence:
                 PhaseCReadinessReport phaseC = world.PhaseCReadinessReport;
                 yield return $"Phase C readiness: ready={phaseC.IsReady}, groups={phaseC.SentientGroupCount}, societies={phaseC.PersistentSocietyCount}, settlements={phaseC.SettlementCount}, polities={phaseC.PolityCount}, viableStarts={phaseC.ViableFocalCandidateCount}";
-                yield return $"Phase C mix: organicPolities={world.StartupOutcomeDiagnostics.OrganicPolityCount}, fallbackPolities={world.StartupOutcomeDiagnostics.FallbackPolityCount}, organicCandidates={world.StartupOutcomeDiagnostics.OrganicPlayerEntryCandidateCount}, fallbackCandidates={world.StartupOutcomeDiagnostics.FallbackPlayerEntryCandidateCount}";
+                yield return $"Phase C mix: organicPolities={phaseC.OrganicPolityCount}, fallbackPolities={phaseC.FallbackPolityCount}, organicCandidates={phaseC.OrganicViableFocalCandidateCount}, fallbackCandidates={phaseC.FallbackViableFocalCandidateCount}";
                 break;
             case PrehistoryRuntimeDetailView.CandidateEvaluation:
             case PrehistoryRuntimeDetailView.FocalSelection:
@@ -377,5 +386,43 @@ public sealed class WorldGenerationLogWriter : IDisposable
     {
         _writer.WriteLine(value);
         Flush();
+    }
+
+    private static IEnumerable<string> BuildCandidateDiagnosticsLines(World world)
+    {
+        if (world.CandidateDiagnostics.Count == 0)
+        {
+            yield break;
+        }
+
+        PrehistoryCandidateDiagnosticsSummary summary = world.CandidateDiagnosticsSummary;
+        if (summary.RejectionCountsByReason.Count > 0)
+        {
+            yield return $"Candidate rejection counts: {string.Join(", ", summary.RejectionCountsByReason.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase).Select(entry => $"{entry.Key}={entry.Value}"))}";
+        }
+
+        if (summary.FailureCountsByDomain.Count > 0)
+        {
+            yield return $"Candidate failure domains: {string.Join(", ", summary.FailureCountsByDomain.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase).Select(entry => $"{entry.Key}={entry.Value}"))}";
+        }
+
+        if (summary.SourcePathCounts.Count > 0)
+        {
+            yield return $"Candidate source paths: {string.Join(", ", summary.SourcePathCounts.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase).Select(entry => $"{entry.Key}={entry.Value}"))}";
+        }
+
+        foreach (PrehistoryCandidateDiagnostics candidate in world.CandidateDiagnostics.OrderBy(candidate => candidate.PolityId))
+        {
+            string truthFloor = candidate.FailedTruthFloors.Count == 0 ? "passed" : string.Join("|", candidate.FailedTruthFloors);
+            string blockers = candidate.BlockingReasons.Count == 0 ? "none" : string.Join("|", candidate.BlockingReasons);
+            string warnings = candidate.WarningReasons.Count == 0 ? "none" : string.Join("|", candidate.WarningReasons);
+            string hardVeto = candidate.HardVetoReasons.Count == 0 ? "none" : string.Join("|", candidate.HardVetoReasons);
+            yield return $"Candidate {candidate.PolityId}:{candidate.PolityName} source={candidate.SourceIdentityPath} species={candidate.SpeciesName} founderSociety={candidate.FounderSocietyId?.ToString() ?? "none"} maturity={candidate.MaturityBand} viable={candidate.IsViable} normalReady={candidate.SupportsNormalEntry}";
+            yield return $"  support={candidate.SupportStability} demography={candidate.DemographicViability}/{candidate.PopulationTrend} continuity={candidate.Continuity} continuityMonths={candidate.PeopleContinuityMonths} breaks12={candidate.IdentityBreakCountLast12Months} breaks24={candidate.IdentityBreakCountLast24Months} monthsSinceBreak={candidate.MonthsSinceIdentityBreak}";
+            yield return $"  settlements12={candidate.SettlementPresentMonthsLast12Months} established12={candidate.EstablishedSettlementMonthsLast12Months} anchored12={candidate.AnchoredMonthsLast12Months} strongAnchored12={candidate.StrongAnchoredMonthsLast12Months} polityAge={candidate.PolityAgeYears} societyAge={candidate.SocietyAgeYears}";
+            yield return $"  rootedness={candidate.Rootedness} homeClusterCurrent={candidate.HomeClusterShareCurrent:F2} homeClusterAvg12={candidate.AverageHomeClusterShareLast12Months:F2} movement={candidate.MovementCoherence} connected={candidate.ConnectedFootprintShareCurrent:F2} routes={candidate.RouteCoverageShareCurrent:F2} scatter={candidate.ScatterShareCurrent:F2}";
+            yield return $"  durability:settlement={candidate.SettlementDurabilityPasses} polity={candidate.PoliticalDurabilityPasses} hardVeto={candidate.HasHardCurrentMonthVeto} hardVetoReasons={hardVeto}";
+            yield return $"  truthFloor={truthFloor} blockers={blockers} warnings={warnings}";
+        }
     }
 }

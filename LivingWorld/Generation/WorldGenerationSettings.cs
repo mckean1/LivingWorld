@@ -96,6 +96,10 @@ public sealed class WorldGenerationSettings
 
     public double PolityFormationComplexityThreshold { get; init; } = 0.46;
 
+    public int PolityFormationMinimumSocietyContinuityYears { get; init; } = 10;
+
+    public int PolityFormationMinimumSettlementPersistenceYears { get; init; } = 6;
+
     public int MinimumPhaseCSentientGroupCount { get; init; } = 2;
 
     public int MinimumPhaseCPersistentSocietyCount { get; init; } = 2;

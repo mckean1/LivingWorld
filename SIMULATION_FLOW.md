@@ -78,6 +78,12 @@ When `Month == 12` and the startup stage includes polities:
 
 ## Event Pipeline
 
+## Startup Integrity Additions
+
+- bootstrap social emergence now stamps monthly observer continuity across each represented social year, so Pass 4 candidate durability reads recent factual history instead of one synthetic checkpoint month
+- Phase C candidate counts now come from the same observer-backed truth floors used by the final evaluator when that evidence exists
+- polity formation now requires persistent society continuity and durable settlement tenure before polity starts can surface
+
 `systems -> World.AddEvent -> World.Events + EventRecorded`
 
 Sinks:

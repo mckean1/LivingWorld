@@ -50,13 +50,24 @@ public sealed class PrehistoryEvaluationSnapshot
     public PrehistoryCandidatePoolSnapshot? CandidatePoolSnapshot => CandidateSelection.CandidatePoolSnapshot;
     public List<PlayerEntryCandidateSummary> PlayerEntryCandidates => CandidateSelection.PlayerEntryCandidates;
     public Dictionary<int, string> CandidateRejectionReasons => CandidateSelection.CandidateRejectionReasons;
+    public List<PrehistoryCandidateDiagnostics> CandidateDiagnostics => CandidateSelection.CandidateDiagnostics;
+    public PrehistoryCandidateDiagnosticsSummary CandidateDiagnosticsSummary
+    {
+        get => CandidateSelection.CandidateDiagnosticsSummary;
+        set => CandidateSelection.CandidateDiagnosticsSummary = value;
+    }
 
     public void ApplyCheckpointEvaluation(PrehistoryCheckpointEvaluationResult result)
     {
         WorldReadinessReport = result.WorldReadinessReport;
         StartupOutcomeDiagnostics = result.StartupOutcomeDiagnostics;
         LegacyCompatibility.ReplaceStartupDiagnostics(result.StartupDiagnostics);
-        CandidateSelection.Replace(result.PlayerEntryCandidates, result.CandidateRejectionReasons, result.CandidatePoolSnapshot);
+        CandidateSelection.Replace(
+            result.PlayerEntryCandidates,
+            result.CandidateRejectionReasons,
+            result.CandidatePoolSnapshot,
+            result.CandidateDiagnostics,
+            result.CandidateDiagnosticsSummary);
         LatestObserverSnapshot = result.LatestObserverSnapshot;
     }
 }
@@ -83,11 +94,15 @@ public sealed class PrehistoryCandidateSelectionState
     public PrehistoryCandidatePoolSnapshot? CandidatePoolSnapshot { get; private set; }
     public List<PlayerEntryCandidateSummary> PlayerEntryCandidates { get; } = new();
     public Dictionary<int, string> CandidateRejectionReasons { get; } = new();
+    public List<PrehistoryCandidateDiagnostics> CandidateDiagnostics { get; } = new();
+    public PrehistoryCandidateDiagnosticsSummary CandidateDiagnosticsSummary { get; set; } = PrehistoryCandidateDiagnosticsSummary.Empty;
 
     public void Replace(
         IEnumerable<PlayerEntryCandidateSummary> candidates,
         IEnumerable<KeyValuePair<int, string>> rejectionReasons,
-        PrehistoryCandidatePoolSnapshot? candidatePoolSnapshot)
+        PrehistoryCandidatePoolSnapshot? candidatePoolSnapshot,
+        IEnumerable<PrehistoryCandidateDiagnostics> candidateDiagnostics,
+        PrehistoryCandidateDiagnosticsSummary candidateDiagnosticsSummary)
     {
         PlayerEntryCandidates.Clear();
         PlayerEntryCandidates.AddRange(candidates);
@@ -98,6 +113,9 @@ public sealed class PrehistoryCandidateSelectionState
             CandidateRejectionReasons[polityId] = reason;
         }
 
+        CandidateDiagnostics.Clear();
+        CandidateDiagnostics.AddRange(candidateDiagnostics);
+        CandidateDiagnosticsSummary = candidateDiagnosticsSummary;
         CandidatePoolSnapshot = candidatePoolSnapshot;
     }
 
@@ -105,6 +123,8 @@ public sealed class PrehistoryCandidateSelectionState
     {
         PlayerEntryCandidates.Clear();
         CandidateRejectionReasons.Clear();
+        CandidateDiagnostics.Clear();
+        CandidateDiagnosticsSummary = PrehistoryCandidateDiagnosticsSummary.Empty;
         CandidatePoolSnapshot = null;
     }
 }

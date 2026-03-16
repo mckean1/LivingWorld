@@ -11,11 +11,15 @@ public sealed class SocialEmergenceSystem
 {
     private readonly Random _random;
     private readonly WorldGenerationSettings _settings;
+    private readonly PrehistoryObserverService _observerService;
+    private readonly PrehistoryReadinessEvaluator _readinessEvaluator;
 
     public SocialEmergenceSystem(int seed, WorldGenerationSettings settings)
     {
         _random = new Random(seed);
         _settings = settings;
+        _observerService = new PrehistoryObserverService();
+        _readinessEvaluator = new PrehistoryReadinessEvaluator(settings);
     }
 
     public void UpdateYear(World world)
@@ -25,7 +29,9 @@ public sealed class SocialEmergenceSystem
         UpdateSocieties(world);
         UpdatePolities(world);
         RefreshFocalCandidates(world);
-        world.PhaseCReadinessReport = PhaseCReadinessEvaluator.Evaluate(world, _settings);
+        PrehistoryObserverSnapshot observerSnapshot = _observerService.Observe(world);
+        IReadOnlyDictionary<int, CandidateReadinessEvaluation> candidateEvaluations = _readinessEvaluator.EvaluateCandidateReadiness(world, observerSnapshot);
+        world.PhaseCReadinessReport = PhaseCReadinessEvaluator.Evaluate(world, _settings, candidateEvaluations);
     }
 
     private void ActivateSentientGroups(World world)
@@ -710,12 +716,16 @@ public sealed class SocialEmergenceSystem
 
     private bool CanFormPolity(World world, EmergingSociety society, IReadOnlyCollection<SocialSettlement> activeSettlements)
         => society.Population >= _settings.PolityFormationMinimumPopulation
+           && society.ContinuityYears >= _settings.PolityFormationMinimumSocietyContinuityYears
            && society.CulturalKnowledge.Count >= _settings.PolityFormationMinimumKnowledgeCount
            && society.SocialComplexity >= _settings.PolityFormationComplexityThreshold
            && society.Cohesion >= 0.45
            && society.FoodSecurity >= 0.50
            && society.StorageSupport >= 0.26
-           && activeSettlements.Any(settlement => settlement.SettlementViability >= 0.55 && settlement.StorageLevel >= 0.24)
+           && activeSettlements.Any(settlement =>
+               settlement.SettlementViability >= 0.55
+               && settlement.StorageLevel >= 0.24
+               && Math.Max(0, world.Time.Year - settlement.FoundingYear) >= _settings.PolityFormationMinimumSettlementPersistenceYears)
            && !world.Polities.Any(polity => polity.FounderSocietyId == society.Id && polity.Population > 0);
 
     private SubsistenceMode ResolveInitialSubsistenceMode(Species species, SentientPopulationGroup group, Region region)

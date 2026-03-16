@@ -425,4 +425,15 @@ Planned:
 For LivingWorld, the Prehistory Rework is now the highest-priority roadmap program.
 
 No later deferred phase should displace it unless the roadmap is intentionally changed and this file is updated to reflect that decision.
+
+---
+
+## Current Integrity Follow-Through
+
+Implemented:
+- Phase C candidate counts and startup diagnostics now align with the canonical observer-backed candidate evaluator instead of legacy polity-shell `FocalCandidateProfile` viability
+- bootstrap social emergence now records monthly observer continuity and monthly settlement aging across each represented social year
+- polity formation now requires persistent society continuity plus durable settlement tenure before polity starts can surface
+- prolonged ecological stress now creates stronger truthful local-collapse turnover, improving Phase B extinction/recolonization texture
+- worldgen logs now include per-candidate diagnostics with exact truth-floor failures, blockers, warnings, support/continuity/rootedness metrics, settlement-persistence metrics, and aggregate rejection summaries
 ```

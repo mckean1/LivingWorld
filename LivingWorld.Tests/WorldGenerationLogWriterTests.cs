@@ -1,6 +1,8 @@
 using System.IO;
 using LivingWorld.Core;
+using LivingWorld.Generation;
 using LivingWorld.Presentation;
+using LivingWorld.Societies;
 using Xunit;
 
 namespace LivingWorld.Tests;
@@ -65,6 +67,51 @@ public sealed class WorldGenerationLogWriterTests
         world.PhaseBReadinessReport = new PhaseBReadinessReport(false, 4, 1, 0, 3, 1, 1, 5, []);
         world.PhaseBDiagnostics = new PhaseBDiagnostics(1.5, 4, 2, 2, 3, 1, 0, 2, 1, 1, []);
         world.PhaseCReadinessReport = new PhaseCReadinessReport(false, 2, 2, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0.0, []);
+        world.CandidateDiagnostics.Add(new PrehistoryCandidateDiagnostics(
+            7,
+            "Stone Chorus",
+            1,
+            "Stonefolk",
+            10,
+            0,
+            "Stone Basin",
+            3,
+            "society-first",
+            CandidateMaturityBand.Settling,
+            SupportStabilityState.Volatile,
+            DemographicViabilityState.Fragile,
+            PopulationTrendState.Declining,
+            MovementCoherenceState.Mixed,
+            RootednessState.SoftAnchored,
+            ContinuityState.Fragile,
+            6,
+            14,
+            8,
+            2,
+            1,
+            1,
+            5,
+            3,
+            4,
+            1,
+            0.58,
+            0.52,
+            0.61,
+            0.42,
+            0.39,
+            false,
+            false,
+            false,
+            Array.Empty<string>(),
+            ["continuity_below_established"],
+            ["settlement_durability_thin"],
+            ["continuity_floor"],
+            false,
+            false));
+        world.CandidateDiagnosticsSummary = new PrehistoryCandidateDiagnosticsSummary(
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["continuity_below_established"] = 1 },
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["continuity"] = 1 },
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["society-first"] = 1 });
 
         using (WorldGenerationLogWriter writer = new(path, new DateTime(2024, 2, 3, 4, 5, 6)))
         {
@@ -93,6 +140,8 @@ public sealed class WorldGenerationLogWriterTests
         Assert.Contains("Attempt 1 result", contents);
         Assert.Contains("Generation attempt 1", contents);
         Assert.Contains("Final failure postmortem", contents);
+        Assert.Contains("Candidate rejection counts: continuity_below_established=1", contents);
+        Assert.Contains("Candidate 7:Stone Chorus", contents);
     }
 
     [Fact]

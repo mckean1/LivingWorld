@@ -242,6 +242,7 @@ public sealed class SocialEmergenceSystemTests
         society.Population = 220;
         society.SocialComplexity = 0.72;
         society.SurvivalKnowledge = 0.78;
+        society.ContinuityYears = 12;
         society.CulturalKnowledge["a"] = new CulturalDiscovery("a", "Water route", CulturalDiscoveryCategory.Geography, RegionId: 0);
         society.CulturalKnowledge["b"] = new CulturalDiscovery("b", "Safe roots", CulturalDiscoveryCategory.FoodSafety, SpeciesId: 2, RegionId: 0);
         society.CulturalKnowledge["c"] = new CulturalDiscovery("c", "Dangerous predator", CulturalDiscoveryCategory.AnimalBehavior, SpeciesId: 5, RegionId: 0);
@@ -262,7 +263,9 @@ public sealed class SocialEmergenceSystemTests
         {
             PolityFormationMinimumPopulation = 140,
             PolityFormationMinimumKnowledgeCount = 4,
-            PolityFormationComplexityThreshold = 0.55
+            PolityFormationComplexityThreshold = 0.55,
+            PolityFormationMinimumSocietyContinuityYears = 10,
+            PolityFormationMinimumSettlementPersistenceYears = 0
         });
         system.UpdateYear(world);
 
@@ -279,6 +282,7 @@ public sealed class SocialEmergenceSystemTests
         society.Population = 126;
         society.SocialComplexity = 0.54;
         society.SurvivalKnowledge = 0.72;
+        society.ContinuityYears = 10;
         society.FoodSecurity = 0.66;
         society.StorageSupport = 0.48;
         society.SettlementSupport = 0.76;
@@ -302,7 +306,9 @@ public sealed class SocialEmergenceSystemTests
         {
             PolityFormationMinimumPopulation = 135,
             PolityFormationMinimumKnowledgeCount = 3,
-            PolityFormationComplexityThreshold = 0.52
+            PolityFormationComplexityThreshold = 0.52,
+            PolityFormationMinimumSocietyContinuityYears = 10,
+            PolityFormationMinimumSettlementPersistenceYears = 0
         });
 
         for (int year = 0; year < 3 && world.Polities.Count == 0; year++)
