@@ -739,7 +739,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             polity.RegionId,
             world.Regions[polity.RegionId].Name,
             founderSociety?.Id,
-            ResolveSourceIdentityPath(polity, founderSociety),
+            ResolveSourceIdentityPath(world, polity, founderSociety),
             summary.MaturityBand,
             readiness?.SupportStability ?? SupportStabilityState.Collapsed,
             readiness?.DemographicViability ?? DemographicViabilityState.Critical,
@@ -770,7 +770,34 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             readiness?.WarningReasons ?? Array.Empty<string>(),
             failedTruthFloors,
             summary.Viability?.IsViable == true,
-            summary.Viability?.SupportsNormalEntry == true);
+            summary.Viability?.SupportsNormalEntry == true)
+        {
+            SourcePeopleId = polity.Id,
+            SourcePolityId = polity.Id,
+            SourceSocietyId = founderSociety?.Id,
+            CurrentFootprintRegionCount = readiness?.CurrentTruthSnapshot?.FootprintRegionCount ?? history?.SpatialHistoryRollup.CurrentOccupiedRegionCount ?? 0,
+            CurrentHomeClusterRegionId = readiness?.CurrentTruthSnapshot?.HomeClusterRegionId ?? polity.RegionId,
+            CurrentSupportAdequacy = readiness?.CurrentTruthSnapshot?.SupportAdequacy ?? history?.SupportHistoryRollup.CurrentSupportAdequacy ?? 0.0,
+            CurrentFootprintSupportRatio = readiness?.CurrentTruthSnapshot?.FootprintSupportRatio ?? 0.0,
+            CurrentMonthSupportPasses = readiness?.CurrentTruthSnapshot?.SupportPasses ?? false,
+            CurrentMonthCoherent = readiness?.CurrentTruthSnapshot?.IsCoherentMonth ?? false,
+            CurrentMonthStrongCoherent = readiness?.CurrentTruthSnapshot?.IsStrongCoherentMonth ?? false,
+            CurrentMonthScattered = readiness?.CurrentTruthSnapshot?.IsScatteredMonth ?? false,
+            CurrentMonthRooted = readiness?.CurrentTruthSnapshot?.IsRootedMonth ?? false,
+            CurrentMonthDeeplyRooted = readiness?.CurrentTruthSnapshot?.IsDeeplyRootedMonth ?? false,
+            CurrentMonthCatastrophicScatterVeto = readiness?.CurrentTruthSnapshot?.CatastrophicScatterVeto ?? false,
+            SupportRuleResult = readiness?.SupportRuleResult ?? string.Empty,
+            MovementRuleResult = readiness?.MovementRuleResult ?? string.Empty,
+            RootednessRuleResult = readiness?.RootednessRuleResult ?? string.Empty,
+            ContinuityRuleResult = readiness?.ContinuityRuleResult ?? string.Empty,
+            Rollup6Months = readiness?.Rolling6Months,
+            Rollup12Months = readiness?.Rolling12Months,
+            Rollup24Months = readiness?.Rolling24Months,
+            BlockerTraces = readiness?.BlockerTraces ?? Array.Empty<CandidateRuleTrace>(),
+            FailedDueToCurrentRawState = readiness?.FailedDueToCurrentRawState ?? false,
+            FailedDueToRollingHistory = readiness?.FailedDueToRollingHistory ?? false,
+            FailedDueToMixedTruthSources = readiness?.FailedDueToMixedTruthSources ?? false
+        };
     }
 
     private static PrehistoryCandidateDiagnosticsSummary SummarizeDiagnostics(
@@ -795,7 +822,13 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             Increment(domainCounts, ResolveFailureDomain(diagnostic));
         }
 
-        return new PrehistoryCandidateDiagnosticsSummary(rejectionCounts, domainCounts, sourceCounts);
+        return new PrehistoryCandidateDiagnosticsSummary(rejectionCounts, domainCounts, sourceCounts)
+        {
+            PassedTruthFloorButRejectedLaterCount = diagnostics.Count(diagnostic => diagnostic.TruthFloorPassed && !diagnostic.IsViable),
+            FailedDueToCurrentMonthCount = diagnostics.Count(diagnostic => diagnostic.FailedDueToCurrentRawState && !diagnostic.FailedDueToRollingHistory),
+            FailedDueToRollingHistoryCount = diagnostics.Count(diagnostic => diagnostic.FailedDueToRollingHistory && !diagnostic.FailedDueToCurrentRawState),
+            FailedDueToMixedTruthSourcesCount = diagnostics.Count(diagnostic => diagnostic.FailedDueToMixedTruthSources)
+        };
     }
 
     private static string ResolveFailureDomain(PrehistoryCandidateDiagnostics diagnostic)
@@ -811,14 +844,18 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         return "other";
     }
 
-    private static string ResolveSourceIdentityPath(Polity polity, EmergingSociety? founderSociety)
+    private static string ResolveSourceIdentityPath(World world, Polity polity, EmergingSociety? founderSociety)
     {
-        bool hasFounderSociety = founderSociety is not null;
+        bool hasFounderSociety = founderSociety is not null && HasActiveSocietalSubstrate(world, founderSociety);
         bool hasSettlement = polity.SettlementCount > 0;
         if (hasFounderSociety && hasSettlement) return "society-first";
         if (hasSettlement) return "settlement-first";
         return "polity-first";
     }
+
+    private static bool HasActiveSocietalSubstrate(World world, EmergingSociety society)
+        => !society.IsCollapsed
+            || (society.FounderPolityId.HasValue && world.Polities.Any(polity => polity.Id == society.FounderPolityId.Value && polity.Population > 0));
 
     private static void Increment(IDictionary<string, int> counts, string key)
         => counts[key] = counts.TryGetValue(key, out int current) ? current + 1 : 1;

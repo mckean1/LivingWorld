@@ -82,8 +82,8 @@ public static class StartupOutcomeDiagnosticsEvaluator
         return new StartupOutcomeDiagnostics(
             world.SentientGroups.Count(group => !group.IsCollapsed && !group.IsFallbackCreated),
             world.SentientGroups.Count(group => !group.IsCollapsed && group.IsFallbackCreated),
-            world.Societies.Count(society => !society.IsCollapsed && !society.IsFallbackCreated),
-            world.Societies.Count(society => !society.IsCollapsed && society.IsFallbackCreated),
+            world.Societies.Count(society => HasActiveSocietalSubstrate(world, society) && !society.IsFallbackCreated),
+            world.Societies.Count(society => HasActiveSocietalSubstrate(world, society) && society.IsFallbackCreated),
             world.SocialSettlements.Count(settlement => !settlement.IsAbandoned && !settlement.IsFallbackCreated),
             world.SocialSettlements.Count(settlement => !settlement.IsAbandoned && settlement.IsFallbackCreated),
             world.Polities.Count(polity => polity.Population > 0 && !polity.IsFallbackCreated),
@@ -225,4 +225,8 @@ public static class StartupOutcomeDiagnosticsEvaluator
             _ => "The world remained below truthful entry readiness."
         };
     }
+
+    private static bool HasActiveSocietalSubstrate(World world, EmergingSociety society)
+        => !society.IsCollapsed
+            || (society.FounderPolityId.HasValue && world.Polities.Any(polity => polity.Id == society.FounderPolityId.Value && polity.Population > 0));
 }

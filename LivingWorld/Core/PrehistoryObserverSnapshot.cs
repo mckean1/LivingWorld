@@ -418,7 +418,8 @@ public sealed class PrehistoryObserverSnapshot
         IReadOnlyList<RegionEvaluationSnapshot> regionEvaluations,
         IReadOnlyList<NeighborContextSnapshot> neighborContexts,
         string summary,
-        IReadOnlyList<string>? notes = null)
+        IReadOnlyList<string>? notes = null,
+        IReadOnlyDictionary<int, IReadOnlyList<PeopleMonthlySnapshot>>? rawPeopleHistoryById = null)
     {
         WorldYear = worldYear;
         WorldMonth = worldMonth;
@@ -427,6 +428,7 @@ public sealed class PrehistoryObserverSnapshot
         NeighborContexts = neighborContexts;
         Summary = summary;
         Notes = notes ?? Array.Empty<string>();
+        RawPeopleHistoryById = rawPeopleHistoryById ?? new Dictionary<int, IReadOnlyList<PeopleMonthlySnapshot>>();
     }
 
     public int WorldYear { get; }
@@ -436,4 +438,10 @@ public sealed class PrehistoryObserverSnapshot
     public IReadOnlyList<NeighborContextSnapshot> NeighborContexts { get; }
     public string Summary { get; }
     public IReadOnlyList<string> Notes { get; }
+    public IReadOnlyDictionary<int, IReadOnlyList<PeopleMonthlySnapshot>> RawPeopleHistoryById { get; }
+
+    public IReadOnlyList<PeopleMonthlySnapshot> GetRawPeopleHistory(int peopleId)
+        => RawPeopleHistoryById.TryGetValue(peopleId, out IReadOnlyList<PeopleMonthlySnapshot>? history)
+            ? history
+            : Array.Empty<PeopleMonthlySnapshot>();
 }

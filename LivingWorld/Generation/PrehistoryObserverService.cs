@@ -33,6 +33,7 @@ public sealed class PrehistoryObserverService
         List<PeopleHistoryWindowSnapshot> peopleHistoryWindows = [];
         List<RegionEvaluationSnapshot> regionEvaluations = [];
         List<NeighborContextSnapshot> neighborContexts = [];
+        Dictionary<int, IReadOnlyList<PeopleMonthlySnapshot>> rawPeopleHistoryById = new();
 
         foreach (Polity polity in world.Polities
                      .Where(candidate => candidate.Population > 0)
@@ -44,6 +45,7 @@ public sealed class PrehistoryObserverService
                 continue;
             }
 
+            rawPeopleHistoryById[polity.Id] = history;
             PeopleHistoryWindowSnapshot peopleHistory = _historyBuilder.Build(history);
             peopleHistoryWindows.Add(peopleHistory);
             regionEvaluations.AddRange(_regionBuilder.Build(context, polity, peopleHistory, history));
@@ -57,7 +59,8 @@ public sealed class PrehistoryObserverService
             regionEvaluations,
             neighborContexts,
             $"Observer snapshot for {peopleHistoryWindows.Count} people at year {context.World.Time.Year}, month {context.World.Time.Month}.",
-            [$"region_contexts:{regionEvaluations.Count}", $"neighbor_contexts:{neighborContexts.Count}"]);
+            [$"region_contexts:{regionEvaluations.Count}", $"neighbor_contexts:{neighborContexts.Count}"],
+            rawPeopleHistoryById);
     }
 
     private List<PeopleMonthlySnapshot> GetObservedHistory(ObserverWorldContext context, Polity polity)

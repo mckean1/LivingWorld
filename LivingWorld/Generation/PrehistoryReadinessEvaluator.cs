@@ -39,11 +39,50 @@ public sealed record CandidateReadinessEvaluation(
     IReadOnlyList<string> WarningReasons,
     string Summary)
 {
+    public CandidateCurrentMonthTruthSnapshot? CurrentTruthSnapshot { get; init; }
+    public CandidateRollingTruthSnapshot? Rolling6Months { get; init; }
+    public CandidateRollingTruthSnapshot? Rolling12Months { get; init; }
+    public CandidateRollingTruthSnapshot? Rolling24Months { get; init; }
+    public IReadOnlyList<CandidateRuleTrace> BlockerTraces { get; init; } = Array.Empty<CandidateRuleTrace>();
+    public string SupportRuleResult { get; init; } = string.Empty;
+    public string MovementRuleResult { get; init; } = string.Empty;
+    public string RootednessRuleResult { get; init; } = string.Empty;
+    public string ContinuityRuleResult { get; init; } = string.Empty;
+    public bool FailedDueToCurrentRawState { get; init; }
+    public bool FailedDueToRollingHistory { get; init; }
+    public bool FailedDueToMixedTruthSources { get; init; }
+
     public string PrimaryBlockingReason
         => HardVetoReasons.FirstOrDefault()
             ?? BlockingReasons.FirstOrDefault()
             ?? "candidate_not_ready";
 }
+
+public sealed record CandidateCurrentMonthTruthSnapshot(
+    int FootprintRegionCount,
+    int HomeClusterRegionId,
+    double HomeClusterShare,
+    double SupportAdequacy,
+    double FootprintSupportRatio,
+    double ConnectedFootprintShare,
+    double RouteCoverageShare,
+    double ScatterShare,
+    int OldestSettlementAgeMonths,
+    bool SupportPasses,
+    bool IsCoherentMonth,
+    bool IsStrongCoherentMonth,
+    bool IsScatteredMonth,
+    bool IsRootedMonth,
+    bool IsDeeplyRootedMonth,
+    bool IsAnchoredThisMonth,
+    bool IsStrongAnchoredThisMonth,
+    bool SupportCrashThisMonth,
+    bool DisplacementThisMonth,
+    bool SettlementLossThisMonth,
+    bool CollapseMarkerThisMonth,
+    bool ActiveIdentityBreakNow,
+    bool CatastrophicScatterVeto,
+    IReadOnlyList<int> OccupiedRegionIds);
 
 public sealed class PrehistoryReadinessEvaluation
 {
@@ -132,7 +171,7 @@ public sealed class PrehistoryReadinessEvaluator
                 continue;
             }
 
-            IReadOnlyList<PeopleMonthlySnapshot> rawHistory = world.PrehistoryObserver.GetPeopleHistory(polity.Id);
+            IReadOnlyList<PeopleMonthlySnapshot> rawHistory = observerSnapshot.GetRawPeopleHistory(polity.Id);
             evaluations[polity.Id] = PrehistoryReadinessEvidenceEvaluator.EvaluateCandidate(
                 polity,
                 historyWindow,
@@ -706,37 +745,85 @@ public static class PrehistoryReadinessEvidenceEvaluator
 
         DemographicViabilityState demographicViability = ClassifyDemographicViability(current, historyWindow.DemographyHistoryRollup, minimumPopulation);
         PopulationTrendState populationTrend = ClassifyPopulationTrend(last6, last12, historyWindow.DemographyHistoryRollup);
-        bool currentSupportPasses = IsSupportedMonth(current);
         bool sparseHistory = rawHistory.Count < 6;
         bool settlementDurabilityPasses = historyWindow.SettlementHistoryRollup.SettlementPresentMonthsLast12Months >= 6
             && historyWindow.SettlementHistoryRollup.EstablishedSettlementMonthsLast12Months >= 4;
         bool politicalDurabilityPasses = polity.YearsSinceFounded >= minimumPolityAgeYears
             && historyWindow.PoliticalHistoryRollup.OrganizedMonthsLast12Months >= 6;
+        double footprintSupportRatio = current.OccupiedRegionIds.Count == 0
+            ? current.SupportAdequacy
+            : current.SupportAdequacy / current.OccupiedRegionIds.Count;
+        bool currentSupportPasses = IsSupportedMonth(current);
+        bool currentCoherentMonth = IsCoherentMonth(current);
+        bool currentStrongCoherentMonth = IsStrongCoherentMonth(current);
+        bool currentScatteredMonth = IsScatteredMonth(current);
+        bool currentRootedMonth = IsRootedMonth(current);
+        bool currentDeeplyRootedMonth = IsDeeplyRootedMonth(current);
+
+        CandidateCurrentMonthTruthSnapshot currentTruthSnapshot = new(
+            current.OccupiedRegionIds.Count,
+            current.HomeClusterRegionId,
+            current.HomeClusterShare,
+            current.SupportAdequacy,
+            footprintSupportRatio,
+            current.ConnectedFootprintShare,
+            current.RouteCoverageShare,
+            current.ScatterShare,
+            current.OldestSettlementAgeMonths,
+            currentSupportPasses,
+            currentCoherentMonth,
+            currentStrongCoherentMonth,
+            currentScatteredMonth,
+            currentRootedMonth,
+            currentDeeplyRootedMonth,
+            current.IsAnchoredThisMonth,
+            current.IsStrongAnchoredThisMonth,
+            current.SupportCrashThisMonth,
+            current.DisplacementThisMonth,
+            current.SettlementLossThisMonth,
+            current.CollapseMarkerThisMonth,
+            current.ActiveIdentityBreakNow,
+            current.ScatterShare >= 0.60 || current.ConnectedFootprintShare < 0.45 || current.RouteCoverageShare < 0.30,
+            current.OccupiedRegionIds.ToArray());
+        CandidateRollingTruthSnapshot rollup6 = BuildRollingTruthSnapshot(last6, 6);
+        CandidateRollingTruthSnapshot rollup12 = BuildRollingTruthSnapshot(last12, 12);
+        CandidateRollingTruthSnapshot rollup24 = BuildRollingTruthSnapshot(last24, 24);
+
+        string supportRuleResult = $"supportPasses={currentSupportPasses}; support={current.SupportAdequacy:F2}; food={current.FoodSatisfaction:F2}; starvingSettlements={current.StarvingSettlementCount}; supportCrash={current.SupportCrashThisMonth}";
+        string continuityRuleResult = $"continuity={health.Continuity.State}; observedMonths={historyWindow.SocialContinuityHistoryRollup.ObservedContinuousIdentityMonths}; monthsSinceBreak={historyWindow.SocialContinuityHistoryRollup.MonthsSinceIdentityBreak}; breaks12={historyWindow.SocialContinuityHistoryRollup.IdentityBreakCountLast12Months}; sparseHistory={sparseHistory}; activeIdentityBreak={current.ActiveIdentityBreakNow}";
+        string movementRuleResult = $"movement={health.MovementCoherence.State}; currentStrong={currentStrongCoherentMonth}; currentCoherent={currentCoherentMonth}; currentScattered={currentScatteredMonth}; coherent6={rollup6.CoherentMonths}; coherent12={rollup12.CoherentMonths}; strong12={rollup12.StrongCoherentMonths}; scattered6={rollup6.ScatteredMonths}; scattered12={rollup12.ScatteredMonths}; connected={current.ConnectedFootprintShare:F2}; routes={current.RouteCoverageShare:F2}; scatter={current.ScatterShare:F2}; supportPerRegion={footprintSupportRatio:F2}";
+        string rootednessRuleResult = $"rootedness={health.Rootedness.State}; currentRooted={currentRootedMonth}; currentDeeplyRooted={currentDeeplyRootedMonth}; anchored12={rollup12.AnchoredMonths}; strongAnchored12={rollup12.StrongAnchoredMonths}; establishedSettlements12={rollup12.EstablishedSettlementMonths}; homeCluster={current.HomeClusterShare:F2}; avgHomeCluster12={rollup12.AverageHomeClusterShare:F2}; displacements6={rollup6.DisplacementMonths}; displacements12={rollup12.DisplacementMonths}";
 
         List<string> hardVetoes = [];
+        List<CandidateRuleTrace> blockerTraces = [];
         if (IsSevereUnsupportedMonth(current))
         {
             hardVetoes.Add("severe_unsupported_current_month");
+            blockerTraces.Add(new CandidateRuleTrace("severe_unsupported_current_month", "support", "current_raw_state", supportRuleResult));
         }
 
         if (current.ActiveIdentityBreakNow)
         {
             hardVetoes.Add("active_identity_break");
+            blockerTraces.Add(new CandidateRuleTrace("active_identity_break", "continuity", "current_raw_state", continuityRuleResult));
         }
 
         if (current.ScatterShare >= 0.60 || current.ConnectedFootprintShare < 0.45 || current.RouteCoverageShare < 0.30)
         {
             hardVetoes.Add("catastrophically_scattered_current_footprint");
+            blockerTraces.Add(new CandidateRuleTrace("catastrophically_scattered_current_footprint", "movement", "current_raw_state", movementRuleResult));
         }
 
         if (current.Population < minimumPopulation)
         {
             hardVetoes.Add("population_below_minimum_demographic_viability");
+            blockerTraces.Add(new CandidateRuleTrace("population_below_minimum_demographic_viability", "demography", "current_raw_state", $"population={current.Population}; minimumPopulation={minimumPopulation}"));
         }
 
         if (current.DisplacementThisMonth && last3.Any(snapshot => snapshot.DisplacementThisMonth) && !HasSpatialRestabilization(last6))
         {
             hardVetoes.Add("catastrophic_unresolved_displacement");
+            blockerTraces.Add(new CandidateRuleTrace("catastrophic_unresolved_displacement", "rootedness", "both", rootednessRuleResult));
         }
 
         List<string> blockers = [];
@@ -744,6 +831,7 @@ public static class PrehistoryReadinessEvidenceEvaluator
         if (!currentSupportPasses)
         {
             blockers.Add("current_support_must_pass");
+            blockerTraces.Add(new CandidateRuleTrace("current_support_must_pass", "support", "current_raw_state", supportRuleResult));
         }
 
         bool continuityPasses = health.Continuity.State >= ContinuityState.Established
@@ -751,6 +839,7 @@ public static class PrehistoryReadinessEvidenceEvaluator
         if (!continuityPasses)
         {
             blockers.Add("continuity_below_established");
+            blockerTraces.Add(new CandidateRuleTrace("continuity_below_established", "continuity", "rolling_history", continuityRuleResult));
         }
 
         bool movementOrRootingPasses = health.MovementCoherence.State >= MovementCoherenceState.Coherent
@@ -758,6 +847,16 @@ public static class PrehistoryReadinessEvidenceEvaluator
         if (!movementOrRootingPasses)
         {
             blockers.Add("movement_or_rooting_below_floor");
+            string movementSource = (currentCoherentMonth || currentRootedMonth)
+                ? "rolling_history"
+                : (currentScatteredMonth || current.DisplacementThisMonth)
+                    ? "both"
+                    : "current_raw_state";
+            blockerTraces.Add(new CandidateRuleTrace(
+                "movement_or_rooting_below_floor",
+                "movement_rootedness",
+                movementSource,
+                $"{movementRuleResult}; {rootednessRuleResult}"));
         }
 
         if (!settlementDurabilityPasses)
@@ -794,6 +893,9 @@ public static class PrehistoryReadinessEvidenceEvaluator
                 : "Meets hard viability truth but remains thin for a normal stop."
             : $"Blocked: {(hardVetoes.FirstOrDefault() ?? blockers.FirstOrDefault() ?? "candidate_not_ready")}.";
 
+        bool failedDueToCurrentRawState = blockerTraces.Any(trace => trace.Source is "current_raw_state" or "both");
+        bool failedDueToRollingHistory = blockerTraces.Any(trace => trace.Source is "rolling_history" or "both");
+
         return new CandidateReadinessEvaluation(
             polity.Id,
             polity.Name,
@@ -813,7 +915,21 @@ public static class PrehistoryReadinessEvidenceEvaluator
             hardVetoes,
             blockers,
             warnings,
-            summary);
+            summary)
+        {
+            CurrentTruthSnapshot = currentTruthSnapshot,
+            Rolling6Months = rollup6,
+            Rolling12Months = rollup12,
+            Rolling24Months = rollup24,
+            BlockerTraces = blockerTraces,
+            SupportRuleResult = supportRuleResult,
+            MovementRuleResult = movementRuleResult,
+            RootednessRuleResult = rootednessRuleResult,
+            ContinuityRuleResult = continuityRuleResult,
+            FailedDueToCurrentRawState = !viable && failedDueToCurrentRawState,
+            FailedDueToRollingHistory = !viable && failedDueToRollingHistory,
+            FailedDueToMixedTruthSources = !viable && failedDueToCurrentRawState && failedDueToRollingHistory
+        };
     }
 
     public static bool IsSupportedMonth(PeopleMonthlySnapshot snapshot)

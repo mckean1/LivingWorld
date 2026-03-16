@@ -19,8 +19,8 @@ public static class PhaseCReadinessEvaluator
         int organicSentientGroupCount = world.SentientGroups.Count(group => !group.IsCollapsed && !group.IsFallbackCreated);
         int fallbackSentientGroupCount = sentientGroupCount - organicSentientGroupCount;
 
-        int persistentSocietyCount = world.Societies.Count(society => !society.IsCollapsed);
-        int organicPersistentSocietyCount = world.Societies.Count(society => !society.IsCollapsed && !society.IsFallbackCreated);
+        int persistentSocietyCount = world.Societies.Count(society => HasActiveSocietalSubstrate(world, society));
+        int organicPersistentSocietyCount = world.Societies.Count(society => HasActiveSocietalSubstrate(world, society) && !society.IsFallbackCreated);
         int fallbackPersistentSocietyCount = persistentSocietyCount - organicPersistentSocietyCount;
 
         int settlementCount = world.SocialSettlements.Count(settlement => !settlement.IsAbandoned);
@@ -130,4 +130,8 @@ public static class PhaseCReadinessEvaluator
             historicalEventDensity,
             failures);
     }
+
+    private static bool HasActiveSocietalSubstrate(World world, EmergingSociety society)
+        => !society.IsCollapsed
+            || (society.FounderPolityId.HasValue && world.Polities.Any(polity => polity.Id == society.FounderPolityId.Value && polity.Population > 0));
 }
