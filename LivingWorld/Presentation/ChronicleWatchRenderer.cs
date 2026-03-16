@@ -137,11 +137,10 @@ public sealed class ChronicleWatchRenderer : IDisposable
         string view = WatchViewCatalog.DescribeView(uiState.ActiveView);
         if (runtime.CurrentPhase == PrehistoryRuntimePhase.GenerationFailure)
         {
-            lines.Add(" World Generation Failure");
-            string failureSummary = runtime.LastCheckpointOutcome?.Summary ?? "No viable starts surfaced.";
+            lines.Add(" World Generation");
+            lines.Add(" Outcome: No truthful player start could be produced.");
             lines.Add($" Status: {runtime.ActivitySummary}");
-            lines.Add($" Details: {failureSummary}");
-            lines.Add(" Note: this is an honest failure, no viable candidates were produced.");
+            lines.Add(" Note: The simulation stopped honestly rather than inventing a start.");
             lines.Add(border);
             return lines;
         }

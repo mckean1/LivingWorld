@@ -107,6 +107,29 @@ public sealed class CheckpointCoordinatorTests
         Assert.Contains(candidate, world.PlayerEntryCandidates);
     }
 
+    [Fact]
+    public void Evaluate_RefreshesRuntimeAgeFromCurrentWorldStateBeforeRecordingOutcome()
+    {
+        World world = CreatePrehistoryWorld();
+        world.Time.Reset(900, 1);
+        world.StartupAgeConfiguration = StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld);
+        world.PrehistoryRuntime.WorldAgeYears = 899;
+
+        StubCheckpointAdapter adapter = new(PrehistoryCheckpointOutcomeKind.ForceEnterFocalSelection, CreateCandidate(6));
+        PrehistoryCheckpointCoordinator coordinator = CreateCoordinator(adapter);
+
+        coordinator.Evaluate(
+            world,
+            phaseLabel: "Testing",
+            subphaseLabel: "Forced",
+            activitySummary: "Activity",
+            completionSummary: "completion",
+            allowEmergencyFallback: true);
+
+        Assert.Equal(world.Time.Year, world.PrehistoryRuntime.WorldAgeYears);
+        Assert.Equal(900, world.PrehistoryRuntime.WorldAgeYears);
+    }
+
     private static PrehistoryCheckpointCoordinator CreateCoordinator(ICheckpointEvaluationAdapter adapter)
         => new(
             new PrehistoryRuntimeOrchestrator(),

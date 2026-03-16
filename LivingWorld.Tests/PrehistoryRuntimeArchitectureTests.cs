@@ -98,6 +98,18 @@ public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<Prehistor
     }
 
     [Fact]
+    public void GenerationFailureKeepsRuntimeWorldAgeSyncedWithDisplayedWorldTime()
+    {
+        World world = fixture.CreateImpossibleEntryWorld(seed: 19);
+
+        Assert.Equal(world.Time.Year, world.PrehistoryRuntime.WorldAgeYears);
+
+        IReadOnlyList<string> lines = StartupProgressRenderer.BuildDisplayLines(world, includeDiagnostics: false);
+
+        Assert.Contains(lines, line => line.Contains($"World Age: {world.Time.Year:N0} years", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void StartupProgressRenderer_UsesRuntimeDetailViewWithoutNeedingLegacyStartupStage()
     {
         World world = fixture.CreateRuntimeDetailViewWorld();

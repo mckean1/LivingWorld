@@ -20,12 +20,37 @@ class Program
 
         int seed = ResolveSeed(programOptions.Seed);
         SimulationOptions options = CreateSimulationOptions(programOptions);
-        using StartupProgressRenderer? startupProgressRenderer = options.OutputMode == OutputMode.Watch
-            ? new StartupProgressRenderer(options)
-            : null;
-        WorldGenerator generator = new(seed, progressRenderer: startupProgressRenderer);
-        World world = generator.Generate();
-        startupProgressRenderer?.ClearForHandoff();
+        World world;
+        string worldGenerationLogPath;
+        using (WorldGenerationLogWriter worldGenerationLogWriter = new())
+        {
+            using WorldGenerationLogLifetime lifetime = new(worldGenerationLogWriter);
+            worldGenerationLogWriter.RecordSessionStart(seed);
+            using StartupProgressRenderer? startupProgressRenderer = options.OutputMode == OutputMode.Watch
+                ? new StartupProgressRenderer(options)
+                : null;
+
+            try
+            {
+                WorldGenerator generator = new(seed, progressRenderer: startupProgressRenderer, worldGenerationLogWriter: worldGenerationLogWriter);
+                world = generator.Generate();
+                startupProgressRenderer?.ClearForHandoff();
+                worldGenerationLogWriter.RecordCompleted(world);
+            }
+            catch (OperationCanceledException exception)
+            {
+                worldGenerationLogWriter.RecordInterrupted("World generation was cancelled.", exception);
+                throw;
+            }
+            catch (Exception exception)
+            {
+                worldGenerationLogWriter.RecordInterrupted("World generation ended because of an unhandled exception.", exception);
+                throw;
+            }
+
+            worldGenerationLogPath = Path.GetFullPath(worldGenerationLogWriter.FilePath);
+        }
+
         using Simulation simulation = new(world, options);
 
         if (ShouldPromptBeforeStart(options))
@@ -35,6 +60,7 @@ class Program
         }
 
         simulation.RunMonths(programOptions.YearsToSimulate * monthsInYear);
+        Console.WriteLine($"World generation log: {worldGenerationLogPath}");
         if (options.WriteStructuredHistory)
         {
             Console.WriteLine($"History file: {Path.GetFullPath(options.HistoryFilePath)}");
@@ -73,6 +99,35 @@ class Program
 
     internal static int ResolveSeed(int? requestedSeed)
         => requestedSeed ?? Random.Shared.Next(1, int.MaxValue);
+
+    private sealed class WorldGenerationLogLifetime : IDisposable
+    {
+        private readonly WorldGenerationLogWriter _writer;
+        private readonly ConsoleCancelEventHandler _cancelKeyPressHandler;
+        private readonly EventHandler _processExitHandler;
+        private readonly UnhandledExceptionEventHandler _unhandledExceptionHandler;
+
+        public WorldGenerationLogLifetime(WorldGenerationLogWriter writer)
+        {
+            _writer = writer;
+            _cancelKeyPressHandler = (_, _) => _writer.RecordInterrupted("World generation was interrupted by Ctrl+C.");
+            _processExitHandler = (_, _) => _writer.RecordInterrupted("World generation ended during process shutdown.");
+            _unhandledExceptionHandler = (_, eventArgs) => _writer.RecordInterrupted(
+                "World generation ended during an unhandled exception.",
+                eventArgs.ExceptionObject as Exception);
+
+            Console.CancelKeyPress += _cancelKeyPressHandler;
+            AppDomain.CurrentDomain.ProcessExit += _processExitHandler;
+            AppDomain.CurrentDomain.UnhandledException += _unhandledExceptionHandler;
+        }
+
+        public void Dispose()
+        {
+            Console.CancelKeyPress -= _cancelKeyPressHandler;
+            AppDomain.CurrentDomain.ProcessExit -= _processExitHandler;
+            AppDomain.CurrentDomain.UnhandledException -= _unhandledExceptionHandler;
+        }
+    }
 
     private static void PrintUsage()
     {

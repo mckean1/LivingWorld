@@ -19,9 +19,14 @@ public sealed class WorldGenerator
     private readonly WorldGenerationSettings _settings;
     private readonly PrehistoryRuntimeOrchestrator _prehistoryRuntimeOrchestrator = new();
     private readonly StartupProgressRenderer? _progressRenderer;
+    private readonly WorldGenerationLogWriter? _worldGenerationLogWriter;
     private readonly PrehistoryCheckpointCoordinator _checkpointCoordinator;
 
-    public WorldGenerator(int seed, WorldGenerationSettings? settings = null, StartupProgressRenderer? progressRenderer = null)
+    public WorldGenerator(
+        int seed,
+        WorldGenerationSettings? settings = null,
+        StartupProgressRenderer? progressRenderer = null,
+        WorldGenerationLogWriter? worldGenerationLogWriter = null)
     {
         _seed = seed;
         _random = new Random(seed);
@@ -29,6 +34,7 @@ public sealed class WorldGenerator
         _regionNames = new Queue<string>(BuildShuffledNames(WorldGenerationCatalog.CreateRegionNames()));
         _primitiveTemplates = WorldGenerationCatalog.CreatePrimitiveLineageTemplates();
         _progressRenderer = progressRenderer;
+        _worldGenerationLogWriter = worldGenerationLogWriter;
         _checkpointCoordinator = new(
             _prehistoryRuntimeOrchestrator,
             new PrehistoryCheckpointEvaluationAdapter(_settings));
@@ -45,7 +51,7 @@ public sealed class WorldGenerator
         {
             World attemptWorld = attempt == 0
                 ? GenerateSingleAttempt(attempt, priorRegenerationReasons)
-                : new WorldGenerator(DeriveAttemptSeed(attempt), _settings, _progressRenderer)
+                : new WorldGenerator(DeriveAttemptSeed(attempt), _settings, _progressRenderer, _worldGenerationLogWriter)
                     .GenerateSingleAttempt(attempt, priorRegenerationReasons);
             GenerationAttemptDiagnosticsSummary attemptSummary = WorldGenerationDiagnosticsEvaluator.BuildAttemptSummary(attemptWorld);
             attemptHistory.Add(attemptSummary);
@@ -601,7 +607,11 @@ public sealed class WorldGenerator
     }
 
     private void ReportProgress(World world)
-        => _progressRenderer?.Render(world);
+    {
+        _prehistoryRuntimeOrchestrator.RefreshAge(world);
+        _worldGenerationLogWriter?.RecordWorldState(world);
+        _progressRenderer?.Render(world);
+    }
 
     private int DeriveAttemptSeed(int attempt)
         => MixSeed(_seed, attempt, 6151);
@@ -638,6 +648,7 @@ public sealed class WorldGenerator
         IReadOnlyList<string> lines = WorldGenerationDiagnosticsFormatter.BuildAttemptSummaryLines(summary, willRegenerate);
         world.Prehistory.LegacyCompatibility.ReplaceStartupDiagnostics(lines);
         world.PrehistoryRuntime.TransitionSummary = WorldGenerationDiagnosticsFormatter.BuildAttemptTransitionSummary(summary, willRegenerate);
+        _worldGenerationLogWriter?.RecordAttemptSummary(world, summary, willRegenerate);
         if (_progressRenderer is not null)
         {
             ReportProgress(world);
@@ -658,6 +669,7 @@ public sealed class WorldGenerator
 
     private void EmitFinalFailureDiagnostics(World world, GenerationFailurePostmortem postmortem)
     {
+        _worldGenerationLogWriter?.RecordFinalFailure(postmortem);
         if (_progressRenderer is not null)
         {
             ReportProgress(world);

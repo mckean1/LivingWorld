@@ -8,7 +8,7 @@ namespace LivingWorld.Tests;
 public sealed class StartupProgressRendererTests
 {
     [Fact]
-    public void BuildDisplayLines_ShowsPhaseSubphaseAndAgeContext()
+    public void BuildDisplayLines_ShowsPlayerFacingWorldGenerationStructure()
     {
         World world = new(new WorldTime(180, 1))
         {
@@ -28,18 +28,22 @@ public sealed class StartupProgressRendererTests
 
         IReadOnlyList<string> lines = StartupProgressRenderer.BuildDisplayLines(world, includeDiagnostics: false);
 
-        Assert.Contains(" Phase: Biological Divergence | Letting lineages branch, adapt, die out, and recolonize", lines);
-        Assert.Contains(" Subphase: Diverging regional lineages", lines);
-        Assert.Contains(" Activity: Diverging isolated lineages into new branches and adaptation paths.", lines);
+        Assert.Contains(" WORLD GENERATION", lines);
+        Assert.Contains(" Era / Stage: Age of Divergence", lines);
         Assert.Contains(lines, line => line.Contains("World Age: 180 years", StringComparison.Ordinal));
-        Assert.Contains(" Transition: Phase A complete: ecosystems stabilized.", lines);
+        Assert.Contains(" Current Outlook", lines);
+        Assert.Contains(lines, line => line.StartsWith(" Status: ", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("Preset:", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("Window:", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("Attempt:", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("Checkpoint:", StringComparison.Ordinal));
     }
 
     [Fact]
-    public void BuildDisplayLines_ShowsCandidateMetricsWithoutDuplicateLines()
+    public void BuildDisplayLines_KeepsCandidateReviewPlayerFacing()
     {
         World world = new(new WorldTime(920, 1));
-        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.WorldReadinessReview;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.SocialEmergence;
         world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.CandidateEvaluation;
         world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
         world.PrehistoryRuntime.WorldAgeYears = 920;
@@ -78,37 +82,13 @@ public sealed class StartupProgressRendererTests
         world.PlayerEntryCandidates.Add(new PlayerEntryCandidateSummary(1, "River Hearth", 10, "Humans", 10, 0, "Green Basin", 12, 920, 2, "mid-sized", "Mixed hunter-forager", "Stable", "paired hearths", "river valley", "deep branch", "Fire", "Fire", "expanded river camps", "good water", 0.92, StabilityBand.Stable, false));
 
         IReadOnlyList<string> lines = StartupProgressRenderer.BuildDisplayLines(world, includeDiagnostics: false);
-        List<string> meaningfulLines = lines
-            .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("=", StringComparison.Ordinal))
-            .ToList();
 
-        Assert.Contains(meaningfulLines, line => line.Contains("Candidates: viable 3 | surfaced 3 | organic 3 | fallback 0", StringComparison.Ordinal));
-        Assert.Equal(meaningfulLines.Count, meaningfulLines.Distinct(StringComparer.Ordinal).Count());
-    }
-
-    [Fact]
-    public void BuildDisplayLines_DistinguishesViableDepthFromSurfacedPool()
-    {
-        World world = new(new WorldTime(1200, 1));
-        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.WorldReadinessReview;
-        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.CandidateEvaluation;
-        world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
-        world.PrehistoryRuntime.WorldAgeYears = 1200;
-        world.PrehistoryRuntime.AreReadinessChecksActive = true;
-        world.WorldReadinessReport = new WorldReadinessReport(
-            new WorldAgeGateReport(1200, 700, 1000, 1400, PrehistoryAgeGateStatus.TargetAgeReached),
-            PrehistoryCheckpointOutcomeKind.EnterFocalSelection,
-            WorldReadinessReport.Empty.CategoryResults,
-            new CandidatePoolReadinessSummary(5, 3, 4, 5, 0, 3, 3, 4, 3, false, "5 viable starts discovered; 3 surfaced for selection."),
-            Array.Empty<string>(),
-            Array.Empty<string>(),
-            false,
-            false,
-            new WorldReadinessSummaryData("World ready for focal selection.", "5 viable starts (3 surfaced)", "Readiness gates passed for a truthful normal stop.", 6, 0, 0));
-
-        IReadOnlyList<string> lines = StartupProgressRenderer.BuildDisplayLines(world, includeDiagnostics: false);
-
-        Assert.Contains(lines, line => line.Contains("Candidates: viable 5 | surfaced 3 | organic 5 | fallback 0", StringComparison.Ordinal));
+        Assert.Contains(" Era / Stage: Approaching First Starts", lines);
+        Assert.Contains(lines, line => line.Contains("truthful starts are being reviewed", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Potential starts exist, but they still need to pass the final review.", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Promising starts exist, but the world still needs review.", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("Candidates:", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("Readiness:", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -140,6 +120,32 @@ public sealed class StartupProgressRendererTests
         startupRenderer.Render(world);
 
         Assert.Empty(chronicleRenderer.SnapshotChronicleEntries());
+    }
+
+    [Fact]
+    public void Render_BatchesLongRunningPrehistoryToHundredYearCadence()
+    {
+        World world = new(new WorldTime(100, 1));
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.BiologicalDivergence;
+        world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.EvolutionaryExpansion;
+        world.PrehistoryRuntime.WorldAgeYears = 100;
+        world.PrehistoryRuntime.PhaseLabel = "Letting lineages branch, adapt, die out, and recolonize";
+        world.PrehistoryRuntime.SubphaseLabel = "Diverging regional lineages";
+        world.PrehistoryRuntime.ActivitySummary = "Diverging isolated lineages into new branches and adaptation paths.";
+        world.PhaseBReadinessReport = new PhaseBReadinessReport(false, 3, 1, 0, 2, 0, 1, 6, []);
+
+        StartupProgressRenderer renderer = new(new SimulationOptions { OutputMode = OutputMode.Watch });
+
+        renderer.Render(world);
+        Assert.Contains(renderer.SnapshotLastRenderedLines(), line => line.Contains("World Age: 100 years", StringComparison.Ordinal));
+
+        world.PrehistoryRuntime.WorldAgeYears = 150;
+        renderer.Render(world);
+        Assert.Contains(renderer.SnapshotLastRenderedLines(), line => line.Contains("World Age: 100 years", StringComparison.Ordinal));
+
+        world.PrehistoryRuntime.WorldAgeYears = 200;
+        renderer.Render(world);
+        Assert.Contains(renderer.SnapshotLastRenderedLines(), line => line.Contains("World Age: 200 years", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -185,7 +191,8 @@ public sealed class StartupProgressRendererTests
         world.PrehistoryRuntime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.Failure("generation_failed_no_candidates", "no_cand");
 
         IReadOnlyList<string> lines = StartupProgressRenderer.BuildDisplayLines(world, includeDiagnostics: false);
-        Assert.Contains(" Phase: Generation Failure | No viable truthful start was produced", lines);
-        Assert.Contains(" Metrics: world generation failed to surface viable starts", lines);
+        Assert.Contains(" Era / Stage: Generation Failure", lines);
+        Assert.Contains(lines, line => line.Contains("This world could not produce a truthful player start.", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, line => line.Contains("Metrics:", StringComparison.Ordinal));
     }
 }

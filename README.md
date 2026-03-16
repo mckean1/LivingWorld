@@ -210,6 +210,12 @@ The JSONL history includes causal ids and propagation depth, so downstream debug
 
 `effect -> parent event -> root event`
 
+World generation and prehistory also write a separate append-only text log at:
+
+- `logs/worldgen-{timestamp}.txt`
+
+That log file is created as soon as generation starts, updated continuously during prehistory, and left behind with partial progress if a run is interrupted before completion.
+
 ## Runtime Options
 
 Default mode is watch mode. Useful flags:

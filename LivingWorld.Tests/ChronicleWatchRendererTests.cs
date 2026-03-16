@@ -82,7 +82,7 @@ public sealed class ChronicleWatchRendererTests
     {
         World world = new(new WorldTime(70, 4));
         world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.GenerationFailure;
-        world.PrehistoryRuntime.ActivitySummary = "Unable to surface viable starts.";
+        world.PrehistoryRuntime.ActivitySummary = "The simulation could not produce a viable truthful start.";
         world.PrehistoryRuntime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.Failure("world_failed");
 
         IReadOnlyList<string> lines = ChronicleWatchRenderer.BuildStatusLines(
@@ -92,9 +92,9 @@ public sealed class ChronicleWatchRendererTests
             width: 80,
             stageNameFormatter: stage => stage.ToString());
 
-        Assert.Contains(" World Generation Failure", lines);
-        Assert.Contains(" Details: world_failed", lines);
-        Assert.Contains(lines, line => line.Contains("honest failure", StringComparison.Ordinal));
+        Assert.Contains(" World Generation", lines);
+        Assert.Contains(" Outcome: No truthful player start could be produced.", lines);
+        Assert.Contains(lines, line => line.Contains("stopped honestly", StringComparison.Ordinal));
     }
 
     private static PlayerEntryCandidateSummary CreateCandidate(int polityId)

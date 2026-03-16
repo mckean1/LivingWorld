@@ -43,6 +43,7 @@ That grouped prehistory state owns:
 - `World.Prehistory.Runtime`
   - `PrehistoryRuntimeStatus` for the canonical `PrehistoryRuntimePhase` ladder
   - phase labels, detail view, activity text, world age, and checkpoint metadata
+  - `WorldAgeYears` means completed elapsed prehistory years for the current world snapshot, mirroring `World.Time.Year` instead of the next in-world year label
 - `World.Prehistory.Observer`
   - retains recent monthly `PeopleMonthlySnapshot` history per polity/people id
   - supports evaluator-ready rollups without storing conclusions in the base world model

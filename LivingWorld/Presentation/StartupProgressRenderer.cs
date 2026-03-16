@@ -7,14 +7,17 @@ namespace LivingWorld.Presentation;
 
 public sealed class StartupProgressRenderer : IDisposable
 {
+    private const int VisibleUpdateIntervalYears = 100;
     private readonly SimulationOptions _options;
     private readonly ChronicleColorWriter _colorWriter;
     private IReadOnlyList<string> _lastLines = [];
     private int _lastWidth = -1;
     private int _lastHeight = -1;
     private string _lastStateKey = string.Empty;
+    private int _lastRenderedAgeBucket = int.MinValue;
     private int _lastRedirectedAge = int.MinValue;
     private string _lastRedirectedPhaseKey = string.Empty;
+    private int _lastRedirectedAgeBucket = int.MinValue;
     private bool _cursorWasVisible = true;
     private bool _cursorHidden;
 
@@ -36,10 +39,22 @@ public sealed class StartupProgressRenderer : IDisposable
             return;
         }
 
+        string stateKey = BuildStateKey(world);
+        int ageBucket = ResolveVisibleAgeBucket(world);
+        bool shouldRender = _lastLines.Count == 0
+            || !string.Equals(stateKey, _lastStateKey, StringComparison.Ordinal)
+            || ageBucket > _lastRenderedAgeBucket;
+        if (!shouldRender)
+        {
+            return;
+        }
+
         List<string> lines = BuildDisplayLines(world, _options.OutputMode == OutputMode.Debug);
         if (Console.IsOutputRedirected)
         {
             _lastLines = lines;
+            _lastStateKey = stateKey;
+            _lastRenderedAgeBucket = ageBucket;
             RenderRedirected(world, lines);
             return;
         }
@@ -47,7 +62,6 @@ public sealed class StartupProgressRenderer : IDisposable
         HideCursor();
         int width = ResolveWindowWidth();
         int height = ResolveWindowHeight(lines.Count);
-        string stateKey = BuildStateKey(world, lines);
         bool dimensionsChanged = width != _lastWidth || height != _lastHeight;
         bool stateOwnerChanged = !string.Equals(stateKey, _lastStateKey, StringComparison.Ordinal);
         if (dimensionsChanged || stateOwnerChanged)
@@ -73,6 +87,7 @@ public sealed class StartupProgressRenderer : IDisposable
         _lastWidth = width;
         _lastHeight = height;
         _lastStateKey = stateKey;
+        _lastRenderedAgeBucket = ageBucket;
         Console.SetCursorPosition(0, Math.Min(height - 1, lines.Count));
     }
 
@@ -92,6 +107,8 @@ public sealed class StartupProgressRenderer : IDisposable
         _lastWidth = -1;
         _lastHeight = -1;
         _lastStateKey = string.Empty;
+        _lastRenderedAgeBucket = int.MinValue;
+        _lastRedirectedAgeBucket = int.MinValue;
     }
 
     public static List<string> BuildDisplayLines(World world, bool includeDiagnostics)
@@ -102,61 +119,15 @@ public sealed class StartupProgressRenderer : IDisposable
             return FocalSelectionPresentationBuilder.BuildStartupLines(world, includeDiagnostics).ToList();
         }
 
-        StartupWorldAgeConfiguration age = world.StartupAgeConfiguration;
-        string border = new('=', 78);
-        string phaseName = runtime.CurrentPhase.ToDisplayString();
-        string phaseDescription = string.IsNullOrWhiteSpace(runtime.PhaseLabel)
-            ? phaseName
-            : runtime.PhaseLabel;
-
-        List<string> lines = [border, " World Generation"];
-        lines.Add(string.Equals(phaseDescription, phaseName, StringComparison.Ordinal)
-            ? $" Phase: {phaseName}"
-            : $" Phase: {phaseName} | {phaseDescription}");
-        if (!string.IsNullOrWhiteSpace(runtime.SubphaseLabel))
-        {
-            lines.Add($" Subphase: {runtime.SubphaseLabel}");
-        }
-
-        lines.Add($" Activity: {runtime.ActivitySummary}");
-        lines.Add(
-            $" World Age: {runtime.WorldAgeYears} years | Preset: {age.Preset} | Window: {age.MinPrehistoryYears}-{age.TargetPrehistoryYears}-{age.MaxPrehistoryYears}");
-
-        string readinessState = runtime.AreReadinessChecksActive ? "Readiness: active" : "Readiness: warming up";
-        string checkpointKind = runtime.LastCheckpointOutcome?.Kind.ToDisplayString() ?? "Pending";
-        string checkpointDetail = runtime.LastCheckpointOutcome?.Summary;
-        string checkpointSummary = checkpointDetail is null ? checkpointKind : $"{checkpointKind} ({checkpointDetail})";
-        lines.Add($"{readinessState} | Checkpoint: {checkpointSummary} | Attempt: {world.StartupGenerationAttempt + 1}");
-
-        if (!string.IsNullOrWhiteSpace(runtime.TransitionSummary))
-        {
-            lines.Add($" Transition: {runtime.TransitionSummary}");
-        }
-
-        lines.Add(string.Empty);
-        lines.AddRange(BuildMetricLines(world));
-
-        if (includeDiagnostics && world.StartupDiagnostics.Count > 0)
-        {
-            lines.Add(string.Empty);
-            lines.Add(" Diagnostics:");
-            foreach (string diagnostic in world.StartupDiagnostics.Take(4))
-            {
-                lines.Add($"  {diagnostic}");
-            }
-        }
-
-        lines.Add(border);
-        return lines;
+        return WorldGenerationScreenFormatter.BuildLines(world, includeDiagnostics);
     }
 
     private void RenderRedirected(World world, IReadOnlyList<string> lines)
     {
-        string phaseKey = world.PrehistoryRuntime.GetStateKey();
+        string phaseKey = BuildStateKey(world);
+        int ageBucket = ResolveVisibleAgeBucket(world);
         bool shouldWrite = !string.Equals(phaseKey, _lastRedirectedPhaseKey, StringComparison.Ordinal)
-            || world.PrehistoryRuntime.WorldAgeYears == 0
-            || world.PrehistoryRuntime.WorldAgeYears >= _lastRedirectedAge + 25
-            || world.PrehistoryRuntime.LastCheckpointOutcome is not null;
+            || ageBucket > _lastRedirectedAgeBucket;
         if (!shouldWrite)
         {
             return;
@@ -170,6 +141,7 @@ public sealed class StartupProgressRenderer : IDisposable
         Console.WriteLine();
         _lastRedirectedPhaseKey = phaseKey;
         _lastRedirectedAge = world.PrehistoryRuntime.WorldAgeYears;
+        _lastRedirectedAgeBucket = ageBucket;
     }
 
     private static IReadOnlyList<string> BuildMetricLines(World world)
@@ -289,8 +261,39 @@ public sealed class StartupProgressRenderer : IDisposable
             _ => "block"
         };
 
-    private static string BuildStateKey(World world, IReadOnlyList<string> lines)
-        => $"{world.PrehistoryRuntime.GetStateKey()}|{lines.Count}";
+    private static string BuildStateKey(World world)
+    {
+        PrehistoryRuntimeStatus runtime = world.PrehistoryRuntime;
+        string checkpointKey = runtime.LastCheckpointOutcome is null
+            ? string.Empty
+            : $"{runtime.LastCheckpointOutcome.Kind}|{runtime.LastCheckpointOutcome.Summary}|{runtime.LastCheckpointOutcome.Details}";
+        return string.Join(
+            "|",
+            runtime.CurrentPhase,
+            runtime.DetailView,
+            runtime.PhaseLabel,
+            runtime.SubphaseLabel,
+            runtime.ActivitySummary,
+            runtime.TransitionSummary,
+            checkpointKey);
+    }
+
+    private static int ResolveVisibleAgeBucket(World world)
+    {
+        PrehistoryRuntimePhase phase = world.PrehistoryRuntime.CurrentPhase;
+        if (phase is PrehistoryRuntimePhase.FocalSelection or PrehistoryRuntimePhase.GenerationFailure or PrehistoryRuntimePhase.SimulationEngineActivePlay)
+        {
+            return int.MaxValue;
+        }
+
+        int years = Math.Max(0, world.PrehistoryRuntime.WorldAgeYears);
+        if (years < VisibleUpdateIntervalYears)
+        {
+            return 0;
+        }
+
+        return years / VisibleUpdateIntervalYears;
+    }
 
     private void HideCursor()
     {
