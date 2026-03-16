@@ -76,6 +76,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         IReadOnlyList<RegionEvaluationSnapshot> regionEvaluations = observerSnapshot.RegionEvaluations
             .Where(snapshot => snapshot.PeopleId == polity.Id)
             .ToArray();
+        SocietalPersistenceTruth socialTruth = SocietalPersistenceTruthEvaluator.Evaluate(world, polity);
         CandidateViabilityResult viability = EvaluateViability(readiness);
         CandidateMaturityBand maturityBand = MapMaturityBand(polity, history, readiness);
         StabilityBand stabilityBand = MapStabilityBand(readiness);
@@ -88,7 +89,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         string archetypeBucket = ResolveArchetypeBucket(maturityBand, subsistenceStyle);
         string pressureShape = ResolvePressureShape(readiness, polity, neighborContext);
         string qualificationReason = ResolveQualificationReason(viability, scoreBreakdown, maturityBand);
-        string evidenceSentence = BuildEvidenceSentence(polity, subsistenceStyle, homeBucket, maturityBand, readiness, neighborContext);
+        string evidenceSentence = BuildEvidenceSentence(polity, subsistenceStyle, homeBucket, maturityBand, readiness, socialTruth, neighborContext);
         IReadOnlyList<string> strengths = BuildStrengths(scoreBreakdown, history, neighborContext);
         IReadOnlyList<string> warnings = BuildWarnings(viability, history);
         IReadOnlyList<string> risks = BuildRisks(readiness, history, neighborContext);
@@ -125,7 +126,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             stabilityBand,
             polity.IsFallbackCreated,
             false,
-            polity.IsFallbackCreated ? "fallback_polity" : string.Empty,
+            BuildCandidateOriginReason(polity, socialTruth),
             viability,
             maturityBand,
             stabilityMode,
@@ -485,7 +486,14 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         };
     }
 
-    private static string BuildEvidenceSentence(Polity polity, string subsistenceStyle, string homeBucket, CandidateMaturityBand maturityBand, CandidateReadinessEvaluation readiness, NeighborContextSnapshot? neighborContext)
+    private static string BuildEvidenceSentence(
+        Polity polity,
+        string subsistenceStyle,
+        string homeBucket,
+        CandidateMaturityBand maturityBand,
+        CandidateReadinessEvaluation readiness,
+        SocietalPersistenceTruth socialTruth,
+        NeighborContextSnapshot? neighborContext)
     {
         string maturityLabel = maturityBand.ToLowerDisplayLabel();
         string support = readiness.SupportStability switch
@@ -495,10 +503,16 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             SupportStabilityState.Volatile => "volatile support",
             _ => "collapsed support"
         };
+        string provenance = socialTruth.CandidateSocialBackingType switch
+        {
+            CandidateSocialBackingType.ActiveSocietyBacked => "active-society backing",
+            CandidateSocialBackingType.HistoricalLineageOnly => "lineage-carried backing",
+            _ => "polity-shell continuity"
+        };
         string external = neighborContext is null || neighborContext.NeighborhoodSummary.RelevantNeighborCount == 0
             ? "light external entanglement"
             : $"{neighborContext.NeighborhoodSummary.RelevantNeighborCount} nearby counterpart{(neighborContext.NeighborhoodSummary.RelevantNeighborCount == 1 ? string.Empty : "s")}";
-        return $"{polity.Name} is a {maturityLabel} {subsistenceStyle.ToLowerInvariant()} start on {homeBucket.Replace('_', ' ')}, with {support}, {readiness.Continuity.ToString().ToLowerInvariant()} continuity, and {external}.";
+        return $"{polity.Name} is a {maturityLabel} {subsistenceStyle.ToLowerInvariant()} start on {homeBucket.Replace('_', ' ')}, with {support}, {readiness.Continuity.ToString().ToLowerInvariant()} continuity, {provenance}, and {external}.";
     }
 
     private static IReadOnlyList<string> BuildStrengths(CandidateScoreBreakdown? scoreBreakdown, PeopleHistoryWindowSnapshot history, NeighborContextSnapshot? neighborContext)
@@ -707,6 +721,11 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         return new CandidateAssessment(summary, new CandidateDiversityProfile(CandidateMaturityBand.Anchored, "unknown", "unknown", "unknown", polity.LineageId, polity.RegionId, "unknown"));
     }
 
+    private static string BuildCandidateOriginReason(Polity polity, SocietalPersistenceTruth socialTruth)
+        => polity.IsFallbackCreated
+            ? $"fallback polity; {socialTruth.CandidateBackingSummary}"
+            : socialTruth.CandidateBackingSummary;
+
     private static PrehistoryCandidateDiagnostics BuildDiagnostics(
         World world,
         PrehistoryObserverSnapshot observerSnapshot,
@@ -723,6 +742,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         EmergingSociety? founderSociety = polity.FounderSocietyId.HasValue
             ? world.Societies.FirstOrDefault(candidate => candidate.Id == polity.FounderSocietyId.Value)
             : null;
+        SocietalPersistenceTruth socialTruth = SocietalPersistenceTruthEvaluator.Evaluate(world, polity);
 
         List<string> failedTruthFloors = [];
         if (summary.Viability is not null)
@@ -738,8 +758,10 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             polity.LineageId,
             polity.RegionId,
             world.Regions[polity.RegionId].Name,
-            founderSociety?.Id,
-            ResolveSourceIdentityPath(world, polity, founderSociety),
+            socialTruth.FounderSocietyId,
+            socialTruth.SourceIdentityPath,
+            socialTruth.SocietyPersistenceState,
+            socialTruth.CandidateSocialBackingType,
             summary.MaturityBand,
             readiness?.SupportStability ?? SupportStabilityState.Collapsed,
             readiness?.DemographicViability ?? DemographicViabilityState.Critical,
@@ -748,7 +770,7 @@ public sealed class PrehistoryCandidateSelectionEvaluator
             readiness?.Rootedness ?? RootednessState.Displaced,
             readiness?.Continuity ?? ContinuityState.Broken,
             polity.YearsSinceFounded,
-            founderSociety is null ? 0 : Math.Max(0, world.Time.Year - founderSociety.FoundingYear),
+            socialTruth.ActiveSocietyAgeYears,
             history?.SocialContinuityHistoryRollup.ObservedContinuousIdentityMonths ?? 0,
             history?.SocialContinuityHistoryRollup.MonthsSinceIdentityBreak ?? 0,
             history?.SocialContinuityHistoryRollup.IdentityBreakCountLast12Months ?? 0,
@@ -774,7 +796,15 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         {
             SourcePeopleId = polity.Id,
             SourcePolityId = polity.Id,
-            SourceSocietyId = founderSociety?.Id,
+            SourceSocietyId = socialTruth.FounderSocietyId,
+            HistoricalSocietyLineageAgeYears = socialTruth.HistoricalSocietyLineageAgeYears,
+            HasActiveSocietySubstrate = socialTruth.HasActiveSocietySubstrate,
+            HasHistoricalSocietyLineage = socialTruth.HasHistoricalSocietyLineage,
+            PolityBackedByActiveSociety = socialTruth.PolityBackedByActiveSociety,
+            CandidateBackedByHistoricalLineageOnly = socialTruth.CandidateBackedByHistoricalLineageOnly,
+            PolityOutlivingSocietySubstrate = socialTruth.PolityOutlivingSocietySubstrate,
+            PolityShellWithoutSocietySubstrate = socialTruth.PolityShellWithoutSocietySubstrate,
+            CandidateBackingSummary = socialTruth.CandidateBackingSummary,
             CurrentFootprintRegionCount = readiness?.CurrentTruthSnapshot?.FootprintRegionCount ?? history?.SpatialHistoryRollup.CurrentOccupiedRegionCount ?? 0,
             CurrentHomeClusterRegionId = readiness?.CurrentTruthSnapshot?.HomeClusterRegionId ?? polity.RegionId,
             CurrentSupportAdequacy = readiness?.CurrentTruthSnapshot?.SupportAdequacy ?? history?.SupportHistoryRollup.CurrentSupportAdequacy ?? 0.0,
@@ -843,19 +873,6 @@ public sealed class PrehistoryCandidateSelectionEvaluator
         if (diagnostic.FailedTruthFloors.Any(reason => reason.Contains("movement", StringComparison.OrdinalIgnoreCase) || reason.Contains("root", StringComparison.OrdinalIgnoreCase))) return "rootedness";
         return "other";
     }
-
-    private static string ResolveSourceIdentityPath(World world, Polity polity, EmergingSociety? founderSociety)
-    {
-        bool hasFounderSociety = founderSociety is not null && HasActiveSocietalSubstrate(world, founderSociety);
-        bool hasSettlement = polity.SettlementCount > 0;
-        if (hasFounderSociety && hasSettlement) return "society-first";
-        if (hasSettlement) return "settlement-first";
-        return "polity-first";
-    }
-
-    private static bool HasActiveSocietalSubstrate(World world, EmergingSociety society)
-        => !society.IsCollapsed
-            || (society.FounderPolityId.HasValue && world.Polities.Any(polity => polity.Id == society.FounderPolityId.Value && polity.Population > 0));
 
     private static void Increment(IDictionary<string, int> counts, string key)
         => counts[key] = counts.TryGetValue(key, out int current) ? current + 1 : 1;

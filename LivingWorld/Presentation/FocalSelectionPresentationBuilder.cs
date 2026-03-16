@@ -212,11 +212,14 @@ internal static class FocalSelectionPresentationBuilder
 
     private static string BuildPoolSummary(World world)
     {
+        string candidateHeadline = world.WorldReadinessReport.SummaryData.CandidateHeadline;
+        if (!string.IsNullOrWhiteSpace(candidateHeadline))
+        {
+            return candidateHeadline;
+        }
+
         int surfaced = world.PlayerEntryCandidates.Count;
-        int viable = world.WorldReadinessReport.CandidatePoolSummary.TotalViableCandidatesDiscovered;
-        return viable > surfaced
-            ? $"{surfaced} surfaced of {viable} viable starts"
-            : $"{surfaced} {(surfaced == 1 ? "viable start" : "viable starts")}";
+        return surfaced == 1 ? "1 viable start" : $"{surfaced} viable starts";
     }
 
     private static string FormatSettlementCount(int settlementCount)

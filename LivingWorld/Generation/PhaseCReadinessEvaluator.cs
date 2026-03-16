@@ -14,14 +14,21 @@ public static class PhaseCReadinessEvaluator
         IReadOnlyDictionary<int, CandidateReadinessEvaluation>? candidateEvaluations)
     {
         Dictionary<int, Polity> politiesById = world.Polities.ToDictionary(polity => polity.Id);
+        List<SocietalPersistenceTruth> polityPersistenceTruths = world.Polities
+            .Where(polity => polity.Population > 0)
+            .Select(polity => SocietalPersistenceTruthEvaluator.Evaluate(world, polity))
+            .ToList();
 
         int sentientGroupCount = world.SentientGroups.Count(group => !group.IsCollapsed);
         int organicSentientGroupCount = world.SentientGroups.Count(group => !group.IsCollapsed && !group.IsFallbackCreated);
         int fallbackSentientGroupCount = sentientGroupCount - organicSentientGroupCount;
 
-        int persistentSocietyCount = world.Societies.Count(society => HasActiveSocietalSubstrate(world, society));
-        int organicPersistentSocietyCount = world.Societies.Count(society => HasActiveSocietalSubstrate(world, society) && !society.IsFallbackCreated);
+        int persistentSocietyCount = world.Societies.Count(SocietalPersistenceTruthEvaluator.HasActiveSocietySubstrate);
+        int organicPersistentSocietyCount = world.Societies.Count(society => SocietalPersistenceTruthEvaluator.HasActiveSocietySubstrate(society) && !society.IsFallbackCreated);
         int fallbackPersistentSocietyCount = persistentSocietyCount - organicPersistentSocietyCount;
+        int activeSocietyBackedPolityCount = polityPersistenceTruths.Count(truth => truth.PolityBackedByActiveSociety);
+        int lineageCarryingPolityCount = polityPersistenceTruths.Count(truth => truth.CandidateBackedByHistoricalLineageOnly);
+        int polityShellCount = polityPersistenceTruths.Count(truth => truth.PolityShellWithoutSocietySubstrate);
 
         int settlementCount = world.SocialSettlements.Count(settlement => !settlement.IsAbandoned);
         int organicSettlementCount = world.SocialSettlements.Count(settlement => !settlement.IsAbandoned && !settlement.IsFallbackCreated);
@@ -116,6 +123,9 @@ public static class PhaseCReadinessEvaluator
             persistentSocietyCount,
             organicPersistentSocietyCount,
             fallbackPersistentSocietyCount,
+            activeSocietyBackedPolityCount,
+            lineageCarryingPolityCount,
+            polityShellCount,
             settlementCount,
             organicSettlementCount,
             fallbackSettlementCount,
@@ -130,8 +140,4 @@ public static class PhaseCReadinessEvaluator
             historicalEventDensity,
             failures);
     }
-
-    private static bool HasActiveSocietalSubstrate(World world, EmergingSociety society)
-        => !society.IsCollapsed
-            || (society.FounderPolityId.HasValue && world.Polities.Any(polity => polity.Id == society.FounderPolityId.Value && polity.Population > 0));
 }

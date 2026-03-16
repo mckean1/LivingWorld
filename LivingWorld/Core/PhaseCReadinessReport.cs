@@ -8,6 +8,9 @@ public sealed record PhaseCReadinessReport(
     int PersistentSocietyCount,
     int OrganicPersistentSocietyCount,
     int FallbackPersistentSocietyCount,
+    int ActiveSocietyBackedPolityCount,
+    int LineageCarryingPolityCount,
+    int PolityShellCount,
     int SettlementCount,
     int OrganicSettlementCount,
     int FallbackSettlementCount,
@@ -24,6 +27,9 @@ public sealed record PhaseCReadinessReport(
 {
     public static PhaseCReadinessReport Empty { get; } = new(
         false,
+        0,
+        0,
+        0,
         0,
         0,
         0,

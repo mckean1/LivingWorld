@@ -164,6 +164,10 @@ Implemented:
   - strengths, warnings, risks
   - score breakdown
   - diversity tags
+- candidate provenance now runs through the shared `SocietalPersistenceTruth` model so surfaced starts, diagnostics, and pool summaries distinguish:
+  - active-society-backed candidates
+  - lineage-carrying candidates
+  - polity-shell candidates
 
 Canonical truth floor remains hard:
 - no candidate should be surfaced as viable unless the hard viability gates actually pass
@@ -330,6 +334,7 @@ Implemented:
 - Phase C and Pass 4 readiness alignment on organic social and political depth
 - stronger expectation that normal startup produces multiple organic candidates
 - startup diagnostics exposing organic and fallback counts, emergency candidate admissions, candidate rejection reasons, startup bottlenecks, and regeneration causes
+- readiness summaries, focal-selection presentation, and generation logs now surface candidate backing mix using the shared active-society / lineage-carrying / polity-shell truth model
 - deterministic startup reroll seed derivation for stable organic-versus-fallback measurement
 - candidate summaries classifying starts from current polity state instead of founder-origin labels
 - polity settlement expansion tuned around subsistence mode, network age, and fragmentation pressure

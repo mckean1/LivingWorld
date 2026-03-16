@@ -13,6 +13,8 @@ public sealed record PrehistoryCandidateDiagnostics(
     string HomeRegionName,
     int? FounderSocietyId,
     string SourceIdentityPath,
+    SocietyPersistenceState SocietyPersistenceState,
+    CandidateSocialBackingType CandidateSocialBackingType,
     CandidateMaturityBand MaturityBand,
     SupportStabilityState SupportStability,
     DemographicViabilityState DemographicViability,
@@ -48,6 +50,14 @@ public sealed record PrehistoryCandidateDiagnostics(
     public int SourcePeopleId { get; init; }
     public int SourcePolityId { get; init; }
     public int? SourceSocietyId { get; init; }
+    public int HistoricalSocietyLineageAgeYears { get; init; }
+    public bool HasActiveSocietySubstrate { get; init; }
+    public bool HasHistoricalSocietyLineage { get; init; }
+    public bool PolityBackedByActiveSociety { get; init; }
+    public bool CandidateBackedByHistoricalLineageOnly { get; init; }
+    public bool PolityOutlivingSocietySubstrate { get; init; }
+    public bool PolityShellWithoutSocietySubstrate { get; init; }
+    public string CandidateBackingSummary { get; init; } = string.Empty;
     public int CurrentFootprintRegionCount { get; init; }
     public int CurrentHomeClusterRegionId { get; init; }
     public double CurrentSupportAdequacy { get; init; }

@@ -275,10 +275,10 @@ public sealed class WorldGenerationLogWriter : IDisposable
         yield return $"Phase B: ready={phaseB.IsReady}, mature={phaseB.MatureLineageCount}, speciation={phaseB.SpeciationCount}, extinct={phaseB.ExtinctLineageCount}, depth={phaseB.MaxAncestryDepth}, sentienceCapable={phaseB.SentienceCapableLineageCount}, roots={diagnostics.SentienceCapableRootBranchCount}, deepLineages={diagnostics.DeepLineageCount}";
 
         PhaseCReadinessReport phaseC = world.PhaseCReadinessReport;
-        yield return $"Phase C: ready={phaseC.IsReady}, groups={phaseC.SentientGroupCount}, societies={phaseC.PersistentSocietyCount}, settlements={phaseC.SettlementCount}, viableSettlements={phaseC.ViableSettlementCount}, polities={phaseC.PolityCount}, viableCandidates={phaseC.ViableFocalCandidateCount}, averagePolityAge={phaseC.AveragePolityAge:F1}";
+        yield return $"Phase C: ready={phaseC.IsReady}, groups={phaseC.SentientGroupCount}, societies={phaseC.PersistentSocietyCount}, settlements={phaseC.SettlementCount}, viableSettlements={phaseC.ViableSettlementCount}, polities={phaseC.PolityCount}, viableCandidates={phaseC.ViableFocalCandidateCount}, activeBackedPolities={phaseC.ActiveSocietyBackedPolityCount}, lineageCarryingPolities={phaseC.LineageCarryingPolityCount}, polityShells={phaseC.PolityShellCount}, averagePolityAge={phaseC.AveragePolityAge:F1}";
 
         WorldReadinessReport report = world.WorldReadinessReport;
-        yield return $"Readiness: final={report.FinalCheckpointResolution}, weakWorld={report.IsWeakWorld}, thinWorld={report.IsThinWorld}, viable={report.CandidatePoolSummary.TotalViableCandidatesDiscovered}, surfaced={report.CandidatePoolSummary.TotalSurfacedCandidates}, normalReady={report.CandidatePoolSummary.NormalReadyCandidateCount}";
+        yield return $"Readiness: final={report.FinalCheckpointResolution}, weakWorld={report.IsWeakWorld}, thinWorld={report.IsThinWorld}, viable={report.CandidatePoolSummary.TotalViableCandidatesDiscovered}, surfaced={report.CandidatePoolSummary.TotalSurfacedCandidates}, normalReady={report.CandidatePoolSummary.NormalReadyCandidateCount}, activeBacked={report.CandidatePoolSummary.ActiveSocietyBackedCandidateCount}, lineageBacked={report.CandidatePoolSummary.HistoricalLineageBackedCandidateCount}, shells={report.CandidatePoolSummary.PolityShellCandidateCount}";
         foreach (string line in BuildCandidateDiagnosticsLines(world))
         {
             yield return line;
@@ -308,13 +308,13 @@ public sealed class WorldGenerationLogWriter : IDisposable
             case PrehistoryRuntimeDetailView.SocietalEmergence:
                 PhaseCReadinessReport phaseC = world.PhaseCReadinessReport;
                 yield return $"Phase C readiness: ready={phaseC.IsReady}, groups={phaseC.SentientGroupCount}, societies={phaseC.PersistentSocietyCount}, settlements={phaseC.SettlementCount}, polities={phaseC.PolityCount}, viableStarts={phaseC.ViableFocalCandidateCount}";
-                yield return $"Phase C mix: organicPolities={phaseC.OrganicPolityCount}, fallbackPolities={phaseC.FallbackPolityCount}, organicCandidates={phaseC.OrganicViableFocalCandidateCount}, fallbackCandidates={phaseC.FallbackViableFocalCandidateCount}";
+                yield return $"Phase C mix: organicPolities={phaseC.OrganicPolityCount}, fallbackPolities={phaseC.FallbackPolityCount}, organicCandidates={phaseC.OrganicViableFocalCandidateCount}, fallbackCandidates={phaseC.FallbackViableFocalCandidateCount}, activeBackedPolities={phaseC.ActiveSocietyBackedPolityCount}, lineageCarryingPolities={phaseC.LineageCarryingPolityCount}, polityShells={phaseC.PolityShellCount}";
                 break;
             case PrehistoryRuntimeDetailView.CandidateEvaluation:
             case PrehistoryRuntimeDetailView.FocalSelection:
                 WorldReadinessReport report = world.WorldReadinessReport;
                 yield return $"Readiness outcome: {report.FinalCheckpointResolution}, weakWorld={report.IsWeakWorld}, thinWorld={report.IsThinWorld}";
-                yield return $"Candidate pool: viable={report.CandidatePoolSummary.TotalViableCandidatesDiscovered}, surfaced={report.CandidatePoolSummary.TotalSurfacedCandidates}, normalReady={report.CandidatePoolSummary.NormalReadyCandidateCount}, emergency={world.StartupOutcomeDiagnostics.EmergencyAdmittedCandidateCount}";
+                yield return $"Candidate pool: viable={report.CandidatePoolSummary.TotalViableCandidatesDiscovered}, surfaced={report.CandidatePoolSummary.TotalSurfacedCandidates}, normalReady={report.CandidatePoolSummary.NormalReadyCandidateCount}, activeBacked={report.CandidatePoolSummary.ActiveSocietyBackedCandidateCount}, lineageBacked={report.CandidatePoolSummary.HistoricalLineageBackedCandidateCount}, shells={report.CandidatePoolSummary.PolityShellCandidateCount}, emergency={world.StartupOutcomeDiagnostics.EmergencyAdmittedCandidateCount}";
                 if (report.GlobalBlockingReasons.Count > 0)
                 {
                     yield return $"Blocking reasons: {string.Join(", ", report.GlobalBlockingReasons)}";
@@ -417,7 +417,8 @@ public sealed class WorldGenerationLogWriter : IDisposable
             string blockers = candidate.BlockingReasons.Count == 0 ? "none" : string.Join("|", candidate.BlockingReasons);
             string warnings = candidate.WarningReasons.Count == 0 ? "none" : string.Join("|", candidate.WarningReasons);
             string hardVeto = candidate.HardVetoReasons.Count == 0 ? "none" : string.Join("|", candidate.HardVetoReasons);
-            yield return $"Candidate {candidate.PolityId}:{candidate.PolityName} source={candidate.SourceIdentityPath} species={candidate.SpeciesName} founderSociety={candidate.FounderSocietyId?.ToString() ?? "none"} maturity={candidate.MaturityBand} viable={candidate.IsViable} normalReady={candidate.SupportsNormalEntry}";
+            yield return $"Candidate {candidate.PolityId}:{candidate.PolityName} source={candidate.SourceIdentityPath} backing={candidate.CandidateSocialBackingType} species={candidate.SpeciesName} founderSociety={candidate.FounderSocietyId?.ToString() ?? "none"} maturity={candidate.MaturityBand} viable={candidate.IsViable} normalReady={candidate.SupportsNormalEntry}";
+            yield return $"  backingSummary={candidate.CandidateBackingSummary} societyPersistence={candidate.SocietyPersistenceState} activeSociety={candidate.HasActiveSocietySubstrate} historicalLineage={candidate.HasHistoricalSocietyLineage} lineageAge={candidate.HistoricalSocietyLineageAgeYears}";
             yield return $"  support={candidate.SupportStability} demography={candidate.DemographicViability}/{candidate.PopulationTrend} continuity={candidate.Continuity} continuityMonths={candidate.PeopleContinuityMonths} breaks12={candidate.IdentityBreakCountLast12Months} breaks24={candidate.IdentityBreakCountLast24Months} monthsSinceBreak={candidate.MonthsSinceIdentityBreak}";
             yield return $"  settlements12={candidate.SettlementPresentMonthsLast12Months} established12={candidate.EstablishedSettlementMonthsLast12Months} anchored12={candidate.AnchoredMonthsLast12Months} strongAnchored12={candidate.StrongAnchoredMonthsLast12Months} polityAge={candidate.PolityAgeYears} societyAge={candidate.SocietyAgeYears}";
             yield return $"  rootedness={candidate.Rootedness} homeClusterCurrent={candidate.HomeClusterShareCurrent:F2} homeClusterAvg12={candidate.AverageHomeClusterShareLast12Months:F2} movement={candidate.MovementCoherence} connected={candidate.ConnectedFootprintShareCurrent:F2} routes={candidate.RouteCoverageShareCurrent:F2} scatter={candidate.ScatterShareCurrent:F2}";

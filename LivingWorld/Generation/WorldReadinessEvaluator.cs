@@ -1,4 +1,5 @@
 using LivingWorld.Core;
+using LivingWorld.Societies;
 
 namespace LivingWorld.Generation;
 
@@ -31,12 +32,44 @@ public static class WorldReadinessEvaluator
 
         int organic = world.PlayerEntryCandidates.Count(candidate => !candidate.IsFallbackCandidate);
         int fallback = world.PlayerEntryCandidates.Count - organic;
+        IReadOnlyDictionary<int, Polity> politiesById = world.Polities
+            .Where(polity => polity.Population > 0)
+            .ToDictionary(polity => polity.Id);
+        int activeBacked = 0;
+        int lineageBacked = 0;
+        int shells = 0;
+
+        foreach (PlayerEntryCandidateSummary candidate in world.PlayerEntryCandidates)
+        {
+            if (!politiesById.TryGetValue(candidate.PolityId, out Polity? polity))
+            {
+                continue;
+            }
+
+            SocietalPersistenceTruth truth = SocietalPersistenceTruthEvaluator.Evaluate(world, polity);
+            switch (truth.CandidateSocialBackingType)
+            {
+                case CandidateSocialBackingType.ActiveSocietyBacked:
+                    activeBacked++;
+                    break;
+                case CandidateSocialBackingType.HistoricalLineageOnly:
+                    lineageBacked++;
+                    break;
+                default:
+                    shells++;
+                    break;
+            }
+        }
+
         CandidatePoolReadinessSummary pool = new(
             world.PlayerEntryCandidates.Count,
             world.PlayerEntryCandidates.Count,
             world.PlayerEntryCandidates.Count,
             organic,
             fallback,
+            activeBacked,
+            lineageBacked,
+            shells,
             world.PlayerEntryCandidates.Select(candidate => candidate.SpeciesId).Distinct().Count(),
             world.PlayerEntryCandidates.Select(candidate => candidate.LineageId).Distinct().Count(),
             world.PlayerEntryCandidates.Select(candidate => candidate.HomeRegionId).Distinct().Count(),

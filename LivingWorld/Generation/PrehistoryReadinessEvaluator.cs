@@ -107,7 +107,7 @@ public sealed class PrehistoryReadinessEvaluator
         IReadOnlyList<PlayerEntryCandidateSummary> surfacedCandidates)
     {
         WorldAgeGateReport ageGate = BuildAgeGate(world);
-        CandidatePoolReadinessSummary candidatePool = BuildCandidatePoolSummary(allViableCandidates, surfacedCandidates);
+        CandidatePoolReadinessSummary candidatePool = BuildCandidatePoolSummary(world, allViableCandidates, surfacedCandidates);
 
         WorldReadinessCategoryReport biological = EvaluateBiological(world);
         WorldReadinessCategoryReport social = EvaluateSocialEmergence(world, ageGate);
@@ -203,11 +203,41 @@ public sealed class PrehistoryReadinessEvaluator
     }
 
     private CandidatePoolReadinessSummary BuildCandidatePoolSummary(
+        World world,
         IReadOnlyList<PlayerEntryCandidateSummary> allViableCandidates,
         IReadOnlyList<PlayerEntryCandidateSummary> surfacedCandidates)
     {
+        IReadOnlyDictionary<int, Polity> politiesById = world.Polities
+            .Where(polity => polity.Population > 0)
+            .ToDictionary(polity => polity.Id);
         int fallbackCount = allViableCandidates.Count(candidate => candidate.IsFallbackCandidate);
         int organicCount = allViableCandidates.Count - fallbackCount;
+        int activeSocietyBackedCount = 0;
+        int historicalLineageBackedCount = 0;
+        int polityShellCount = 0;
+
+        foreach (PlayerEntryCandidateSummary candidate in allViableCandidates)
+        {
+            if (!politiesById.TryGetValue(candidate.PolityId, out Polity? polity))
+            {
+                continue;
+            }
+
+            SocietalPersistenceTruth truth = SocietalPersistenceTruthEvaluator.Evaluate(world, polity);
+            switch (truth.CandidateSocialBackingType)
+            {
+                case CandidateSocialBackingType.ActiveSocietyBacked:
+                    activeSocietyBackedCount++;
+                    break;
+                case CandidateSocialBackingType.HistoricalLineageOnly:
+                    historicalLineageBackedCount++;
+                    break;
+                default:
+                    polityShellCount++;
+                    break;
+            }
+        }
+
         int distinctSpecies = allViableCandidates.Select(candidate => candidate.SpeciesId).Distinct().Count();
         int distinctLineages = allViableCandidates.Select(candidate => candidate.LineageId).Distinct().Count();
         int distinctRegions = allViableCandidates.Select(candidate => candidate.HomeRegionId).Distinct().Count();
@@ -225,6 +255,9 @@ public sealed class PrehistoryReadinessEvaluator
             allViableCandidates.Count(candidate => candidate.Viability?.SupportsNormalEntry == true),
             organicCount,
             fallbackCount,
+            activeSocietyBackedCount,
+            historicalLineageBackedCount,
+            polityShellCount,
             distinctSpecies,
             distinctLineages,
             distinctRegions,
@@ -233,8 +266,8 @@ public sealed class PrehistoryReadinessEvaluator
             allViableCandidates.Count == 0
                 ? "No viable starts discovered."
                 : surfacedCandidates.Count == allViableCandidates.Count
-                    ? $"{allViableCandidates.Count} viable start{(allViableCandidates.Count == 1 ? string.Empty : "s")} discovered across {Math.Max(1, distinctRegions)} regions."
-                    : $"{allViableCandidates.Count} viable start{(allViableCandidates.Count == 1 ? string.Empty : "s")} discovered; {surfacedCandidates.Count} surfaced for selection.");
+                    ? $"{allViableCandidates.Count} viable start{(allViableCandidates.Count == 1 ? string.Empty : "s")} discovered across {Math.Max(1, distinctRegions)} regions. Backing mix: active={activeSocietyBackedCount}, lineage={historicalLineageBackedCount}, shells={polityShellCount}."
+                    : $"{allViableCandidates.Count} viable start{(allViableCandidates.Count == 1 ? string.Empty : "s")} discovered; {surfacedCandidates.Count} surfaced for selection. Backing mix: active={activeSocietyBackedCount}, lineage={historicalLineageBackedCount}, shells={polityShellCount}.");
     }
 
     private WorldReadinessCategoryReport EvaluateBiological(World world)
@@ -561,6 +594,7 @@ public sealed class PrehistoryReadinessEvaluator
         {
             candidateHeadline = $"{candidateHeadline} ({candidatePool.TotalSurfacedCandidates} surfaced)";
         }
+        candidateHeadline = $"{candidateHeadline} | backing active={candidatePool.ActiveSocietyBackedCandidateCount}, lineage={candidatePool.HistoricalLineageBackedCandidateCount}, shells={candidatePool.PolityShellCandidateCount}";
         string worldCondition = resolution switch
         {
             PrehistoryCheckpointOutcomeKind.GenerationFailure => "No truthful entry exists at max age.",

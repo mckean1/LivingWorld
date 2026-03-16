@@ -64,6 +64,9 @@ public sealed record CandidatePoolReadinessSummary(
     int NormalReadyCandidateCount,
     int OrganicViableCandidateCount,
     int FallbackViableCandidateCount,
+    int ActiveSocietyBackedCandidateCount,
+    int HistoricalLineageBackedCandidateCount,
+    int PolityShellCandidateCount,
     int DistinctSpeciesCount,
     int DistinctLineageCount,
     int DistinctHomeRegionCount,
@@ -112,7 +115,7 @@ public sealed record WorldReadinessReport(
             new(WorldReadinessCategoryKind.VarietyReadiness, ReadinessAssessmentStatus.Warning, ReadinessCategoryStrictness.Soft, "No variety readiness data.", Array.Empty<string>(), ["not_evaluated"]),
             new(WorldReadinessCategoryKind.AgencyReadiness, ReadinessAssessmentStatus.Warning, ReadinessCategoryStrictness.Soft, "No agency readiness data.", Array.Empty<string>(), ["not_evaluated"])
         ],
-        new CandidatePoolReadinessSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, true, "No candidate pool."),
+        new CandidatePoolReadinessSummary(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, true, "No candidate pool."),
         Array.Empty<string>(),
         Array.Empty<string>(),
         false,

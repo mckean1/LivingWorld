@@ -13,6 +13,11 @@ internal static class WorldGenerationDiagnosticsFormatter
             $"Candidates: viable {report.CandidatePoolSummary.TotalViableCandidatesDiscovered} | surfaced {report.CandidatePoolSummary.TotalSurfacedCandidates} | normal-ready {report.CandidatePoolSummary.NormalReadyCandidateCount}"
         ];
 
+        if (report.CandidatePoolSummary.TotalViableCandidatesDiscovered > 0)
+        {
+            lines.Add($"Backing: active {report.CandidatePoolSummary.ActiveSocietyBackedCandidateCount} | lineage {report.CandidatePoolSummary.HistoricalLineageBackedCandidateCount} | shells {report.CandidatePoolSummary.PolityShellCandidateCount}");
+        }
+
         string bottlenecks = FormatReasonCounts(diagnostics.Bottlenecks, 3);
         if (!string.IsNullOrWhiteSpace(bottlenecks))
         {
