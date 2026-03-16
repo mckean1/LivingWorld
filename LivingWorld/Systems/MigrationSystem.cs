@@ -108,13 +108,17 @@ public sealed class MigrationSystem
             SettlementStatus.SemiSettled => 0.08,
             _ => 0.0
         };
+        double durableSettlementGravity = ResolveDurableSettlementGravity(polity);
+        double unsupportedSprawlPressure = ResolveUnsupportedSprawlPressure(polity);
 
         double pressure =
             (shortagePressure * 0.40) +
             (foodStorePressure * 0.25) +
             (ecologyPressure * 0.20) +
             (crowdingPressure * 0.15) -
-            settlementAnchor;
+            settlementAnchor -
+            durableSettlementGravity +
+            unsupportedSprawlPressure;
 
         pressure += polity.EventDrivenMigrationPressureBonus;
 
@@ -128,6 +132,8 @@ public sealed class MigrationSystem
 
         Region? bestRegion = null;
         double bestScore = double.MinValue;
+        int preferredCoreRegionId = ResolvePreferredCoreRegionId(polity);
+        double durableSettlementGravity = ResolveDurableSettlementGravity(polity);
 
         foreach (int regionId in currentRegion.ConnectedRegionIds)
         {
@@ -139,6 +145,17 @@ public sealed class MigrationSystem
             int localPopulation = lookup.GetActivePopulationInRegion(region.Id);
 
             double crowdingPenalty = localPopulation * 0.7;
+            int hopDistanceFromCore = ComputeMinimumSettlementHopDistance(lookup, polity, region.Id);
+            double returnBias = region.Id == polity.PreviousRegionId
+                ? 140.0 * (0.25 + durableSettlementGravity)
+                : 0.0;
+            double coreBias = region.Id == preferredCoreRegionId
+                ? 120.0 * (0.20 + durableSettlementGravity)
+                : 0.0;
+            double corridorBias = hopDistanceFromCore <= 1
+                ? 65.0 * (0.20 + durableSettlementGravity)
+                : 0.0;
+            double antiSprawlPenalty = Math.Max(0, hopDistanceFromCore - 1) * 85.0 * (0.15 + durableSettlementGravity);
 
             double score =
                 region.PlantBiomass +
@@ -146,7 +163,11 @@ public sealed class MigrationSystem
                 (region.Fertility * 200) +
                 (region.WaterAvailability * 150) +
                 (region.CarryingCapacity * 2.0) -
-                crowdingPenalty;
+                crowdingPenalty +
+                returnBias +
+                coreBias +
+                corridorBias -
+                antiSprawlPenalty;
 
             // Small randomness so ties don't always pick the same region
             score += _random.NextDouble() * 10.0;
@@ -159,5 +180,113 @@ public sealed class MigrationSystem
         }
 
         return bestRegion;
+    }
+
+    private static double ResolveDurableSettlementGravity(Polity polity)
+    {
+        if (!polity.HasSettlements)
+        {
+            return 0.0;
+        }
+
+        double averageSettlementAgeMonths = polity.Settlements.Average(settlement => settlement.EstablishedMonths);
+        double oldestSettlementAgeMonths = polity.Settlements.Max(settlement => settlement.EstablishedMonths);
+        double dominantClusterShare = polity.Settlements
+            .GroupBy(settlement => settlement.RegionId)
+            .Select(group => group.Count() / (double)polity.SettlementCount)
+            .DefaultIfEmpty(1.0)
+            .Max();
+        double gravity = Math.Clamp(averageSettlementAgeMonths / 48.0, 0.0, 0.12)
+            + Math.Clamp(oldestSettlementAgeMonths / 72.0, 0.0, 0.08)
+            + Math.Max(0.0, dominantClusterShare - 0.45) * 0.10
+            + (polity.Stage >= PolityStage.Tribe ? 0.04 : 0.0);
+        return Math.Clamp(gravity, 0.0, 0.22);
+    }
+
+    private static double ResolveUnsupportedSprawlPressure(Polity polity)
+    {
+        if (!polity.HasSettlements)
+        {
+            return 0.0;
+        }
+
+        int distinctSettlementRegions = polity.Settlements.Select(settlement => settlement.RegionId).Distinct().Count();
+        double weakSettlementShare = polity.Settlements.Count(settlement => settlement.FoodState is FoodState.Deficit or FoodState.Starving)
+            / Math.Max(1.0, polity.SettlementCount);
+        double sprawl = Math.Max(0, distinctSettlementRegions - 2) * 0.03;
+        return Math.Clamp(sprawl + (weakSettlementShare * 0.06), 0.0, 0.16);
+    }
+
+    private static int ResolvePreferredCoreRegionId(Polity polity)
+        => !polity.HasSettlements
+            ? polity.RegionId
+            : polity.Settlements
+                .GroupBy(settlement => settlement.RegionId)
+                .Select(group => new
+                {
+                    RegionId = group.Key,
+                    Count = group.Count(),
+                    OldestSettlementAgeMonths = group.Max(settlement => settlement.EstablishedMonths)
+                })
+                .OrderByDescending(entry => entry.Count)
+                .ThenByDescending(entry => entry.OldestSettlementAgeMonths)
+                .ThenBy(entry => entry.RegionId)
+                .First()
+                .RegionId;
+
+    private static int ComputeMinimumSettlementHopDistance(WorldLookup lookup, Polity polity, int targetRegionId)
+    {
+        if (!polity.HasSettlements)
+        {
+            return targetRegionId == polity.RegionId ? 0 : 1;
+        }
+
+        int minimumDistance = int.MaxValue;
+        foreach (int settlementRegionId in polity.Settlements.Select(settlement => settlement.RegionId).Distinct())
+        {
+            int distance = ComputeHopDistance(lookup, settlementRegionId, targetRegionId);
+            minimumDistance = Math.Min(minimumDistance, distance);
+        }
+
+        return minimumDistance;
+    }
+
+    private static int ComputeHopDistance(WorldLookup lookup, int sourceRegionId, int targetRegionId)
+    {
+        if (sourceRegionId == targetRegionId)
+        {
+            return 0;
+        }
+
+        Queue<(int RegionId, int Depth)> frontier = new();
+        HashSet<int> visited = [sourceRegionId];
+        frontier.Enqueue((sourceRegionId, 0));
+
+        while (frontier.Count > 0)
+        {
+            (int regionId, int depth) = frontier.Dequeue();
+            if (!lookup.TryGetRegion(regionId, out Region? region) || region is null)
+            {
+                continue;
+            }
+
+            foreach (int neighborId in region.ConnectedRegionIds)
+            {
+                if (!visited.Add(neighborId))
+                {
+                    continue;
+                }
+
+                int nextDepth = depth + 1;
+                if (neighborId == targetRegionId)
+                {
+                    return nextDepth;
+                }
+
+                frontier.Enqueue((neighborId, nextDepth));
+            }
+        }
+
+        return int.MaxValue;
     }
 }

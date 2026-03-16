@@ -1187,11 +1187,28 @@ public sealed class SocialEmergenceSystem
 
     private Region? SelectPolityExpansionRegion(World world, Species species, Polity polity, SubsistenceMode subsistenceMode)
     {
-        HashSet<int> occupiedRegionIds = polity.Settlements.Select(settlement => settlement.RegionId).ToHashSet();
-        Region? frontierRegion = polity.Settlements
+        List<Settlement> settlements = polity.Settlements.ToList();
+        HashSet<int> occupiedRegionIds = settlements.Select(settlement => settlement.RegionId).ToHashSet();
+        Dictionary<int, int> settlementCountByRegion = settlements
+            .GroupBy(settlement => settlement.RegionId)
+            .ToDictionary(group => group.Key, group => group.Count());
+        int preferredCoreRegionId = ResolvePreferredCoreRegionId(settlements);
+        double homeClusterShare = settlements.Count == 0
+            ? 1.0
+            : settlementCountByRegion[preferredCoreRegionId] / (double)settlements.Count;
+        bool needsCoreReinforcement = settlements.Count >= 2 && homeClusterShare < 0.58;
+        bool postPolityConsolidation = polity.Stage >= PolityStage.Tribe || settlements.Count >= 3;
+
+        HashSet<int> candidateRegionIds = settlements
             .SelectMany(settlement => world.Regions[settlement.RegionId].ConnectedRegionIds)
-            .Distinct()
             .Where(regionId => !occupiedRegionIds.Contains(regionId))
+            .ToHashSet();
+        if (needsCoreReinforcement || postPolityConsolidation)
+        {
+            candidateRegionIds.Add(preferredCoreRegionId);
+        }
+
+        Region? targetRegion = candidateRegionIds
             .Select(regionId =>
             {
                 Region region = world.Regions[regionId];
@@ -1223,25 +1240,92 @@ public sealed class SocialEmergenceSystem
                         + (region.Fertility * 0.14)
                         + (region.EffectiveEcologyProfile.MigrationEase * 0.08)
                 };
+                int adjacentOccupiedRegions = region.ConnectedRegionIds.Count(occupiedRegionIds.Contains);
+                int hopDistanceFromCore = ComputeRegionHopDistance(world, preferredCoreRegionId, region.Id);
+                bool reinforcesCore = region.Id == preferredCoreRegionId;
+                double clusterBonus = Math.Min(0.18, adjacentOccupiedRegions * 0.06);
+                double coreReinforcementBonus = reinforcesCore
+                    ? 0.16 + Math.Max(0.0, 0.62 - homeClusterShare) * 0.26
+                    : 0.0;
+                double corridorBonus = hopDistanceFromCore <= 1 ? 0.08 : 0.0;
+                double consolidationBonus = postPolityConsolidation && hopDistanceFromCore <= 1 ? 0.08 : 0.0;
+                double antiSprawlPenalty = Math.Max(0, hopDistanceFromCore - 1) * 0.12;
                 double score = support
                     + subsistenceScore
-                    + Math.Min(0.22, (population?.PopulationCount ?? 0) / 220.0);
-                return (Region: region, Support: support, Score: score);
+                    + Math.Min(0.22, (population?.PopulationCount ?? 0) / 220.0)
+                    + clusterBonus
+                    + coreReinforcementBonus
+                    + corridorBonus
+                    + consolidationBonus
+                    - antiSprawlPenalty;
+                return (Region: region, Support: support, Score: score, ReinforcesCore: reinforcesCore);
             })
-            .Where(entry => entry.Support >= 0.44)
+            .Where(entry => entry.Support >= (entry.ReinforcesCore ? 0.40 : 0.44))
             .OrderByDescending(entry => entry.Score)
+            .ThenByDescending(entry => entry.ReinforcesCore)
             .ThenBy(entry => entry.Region.Id)
             .Select(entry => entry.Region)
             .FirstOrDefault();
-        if (frontierRegion is not null)
+        if (targetRegion is not null)
         {
-            return frontierRegion;
+            return targetRegion;
         }
 
         Region homeRegion = world.Regions[polity.RegionId];
         RegionSpeciesPopulation? homePopulation = homeRegion.GetSpeciesPopulation(species.Id);
         double homeSupport = homePopulation is null ? 0.0 : ResolveRegionalSupport(world, species, homeRegion, homePopulation);
         return homeSupport >= 0.50 ? homeRegion : null;
+    }
+
+    private static int ResolvePreferredCoreRegionId(IReadOnlyList<Settlement> settlements)
+        => settlements
+            .GroupBy(settlement => settlement.RegionId)
+            .Select(group => new
+            {
+                RegionId = group.Key,
+                Count = group.Count(),
+                OldestSettlementAgeMonths = group.Max(settlement => settlement.EstablishedMonths),
+                AverageSettlementAgeMonths = group.Average(settlement => settlement.EstablishedMonths)
+            })
+            .OrderByDescending(entry => entry.Count)
+            .ThenByDescending(entry => entry.OldestSettlementAgeMonths)
+            .ThenByDescending(entry => entry.AverageSettlementAgeMonths)
+            .ThenBy(entry => entry.RegionId)
+            .First()
+            .RegionId;
+
+    private static int ComputeRegionHopDistance(World world, int sourceRegionId, int targetRegionId)
+    {
+        if (sourceRegionId == targetRegionId)
+        {
+            return 0;
+        }
+
+        Queue<(int RegionId, int Depth)> frontier = new();
+        HashSet<int> visited = [sourceRegionId];
+        frontier.Enqueue((sourceRegionId, 0));
+
+        while (frontier.Count > 0)
+        {
+            (int regionId, int depth) = frontier.Dequeue();
+            foreach (int connectedRegionId in world.Regions[regionId].ConnectedRegionIds)
+            {
+                if (!visited.Add(connectedRegionId))
+                {
+                    continue;
+                }
+
+                int nextDepth = depth + 1;
+                if (connectedRegionId == targetRegionId)
+                {
+                    return nextDepth;
+                }
+
+                frontier.Enqueue((connectedRegionId, nextDepth));
+            }
+        }
+
+        return int.MaxValue;
     }
 
     private List<SettlementProjection> BuildSettlementProjections(World world, Species species, Polity polity)

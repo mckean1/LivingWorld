@@ -988,6 +988,46 @@ public static class PrehistoryReadinessEvidenceEvaluator
             .ToArray();
     }
 
+    private static CandidateRollingTruthSnapshot BuildRollingTruthSnapshot(IReadOnlyList<PeopleMonthlySnapshot> history, int windowMonths)
+    {
+        if (history.Count == 0)
+        {
+            return new CandidateRollingTruthSnapshot(
+                windowMonths,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0);
+        }
+
+        return new CandidateRollingTruthSnapshot(
+            windowMonths,
+            history.Count(IsSupportedMonth),
+            history.Count(IsSevereUnsupportedMonth),
+            history.Count(IsCoherentMonth),
+            history.Count(IsStrongCoherentMonth),
+            history.Count(IsScatteredMonth),
+            history.Count(snapshot => snapshot.IsAnchoredThisMonth),
+            history.Count(snapshot => snapshot.IsStrongAnchoredThisMonth),
+            history.Count(snapshot => snapshot.SettlementCount > 0 && snapshot.OldestSettlementAgeMonths >= 6),
+            history.Count(snapshot => snapshot.DisplacementThisMonth),
+            history.Average(snapshot => snapshot.SupportAdequacy),
+            history.Average(snapshot => snapshot.HomeClusterShare),
+            history.Average(snapshot => snapshot.ConnectedFootprintShare),
+            history.Average(snapshot => snapshot.RouteCoverageShare),
+            history.Average(snapshot => snapshot.ScatterShare));
+    }
+
     private static PeopleMonthlySnapshot CreateSyntheticCurrent(PeopleHistoryWindowSnapshot historyWindow)
         => new(
             historyWindow.Header.PeopleId,

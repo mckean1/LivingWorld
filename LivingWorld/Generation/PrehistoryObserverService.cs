@@ -239,11 +239,14 @@ internal sealed class PeopleMonthlySnapshotExtractor
 {
     public PeopleMonthlySnapshot Create(ObserverWorldContext context, Polity polity, PeopleMonthlySnapshot? previous)
     {
+        int absoluteMonthIndex = ObserverMath.ToAbsoluteMonthIndex(context.World.Time.Year, context.World.Time.Month);
         List<int> occupiedRegionIds = context.GetOccupiedRegionIds(polity);
+        IReadOnlyList<PeopleMonthlySnapshot> recentHistory = context.World.Prehistory.Observer.GetPeopleHistory(polity.Id)
+            .Where(snapshot => snapshot.AbsoluteMonthIndex < absoluteMonthIndex && absoluteMonthIndex - snapshot.AbsoluteMonthIndex <= 24)
+            .OrderBy(snapshot => snapshot.AbsoluteMonthIndex)
+            .ToArray();
 
         int settlementCount = polity.SettlementCount;
-        int homeClusterRegionId = occupiedRegionIds[0];
-        double homeClusterShare = 1.0;
         int oldestSettlementAgeMonths = 0;
         double averageSettlementAgeMonths = 0.0;
         int surplusSettlements = 0;
@@ -256,13 +259,6 @@ internal sealed class PeopleMonthlySnapshotExtractor
 
         if (settlementCount > 0)
         {
-            IGrouping<int, Settlement> dominantCluster = polity.Settlements
-                .GroupBy(settlement => settlement.RegionId)
-                .OrderByDescending(group => group.Count())
-                .ThenBy(group => group.Key)
-                .First();
-            homeClusterRegionId = dominantCluster.Key;
-            homeClusterShare = dominantCluster.Count() / (double)settlementCount;
             oldestSettlementAgeMonths = polity.Settlements.Max(settlement => settlement.EstablishedMonths);
             averageSettlementAgeMonths = polity.Settlements.Average(settlement => settlement.EstablishedMonths);
             surplusSettlements = polity.Settlements.Count(settlement => settlement.FoodState == FoodState.Surplus);
@@ -273,6 +269,18 @@ internal sealed class PeopleMonthlySnapshotExtractor
             produced = polity.Settlements.Sum(settlement => settlement.FoodProduced + settlement.ManagedAnimalFoodThisMonth + settlement.ManagedCropFoodThisMonth);
             stored = polity.Settlements.Sum(settlement => settlement.FoodStored);
         }
+
+        SpatialIdentityEvidence spatialIdentity = BuildSpatialIdentityEvidence(
+            context,
+            polity,
+            previous,
+            recentHistory,
+            occupiedRegionIds,
+            settlementCount,
+            oldestSettlementAgeMonths,
+            averageSettlementAgeMonths);
+        int homeClusterRegionId = spatialIdentity.HomeClusterRegionId;
+        double homeClusterShare = spatialIdentity.HomeClusterShare;
 
         double supportAdequacy = required <= 0.0
             ? 1.0
@@ -287,7 +295,7 @@ internal sealed class PeopleMonthlySnapshotExtractor
             ? 0.0
             : Math.Clamp(polity.FoodSurplusThisMonth / required, 0.0, 1.5);
         double connectedFootprintShare = ObserverMath.ComputeLargestConnectedShare(context, occupiedRegionIds);
-        double routeCoverageShare = ComputeRouteCoverageShare(context, occupiedRegionIds, homeClusterRegionId);
+        double routeCoverageShare = spatialIdentity.RouteCoverageShare;
         double scatterShare = Math.Clamp(1.0 - connectedFootprintShare, 0.0, 1.0);
         int maxFootprintHopDistance = ObserverMath.ComputeMaxPairwiseHopDistance(context, occupiedRegionIds);
         bool movedThisMonth = polity.MovedThisMonth;
@@ -295,24 +303,34 @@ internal sealed class PeopleMonthlySnapshotExtractor
             && ((previous.SupportAdequacy >= 0.85 && supportAdequacy <= 0.55)
                 || (previous.StarvingSettlementCount == 0 && starvingSettlements > 0));
         bool settlementLossThisMonth = previous is not null && previous.SettlementCount > settlementCount;
-        bool displacementThisMonth = movedThisMonth
-            || (previous is not null
-                && previous.HomeClusterRegionId != homeClusterRegionId
-                && homeClusterShare < 0.50);
+        bool coherentMobilityThisMonth = movedThisMonth && IsCoherentMobilityMove(context, previous, homeClusterRegionId, routeCoverageShare, connectedFootprintShare, scatterShare);
+        bool displacementThisMonth = !coherentMobilityThisMonth
+            && (movedThisMonth
+                || (previous is not null
+                    && previous.HomeClusterRegionId != homeClusterRegionId
+                    && homeClusterShare < 0.50));
         bool collapseMarkerThisMonth = polity.Population <= 40
             || polity.FragmentationPressure >= 0.85
             || (settlementCount > 0 && starvingSettlements == settlementCount);
         bool identityBreakThisMonth = previous is not null
             && previous.HomeClusterRegionId != homeClusterRegionId
+            && !coherentMobilityThisMonth
             && (movedThisMonth || settlementLossThisMonth || connectedFootprintShare < 0.50);
         bool activeIdentityBreakNow = identityBreakThisMonth;
         int continuousIdentityMonthsObserved = previous is null
             ? 1
             : identityBreakThisMonth
                 ? 0
-                : previous.ContinuousIdentityMonthsObserved + Math.Max(1, ObserverMath.ToAbsoluteMonthIndex(context.World.Time.Year, context.World.Time.Month) - previous.AbsoluteMonthIndex);
-        bool anchoredThisMonth = settlementCount > 0 && homeClusterShare >= 0.50 && oldestSettlementAgeMonths >= 6 && !movedThisMonth;
-        bool strongAnchoredThisMonth = anchoredThisMonth && homeClusterShare >= 0.75 && oldestSettlementAgeMonths >= 12 && starvingSettlements == 0;
+                : previous.ContinuousIdentityMonthsObserved + Math.Max(1, absoluteMonthIndex - previous.AbsoluteMonthIndex);
+        bool anchoredThisMonth = !movedThisMonth
+            && settlementCount > 0
+            && ((homeClusterShare >= 0.50 && oldestSettlementAgeMonths >= 6)
+                || spatialIdentity.RepeatedHabitationMonths >= 6);
+        bool strongAnchoredThisMonth = !movedThisMonth
+            && anchoredThisMonth
+            && starvingSettlements == 0
+            && ((homeClusterShare >= 0.72 && oldestSettlementAgeMonths >= 12)
+                || spatialIdentity.RepeatedHabitationMonths >= 12);
         bool expansionOpportunityThisMonth = settlementCount > 0
             && supportAdequacy >= 1.0
             && starvingSettlements == 0
@@ -382,17 +400,203 @@ internal sealed class PeopleMonthlySnapshotExtractor
             neighbors.Count(neighbor => neighbor.ExertsPressure));
     }
 
-    private static double ComputeRouteCoverageShare(ObserverWorldContext context, IReadOnlyCollection<int> occupiedRegionIds, int homeClusterRegionId)
+    private static SpatialIdentityEvidence BuildSpatialIdentityEvidence(
+        ObserverWorldContext context,
+        Polity polity,
+        PeopleMonthlySnapshot? previous,
+        IReadOnlyList<PeopleMonthlySnapshot> recentHistory,
+        IReadOnlyList<int> occupiedRegionIds,
+        int settlementCount,
+        int oldestSettlementAgeMonths,
+        double averageSettlementAgeMonths)
+    {
+        Dictionary<int, double> coreWeights = [];
+        Dictionary<int, int> currentSettlementCountByRegion = polity.Settlements
+            .GroupBy(settlement => settlement.RegionId)
+            .ToDictionary(group => group.Key, group => group.Count());
+        int currentCenterRegionId = occupiedRegionIds.Count == 0 ? polity.RegionId : occupiedRegionIds[0];
+
+        foreach (int regionId in occupiedRegionIds.Append(polity.RegionId).Distinct())
+        {
+            double weight = 1.0;
+            if (currentSettlementCountByRegion.TryGetValue(regionId, out int currentSettlementCount))
+            {
+                weight += currentSettlementCount * 1.55;
+                double averageAgeInRegion = polity.Settlements
+                    .Where(settlement => settlement.RegionId == regionId)
+                    .Average(settlement => (double)settlement.EstablishedMonths);
+                weight += Math.Clamp(averageAgeInRegion / 18.0, 0.0, 1.4);
+            }
+            else if (regionId == polity.RegionId)
+            {
+                weight += 0.65;
+            }
+
+            if (regionId == polity.RegionId)
+            {
+                weight += 0.80;
+            }
+
+            if (previous is not null && previous.HomeClusterRegionId == regionId)
+            {
+                weight += 0.90 + (previous.HomeClusterShare * 0.85);
+            }
+
+            double repeatedOccupationWeight = 0.0;
+            double repeatedHomeWeight = 0.0;
+            foreach (PeopleMonthlySnapshot snapshot in recentHistory)
+            {
+                double recencyWeight = 1.0 - Math.Clamp((recentHistory[^1].AbsoluteMonthIndex - snapshot.AbsoluteMonthIndex) / 24.0, 0.0, 0.75);
+                if (snapshot.OccupiedRegionIds.Contains(regionId) || snapshot.CurrentRegionId == regionId)
+                {
+                    repeatedOccupationWeight += 0.32 * recencyWeight;
+                }
+
+                if (snapshot.HomeClusterRegionId == regionId)
+                {
+                    repeatedHomeWeight += 0.42 * recencyWeight;
+                }
+
+                if (snapshot.IsAnchoredThisMonth && snapshot.HomeClusterRegionId == regionId)
+                {
+                    repeatedHomeWeight += 0.24 * recencyWeight;
+                }
+            }
+
+            coreWeights[regionId] = weight + repeatedOccupationWeight + repeatedHomeWeight;
+        }
+
+        KeyValuePair<int, double> resolvedHomeCluster = coreWeights
+            .OrderByDescending(entry => entry.Value)
+            .ThenByDescending(entry => currentSettlementCountByRegion.TryGetValue(entry.Key, out int settlementCountInRegion) ? settlementCountInRegion : 0)
+            .ThenBy(entry => context.GetHopDistance(currentCenterRegionId, entry.Key))
+            .ThenBy(entry => entry.Key)
+            .First();
+
+        int repeatedHabitationMonths = recentHistory.Count(snapshot => snapshot.HomeClusterRegionId == resolvedHomeCluster.Key)
+            + recentHistory.Count(snapshot => snapshot.OccupiedRegionIds.Contains(resolvedHomeCluster.Key) && snapshot.IsAnchoredThisMonth);
+        double homeClusterShare = coreWeights.Count == 0
+            ? 1.0
+            : Math.Clamp(resolvedHomeCluster.Value / Math.Max(0.01, coreWeights.Values.Sum()), 0.0, 1.0);
+        homeClusterShare = Math.Max(homeClusterShare, settlementCount <= 0 ? 1.0 : Math.Clamp((currentSettlementCountByRegion.TryGetValue(resolvedHomeCluster.Key, out int clusterSettlementCount) ? clusterSettlementCount : 0) / Math.Max(1.0, settlementCount), 0.0, 1.0));
+
+        double routeCoverageShare = ComputeRouteCoverageShare(context, occupiedRegionIds, resolvedHomeCluster.Key, recentHistory);
+        if (settlementCount > 0 && homeClusterShare < 0.65 && averageSettlementAgeMonths >= 8.0 && repeatedHabitationMonths >= 4)
+        {
+            homeClusterShare = Math.Clamp(homeClusterShare + 0.08 + Math.Min(0.10, oldestSettlementAgeMonths / 120.0), 0.0, 1.0);
+        }
+
+        return new SpatialIdentityEvidence(
+            resolvedHomeCluster.Key,
+            homeClusterShare,
+            routeCoverageShare,
+            repeatedHabitationMonths);
+    }
+
+    private static double ComputeRouteCoverageShare(
+        ObserverWorldContext context,
+        IReadOnlyCollection<int> occupiedRegionIds,
+        int homeClusterRegionId,
+        IReadOnlyList<PeopleMonthlySnapshot> recentHistory)
     {
         if (occupiedRegionIds.Count <= 1)
         {
             return occupiedRegionIds.Count == 0 ? 0.0 : 1.0;
         }
 
-        int routeCoveredRegions = occupiedRegionIds.Count(regionId => context.GetHopDistance(homeClusterRegionId, regionId) <= 1);
-        return Math.Clamp(routeCoveredRegions / (double)occupiedRegionIds.Count, 0.0, 1.0);
+        Dictionary<(int LeftRegionId, int RightRegionId), int> routeReuseCounts = [];
+        foreach (PeopleMonthlySnapshot snapshot in recentHistory)
+        {
+            IReadOnlyList<int> routeRegions = snapshot.OccupiedRegionIds.Count == 0
+                ? [snapshot.CurrentRegionId]
+                : snapshot.OccupiedRegionIds;
+            foreach (int sourceRegionId in routeRegions)
+            {
+                foreach (int targetRegionId in routeRegions)
+                {
+                    if (sourceRegionId >= targetRegionId || context.GetHopDistance(sourceRegionId, targetRegionId) != 1)
+                    {
+                        continue;
+                    }
+
+                    (int LeftRegionId, int RightRegionId) key = (sourceRegionId, targetRegionId);
+                    routeReuseCounts[key] = routeReuseCounts.TryGetValue(key, out int count) ? count + 1 : 1;
+                }
+            }
+
+            if (snapshot.CurrentRegionId != snapshot.PreviousRegionId && context.GetHopDistance(snapshot.CurrentRegionId, snapshot.PreviousRegionId) == 1)
+            {
+                (int LeftRegionId, int RightRegionId) key = snapshot.CurrentRegionId <= snapshot.PreviousRegionId
+                    ? (snapshot.CurrentRegionId, snapshot.PreviousRegionId)
+                    : (snapshot.PreviousRegionId, snapshot.CurrentRegionId);
+                routeReuseCounts[key] = routeReuseCounts.TryGetValue(key, out int count) ? count + 1 : 1;
+            }
+        }
+
+        int supportedRegions = 0;
+        foreach (int regionId in occupiedRegionIds)
+        {
+            if (regionId == homeClusterRegionId || context.GetHopDistance(homeClusterRegionId, regionId) <= 1)
+            {
+                supportedRegions++;
+                continue;
+            }
+
+            bool corridorSupported = occupiedRegionIds
+                .Where(otherRegionId => otherRegionId != regionId && context.GetHopDistance(otherRegionId, regionId) == 1)
+                .Any(otherRegionId => GetRouteReuseCount(routeReuseCounts, otherRegionId, regionId) >= 2);
+            if (!corridorSupported)
+            {
+                corridorSupported = recentHistory.Count(snapshot => snapshot.OccupiedRegionIds.Contains(regionId) && snapshot.HomeClusterRegionId == homeClusterRegionId) >= 3;
+            }
+
+            if (corridorSupported)
+            {
+                supportedRegions++;
+            }
+        }
+
+        return Math.Clamp(supportedRegions / (double)occupiedRegionIds.Count, 0.0, 1.0);
+    }
+
+    private static int GetRouteReuseCount(Dictionary<(int LeftRegionId, int RightRegionId), int> routeReuseCounts, int leftRegionId, int rightRegionId)
+    {
+        (int LeftRegionId, int RightRegionId) key = leftRegionId <= rightRegionId
+            ? (leftRegionId, rightRegionId)
+            : (rightRegionId, leftRegionId);
+        return routeReuseCounts.TryGetValue(key, out int count)
+            ? count
+            : 0;
+    }
+
+    private static bool IsCoherentMobilityMove(
+        ObserverWorldContext context,
+        PeopleMonthlySnapshot? previous,
+        int currentHomeClusterRegionId,
+        double routeCoverageShare,
+        double connectedFootprintShare,
+        double scatterShare)
+    {
+        if (previous is null)
+        {
+            return false;
+        }
+
+        bool returnedToKnownCore = previous.HomeClusterRegionId == currentHomeClusterRegionId
+            || previous.OccupiedRegionIds.Contains(currentHomeClusterRegionId)
+            || context.GetHopDistance(previous.HomeClusterRegionId, currentHomeClusterRegionId) <= 1;
+        bool spatiallyCoherentNow = routeCoverageShare >= 0.65
+            && connectedFootprintShare >= 0.60
+            && scatterShare <= 0.35;
+        return returnedToKnownCore || spatiallyCoherentNow;
     }
 }
+
+internal sealed record SpatialIdentityEvidence(
+    int HomeClusterRegionId,
+    double HomeClusterShare,
+    double RouteCoverageShare,
+    int RepeatedHabitationMonths);
 
 public sealed class PeopleHistoryWindowSnapshotBuilder
 {
