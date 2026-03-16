@@ -20,7 +20,7 @@ A feature is not fully complete until:
 
 This remains the top roadmap priority for LivingWorld.
 
-The primitive-life-first simulation foundation still underpins startup, but PR-1 through PR-6 already replaced the old outer startup wrapper with the canonical prehistory runtime architecture: `BootstrapWorldFrame` -> `PrehistoryRunning` -> `ReadinessCheckpoint` -> `FocalSelection` -> `ActivePlay` -> `GenerationFailure`. PR-7 completed the documentation and roadmap sync for that implemented baseline.
+The primitive-life-first simulation foundation still underpins startup, but PR-1 through PR-6 already replaced the old outer startup wrapper with the canonical prehistory runtime architecture: `WorldSeeding` -> `BiologicalDivergence` -> `SocialEmergence` -> `WorldReadinessReview` -> `FocalSelection` -> `SimulationEngineActivePlay` -> `GenerationFailure`. PR-7 completed the documentation and roadmap sync for that implemented baseline.
 
 All later civilization-era roadmap phases remain deferred until this program is complete enough to stop being the repository's critical path.
 
@@ -42,9 +42,9 @@ Implemented:
 - raw simulation truth is now separated from evaluator-owned startup decisions
 - stop logic, candidate evaluation, focal selection, and player handoff now sit above simulation facts rather than rewriting them
 - honest failure states are preserved when the world does not produce true viable starts
-- `PrehistoryRuntimePhase` and `PrehistoryRuntimeStatus` now serve as the single source of runtime truth (BootstrapWorldFrame → PrehistoryRunning → ReadinessCheckpoint → FocalSelection → ActivePlay → GenerationFailure), while `World` retains the simulation truth and legacy `WorldStartupStage` stays purely a transitional subphase label and generator diagnostic artifact.
+- `PrehistoryRuntimePhase` and `PrehistoryRuntimeStatus` now serve as the single source of runtime truth (`WorldSeeding` → `BiologicalDivergence` → `SocialEmergence` → `WorldReadinessReview` → `FocalSelection` → `SimulationEngineActivePlay` → `GenerationFailure`), while `World` retains the simulation truth and legacy `WorldStartupStage` stays purely a transitional subphase label and generator diagnostic artifact.
 - `PrehistoryCheckpointCoordinator` plus the transitional `LegacyCheckpointCompatibilityAdapter` and `LegacyPlayerEntryOutcomeEvaluatorAdapter` now keep the checkpoint layer, candidate pool, and failure handling above the world rather than mutating simulation truth.
-- `StartupProgressRenderer`, `ChronicleWatchRenderer`, and `ActivePlayHandoffState` are now aligned so the canonical phases drive the player view: the startup panel shows the phase text and metrics, `FocalSelection` pauses monthly ticks while the candidate pool is shown, `ActivePlay` only begins once the handoff is recorded, and `GenerationFailure` surfaces an honest failure summary.
+- `StartupProgressRenderer`, `ChronicleWatchRenderer`, and `ActivePlayHandoffState` are now aligned so the canonical phases drive the player view: the startup panel shows the phase text and metrics, `FocalSelection` pauses monthly ticks while the candidate pool is shown, `SimulationEngineActivePlay` only begins once the handoff is recorded, and `GenerationFailure` surfaces an honest failure summary.
 
 Implemented cleanup:
 - `World` now groups startup/runtime ownership under `World.Prehistory`, with compatibility forwarding properties kept only as a transitional surface.
@@ -218,7 +218,7 @@ Implemented:
   - `Settling` starts convert to `Polity` only if the full polity gate passes
   - `EmergentPolity` starts fall back to `Society` when structured-authority evidence is too thin
 - spatial control conversion now maps starts truthfully into `Network`, `AnchoredHomeRange`, or `TerritorialCore`
-- `ActiveControl` is now the explicit runtime/player-control overlay, while polity objects remain the backing simulation state beneath that control boundary
+- `ActiveControl` is now the explicit runtime/player-control overlay, while polity objects remain the backing `SimulationEngine` state beneath that control boundary
 - watch/UI entry surfaces now show the inherited start, converted control type, and compact handoff summary without dumping raw handoff fields into the chronicle
 
 ### PR-7 - Documentation and Canonical Roadmap Sync
@@ -230,10 +230,10 @@ Implemented:
 - synced `SIMULATION_ROADMAP.md` so the Prehistory Rework remains clearly above later civilization-era phases and PR-7 is recorded as completed documentation-sync work
 - updated the canonical architecture/runtime docs to match the implemented startup/runtime truth:
   - `PrehistoryRuntimePhase` ladder
-  - `ReadinessCheckpoint`
+  - `WorldReadinessReview`
   - truthful `FocalSelection` freeze at the selected end-of-month state
   - canonical active-play handoff package
-  - active play beginning paused
+  - the `SimulationEngine` beginning paused
   - honest `GenerationFailure` handling
 - aligned player-facing and subsystem docs around the current observer-versus-evaluator boundary, discovery-versus-learned terminology, and the rule that initialization/prehistory are not the live chronicle
 - kept directive system, standing posture system, planning UX, and month-result review/planning flow explicitly deferred and out of the current critical path

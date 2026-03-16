@@ -126,10 +126,13 @@ public sealed class ChronicleWatchRenderer : IDisposable
     {
         string border = new('=', width);
         PrehistoryRuntimeStatus runtime = world.PrehistoryRuntime;
+        string phaseName = runtime.CurrentPhase.ToDisplayString();
         string phaseDescription = string.IsNullOrWhiteSpace(runtime.PhaseLabel)
-            ? runtime.CurrentPhase.ToString()
+            ? phaseName
             : runtime.PhaseLabel;
-        List<string> lines = [border, $" Phase: {runtime.CurrentPhase} | {phaseDescription}"];
+        List<string> lines = [border, string.Equals(phaseDescription, phaseName, StringComparison.Ordinal)
+            ? $" Phase: {phaseName}"
+            : $" Phase: {phaseName} | {phaseDescription}"];
         string status = uiState.IsPaused ? "PAUSED" : "RUNNING";
         string view = WatchViewCatalog.DescribeView(uiState.ActiveView);
         if (runtime.CurrentPhase == PrehistoryRuntimePhase.GenerationFailure)
@@ -145,7 +148,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
 
         if (runtime.CurrentPhase == PrehistoryRuntimePhase.FocalSelection)
         {
-            lines.Add(" Chronicle Watch - Focal selection (time paused)");
+            lines.Add(" Chronicle Watch - Focal Selection (time paused)");
             lines.Add($" Status: SELECTING | View: {view}");
             lines.Add($" World Age: {world.Time.Year} | Preset: {world.StartupAgeConfiguration.Preset} (locked until choice)");
             int surfacedCount = world.PlayerEntryCandidates.Count;
@@ -153,7 +156,7 @@ public sealed class ChronicleWatchRenderer : IDisposable
             lines.Add(viableCount > surfacedCount
                 ? $" Candidate pool: {surfacedCount} surfaced of {viableCount} viable start(s)"
                 : $" Candidate pool: {surfacedCount} viable start(s) available");
-            string checkpointLabel = runtime.LastCheckpointOutcome?.Kind.ToString() ?? "Pending";
+            string checkpointLabel = runtime.LastCheckpointOutcome?.Kind.ToDisplayString() ?? "Pending";
             string? checkpointDetails = runtime.LastCheckpointOutcome?.Summary;
             string checkpointLine = checkpointDetails is null
                 ? $" Checkpoint: {checkpointLabel}"

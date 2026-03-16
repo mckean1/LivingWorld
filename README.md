@@ -47,9 +47,9 @@ The current simulation phase now treats ecology, hunting, and polity history as 
 
 ## Runtime Architecture
 
-LivingWorld now enters play through the canonical `PrehistoryRuntimePhase` ladder: `BootstrapWorldFrame`, `PrehistoryRunning`, `ReadinessCheckpoint`, `FocalSelection`, `ActivePlay`, and `GenerationFailure`. `StartupProgressRenderer` owns the console through startup and prehistory, keeping initialization separate from the live chronicle. If the world produces real viable starts, time freezes in `FocalSelection` while the player reviews the surfaced candidate pool. If it does not, runtime stops honestly in `GenerationFailure` instead of inventing a start.
+LivingWorld now enters play through the canonical `PrehistoryRuntimePhase` ladder: `WorldSeeding`, `BiologicalDivergence`, `SocialEmergence`, `WorldReadinessReview`, `FocalSelection`, `SimulationEngineActivePlay`, and `GenerationFailure`. `StartupProgressRenderer` owns the console through startup and prehistory, keeping initialization separate from the live chronicle. If the world produces real viable starts, time freezes in `FocalSelection` while the player reviews the surfaced candidate pool. If it does not, runtime stops honestly in `GenerationFailure` instead of inventing a start.
 
-The startup handoff is built from the exact selected end-of-month prehistory state. `ActivePlayHandoffState` preserves identity, current condition, routes, settlements, neighbors, discoveries, learned capabilities, visibility truth, unresolved shocks, and a compact inherited prehistory summary. `World.BeginActiveSimulation` starts the live chronicle only after that handoff package is recorded, and active play begins paused so the inherited start can be inspected before time resumes.
+The startup handoff is built from the exact selected end-of-month prehistory state. `ActivePlayHandoffState` preserves identity, current condition, routes, settlements, neighbors, discoveries, learned capabilities, visibility truth, unresolved shocks, and a compact inherited prehistory summary. `World.BeginActiveSimulation` starts the live chronicle only after that handoff package is recorded, and the `SimulationEngine` begins paused so the inherited start can be inspected before time resumes.
 
 Readiness and candidate selection stay evaluator-owned. Observer artifacts such as `PeopleHistoryWindowSnapshot`, `RegionEvaluationSnapshot`, and `NeighborContextSnapshot` hold facts only. `WorldReadinessReport` resolves `ContinuePrehistory`, `EnterFocalSelection`, `ForceEnterFocalSelection`, or `GenerationFailure` from those facts, and `PrehistoryCandidateSelectionEvaluator` surfaces viable starts without weakening hard truth or blurring `Discoveries` with `Learned`.
 
@@ -110,11 +110,11 @@ Default watch mode still shows:
 
 ## Active-Play Handoff Contract
 
-PR-6 now treats `ActiveControl` as an intentional runtime/player-control overlay on top of the underlying polity-backed simulation model.
+PR-6 now treats `ActiveControl` as an intentional runtime/player-control overlay on top of the underlying polity-backed `SimulationEngine` model.
 
 - canonical focal-selection entry always runs through the full handoff builder path
 - the selected start is the exact end-of-month prehistory state the player chose; handoff conversion does not advance another month
-- active play begins paused so inherited context can be inspected before time resumes
+- the `SimulationEngine` begins paused so inherited context can be inspected before time resumes
 - the handoff package is the authoritative bootstrap source for entry discoveries, learned capabilities, and known regions/species/polities
 - discoveries remain world knowledge, while learned capabilities remain gained advancements
 - `Society` / `Polity` control conversion and `Network` / `AnchoredHomeRange` / `TerritorialCore` spatial interpretation are descriptive, not strength-inflating rewrites of simulation truth

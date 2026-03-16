@@ -28,10 +28,10 @@ public sealed class ChronicleWatchRendererTests
             width: 80,
             stageNameFormatter: stage => stage.ToString());
 
-        Assert.Contains(" Chronicle Watch - Focal selection (time paused)", lines);
+        Assert.Contains(" Chronicle Watch - Focal Selection (time paused)", lines);
         Assert.Contains(" Candidate pool: 1 viable start(s) available", lines);
         Assert.Contains(" Handoff: awaiting player selection", lines);
-        Assert.Contains(lines, line => line.Contains("Checkpoint: EnterFocalSelection", StringComparison.Ordinal));
+        Assert.Contains(lines, line => line.Contains("Checkpoint: Enter Focal Selection", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -126,9 +126,9 @@ public sealed class ChronicleWatchRendererTests
     private static World CreateActivePlayWorld()
     {
         World world = new(new WorldTime(920, 6));
-        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.SimulationEngineActivePlay;
         world.PrehistoryRuntime.ActivitySummary = "Chronicle running";
-        world.PrehistoryRuntime.PhaseLabel = "Active play";
+        world.PrehistoryRuntime.PhaseLabel = "Selected start now running inside the SimulationEngine";
 
         world.Regions.Add(new Region(0, "Green Basin") { Biome = RegionBiome.RiverValley, Fertility = 0.72, WaterAvailability = 0.68 });
         world.Regions.Add(new Region(1, "Stone Shelf") { Biome = RegionBiome.Highlands, Fertility = 0.61, WaterAvailability = 0.52 });

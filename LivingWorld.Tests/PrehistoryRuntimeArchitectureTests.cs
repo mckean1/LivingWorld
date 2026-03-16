@@ -65,7 +65,7 @@ public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<Prehistor
 
         simulation.RunMonths(1);
 
-        Assert.Equal(PrehistoryRuntimePhase.ActivePlay, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimePhase.SimulationEngineActivePlay, world.PrehistoryRuntime.CurrentPhase);
         Assert.NotNull(world.SelectedFocalPolityId);
         Assert.NotNull(world.LiveChronicleStartYear);
         Assert.Equal(handoffYear, world.Time.Year);
@@ -102,10 +102,10 @@ public sealed class PrehistoryRuntimeArchitectureTests : IClassFixture<Prehistor
     {
         World world = fixture.CreateRuntimeDetailViewWorld();
         world.StartupStage = WorldStartupStage.PrimitiveEcologyFoundation;
-        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.BiologicalDivergence;
         world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.EvolutionaryExpansion;
         world.PrehistoryRuntime.WorldAgeYears = 180;
-        world.PrehistoryRuntime.PhaseLabel = "Running evolutionary history";
+        world.PrehistoryRuntime.PhaseLabel = "Letting lineages branch, adapt, die out, and recolonize";
         world.PrehistoryRuntime.SubphaseLabel = "Diverging regional lineages";
         world.PrehistoryRuntime.ActivitySummary = "Diverging isolated lineages into new branches and adaptation paths.";
         world.PhaseBDiagnostics = new PhaseBDiagnostics(2.4, 6, 3, 4, 5, 2, 1, 2, 2, 2, []);

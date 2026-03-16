@@ -49,11 +49,11 @@ These values are intentionally centralized so density tuning can happen without 
 8. initialize explicit evolutionary lineage records from the surviving primitive carriers
 9. run an internal Phase B evolutionary bootstrap loop with mutation, divergence, speciation, extinction, and sentience-capability progression until readiness is achieved or the bootstrap year cap is reached
 10. run an internal Phase C social bootstrap loop with sentient activation, society formation, settlement pressure, polity formation, and candidate tracking until readiness is achieved or the bootstrap year cap is reached
-11. run the canonical player-entry evaluation layer using startup age presets, observer snapshots, readiness checkpoints, candidate composition, and weak-world regeneration until the world truthfully resolves to `FocalSelection` or `GenerationFailure`
+11. run the canonical player-entry evaluation layer using startup age presets, observer snapshots, `WorldReadinessReview` checkpoints, candidate composition, and weak-world regeneration until the world truthfully resolves to `FocalSelection` or `GenerationFailure`
 12. store `PhaseAReadinessReport`, `PhaseBReadinessReport`, `PhaseCReadinessReport`, and `WorldReadinessReport` for inspection
 13. store startup outcome diagnostics for organic/fallback counts, candidate rejections, bottlenecks, and regeneration causes
 14. if viable starts exist, freeze the world in `FocalSelection` with compact candidate summaries ready for player choice; otherwise keep the world frozen in `GenerationFailure`
-15. render a dedicated startup progress panel during those steps so the player can see current phase, age, readiness-window context, and compact live metrics without chronicle spam
+15. render a dedicated startup progress panel during those steps so the player can see `World Seeding`, `Biological Divergence`, `Social Emergence`, and `World Readiness Review` progress, age, readiness-window context, and compact live metrics without chronicle spam
 
 The default startup now intentionally reaches a playable prehistory handoff rather than stopping before player-entry logic exists.
 

@@ -12,10 +12,10 @@ public sealed class PrehistoryRuntimeOrchestratorTests
         World world = new(new WorldTime());
         PrehistoryRuntimeOrchestrator orchestrator = new();
         orchestrator.Initialize(world, StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld));
-        orchestrator.BeginPrehistoryRunning(world);
+        orchestrator.BeginAdvancingPhase(world, PrehistoryRuntimePhase.BiologicalDivergence);
 
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.Continue("keep going"));
-        Assert.Equal(PrehistoryRuntimePhase.PrehistoryRunning, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimePhase.BiologicalDivergence, world.PrehistoryRuntime.CurrentPhase);
 
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.EnterFocalSelection("ready"));
         Assert.Equal(PrehistoryRuntimePhase.FocalSelection, world.PrehistoryRuntime.CurrentPhase);
@@ -43,11 +43,11 @@ public sealed class PrehistoryRuntimeOrchestratorTests
             phaseLabel: "Checking readiness",
             subphaseLabel: "Checking stop conditions",
             activitySummary: "Inspecting world facts");
-        Assert.Equal(PrehistoryRuntimePhase.ReadinessCheckpoint, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimePhase.WorldReadinessReview, world.PrehistoryRuntime.CurrentPhase);
         Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
 
         orchestrator.BeginActivePlay(world);
-        Assert.Equal(PrehistoryRuntimePhase.ActivePlay, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimePhase.SimulationEngineActivePlay, world.PrehistoryRuntime.CurrentPhase);
         Assert.Equal(PrehistoryRuntimeDetailView.ActivePlay, world.PrehistoryRuntime.DetailView);
         Assert.True(world.PrehistoryRuntime.AreReadinessChecksActive);
         Assert.False(world.PrehistoryRuntime.IsPrehistoryAdvancing);
@@ -59,11 +59,11 @@ public sealed class PrehistoryRuntimeOrchestratorTests
         World world = new(new WorldTime());
         PrehistoryRuntimeOrchestrator orchestrator = new();
         orchestrator.Initialize(world, StartupWorldAgeConfiguration.ForPreset(StartupWorldAgePreset.StandardWorld));
-        orchestrator.BeginPrehistoryRunning(world);
+        orchestrator.BeginAdvancingPhase(world, PrehistoryRuntimePhase.SocialEmergence);
 
         orchestrator.RecordCheckpointOutcome(world, PrehistoryCheckpointOutcome.Continue("still running"));
 
-        Assert.Equal(PrehistoryRuntimePhase.PrehistoryRunning, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimePhase.SocialEmergence, world.PrehistoryRuntime.CurrentPhase);
         Assert.True(world.PrehistoryRuntime.IsPrehistoryAdvancing);
     }
 

@@ -104,14 +104,15 @@ public sealed class StartupProgressRenderer : IDisposable
 
         StartupWorldAgeConfiguration age = world.StartupAgeConfiguration;
         string border = new('=', 78);
-        string phaseDescription = runtime.PhaseLabel;
-        if (string.IsNullOrWhiteSpace(phaseDescription))
-        {
-            phaseDescription = runtime.CurrentPhase.ToString();
-        }
+        string phaseName = runtime.CurrentPhase.ToDisplayString();
+        string phaseDescription = string.IsNullOrWhiteSpace(runtime.PhaseLabel)
+            ? phaseName
+            : runtime.PhaseLabel;
 
         List<string> lines = [border, " World Generation"];
-        lines.Add($" Runtime phase: {runtime.CurrentPhase} | {phaseDescription}");
+        lines.Add(string.Equals(phaseDescription, phaseName, StringComparison.Ordinal)
+            ? $" Phase: {phaseName}"
+            : $" Phase: {phaseName} | {phaseDescription}");
         if (!string.IsNullOrWhiteSpace(runtime.SubphaseLabel))
         {
             lines.Add($" Subphase: {runtime.SubphaseLabel}");
@@ -122,7 +123,7 @@ public sealed class StartupProgressRenderer : IDisposable
             $" World Age: {runtime.WorldAgeYears} years | Preset: {age.Preset} | Window: {age.MinPrehistoryYears}-{age.TargetPrehistoryYears}-{age.MaxPrehistoryYears}");
 
         string readinessState = runtime.AreReadinessChecksActive ? "Readiness: active" : "Readiness: warming up";
-        string checkpointKind = runtime.LastCheckpointOutcome?.Kind.ToString() ?? "pending";
+        string checkpointKind = runtime.LastCheckpointOutcome?.Kind.ToDisplayString() ?? "Pending";
         string checkpointDetail = runtime.LastCheckpointOutcome?.Summary;
         string checkpointSummary = checkpointDetail is null ? checkpointKind : $"{checkpointKind} ({checkpointDetail})";
         lines.Add($"{readinessState} | Checkpoint: {checkpointSummary} | Attempt: {world.StartupGenerationAttempt + 1}");
@@ -175,11 +176,7 @@ public sealed class StartupProgressRenderer : IDisposable
     {
         return world.PrehistoryRuntime.CurrentPhase switch
         {
-            PrehistoryRuntimePhase.BootstrapWorldFrame => BuildWorldFrameMetrics(world),
-            PrehistoryRuntimePhase.PrehistoryRunning => BuildRuntimeDetailMetrics(world),
-            PrehistoryRuntimePhase.ReadinessCheckpoint => BuildRuntimeDetailMetrics(world),
-            PrehistoryRuntimePhase.FocalSelection => BuildRuntimeDetailMetrics(world),
-            PrehistoryRuntimePhase.ActivePlay => [" Metrics: live chronicle active"],
+            PrehistoryRuntimePhase.SimulationEngineActivePlay => [" Metrics: SimulationEngine active"],
             PrehistoryRuntimePhase.GenerationFailure => BuildGenerationFailureMetrics(world),
             _ => BuildRuntimeDetailMetrics(world)
         };

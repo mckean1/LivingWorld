@@ -66,14 +66,14 @@ Turn prehistory into the canonical player-entry architecture so that:
 - readiness is evaluated from real evidence rather than thin summary shortcuts
 - viable starts are surfaced honestly
 - weak worlds are handled honestly
-- the selected start carries real prehistory, real pressures, and real opportunities into active play
+- the selected start carries real prehistory, real pressures, and real opportunities into the `SimulationEngine`
 
 ### PR-1 - Prehistory Runtime and Evaluation Architecture
 
 Implemented:
-- keep the same universal monthly simulation pipeline in both prehistory and active play
+- keep the same universal monthly simulation pipeline in both prehistory and the `SimulationEngine`
 - keep raw simulation truth separate from evaluator-owned startup decisions
-- treat prehistory as the canonical startup path into active play
+- treat prehistory as the canonical startup path into the `SimulationEngine`
 - preserve honest failure states when the world does not produce true viable starts
 - formalize checkpoint coordination with `PrehistoryCheckpointCoordinator`, `LegacyCheckpointCompatibilityAdapter`, and `LegacyPlayerEntryOutcomeEvaluatorAdapter` so reader-facing readiness/candidate logic cannot mutate the core world state and GenerationFailure remains explicit
 - group startup/runtime ownership under `World.Prehistory`, with `PrehistoryEvaluationSnapshot.LegacyCompatibility` and `PrehistoryEvaluationSnapshot.CandidateSelection` separating transitional legacy artifacts from candidate-pool state
@@ -133,10 +133,10 @@ Implemented:
 ### PR-6 - Active-Play Handoff
 
 Implemented:
-- hand off directly from the selected end-of-month prehistory state into active play
+- hand off directly from the selected end-of-month prehistory state into the `SimulationEngine`
 - do not advance an extra month during handoff
 - preserve real current condition, discoveries, learned capabilities, neighbors, routes, settlements, support, continuity, and unresolved shocks
-- start active play paused
+- start the `SimulationEngine` paused
 - preserve discovery-versus-learned truth
 - convert the selected prehistory people into a truthful active control wrapper rather than a fake upgrade
 - preserve compact inherited prehistory summary state and entry visibility truth through a canonical handoff package
@@ -145,7 +145,7 @@ Implemented:
 
 Implemented:
 - kept `IMPLEMENTED_SYSTEMS_LIST.md` and `SIMULATION_ROADMAP.md` aligned as the canonical implementation and planning sources of truth
-- updated the canonical docs to describe the implemented `PrehistoryRuntimePhase` ladder, `ReadinessCheckpoint`, truthful `FocalSelection` freeze, canonical active-play handoff package, paused active-play entry, and honest `GenerationFailure`
+- updated the canonical docs to describe the implemented `PrehistoryRuntimePhase` ladder, `WorldReadinessReview`, truthful `FocalSelection` freeze, canonical active-play handoff package, paused `SimulationEngine` entry, and honest `GenerationFailure`
 - removed roadmap/documentation drift that still implied the older outer startup wrapper was the current canonical player-entry flow
 - kept directive system, standing posture system, planning UX, and month-result review/planning flow explicitly deferred and out of the current critical path
 

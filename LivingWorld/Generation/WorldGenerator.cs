@@ -290,13 +290,13 @@ public sealed class WorldGenerator
 
     private void StabilizePrimitiveEcology(World world)
     {
-        _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.BeginAdvancingPhase(world, PrehistoryRuntimePhase.WorldSeeding);
         _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.EcologyFoundation);
         _prehistoryRuntimeOrchestrator.Describe(
             world,
-            "Stabilizing ecosystems",
             "Growing primitive ecologies",
-            "Expanding primitive ecosystems across fertile regions and balancing food webs.");
+            "Balancing the first food webs",
+            "Expanding primitive ecosystems across fertile regions and balancing early food webs.");
         ReportProgress(world);
         FoodSystem foodSystem = new();
         EcosystemSystem ecosystemSystem = new();
@@ -314,8 +314,8 @@ public sealed class WorldGenerator
                 {
                     _prehistoryRuntimeOrchestrator.Describe(
                         world,
-                        "Stabilizing ecosystems",
-                        "Testing biological foundation",
+                        "Testing the living foundation",
+                        "Checking the seeded biosphere",
                         "Checking whether primitive ecosystems have spread broadly enough to support deeper history.");
                     ReportProgress(world);
                 }
@@ -331,10 +331,10 @@ public sealed class WorldGenerator
         _prehistoryRuntimeOrchestrator.RefreshAge(world);
         _prehistoryRuntimeOrchestrator.Describe(
             world,
-            "Stabilizing ecosystems",
-            "Phase A complete",
-            "Phase A complete: primitive ecosystems stabilized enough to support evolutionary history.",
-            "Phase A complete: ecosystems stabilized.");
+            "World seeding established",
+            "Living foundation ready",
+            "Primitive ecosystems stabilized enough to support evolutionary history.",
+            "World seeding complete: ecosystems stabilized.");
         ReportProgress(world);
     }
 
@@ -377,12 +377,12 @@ public sealed class WorldGenerator
 
     private void AdvanceEvolutionaryHistory(World world)
     {
-        _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.BeginAdvancingPhase(world, PrehistoryRuntimePhase.BiologicalDivergence);
         _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.EvolutionaryExpansion);
         world.StartupStage = WorldStartupStage.EvolutionaryExpansion;
         _prehistoryRuntimeOrchestrator.Describe(
             world,
-            "Running evolutionary history",
+            "Letting lineages branch, adapt, die out, and recolonize",
             "Diverging regional lineages",
             "Diverging isolated lineages into new branches and adaptation paths.");
         ReportProgress(world);
@@ -413,8 +413,8 @@ public sealed class WorldGenerator
             {
                 _prehistoryRuntimeOrchestrator.Describe(
                     world,
-                    "Running evolutionary history",
-                    world.PhaseBReadinessReport.IsReady ? "Checking mature biological history" : "Deepening biological branching",
+                    world.PhaseBReadinessReport.IsReady ? "Testing mature biological history" : "Letting lineages keep branching",
+                    world.PhaseBReadinessReport.IsReady ? "Checking for sentience-capable biological depth" : "Deepening biological branching",
                     world.PhaseBReadinessReport.IsReady
                         ? "Testing whether the world's biological history has matured enough for sentience-capable branches."
                         : "Letting isolated populations branch, adapt, go extinct, and recolonize over deep time.");
@@ -432,22 +432,22 @@ public sealed class WorldGenerator
         _prehistoryRuntimeOrchestrator.RefreshAge(world);
         _prehistoryRuntimeOrchestrator.Describe(
             world,
-            "Running evolutionary history",
-            "Phase B complete",
-            "Phase B complete: evolutionary history matured into a deeper biological world.",
-            "Phase B complete: evolutionary history matured.");
+            "Biological history established",
+            "Divergence pass complete",
+            "Evolutionary history matured into a deeper biological world.",
+            "Biological divergence complete: evolutionary history matured.");
         ReportProgress(world);
     }
 
     private void AdvanceCivilizationalEmergence(World world)
     {
         SocialEmergenceSystem socialEmergenceSystem = new(_seed + 313, _settings);
-        _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.BeginAdvancingPhase(world, PrehistoryRuntimePhase.SocialEmergence);
         _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.SocietalEmergence);
         world.StartupStage = WorldStartupStage.SentienceActivation;
         _prehistoryRuntimeOrchestrator.Describe(
             world,
-            "Developing sentient societies",
+            "Persistent peoples, settlements, and early polities forming",
             "Activating sentient branches",
             "Identifying sentience-capable branches and grounding the first social trajectories.");
         ReportProgress(world);
@@ -469,7 +469,7 @@ public sealed class WorldGenerator
             {
                 _prehistoryRuntimeOrchestrator.Describe(
                     world,
-                    "Developing sentient societies",
+                    "Persistent peoples, settlements, and early polities forming",
                     "Growing groups, settlements, and polities",
                     "Growing early societies, settlements, and the first plausible polity starts.");
                 ReportProgress(world);
@@ -493,21 +493,21 @@ public sealed class WorldGenerator
         _prehistoryRuntimeOrchestrator.RefreshAge(world);
         _prehistoryRuntimeOrchestrator.Describe(
             world,
-            "Developing sentient societies",
-            "Phase C complete",
-            "Phase C complete: early societies matured into plausible player-entry material.",
-            "Phase C complete: viable societies emerged.");
+            "Social foundations established",
+            "Persistent societies ready",
+            "Early societies matured into plausible player-entry material.",
+            "Social emergence complete: viable societies formed.");
         ReportProgress(world);
     }
 
     private void AdvancePlayerEntryEvaluation(World world, IReadOnlyList<string>? regenerationReasons)
     {
-        _prehistoryRuntimeOrchestrator.BeginPrehistoryRunning(world);
+        _prehistoryRuntimeOrchestrator.BeginAdvancingPhase(world, PrehistoryRuntimePhase.SocialEmergence);
         _prehistoryRuntimeOrchestrator.SetDetailView(world, PrehistoryRuntimeDetailView.CandidateEvaluation);
         world.StartupStage = WorldStartupStage.PlayerEntryEvaluation;
         _prehistoryRuntimeOrchestrator.Describe(
             world,
-            "Evaluating world readiness",
+            "Evaluating viable starts during late social emergence",
             "Building focal candidates",
             "Evaluating whether the world is mature enough to surface healthy starting candidates.");
         ReportProgress(world);
@@ -516,7 +516,7 @@ public sealed class WorldGenerator
 
         PrehistoryCheckpointOutcome initialOutcome = _checkpointCoordinator.Evaluate(
             world,
-            phaseLabel: "Evaluating world readiness",
+            phaseLabel: "Evaluating viable starts",
             subphaseLabel: "Building focal candidates",
             activitySummary: "Evaluating whether the world is mature enough to surface healthy starting candidates.",
             completionSummary: "world_readiness_passed",
@@ -538,7 +538,7 @@ public sealed class WorldGenerator
             {
                 PrehistoryCheckpointOutcome checkpointOutcome = _checkpointCoordinator.Evaluate(
                     world,
-                    phaseLabel: "Evaluating world readiness",
+                    phaseLabel: "Reviewing whether the world can stop truthfully",
                     subphaseLabel: "Checking stop conditions",
                     activitySummary: "Evaluating whether the world is ready for player entry or needs more historical time.",
                     completionSummary: "world_readiness_passed",
@@ -557,7 +557,7 @@ public sealed class WorldGenerator
             {
                 PrehistoryCheckpointOutcome targetOutcome = _checkpointCoordinator.Evaluate(
                     world,
-                    phaseLabel: "Evaluating world readiness",
+                    phaseLabel: "Reviewing target-age handoff readiness",
                     subphaseLabel: "Testing target-age handoff",
                     activitySummary: "Checking whether the world can stop at target age with a healthy candidate pool.",
                     completionSummary: "target_age_readiness_passed",
@@ -582,7 +582,7 @@ public sealed class WorldGenerator
             {
                 _prehistoryRuntimeOrchestrator.Describe(
                     world,
-                    "Evaluating world readiness",
+                    "Letting late social emergence continue",
                     "Advancing late prehistory",
                     "Letting late prehistory continue so additional settlements, polities, and candidates can mature.");
                 ReportProgress(world);
@@ -591,7 +591,7 @@ public sealed class WorldGenerator
 
         PrehistoryCheckpointOutcome finalOutcome = _checkpointCoordinator.Evaluate(
             world,
-            phaseLabel: "Evaluating world readiness",
+            phaseLabel: "Reviewing final-start readiness",
             subphaseLabel: "Final candidate pass",
             activitySummary: "Running the final candidate pass at max age and checking whether the world still needs rescue paths.",
             completionSummary: "max_prehistory_age_reached",
@@ -616,7 +616,7 @@ public sealed class WorldGenerator
                 : "Preparing the final candidate starts for selection.";
             _prehistoryRuntimeOrchestrator.Describe(
                 world,
-                "World generation complete",
+                "Reviewing surfaced candidate starts",
                 "Building focal starts",
                 activity,
                 transitionSummary: outcome.Summary);

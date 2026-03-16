@@ -8,13 +8,14 @@ public sealed class PrehistoryRuntimeOrchestrator
     {
         world.StartupAgeConfiguration = configuration;
         world.PrehistoryRuntime.StartupPreset = configuration.Preset;
-        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.BootstrapWorldFrame;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.WorldSeeding;
+        world.PrehistoryRuntime.LastAdvancingPhase = PrehistoryRuntimePhase.WorldSeeding;
         world.PrehistoryRuntime.DetailView = PrehistoryRuntimeDetailView.WorldFrame;
         world.PrehistoryRuntime.WorldAgeYears = world.Time.Year;
         world.PrehistoryRuntime.AreReadinessChecksActive = false;
         world.PrehistoryRuntime.IsPrehistoryAdvancing = true;
         world.PrehistoryRuntime.LastCheckpointOutcome = null;
-        Describe(world, "Generating world frame", "Preparing the first regions", "Laying out the continent, climate, and primitive starting conditions.");
+        Describe(world, "Establishing the initial world frame", "Preparing the first regions", "Laying out the continent, climate, and primitive starting conditions.");
     }
 
     public void Describe(World world, string phaseLabel, string subphaseLabel, string activitySummary, string? transitionSummary = null)
@@ -25,10 +26,11 @@ public sealed class PrehistoryRuntimeOrchestrator
         world.PrehistoryRuntime.TransitionSummary = transitionSummary;
     }
 
-    public void BeginPrehistoryRunning(World world)
+    public void BeginAdvancingPhase(World world, PrehistoryRuntimePhase phase)
     {
         var runtime = world.PrehistoryRuntime;
-        runtime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
+        runtime.CurrentPhase = phase;
+        runtime.LastAdvancingPhase = phase;
         runtime.IsPrehistoryAdvancing = true;
         runtime.TransitionSummary = null;
     }
@@ -36,7 +38,7 @@ public sealed class PrehistoryRuntimeOrchestrator
     public void BeginReadinessCheckpoint(World world, string phaseLabel, string subphaseLabel, string activitySummary)
     {
         var runtime = world.PrehistoryRuntime;
-        runtime.CurrentPhase = PrehistoryRuntimePhase.ReadinessCheckpoint;
+        runtime.CurrentPhase = PrehistoryRuntimePhase.WorldReadinessReview;
         runtime.IsPrehistoryAdvancing = false;
         Describe(world, phaseLabel, subphaseLabel, activitySummary);
     }
@@ -49,7 +51,7 @@ public sealed class PrehistoryRuntimeOrchestrator
         switch (outcome.Kind)
         {
             case PrehistoryCheckpointOutcomeKind.ContinuePrehistory:
-                runtime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
+                runtime.CurrentPhase = runtime.LastAdvancingPhase;
                 runtime.IsPrehistoryAdvancing = true;
                 break;
             case PrehistoryCheckpointOutcomeKind.EnterFocalSelection:
@@ -73,19 +75,19 @@ public sealed class PrehistoryRuntimeOrchestrator
         runtime.DetailView = PrehistoryRuntimeDetailView.GenerationFailure;
         runtime.IsPrehistoryAdvancing = false;
         runtime.LastCheckpointOutcome = PrehistoryCheckpointOutcome.Failure(summary, details);
-        runtime.PhaseLabel = "World generation failure";
-        runtime.SubphaseLabel = "No viable starts";
-        runtime.ActivitySummary = "The simulation could not produce viable player starts.";
+        runtime.PhaseLabel = "No viable truthful start was produced";
+        runtime.SubphaseLabel = "Candidate pool collapsed before handoff";
+        runtime.ActivitySummary = "The simulation could not produce a viable truthful start.";
     }
 
     public void BeginActivePlay(World world)
     {
         var runtime = world.PrehistoryRuntime;
-        runtime.CurrentPhase = PrehistoryRuntimePhase.ActivePlay;
+        runtime.CurrentPhase = PrehistoryRuntimePhase.SimulationEngineActivePlay;
         runtime.DetailView = PrehistoryRuntimeDetailView.ActivePlay;
         runtime.IsPrehistoryAdvancing = false;
         runtime.AreReadinessChecksActive = true;
-        Describe(world, "Active play", "Chronicle active", "The live chronicle has begun.");
+        Describe(world, "Selected start now running inside the SimulationEngine", "Chronicle active", "The SimulationEngine is now driving the live monthly simulation.");
     }
 
     public void SetDetailView(World world, PrehistoryRuntimeDetailView detailView)

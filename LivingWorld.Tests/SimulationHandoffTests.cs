@@ -26,7 +26,7 @@ public sealed class SimulationHandoffTests
 
         simulation.RunMonths(1);
 
-        Assert.Equal(PrehistoryRuntimePhase.ActivePlay, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimePhase.SimulationEngineActivePlay, world.PrehistoryRuntime.CurrentPhase);
         Assert.Equal(yearAtSelection, world.Time.Year);
         Assert.Equal(monthAtSelection, world.Time.Month);
         Assert.True(simulation.IsWatchPaused);

@@ -384,7 +384,7 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        if (initialPhase == PrehistoryRuntimePhase.ActivePlay)
+        if (initialPhase == PrehistoryRuntimePhase.SimulationEngineActivePlay)
         {
             _world.BeginActiveSimulation();
             return;
@@ -416,7 +416,7 @@ public sealed class Simulation : IDisposable
             return;
         }
 
-        if (refreshedPhase == PrehistoryRuntimePhase.ActivePlay)
+        if (refreshedPhase == PrehistoryRuntimePhase.SimulationEngineActivePlay)
         {
             _world.BeginActiveSimulation();
             return;
@@ -771,7 +771,7 @@ public sealed class Simulation : IDisposable
         => Math.Max(MinimumInteractiveStepIntervalMilliseconds, _options.ChroniclePlaybackDelayMilliseconds);
 
     private bool IsActivePlayPhase()
-        => _world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.ActivePlay;
+        => _world.PrehistoryRuntime.CurrentPhase == PrehistoryRuntimePhase.SimulationEngineActivePlay;
 
     private void PrintDebugYearEvents()
     {

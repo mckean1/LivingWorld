@@ -24,7 +24,7 @@ public sealed class CheckpointCoordinatorTests
             completionSummary: "completion",
             allowEmergencyFallback: false);
 
-        Assert.Equal(PrehistoryRuntimePhase.PrehistoryRunning, world.PrehistoryRuntime.CurrentPhase);
+        Assert.Equal(PrehistoryRuntimePhase.SocialEmergence, world.PrehistoryRuntime.CurrentPhase);
         Assert.True(world.PrehistoryRuntime.IsPrehistoryAdvancing);
         Assert.Equal(PrehistoryCheckpointOutcomeKind.ContinuePrehistory, outcome.Kind);
         Assert.Equal(PrehistoryCheckpointOutcomeKind.ContinuePrehistory, world.PrehistoryRuntime.LastCheckpointOutcome?.Kind);
@@ -118,7 +118,8 @@ public sealed class CheckpointCoordinatorTests
         {
             StartupStage = WorldStartupStage.PlayerEntryEvaluation
         };
-        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.PrehistoryRunning;
+        world.PrehistoryRuntime.CurrentPhase = PrehistoryRuntimePhase.SocialEmergence;
+        world.PrehistoryRuntime.LastAdvancingPhase = PrehistoryRuntimePhase.SocialEmergence;
         world.PrehistoryRuntime.IsPrehistoryAdvancing = true;
         return world;
     }
